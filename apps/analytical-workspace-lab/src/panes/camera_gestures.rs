@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Default)]
 pub struct UiBehaviour {
-    camera_drags: BTreeMap<PaneId, CameraGesture>,
+    camera_drags: BTreeMap<PaneId, CameraDragSession>,
     camera_wheels: BTreeMap<CameraGestureKey, CameraGesture>,
     frame_camera_overrides: BTreeMap<PaneId, Camera>,
     pub(super) pointer_image: BTreeMap<PaneId, ImagePoint>,
@@ -28,6 +28,13 @@ pub(super) struct ImageFrame {
 
 pub(super) const WHEEL_GESTURE_IDLE: Duration = Duration::from_millis(140);
 
+pub(super) fn drag_pointer_sample(response: &egui::Response) -> Option<ViewportPoint> {
+    (response.dragged() || response.drag_stopped())
+        .then(|| response.interact_pointer_pos())
+        .flatten()
+        .map(|pointer| ViewportPoint::new(pointer.x as f64, pointer.y as f64))
+}
+
 impl UiBehaviour {
     #[cfg(test)]
     pub(super) fn wheel_gesture_count(&self) -> usize {
@@ -36,12 +43,16 @@ impl UiBehaviour {
 
     pub fn begin_frame(&mut self) {
         self.frame_camera_overrides.clear();
-        let previews: Vec<_> = self
+        let mut previews: Vec<_> = self
             .camera_drags
             .values()
-            .chain(self.camera_wheels.values())
-            .flat_map(|gesture| gesture.preview.iter().cloned())
+            .flat_map(|gesture| gesture.preview().iter().cloned())
             .collect();
+        previews.extend(
+            self.camera_wheels
+                .values()
+                .flat_map(|gesture| gesture.preview.iter().cloned()),
+        );
         self.expose_preview(&previews);
     }
 
@@ -52,13 +63,21 @@ impl UiBehaviour {
             .or_else(|| {
                 self.camera_drags
                     .values()
-                    .chain(self.camera_wheels.values())
                     .find_map(|gesture| {
                         gesture
-                            .preview
+                            .preview()
                             .iter()
                             .find(|state| state.pane == pane)
                             .map(|state| state.camera)
+                    })
+                    .or_else(|| {
+                        self.camera_wheels.values().find_map(|gesture| {
+                            gesture
+                                .preview
+                                .iter()
+                                .find(|state| state.pane == pane)
+                                .map(|state| state.camera)
+                        })
                     })
             })
             .or_else(|| {
@@ -190,46 +209,30 @@ impl PaneSurface<'_> {
                 .ui_behaviour
                 .finish_wheel_key(key, self.outputs)
                 .unwrap_or_else(|| self.ui_behaviour.camera_states(self.cameras));
-            self.ui_behaviour.camera_drags.insert(
-                pane,
-                CameraGesture {
-                    source_pane: pane,
-                    preview: before.clone(),
-                    before,
-                    last_input: now,
-                },
-            );
+            let pointer_origin = ui
+                .input(|input| input.pointer.press_origin())
+                .or_else(|| response.interact_pointer_pos())
+                .map(|pointer| ViewportPoint::new(pointer.x as f64, pointer.y as f64));
+            let drag = match pointer_origin {
+                Some(origin) => CameraDragSession::new_at(pane, before, origin),
+                None => CameraDragSession::new(pane, before),
+            };
+            if let Some(drag) = drag {
+                self.ui_behaviour.camera_drags.insert(pane, drag);
+            }
         }
-        if response.dragged() {
-            if let Some(gesture) = self.ui_behaviour.camera_drags.get_mut(&pane) {
-                let Some(source) = gesture.before.iter().find(|state| state.pane == pane) else {
-                    return;
-                };
-                let mut preview = source.camera;
-                preview.pan(ViewportPoint::new(
-                    response.drag_delta().x as f64,
-                    response.drag_delta().y as f64,
-                ));
-                let changes = linked_camera_changes(&gesture.before, pane, preview);
-                gesture.preview = gesture.before.clone();
-                apply_camera_changes(&mut gesture.preview, &changes, true);
-                gesture.last_input = now;
-                let preview = gesture.preview.clone();
+        if let Some(pointer) = drag_pointer_sample(response) {
+            if let Some(drag) = self.ui_behaviour.camera_drags.get_mut(&pane) {
+                let preview = drag.update_pointer(pointer).to_vec();
                 self.ui_behaviour.expose_preview(&preview);
                 self.outputs.interaction_active = true;
             }
         }
         if response.drag_stopped() {
-            if let Some(gesture) = self.ui_behaviour.camera_drags.remove(&pane) {
-                let after = gesture
-                    .preview
-                    .iter()
-                    .find(|state| state.pane == pane)
-                    .map(|state| state.camera)
-                    .unwrap_or_default();
-                self.ui_behaviour.expose_preview(&gesture.preview);
+            if let Some(drag) = self.ui_behaviour.camera_drags.remove(&pane) {
+                self.ui_behaviour.expose_preview(drag.preview());
                 self.outputs.commands.push(Command::SetCameras {
-                    changes: linked_camera_changes(&gesture.before, pane, after),
+                    changes: drag.finish(),
                 });
             }
         }

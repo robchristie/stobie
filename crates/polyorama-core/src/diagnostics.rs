@@ -29,6 +29,7 @@ pub struct FrameMetrics {
     pub repaint_reason: RepaintReason,
     pub recent_reasons: VecDeque<RepaintReason>,
     pub interaction_active: bool,
+    pub physical_wheel_events: u64,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -148,6 +149,14 @@ pub struct VirtualisationMetrics {
     pub thumbnail_count: u64,
     pub visible_thumbnails: (usize, usize),
     pub materialised_thumbnails: usize,
+    pub materialised_thumbnail_range: (usize, usize),
+    pub thumbnail_columns: usize,
+    pub thumbnail_total_rows: usize,
+    pub thumbnail_scroll_offset_y: f32,
+    pub thumbnail_content_height: f32,
+    pub thumbnail_viewport_height: f32,
+    pub thumbnail_wheel_input_frames: u64,
+    pub thumbnail_wheel_delta_y: f32,
     pub resident_thumbnails: usize,
     pub thumbnail_cache_bytes: usize,
 }
@@ -162,6 +171,14 @@ impl Default for VirtualisationMetrics {
             thumbnail_count: THUMBNAIL_COUNT,
             visible_thumbnails: (0, 0),
             materialised_thumbnails: 0,
+            materialised_thumbnail_range: (0, 0),
+            thumbnail_columns: 0,
+            thumbnail_total_rows: 0,
+            thumbnail_scroll_offset_y: 0.0,
+            thumbnail_content_height: 0.0,
+            thumbnail_viewport_height: 0.0,
+            thumbnail_wheel_input_frames: 0,
+            thumbnail_wheel_delta_y: 0.0,
             resident_thumbnails: 0,
             thumbnail_cache_bytes: 0,
         }

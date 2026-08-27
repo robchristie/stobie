@@ -23,7 +23,7 @@ mod thumbnails;
 use annotations::paint_image_overlay;
 pub use camera_gestures::UiBehaviour;
 #[cfg(test)]
-use camera_gestures::{CameraGestureKey, WHEEL_GESTURE_IDLE};
+use camera_gestures::{CameraGestureKey, WHEEL_GESTURE_IDLE, drag_pointer_sample};
 use camera_gestures::{derive_image_frame, image_demands};
 
 #[derive(Default)]
@@ -335,6 +335,72 @@ mod tests {
             centre: ImagePoint::new(x, y),
             ..Camera::default()
         }
+    }
+
+    #[test]
+    fn coalesced_final_pointer_move_and_release_is_sampled_before_drag_completion() {
+        use std::{cell::RefCell, rc::Rc};
+
+        fn frame(
+            context: &egui::Context,
+            events: Vec<egui::Event>,
+        ) -> (bool, Option<ViewportPoint>) {
+            let observed = Rc::new(RefCell::new(None));
+            let output = observed.clone();
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(200.0, 160.0),
+                )),
+                events,
+                focused: true,
+                ..Default::default()
+            };
+            let mut full_output = context.run_ui(input, |ui| {
+                let response = ui.allocate_response(egui::vec2(180.0, 140.0), egui::Sense::drag());
+                *output.borrow_mut() =
+                    Some((response.drag_stopped(), drag_pointer_sample(&response)));
+            });
+            full_output.textures_delta.clear();
+            observed.borrow_mut().take().unwrap()
+        }
+
+        let context = egui::Context::default();
+        let modifiers = egui::Modifiers::NONE;
+        let origin = egui::pos2(10.0, 20.0);
+        frame(&context, vec![egui::Event::PointerMoved(origin)]);
+        frame(
+            &context,
+            vec![
+                egui::Event::PointerMoved(origin),
+                egui::Event::PointerButton {
+                    pos: origin,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers,
+                },
+            ],
+        );
+        frame(
+            &context,
+            vec![egui::Event::PointerMoved(egui::pos2(40.0, 30.0))],
+        );
+
+        let final_position = egui::pos2(100.0, 70.0);
+        let (stopped, final_sample) = frame(
+            &context,
+            vec![
+                egui::Event::PointerMoved(final_position),
+                egui::Event::PointerButton {
+                    pos: final_position,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers,
+                },
+            ],
+        );
+        assert!(stopped);
+        assert_eq!(final_sample, Some(ViewportPoint::new(100.0, 70.0)));
     }
 
     #[test]

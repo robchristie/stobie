@@ -264,10 +264,19 @@ fn run(program: &str, arguments: &[&str]) -> Result<()> {
         bail!("run xtask from the repository root");
     }
     println!("+ {program} {}", arguments.join(" "));
-    let status = Command::new(program)
-        .args(arguments)
-        .status()
-        .with_context(|| format!("run {program}"))?;
+    let mut command = Command::new(program);
+    command.args(arguments);
+    if program == "cargo" {
+        let temporary_directory = env::current_dir()
+            .context("resolve verification working directory")?
+            .join(".tools/runtime/verification-tmp");
+        fs::create_dir_all(&temporary_directory)
+            .context("create verification temporary directory")?;
+        // Rust response files avoid a potentially crowded shared /tmp while
+        // remaining inside the repository's ignored runtime area.
+        command.env("TMPDIR", temporary_directory);
+    }
+    let status = command.status().with_context(|| format!("run {program}"))?;
     if !status.success() {
         bail!(
             "command failed with {status}: {program} {}",

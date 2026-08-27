@@ -273,9 +273,35 @@ impl PaneSurface<'_> {
                     (
                         "Visible / materialised thumbnails",
                         format!(
-                            "{:?} / {}",
+                            "{:?} / {:?} ({})",
                             self.diagnostics.virtualisation.visible_thumbnails,
+                            self.diagnostics.virtualisation.materialised_thumbnail_range,
                             self.diagnostics.virtualisation.materialised_thumbnails
+                        ),
+                    ),
+                    (
+                        "Thumbnail grid",
+                        format!(
+                            "{} columns · {} rows",
+                            self.diagnostics.virtualisation.thumbnail_columns,
+                            self.diagnostics.virtualisation.thumbnail_total_rows
+                        ),
+                    ),
+                    (
+                        "Thumbnail scroll / extent",
+                        format!(
+                            "{:.1} / {:.1} · viewport {:.1}",
+                            self.diagnostics.virtualisation.thumbnail_scroll_offset_y,
+                            self.diagnostics.virtualisation.thumbnail_content_height,
+                            self.diagnostics.virtualisation.thumbnail_viewport_height
+                        ),
+                    ),
+                    (
+                        "Thumbnail wheel input",
+                        format!(
+                            "{} frames · {:+.1} signed points",
+                            self.diagnostics.virtualisation.thumbnail_wheel_input_frames,
+                            self.diagnostics.virtualisation.thumbnail_wheel_delta_y
                         ),
                     ),
                     (

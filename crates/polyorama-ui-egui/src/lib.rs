@@ -1,5 +1,9 @@
 //! Immediate-mode presentation and semantic pane interfaces.
 
+mod virtual_grid;
+
+pub use virtual_grid::*;
+
 use egui::{Pos2, Rect, Ui};
 use polyorama_core::{
     Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,

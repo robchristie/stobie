@@ -65,7 +65,6 @@ pub(crate) enum TestAction {
     MakeWorkerUnavailable,
 }
 
-#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug, Serialize)]
 pub(crate) struct TestSnapshot {
     cameras: Vec<CameraState>,
@@ -76,11 +75,13 @@ pub(crate) struct TestSnapshot {
     undo_depth: usize,
     workspace_hash: String,
     thumbnail_resident_keys: Vec<TileKey>,
+    virtualisation: VirtualisationMetrics,
     runtime: RuntimeMetrics,
     render: RenderMetrics,
     visible_panes: Vec<PaneId>,
     frame_number: u64,
     repaint_requests: u64,
+    physical_wheel_events: u64,
 }
 
 impl From<DisplaySettings> for DisplaySettingsDto {
@@ -180,9 +181,7 @@ pub struct AnalyticalWorkspaceApp {
     status: String,
     #[cfg(target_arch = "wasm32")]
     egui_context: egui::Context,
-    #[cfg(target_arch = "wasm32")]
     last_render_cameras: Vec<CameraState>,
-    #[cfg(target_arch = "wasm32")]
     last_visible_tile_keys: Vec<TileKey>,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
@@ -283,9 +282,7 @@ impl AnalyticalWorkspaceApp {
             status: "Initialising progressive data…".into(),
             #[cfg(target_arch = "wasm32")]
             egui_context: cc.egui_ctx.clone(),
-            #[cfg(target_arch = "wasm32")]
             last_render_cameras: Vec::new(),
-            #[cfg(target_arch = "wasm32")]
             last_visible_tile_keys: Vec::new(),
             #[cfg(target_arch = "wasm32")]
             browser_worker,
@@ -439,25 +436,39 @@ impl AnalyticalWorkspaceApp {
         Ok(self.test_snapshot())
     }
 
-    #[cfg(target_arch = "wasm32")]
     pub(crate) fn test_snapshot(&self) -> TestSnapshot {
         let mut visible_panes = Vec::new();
         self.workspace.root.active_panes(&mut visible_panes);
+        let render_cameras = self.last_render_cameras.clone();
+        let visible_tile_keys = self.last_visible_tile_keys.clone();
         TestSnapshot {
             cameras: self.session.cameras.clone(),
-            render_cameras: self.last_render_cameras.clone(),
-            visible_tile_keys: self.last_visible_tile_keys.clone(),
+            render_cameras,
+            visible_tile_keys,
             annotation_count: self.document.annotations.len(),
             selected_annotation: self.session.selected_annotation,
             undo_depth: self.history.undo_len(),
             workspace_hash: format!("{:016x}", stable_workspace_hash(&self.workspace)),
             thumbnail_resident_keys: self.thumbnail_cache.keys(),
+            virtualisation: self.diagnostics.virtualisation.clone(),
             runtime: self.runtime.metrics.clone(),
             render: self.render_bridge.snapshot(),
             visible_panes,
             frame_number: self.diagnostics.frame.frame_number,
             repaint_requests: self.diagnostics.frame.repaint_requests,
+            physical_wheel_events: self.diagnostics.frame.physical_wheel_events,
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn write_native_test_snapshot(&self) -> Result<(), String> {
+        let path = std::env::var("POLYORAMA_TEST_SNAPSHOT_PATH")
+            .map_err(|_| "POLYORAMA_TEST_SNAPSHOT_PATH is not configured".to_owned())?;
+        let json = serde_json::to_string_pretty(&self.test_snapshot())
+            .map_err(|error| format!("native test snapshot could not be serialised: {error}"))?;
+        std::fs::write(&path, json).map_err(|error| {
+            format!("native test snapshot could not be written to {path}: {error}")
+        })
     }
 
     fn request_repaint(&mut self, ctx: &egui::Context, reason: RepaintReason) {
@@ -687,6 +698,13 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.frame_started = Instant::now();
         self.diagnostics.frame.frame_number += 1;
         self.diagnostics.frame.repaint_reason = RepaintReason::None;
+        self.diagnostics.frame.physical_wheel_events += root_ui.input(|input| {
+            input
+                .events
+                .iter()
+                .filter(|event| matches!(event, egui::Event::MouseWheel { .. }))
+                .count() as u64
+        });
         self.ui_behaviour.begin_frame();
         self.poll_runtime(&ctx);
         let mut save_now = false;
@@ -793,35 +811,38 @@ impl eframe::App for AnalyticalWorkspaceApp {
             self.status = format!("Render plan rejected: {error}");
             outputs.render_plan.images.clear();
         }
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.last_render_cameras = outputs
-                .render_plan
-                .images
-                .iter()
-                .map(|request| CameraState {
-                    pane: request.pane,
-                    camera: request.camera,
-                    link: self
-                        .session
-                        .cameras
-                        .iter()
-                        .find(|state| state.pane == request.pane)
-                        .and_then(|state| state.link),
-                })
-                .collect();
-            self.last_visible_tile_keys = outputs
-                .demands
-                .iter()
-                .filter(|demand| demand.priority == DemandPriority::Visible)
-                .map(|demand| demand.key)
-                .collect();
-            self.last_visible_tile_keys.sort();
-            self.last_visible_tile_keys.dedup();
-        }
+        self.last_render_cameras = outputs
+            .render_plan
+            .images
+            .iter()
+            .map(|request| CameraState {
+                pane: request.pane,
+                camera: request.camera,
+                link: self
+                    .session
+                    .cameras
+                    .iter()
+                    .find(|state| state.pane == request.pane)
+                    .and_then(|state| state.link),
+            })
+            .collect();
+        self.last_visible_tile_keys = outputs
+            .demands
+            .iter()
+            .filter(|demand| demand.priority == DemandPriority::Visible)
+            .map(|demand| demand.key)
+            .collect();
+        self.last_visible_tile_keys.sort();
+        self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();
+        #[cfg(not(target_arch = "wasm32"))]
+        if root_ui.input(|input| input.key_pressed(egui::Key::F12))
+            && let Err(error) = self.write_native_test_snapshot()
+        {
+            tracing::error!(%error, "native physical-test snapshot failed");
+        }
         if save_now {
             if let Some(storage) = frame.storage_mut() {
                 eframe::set_value(storage, STORAGE_KEY, &self.persisted());
@@ -850,7 +871,6 @@ impl eframe::App for AnalyticalWorkspaceApp {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
 fn stable_workspace_hash(workspace: &Workspace) -> u64 {
     serde_json::to_vec(workspace)
         .unwrap_or_default()

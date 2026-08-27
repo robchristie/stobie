@@ -1,6 +1,9 @@
 import { createServer } from 'node:http';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, dirname, extname, join, normalize } from 'node:path';
+import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
@@ -21,11 +24,52 @@ const server = createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(4173, '127.0.0.1', resolve));
 
 const errors = [];
-const browser = await chromium.launch({
-  headless: true,
+const installedChromium = chromium.executablePath();
+const revisionDirectory = basename(dirname(dirname(installedChromium)));
+const revision = revisionDirectory.slice(revisionDirectory.lastIndexOf('-') + 1);
+const headlessShell = process.env.POLYORAMA_CHROMIUM ?? join(
+  dirname(dirname(dirname(installedChromium))),
+  `chromium_headless_shell-${revision}`,
+  'chrome-headless-shell-linux64',
+  'chrome-headless-shell',
+);
+const browserProfile = await mkdtemp(join(tmpdir(), 'polyorama-browser-'));
+const browserProcess = spawn(headlessShell, [
+  '--headless',
+  '--no-sandbox',
+  '--remote-debugging-port=0',
+  `--user-data-dir=${browserProfile}`,
+  '--enable-unsafe-webgpu',
+  '--enable-features=Vulkan',
+  '--use-angle=vulkan',
+  '--disable-vulkan-surface',
+  'about:blank',
+], {
   env: { ...process.env, LD_LIBRARY_PATH: `${join(process.cwd(), '.tools/sysroot/usr/lib')}:${process.env.LD_LIBRARY_PATH ?? ''}` },
-  args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=vulkan', '--disable-vulkan-surface'],
+  stdio: ['ignore', 'ignore', 'pipe'],
 });
+const cdpEndpoint = await new Promise((resolve, reject) => {
+  let diagnostics = '';
+  const timeout = setTimeout(() => reject(new Error(`Chromium CDP endpoint timed out: ${diagnostics}`)), 10_000);
+  browserProcess.stderr.setEncoding('utf8');
+  browserProcess.stderr.on('data', (chunk) => {
+    diagnostics += chunk;
+    const endpoint = diagnostics.match(/DevTools listening on (ws:\/\/\S+)/)?.[1];
+    if (endpoint) {
+      clearTimeout(timeout);
+      resolve(endpoint);
+    }
+  });
+  browserProcess.once('error', (error) => {
+    clearTimeout(timeout);
+    reject(error);
+  });
+  browserProcess.once('exit', (code, signal) => {
+    clearTimeout(timeout);
+    reject(new Error(`Chromium exited before CDP attachment: code=${code} signal=${signal}\n${diagnostics}`));
+  });
+});
+const browser = await chromium.connectOverCDP(cdpEndpoint);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack ?? error}`));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
@@ -203,6 +247,8 @@ try {
   };
   const rasterBeforePan = await page.screenshot({ path: join(evidenceRoot, 'browser-pan-before.png') });
   const panHistoryBefore = await semanticSnapshot();
+  const primaryBeforePan = panHistoryBefore.cameras.find((item) => item.pane === 1);
+  const linkedBeforePan = panHistoryBefore.cameras.find((item) => item.pane === 2);
   await observe('four_viewports_panning', async () => {
     await page.mouse.move(300, 300); await page.mouse.down(); await page.mouse.move(390, 350, { steps: 12 }); await page.mouse.up();
   });
@@ -212,6 +258,40 @@ try {
   if (panHistoryAfter.undo_depth !== panHistoryBefore.undo_depth + 1) {
     throw new Error('one completed camera drag did not create exactly one history record');
   }
+  const primaryAfterPan = panHistoryAfter.cameras.find((item) => item.pane === 1);
+  const linkedAfterPan = panHistoryAfter.cameras.find((item) => item.pane === 2);
+  const primaryRenderAfterPan = panHistoryAfter.render_cameras.find((item) => item.pane === 1);
+  const expectedPan = {
+    x: primaryBeforePan.camera.centre.x - 90 * primaryBeforePan.camera.pixels_per_screen_point,
+    y: primaryBeforePan.camera.centre.y - 50 * primaryBeforePan.camera.pixels_per_screen_point,
+  };
+  const panTolerance = 1e-6;
+  if (Math.abs(primaryAfterPan.camera.centre.x - expectedPan.x) > panTolerance
+      || Math.abs(primaryAfterPan.camera.centre.y - expectedPan.y) > panTolerance) {
+    throw new Error(`physical pan did not preserve the full 90x50-point drag: expected ${JSON.stringify(expectedPan)}, got ${JSON.stringify(primaryAfterPan.camera.centre)}`);
+  }
+  if (JSON.stringify(primaryAfterPan.camera) !== JSON.stringify(linkedAfterPan.camera)
+      || JSON.stringify(primaryAfterPan.camera) !== JSON.stringify(primaryRenderAfterPan.camera)) {
+    throw new Error('physical pan did not propagate one camera through the linked model and render plan');
+  }
+  const panUndone = await semanticAction({ kind: 'undo' });
+  const primaryAfterPanUndo = panUndone.cameras.find((item) => item.pane === 1);
+  const linkedAfterPanUndo = panUndone.cameras.find((item) => item.pane === 2);
+  if (JSON.stringify(primaryAfterPanUndo.camera) !== JSON.stringify(primaryBeforePan.camera)
+      || JSON.stringify(linkedAfterPanUndo.camera) !== JSON.stringify(linkedBeforePan.camera)
+      || panUndone.undo_depth !== panHistoryBefore.undo_depth) {
+    throw new Error('physical pan undo did not restore the exact linked starting cameras');
+  }
+  semanticEvidence.physical_pan = {
+    pointer_delta: { x: 90, y: 50 },
+    before: [primaryBeforePan, linkedBeforePan],
+    after: [primaryAfterPan, linkedAfterPan],
+    render_after: primaryRenderAfterPan,
+    expected_centre: expectedPan,
+    undo_restored: [primaryAfterPanUndo, linkedAfterPanUndo],
+    undo_depth_before: panHistoryBefore.undo_depth,
+    undo_depth_after: panHistoryAfter.undo_depth,
+  };
 
   const zoomHistoryBefore = await semanticSnapshot();
   await observe('rapid_zoom_transitions', async () => {
@@ -240,19 +320,61 @@ try {
   await observe('million_row_scroll', async () => {
     await page.mouse.move(1180, 270); await page.mouse.wheel(0, 1800);
   });
+  await page.mouse.click(1170, 53);
+  await page.waitForFunction(() => {
+    const virtualisation = window.__POLYORAMA_DIAGNOSTICS.virtualisation;
+    return virtualisation.thumbnail_content_height > virtualisation.thumbnail_viewport_height
+      && virtualisation.visible_thumbnails[1] > virtualisation.visible_thumbnails[0];
+  }, null, { timeout: 10_000 });
+  const thumbnailBeforeScroll = await semanticSnapshot();
   await observe('thumbnail_scroll', async () => {
-    await page.mouse.click(1170, 53); await page.mouse.move(1180, 270); await page.mouse.wheel(0, 1500);
+    await page.mouse.move(1100, 150); await page.waitForTimeout(300);
+    for (let index = 0; index < 5; index += 1) {
+      await page.mouse.wheel(0, 300); await page.waitForTimeout(50);
+    }
   });
+  await page.waitForFunction((initialStart) => {
+    const range = window.__POLYORAMA_DIAGNOSTICS.virtualisation.visible_thumbnails;
+    return range[0] > initialStart;
+  }, thumbnailBeforeScroll.virtualisation.visible_thumbnails[0], { timeout: 10_000 });
+  const thumbnailAfterScroll = await semanticSnapshot();
+  const laterVisibleStart = thumbnailAfterScroll.virtualisation.visible_thumbnails[0];
+  const laterDemand = thumbnailAfterScroll.visible_tile_keys.find(
+    (key) => key.source === 2 && key.x >= laterVisibleStart,
+  );
+  if (thumbnailAfterScroll.virtualisation.thumbnail_scroll_offset_y
+        <= thumbnailBeforeScroll.virtualisation.thumbnail_scroll_offset_y
+      || thumbnailAfterScroll.physical_wheel_events <= thumbnailBeforeScroll.physical_wheel_events
+      || !laterDemand) {
+    throw new Error(`physical thumbnail wheel did not advance scroll state and demand: ${JSON.stringify(thumbnailAfterScroll.virtualisation)}`);
+  }
+  await page.waitForFunction((minimumKey) => window.__POLYORAMA_HANDLE.test_snapshot()
+    .thumbnail_resident_keys.some((key) => key.source === 2 && key.x >= minimumKey), laterVisibleStart, { timeout: 10_000 });
   await page.screenshot({ path: join(evidenceRoot, 'browser-thumbnails.png') });
   const thumbnailSemantic = await semanticSnapshot();
   if (!thumbnailSemantic.thumbnail_resident_keys.length
       || thumbnailSemantic.thumbnail_resident_keys.length > 256) {
     throw new Error(`decoded thumbnail cache is empty or unbounded: ${thumbnailSemantic.thumbnail_resident_keys.length}`);
   }
+  const visibleCount = thumbnailSemantic.virtualisation.visible_thumbnails[1]
+    - thumbnailSemantic.virtualisation.visible_thumbnails[0];
+  const materialisedBound = visibleCount + 4 * thumbnailSemantic.virtualisation.thumbnail_columns;
+  if (thumbnailSemantic.virtualisation.materialised_thumbnails > materialisedBound
+      || thumbnailSemantic.virtualisation.thumbnail_cache_bytes > 4 * 1024 * 1024) {
+    throw new Error(`thumbnail presentation exceeded its materialisation/cache bound: ${JSON.stringify(thumbnailSemantic.virtualisation)}`);
+  }
   semanticEvidence.thumbnail_cache = {
     resident_keys: thumbnailSemantic.thumbnail_resident_keys,
     resident_count: thumbnailSemantic.thumbnail_resident_keys.length,
     configured_item_bound: 256,
+    before_scroll: thumbnailBeforeScroll.virtualisation,
+    after_scroll: thumbnailSemantic.virtualisation,
+    later_demanded_key: laterDemand,
+    later_resident: thumbnailSemantic.thumbnail_resident_keys.find(
+      (key) => key.source === 2 && key.x >= laterVisibleStart,
+    ),
+    physical_wheel_events_before: thumbnailBeforeScroll.physical_wheel_events,
+    physical_wheel_events_after: thumbnailAfterScroll.physical_wheel_events,
   };
   await observe('polygon_editing', async () => {
     await page.mouse.click(110, 77);
@@ -358,5 +480,10 @@ try {
   throw new Error(`${error.stack ?? error}\nloading: ${loading}\n${errors.join('\n')}`);
 } finally {
   await browser.close();
+  if (browserProcess.exitCode === null) {
+    browserProcess.kill('SIGTERM');
+    await Promise.race([once(browserProcess, 'exit'), new Promise((resolve) => setTimeout(resolve, 2_000))]);
+  }
+  await rm(browserProfile, { recursive: true, force: true });
   await new Promise((resolve) => server.close(resolve));
 }

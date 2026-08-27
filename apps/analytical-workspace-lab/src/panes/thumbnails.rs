@@ -1,8 +1,9 @@
 use eframe::egui;
 use polyorama_core::{
     DemandPriority, ImageIntent, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
-    VirtualisationMetrics, virtual_grid,
+    VirtualisationMetrics,
 };
+use polyorama_ui_egui::VirtualGridPresenter;
 
 use crate::thumbnail_cache::ThumbnailCache;
 
@@ -20,32 +21,18 @@ pub fn show(
         "{} logical thumbnails · progressive worker decode",
         THUMBNAIL_COUNT
     ));
-    let cell = (106.0, 96.0);
-    egui::ScrollArea::vertical()
-        .id_salt("thumbnail-grid")
-        .show_viewport(ui, |ui, viewport| {
-            let grid = virtual_grid(
-                viewport.top(),
-                viewport.width(),
-                viewport.height(),
-                cell,
-                THUMBNAIL_COUNT as usize,
-                2,
-            );
-            let rows = (THUMBNAIL_COUNT as usize).div_ceil(grid.columns);
-            ui.set_min_height(rows as f32 * cell.1);
-            virtualisation.visible_thumbnails = (
-                grid.visible_rows.start * grid.columns,
-                (grid.visible_rows.end * grid.columns).min(THUMBNAIL_COUNT as usize),
-            );
-            virtualisation.materialised_thumbnails = grid.materialised_items.len();
-            let origin = ui.min_rect().min;
-            for index in grid.materialised_items {
-                let row = index / grid.columns;
-                let column = index % grid.columns;
+    let cell = egui::vec2(106.0, 96.0);
+    let output = VirtualGridPresenter::new(cell, 2).show(
+        ui,
+        ui.id().with("thumbnail-grid"),
+        THUMBNAIL_COUNT as usize,
+        |grid_ui, layout, origin| {
+            for index in layout.materialised_items.clone() {
+                let row = index / layout.columns;
+                let column = index % layout.columns;
                 let rect = egui::Rect::from_min_size(
-                    origin + egui::vec2(column as f32 * cell.0, row as f32 * cell.1),
-                    egui::vec2(cell.0 - 7.0, cell.1 - 7.0),
+                    origin + egui::vec2(column as f32 * cell.x, row as f32 * cell.y),
+                    egui::vec2(cell.x - 7.0, cell.y - 7.0),
                 );
                 let key = TileKey {
                     source: SourceId(2),
@@ -55,13 +42,17 @@ pub fn show(
                 };
                 outputs.demands.push(TileDemand {
                     key,
-                    priority: DemandPriority::Visible,
+                    priority: if layout.visible_items.contains(&index) {
+                        DemandPriority::Visible
+                    } else {
+                        DemandPriority::Prefetch
+                    },
                     generation,
                 });
                 let texture = cache.texture(key);
-                let response = ui.interact(
+                let response = grid_ui.interact(
                     rect,
-                    ui.id().with(("thumbnail", index)),
+                    grid_ui.id().with(("thumbnail", index)),
                     egui::Sense::click(),
                 );
                 if response.clicked() {
@@ -70,17 +61,18 @@ pub fn show(
                     });
                 }
                 let selected = selected_result == Some(ResultId(index as u64));
-                ui.painter()
+                grid_ui
+                    .painter()
                     .rect_filled(rect, 3.0, egui::Color32::from_rgb(34, 39, 42));
                 if let Some(texture) = texture {
-                    ui.painter().image(
+                    grid_ui.painter().image(
                         texture,
                         rect.shrink(2.0),
                         egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
                         egui::Color32::WHITE,
                     );
                 } else {
-                    ui.painter().text(
+                    grid_ui.painter().text(
                         rect.center(),
                         egui::Align2::CENTER_CENTER,
                         "pending",
@@ -88,7 +80,7 @@ pub fn show(
                         egui::Color32::GRAY,
                     );
                 }
-                ui.painter().text(
+                grid_ui.painter().text(
                     rect.left_bottom() + egui::vec2(5.0, -5.0),
                     egui::Align2::LEFT_BOTTOM,
                     format!("#{index}"),
@@ -96,7 +88,7 @@ pub fn show(
                     egui::Color32::WHITE,
                 );
                 if selected {
-                    ui.painter().rect_stroke(
+                    grid_ui.painter().rect_stroke(
                         rect,
                         3.0,
                         egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 190, 72)),
@@ -104,5 +96,24 @@ pub fn show(
                     );
                 }
             }
-        });
+        },
+    );
+    virtualisation.visible_thumbnails = (
+        output.layout.visible_items.start,
+        output.layout.visible_items.end,
+    );
+    virtualisation.materialised_thumbnails = output.layout.materialised_items.len();
+    virtualisation.materialised_thumbnail_range = (
+        output.layout.materialised_items.start,
+        output.layout.materialised_items.end,
+    );
+    virtualisation.thumbnail_columns = output.layout.columns;
+    virtualisation.thumbnail_total_rows = output.layout.total_rows;
+    virtualisation.thumbnail_scroll_offset_y = output.scroll_offset_y;
+    virtualisation.thumbnail_content_height = output.content_height;
+    virtualisation.thumbnail_viewport_height = output.viewport_height;
+    if output.wheel_delta_y != 0.0 {
+        virtualisation.thumbnail_wheel_input_frames += 1;
+        virtualisation.thumbnail_wheel_delta_y += output.wheel_delta_y;
+    }
 }

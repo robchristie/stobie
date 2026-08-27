@@ -115,7 +115,6 @@ impl ThumbnailCache {
         self.used
     }
 
-    #[cfg(target_arch = "wasm32")]
     pub fn keys(&self) -> Vec<TileKey> {
         self.entries.keys().copied().collect()
     }

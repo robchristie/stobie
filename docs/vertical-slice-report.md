@@ -12,7 +12,7 @@ Polyorama now contains a runnable, application-shaped analytical workspace built
 
 The complete release verification passed on both targets. The native binary was launched under a user-space Xvfb display and rendered through wgpu's OpenGL backend on Mesa llvmpipe. The WebAssembly build was launched in headless Chromium with real WebGPU, a module Web Worker and persisted browser storage. Both paths were interacted with and captured; neither result rests on compilation alone.
 
-The architectural hypothesis is supported: this slice did not reveal a need to replace egui. A narrow egui integration layer presents a canonical retained workspace and submits a complete typed frame render plan into one renderer-owned wgpu resource universe. The retained 0.1.0 profile identified fixture production during rapid zoom, rather than egui presentation, as the strongest measured limitation. Version 0.1.1 moved deterministic scalar generation and LZ4 work behind the worker boundary and added bounded desired-set scheduling; the same release-browser rapid-zoom scenario improved from a 126.3 ms p95 baseline to 0.9 ms p95 without changing the GUI substrate. Version 0.1.2 closes the remaining lifecycle gaps around unavailable workers, hidden image panes, linked wheel gestures and checked render-plan publication; its fresh verification capture measured a 1.0 ms rapid-zoom p95.
+The architectural hypothesis is supported: this slice did not reveal a need to replace egui. A narrow egui integration layer presents a canonical retained workspace and submits a complete typed frame render plan into one renderer-owned wgpu resource universe. The retained 0.1.0 profile identified fixture production during rapid zoom, rather than egui presentation, as the strongest measured limitation. Version 0.1.1 moved deterministic scalar generation and LZ4 work behind the worker boundary and added bounded desired-set scheduling; the same release-browser rapid-zoom scenario improved from a 126.3 ms p95 baseline to 0.9 ms p95 without changing the GUI substrate. Version 0.1.2 closed lifecycle gaps around unavailable workers, hidden image panes, linked wheel gestures and checked render-plan publication, but its physical smoke assertions were too weak to detect an incomplete mouse pan and a thumbnail surface that did not retain wheel scrolling. Version 0.1.3 fixes and requalifies those real-input paths on native and browser; its physical rapid-zoom capture measured a 1.1 ms p95.
 
 Important limitations are documented below. In particular, native evidence uses a software adapter, browser adapter naming is unavailable, GPU timestamps are unavailable, and the synthetic data/decoder is an architectural fixture rather than a production image codec.
 
@@ -48,6 +48,42 @@ The second no-new-features hardening pass closes the remaining reviewed edge cas
 - the former 1,466-line presenter is split into image, camera-gesture, annotation, diagnostics, results, thumbnails and inspector modules. Architecture verification rejects broad mutable projections, feature implementations in the dispatcher and missing lifecycle enforcement;
 - renderer diagnostics now name image paint callbacks and renderer-returned command buffers directly, while actual render-pass topology is serialised as unavailable;
 - Rust-owned browser probes establish both failure modes: zero-viewport upload/idle and terminal Worker failure followed by new demand. The latter terminates the Worker object, reported one failed demand, zero queued/in-flight/external work, zero credits in use and an unchanged frame 9 over the idle interval.
+
+## Version 0.1.3 physical interaction verification
+
+The third no-new-features hardening pass corrects the two physical regressions
+found after 0.1.2 and makes their acceptance evidence semantic rather than
+visual:
+
+- `CameraDragSession` owns the exact initial linked-camera set, total physical
+  displacement, same-frame preview and exact completion changes. The presenter
+  derives displacement from the pointer press origin, so movement before egui's
+  drag-recognition threshold and a final move coalesced with release are retained
+  without repeatedly mutating a camera;
+- `VirtualGridPresenter` in `polyorama-ui-egui` presents 100,000 logical items
+  through `ScrollArea::show_rows`, establishes the exact 33,334-row extent,
+  positions only visible rows plus two rows of overscan, retains the scroll
+  state under a stable ID and exposes the visible/materialised ranges, offset,
+  content height, viewport height and signed wheel input;
+- Diagnostics count raw physical wheel events separately from presenter input
+  frames and report the thumbnail grid geometry, scroll offset/extent and exact
+  materialised item range;
+- the browser smoke surrounds a real 90-by-50 Playwright drag with Rust-owned
+  snapshots, asserts the exact linked camera transform and render camera, then
+  asserts one undo restores both original cameras exactly;
+- the native smoke repeats the same drag/linked/undo checks through xdotool and
+  writes structured physical evidence. Its display uses a repository-owned
+  X11 temporary directory, avoiding dependence on shared `/tmp` capacity and
+  stale display locks;
+- both smokes send five physical wheel steps over the gallery and require an
+  increased offset, an advanced visible range, later demanded/resident keys,
+  bounded materialisation and a cache below 4 MiB. In the browser capture the
+  visible range advanced from `0..18` to `45..63` at an offset of about 1,503
+  points;
+- the performance observations below now measure a confirmed full physical pan
+  and confirmed physical thumbnail scroll. The Rust semantic control surface
+  remains useful for architecture and lifecycle tests, but is no longer
+  accepted by itself as proof of user-input behaviour.
 
 ## Architecture
 
@@ -106,7 +142,7 @@ Native decode uses a named background thread and an explicit egui repaint waker.
 | A01 | Required document/workspace/session/UI/GPU/runtime ownership; no authoritative domain state in widget memory | Verified | `app.rs`, `panes/`, `diagnostics.rs`; `cargo xtask architecture` | Selection and layout live in Rust models. UI behaviour contains only transient camera drag/pointer state. |
 | A02 | Egui is immediate presentation through narrow pane APIs | Verified | `PaneReadModel`, `PaneFeatureState`, `PaneIntent`; `panes/{image,camera_gestures,annotations,diagnostics,results,thumbnails,inspector}.rs`; recursive architecture source scan | Pane code has no mutable complete app/session/runtime/workspace or wgpu/egui-wgpu access; authoritative tool, display and annotation-selection changes are shell-validated intents. |
 | A03 | Intent, command, event, demand, render request and repaint outputs remain distinct | Verified | `ImageIntent`, `Command`, `DecodeEvent`, `TileDemand`, `ImageRenderRequest`, `RepaintReason`; command validation tests | Decode is demand/event work; persistence is a shell operation. No speculative effect abstraction was added. |
-| A04 | Live interaction preview and one durable command per completed gesture | Verified | Same-frame image-model test; exact linked-camera history tests; hidden-origin, cross-linked, unlinked and wheel-to-drag lifecycle tests; semantic drag/wheel assertions; native polygon/edit/undo/redo sequence | Raster, overlays, coordinates, overview and demands share one preview camera; wheel bursts coalesce by link scope after 140 ms and finalise outside pane visibility. |
+| A04 | Live interaction preview and one durable command per completed gesture | Verified | `CameraDragSession` total-displacement test; coalesced final-move/release egui test; exact linked-camera history tests; browser/native 90×50 physical drag and exact undo assertions; hidden-origin, cross-linked, unlinked and wheel-to-drag lifecycle tests; native polygon/edit/undo/redo sequence | Raster, overlays, coordinates, overview and demands share one preview camera; the drag includes recognition and release-edge movement, while wheel bursts coalesce by link scope after 140 ms. |
 | A05 | Exactly one canonical, versioned dock tree with stable IDs, splits, tabs, resizing, active pane and drag/drop | Verified | Stable `DockNodeId`; node/pane invariant, rearrangement, schema and round-trip tests; `browser-rearranged-dock.png`; native restored layout | Optional close/create was not implemented because it is conditional “where supported”; all mandatory panes remain restorable through Reset. |
 | A06 | One shared wgpu device/queue and renderer resource universe for all viewports | Verified | `ScalarRenderer` is inserted once from `CreationContext::wgpu_render_state`; architecture scan rejects viewport device creation; diagnostics report four GPU viewports | No texture-import or per-pane device architecture exists. |
 | A07 | Typed render plan and correct logical/physical viewport, scale, clipping, focus and pointer-local mapping | Verified | Real `FrameOutput::render_plan`, pane-identified opaque targets, count/order/duplicate rejection test, geometry tests and semantic render-camera snapshot | The shell finalises cross-pane preview cameras and demands, validates exact request/target correspondence, then publishes the complete plan before callback preparation. |
@@ -115,27 +151,27 @@ Native decode uses a named background thread and an explicit egui repaint waker.
 | A10 | Agent-friendly dependency direction and durable rules | Verified | `cargo xtask architecture`; `AGENTS.md`; workspace crate graph | Core reducers run with no window/GPU. No fork or general GUI core was introduced. |
 | D01 | Deterministic scalar virtual raster ≥131072², 256² tiles, multiresolution, compressed worker path, never fully allocated | Verified | `TILE_SIZE`, `PYRAMID_LEVELS`, `visible_tile_demands`, deterministic tile function and LZ4 decode test; worker runtime evidence | Allocation is per demanded tile only. |
 | D02 | At least 1,000,000 deterministic logical results without a million row structures | Verified | `RESULT_COUNT`, `result_at`, virtual-row tests; Diagnostics screenshot | Rows are calculated from index and stable `ResultId`. |
-| D03 | At least 100,000 logical thumbnails, progressively demanded without creating/requesting all | Verified | `THUMBNAIL_COUNT`, virtual-grid test, Source 2 worker demands; thumbnail screenshots and diagnostics | Visible cells plus two overscan rows are requested. |
+| D03 | At least 100,000 logical thumbnails, progressively demanded without creating/requesting all | Verified | `THUMBNAIL_COUNT`; exact-extent and physical-wheel `VirtualGridPresenter` tests; native/browser scroll snapshots; Source 2 worker demands | Visible cells plus two overscan rows are requested; the captured browser range advanced from `0..18` to `45..63`. |
 | W01 | Default workspace contains four GPU views and Results, Thumbnails, Inspector, Diagnostics | Verified | Default dock invariant lists panes 1–8; native/browser default screenshots; readiness asserts pane count 8 | Results/Thumbnails and Inspector/Diagnostics are tab stacks. |
 | F01 | Resize, tabs, horizontal/vertical dock drops, activation, reset, save and deterministic restore | Verified | Playwright splitter and pane drag; native splitter/drag/save/restart; round-trip and schema tests | Empty source nodes are pruned after moves. |
 | F02 | Non-RGBA scientific pixels retained and mapped by a custom shader with controls | Verified | Renderer creates `R16Uint` textures and WGSL `textureLoad`; Viridis, greyscale, threshold and window controls; capability diagnostics | No CPU RGBA conversion is used for source tiles. |
-| F03 | Independent pan, pointer-centred zoom, fit, coordinates, link/unlink, explicit propagation, overview footprint/recentre | Verified | Camera/link and renderer-geometry tests; browser exact camera equality, unlink/relink and differing before/after compositor captures; native linked-camera screenshot and result/overview interactions | Primary and Linked Detail begin in Link A and can leave/rejoin it. |
+| F03 | Independent pan, pointer-centred zoom, fit, coordinates, link/unlink, explicit propagation, overview footprint/recentre | Verified | Camera/link and renderer-geometry tests; exact browser/native physical 90×50 pan snapshots; browser render-camera equality; exact linked undo; unlink/relink captures; native result/overview interactions | Primary and Linked Detail begin in Link A and can leave/rejoin it; both physical paths must produce the full expected transform. |
 | F04 | View-derived bounded tile demand, desired-set reconciliation, dedupe, reprioritisation, strict stale/failure handling, hidden suppression, coarse-first placeholder | Verified | Desired-set/token/priority/obsolete-completion tests; semantic queue-bound snapshot; placeholder painter | Disappeared work becomes obsolete and only an exact outstanding token can complete. |
 | F05 | Common compact protocol; native background work; actual browser Worker; no UI/GPU worker ownership; completion/failure repaint | Verified | Native worker thread, module Worker and worker Wasm; portable endian/invalid-level tests; forced native event-disconnection test; fail-closed native/browser lifecycle tests; Worker termination and browser semantic failure evidence | Fixture generation, compression and decode occur behind the worker boundary; invalid pyramid work is rejected and unavailable workers never retain or accept queued work. |
 | F06 | Bounded configurable GPU cache, decode hand-off, renderer bridge and per-frame upload; deterministic tokened residency/eviction | Verified | 64 MiB GPU cache/4 MiB upload and 8 MiB bridge diagnostics; LRU, oversized-forward-progress, obsolete-admission cache-hit and token-ack tests; zero-viewport WebGPU probe | The renderer is authoritative for scalar GPU residency; maintenance drains uploads without an image callback and the runtime validates every acknowledgement token. |
 | F07 | Polygon preview, commit, selection, vertex move, delete, undo/redo, coordinates and linked display | Verified | Command/coalescing/validation tests; native scripted creation/edit/delete/undo/redo; native/browser polygon screenshots | Durable polygons store `WorldPoint` vertices. |
 | F08 | Million-row virtual result table, bounded overscan, stable selection and recenter | Verified | Virtual-row and stable-selection tests; browser result scroll profile; native select/recentre action; diagnostics | Default materialisation is far below 500 rows (16 in the captured default snapshot). |
-| F09 | Two-dimensional 100k thumbnail grid, bounded visible/overscan demand, placeholders, actual decoded content, stable selection and recenter path | Verified | Virtual-grid and bounded thumbnail-cache tests; semantic cache snapshot; browser/native gallery screenshots | Worker-decoded 64×64 scalar payloads are colour-mapped into a bounded 4 MiB presentation cache. |
+| F09 | Two-dimensional 100k thumbnail grid, bounded visible/overscan demand, placeholders, actual decoded content, stable selection and recenter path | Verified | `VirtualGridPresenter` geometry/wheel tests; five-step physical native/browser scroll assertions; later demanded/resident key snapshots; bounded thumbnail-cache tests; gallery screenshots | Worker-decoded 64×64 scalar payloads are colour-mapped into a bounded 4 MiB cache; scroll offset, extent and ranges are live diagnostics. |
 | F10 | GPU view, results, thumbnails and inspector converge on authoritative session selection; focused command routing | Verified | `Session::selected_result/selected_annotation`; explicit selection intents; stable-selection test; active-pane keyboard guards | Undo/redo is shell-routed; fit/delete/commit are pane-context routed. |
 | F11 | Versioned persistence of canonical layout, pane display, camera links and active pane; browser local storage; visible reset | Verified | `PersistedState`; unknown-schema and round-trip tests; Playwright local-storage/reload assertion; native save/restart screenshot | JavaScript only boots Wasm/Worker and does not mirror state. |
-| S01 | Event-driven repainting with auditable reasons and no deliberate warmed-idle loop | Verified | `RepaintReason` diagnostics; ordinary Playwright frame 187 remained 187, zero-viewport frame 22 remained 22 and unavailable-Worker frame 9 remained 9 over separate 700 ms intervals | Splitter uses egui's interaction repaint while dragged; no unconditional application repaint exists. |
+| S01 | Event-driven repainting with auditable reasons and no deliberate warmed-idle loop | Verified | `RepaintReason` diagnostics; ordinary Playwright frame 217 remained 217, zero-viewport frame 22 remained 22 and unavailable-Worker frame 9 remained 9 over separate 700 ms intervals | Splitter uses egui's interaction repaint while dragged; no unconditional application repaint exists. |
 | I01 | Live application-update/UI, workspace, measured renderer callbacks, scheduler/workers/cache/upload and virtualisation diagnostics | Verified | Diagnostics pane/screenshot and structured browser snapshot | GPU timestamp and actual render-pass count are explicitly unavailable; image paint callbacks are measured and the renderer returns zero command buffers because egui owns submission. |
 | I02 | Structured spans around frame, command, demand, decode, upload, eviction, render preparation, viewport and layout serialisation | Verified | Source span inventory; native subscriber; tracing `log` fallback reaches the browser web logger | Both target builds compile the same instrumented operations. |
 | I03 | Copy/save structured snapshot with versions, backend, viewports, budgets, datasets and counters | Verified | “Copy JSON snapshot”; `browser-diagnostics.json` | Snapshot includes pinned dependency versions; browser adapter name is unavailable and remains empty. |
 | I04 | Honest release observations for all eight specified scenarios, with environment and unavailable metrics distinguished | Verified | `browser-performance.json` and Performance observations below | Splitter/pane-drag observations are additional. |
 | V01 | All specified focused automated tests run without UI/GPU where required | Verified | `polyorama-core`, `polyorama-runtime`, renderer and application tests in `cargo test --workspace` | Covers dock, schema, IDs, links, coordinates, validation, history, camera and bounded-raster geometry, demand, cache, eviction, invalidation, upload, virtualisation and stable selection. |
-| V02 | Native release actually launched and required interactions captured | Verified | `tools/native-smoke.sh`, runtime log, seven native screenshots | Failure scan rejects panic and wgpu fatal errors. |
-| V03 | Browser Wasm actually launched in a real browser, checked and interacted with | Verified | Playwright readiness plus Rust-owned `browser-semantic.json`, zero-viewport/Worker-failure lifecycle probes, compositor screenshots, console failure hooks, pan/zoom/split/drag/save/reload | Correctness uses semantic actions/snapshots; coordinates are retained only for visual interaction evidence. |
+| V02 | Native release actually launched and required interactions captured | Verified | `tools/native-smoke.sh`, `native-semantic.json`, runtime log, seven native screenshots | Real xdotool drag/wheel results are asserted through Rust snapshots; failure scan rejects panic and fatal wgpu errors. |
+| V03 | Browser Wasm actually launched in a real browser, checked and interacted with | Verified | Playwright readiness plus Rust-owned `browser-semantic.json`; exact physical drag/wheel snapshots; zero-viewport/Worker-failure probes; compositor screenshots; console failure hooks; split/drag/save/reload | Physical input claims enter through browser events; semantic actions remain for architecture/lifecycle invariants. |
 | V04 | Mechanical architecture verification | Verified | `cargo xtask architecture` output | Checks dependency trees, read-model/feature-state pane API, presenter module split, checked plan publication, renderer maintenance staging, one Workspace definition and no renderer device creation. |
 | V05 | One documented command runs format, native+Wasm lint, tests, architecture, release builds and both runtime smokes | Verified | `cargo xtask verify`; README and xtask help | The command completed successfully on 27 August 2026. |
 | L01 | Polyorama code is Apache-2.0 and stated non-goals/boundaries remain intact | Verified | Full SPDX Apache-2.0 `LICENSE`; Cargo `license = "Apache-2.0"`; architecture scan and diff review | No network data service, proprietary data, egui/wgpu fork, generic GUI core, render graph or WebGL fallback was added. |
@@ -224,7 +260,7 @@ npm run browser-smoke
 bash tools/native-smoke.sh
 ```
 
-Summary: formatting passed; native and Wasm clippy passed with warnings denied; all 65 focused core/runtime/renderer/UI/application tests passed; architecture boundaries passed; release native and both release Wasm packages built; Playwright browser smoke passed; native release smoke passed. The browser canvas was 1440×900 with eight registered panes, `wgpu-scalar` readiness, four GPU render jobs and completed Worker work. Rust-owned semantic snapshots proved exact linked cameras, render-plan camera equality, one-record gesture history, polygon commit/undo, dock-tree restoration, bounded queues, aborted dock-drag cleanup, decoded thumbnails, zero-viewport maintenance and fail-closed Worker state. The responsive reload probes also produced non-zero 1280×720 and 900×700 canvases. Native smoke reported `GL/llvmpipe, 1440x900` and found no panic or fatal wgpu error.
+Summary: formatting passed; native and Wasm clippy passed with warnings denied; all 69 focused core/runtime/renderer/UI/application tests passed; architecture boundaries passed; release native and both release Wasm packages built; Playwright browser smoke passed; native release smoke passed. The browser canvas was 1440×900 with eight registered panes, `wgpu-scalar` readiness, four GPU render jobs and completed Worker work. Rust-owned snapshots around real physical input proved the full 90×50 linked-camera displacement, render-camera equality, one-record history, exact undo, retained thumbnail scrolling, advanced demand/residency and cache/materialisation bounds on native and browser. The native gate requires current visible demands and residency beyond the complete pre-scroll resident/materialised frontier. Semantic probes additionally proved polygon commit/undo, dock-tree restoration, bounded queues, aborted dock-drag cleanup, zero-viewport maintenance and fail-closed Worker state. The responsive reload probes produced non-zero 1280×720 and 900×700 canvases. Native smoke reported `GL/llvmpipe, 1440x900` and found no panic or fatal wgpu error.
 
 Verification host:
 
@@ -234,11 +270,11 @@ Verification host:
 | Rust | `rustc 1.97.1 (8bab26f4f 2026-07-14)`, Cargo 1.97.1, edition 2024 |
 | Web tooling | wasm32 target; wasm-bindgen CLI 0.2.127; Node 25.8.2; Playwright 1.62.1 |
 | Principal locked dependencies | eframe/egui/egui-wgpu 0.36.1; wgpu 30.0.1; wasm-bindgen 0.2.127; tracing 0.1.44 |
-| Lockfile identity | SHA-256 `030366477da914e3a43dc3c2b6ac5860b85aa135c92d0bacfca01f17ce0ac8b4` |
+| Lockfile identity | SHA-256 `6a5c080c323f127ae78b747c9d6966e1f1fce5fd7354c56a80888ca0295dd8f7` |
 | Native graphics | wgpu OpenGL backend; Mesa llvmpipe LLVM 22.1.6 software adapter; Xvfb 1440×900 |
 | Browser graphics | Headless Chromium 151.0.7922.34 through Playwright; `BrowserWebGpu`; WebGPU enabled; adapter name unavailable |
 
-The Linux verification bootstrap downloads pinned user-space UI/X11 packages into ignored `.tools`; it does not mutate system packages. Internet access is needed on a cold run for those packages, Cargo/npm artefacts and Playwright Chromium.
+The Linux verification bootstrap downloads pinned user-space UI/X11 packages into ignored `.tools`; it does not mutate system packages. Cargo compiler temporaries are routed into the same ignored runtime area so the command does not depend on capacity in a shared system temporary directory. Internet access is needed on a cold run for those packages, Cargo/npm artefacts and Playwright Chromium.
 
 ## Performance observations
 
@@ -246,15 +282,15 @@ These values are directly measured application-side CPU frame samples from the r
 
 | Scenario | Median | p95 | Direct observation |
 | --- | ---: | ---: | --- |
-| Initial loading | 0.8 ms | 24.6 ms | Thirteen samples; startup/first pipeline work dominates the tail. |
-| Four visible GPU viewports while panning | 0.9 ms | 1.1 ms | Semantic history confirms one completed drag command. |
-| Warmed idle | n/a | n/a | Frame counter stayed 187 → 187 over 700 ms; no deliberate continuous repaint. |
-| Rapid zoom/tile-level transitions | 0.8 ms | 1.0 ms | The 0.1.0 p95 baseline was 126.3 ms before worker-side production and desired-set scheduling. |
-| Million-row result scroll | 0.7 ms | 1.1 ms | The visible range plus eight explicit overscan rows was materialised. |
-| Thumbnail gallery scroll | 0.5 ms | 1.1 ms | Actual worker-decoded thumbnail pixels entered the bounded presentation cache. |
-| Polygon editing | 0.4 ms | 0.6 ms | Three vertices and commit across linked panes. |
-| Saved workspace restore | 0.6 ms | 4.2 ms | Persisted rearranged dock restored after a full reload. |
-| Splitter interaction (additional) | 0.6 ms | 0.9 ms | A transient preview resolved to one canonical, undoable split command and recorded repaint reason. |
+| Initial loading | 1.0 ms | 20.1 ms | Nine samples; startup/first pipeline work dominates the tail. |
+| Four visible GPU viewports while panning | 0.8 ms | 1.1 ms | A real 90×50 drag produced the exact linked transform and one command; undo restored both cameras. |
+| Warmed idle | n/a | n/a | Frame counter stayed 217 → 217 over 700 ms; no deliberate continuous repaint. |
+| Rapid zoom/tile-level transitions | 0.8 ms | 1.1 ms | The 0.1.0 p95 baseline was 126.3 ms before worker-side production and desired-set scheduling. |
+| Million-row result scroll | 0.8 ms | 1.2 ms | The visible range plus eight explicit overscan rows was materialised. |
+| Thumbnail gallery scroll | 0.6 ms | 0.9 ms | Five physical wheel steps advanced `0..18` to `45..63`; later decoded keys entered the bounded cache. |
+| Polygon editing | 0.5 ms | 0.6 ms | Three vertices and commit across linked panes. |
+| Saved workspace restore | 0.6 ms | 4.3 ms | Persisted rearranged dock restored after a full reload. |
+| Splitter interaction (additional) | 0.5 ms | 1.2 ms | A transient preview resolved to one canonical, undoable split command and recorded repaint reason. |
 | Pane drag/drop (additional) | 0.4 ms | 0.6 ms | Derived View moved and the empty source split was pruned. |
 
 Measured capability and counters from the restored browser snapshot include four GPU viewports/render jobs, four image paint callbacks, 20 actual draw calls, zero renderer-returned command buffers, unavailable actual render-pass topology, a 64 MiB texture cache budget, 4 MiB upload budget, 655,360 resident texture bytes, zero in-flight decodes and zero failures. Dataset sizes are 1,000,000 results and 100,000 thumbnails.
