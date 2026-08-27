@@ -1,8 +1,8 @@
 //! Desired-set reconciliation and bounded CPU-only worker scheduling.
 
 use polyorama_core::{
-    DemandPriority, ResourceState, RuntimeMetrics, TILE_SIZE, TileDemand, TileKey, WorkerHealth,
-    reconcile_demands,
+    DemandPriority, PYRAMID_LEVELS, ResourceState, RuntimeMetrics, TILE_SIZE, TileDemand, TileKey,
+    WorkerHealth, reconcile_demands,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -71,7 +71,7 @@ impl DecodeEvent {
 pub fn synthetic_scalar_tile(key: TileKey) -> Vec<u16> {
     let dimension = if key.source.0 == 2 { 64 } else { TILE_SIZE };
     let mut values = Vec::with_capacity((dimension * dimension) as usize);
-    let level_scale = 1_u32 << key.level;
+    let level_scale = 1_u32 << key.level.min(PYRAMID_LEVELS - 1);
     for local_y in 0..dimension {
         for local_x in 0..dimension {
             let x = (key.x * dimension + local_x) * level_scale;
@@ -166,6 +166,12 @@ enum EntryState {
     Failed,
     Obsolete,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum WorkerTransport {
+    #[cfg(not(target_arch = "wasm32"))]
+    Native,
+    External,
+}
 #[derive(Clone, Debug)]
 struct ResourceEntry {
     token: RequestToken,
@@ -220,6 +226,7 @@ pub struct Runtime {
     decoded_bytes: usize,
     external_requests: VecDeque<DecodeRequest>,
     browser_submitted: BTreeSet<RequestToken>,
+    transport: WorkerTransport,
     #[cfg(not(target_arch = "wasm32"))]
     native: Option<NativeWorker>,
     pub metrics: RuntimeMetrics,
@@ -273,6 +280,7 @@ impl Runtime {
             decoded_bytes: 0,
             external_requests: VecDeque::new(),
             browser_submitted: BTreeSet::new(),
+            transport: WorkerTransport::Native,
             native,
             metrics: RuntimeMetrics {
                 worker_health: health,
@@ -293,6 +301,7 @@ impl Runtime {
             decoded_bytes: 0,
             external_requests: VecDeque::new(),
             browser_submitted: BTreeSet::new(),
+            transport: WorkerTransport::External,
             metrics: RuntimeMetrics {
                 worker_health: health,
                 ..Default::default()
@@ -312,17 +321,7 @@ impl Runtime {
         }
     }
     pub fn record_browser_worker_unavailable(&mut self, message: impl Into<String>) {
-        self.metrics.worker_health = WorkerHealth::Unavailable;
-        self.metrics.worker_failures += 1;
-        self.metrics.last_worker_error = message.into();
-        for entry in self.resources.values_mut() {
-            if matches!(entry.state, EntryState::Queued | EntryState::Dispatched) {
-                entry.state = EntryState::Failed;
-                self.metrics.failed += 1;
-            }
-        }
-        self.external_requests.clear();
-        self.browser_submitted.clear();
+        self.stop_worker(WorkerHealth::Unavailable, message.into());
         self.update_metrics();
     }
     pub fn record_browser_transport_failure(
@@ -368,12 +367,16 @@ impl Runtime {
         self.demand_epoch += 1;
         let current_generation = self.source_generation;
         let mut stale = 0_u64;
+        let mut invalid = 0_u64;
         let (demands, duplicates) = reconcile_demands(demands.into_iter().filter(|demand| {
             let current = demand.generation == current_generation;
             stale += u64::from(!current);
-            current
+            let valid = demand.key.level < PYRAMID_LEVELS;
+            invalid += u64::from(current && !valid);
+            current && valid
         }));
         self.metrics.stale_demands_rejected += stale;
+        self.metrics.invalid_demands_rejected += invalid;
         let new_desired: BTreeMap<_, _> = demands
             .into_iter()
             .map(|demand| (demand.key, demand))
@@ -441,6 +444,10 @@ impl Runtime {
             .count()
     }
     fn admit_desired(&mut self) {
+        if !self.worker_accepts_work() {
+            self.fail_new_desired();
+            return;
+        }
         let available = self
             .config
             .scheduler_capacity
@@ -502,31 +509,112 @@ impl Runtime {
         output
     }
     fn dispatch_ready(&mut self) {
+        if !self.worker_accepts_work() {
+            self.fail_outstanding_work();
+            return;
+        }
+        match self.transport {
+            #[cfg(not(target_arch = "wasm32"))]
+            WorkerTransport::Native => self.dispatch_native(),
+            WorkerTransport::External => self.dispatch_external(),
+        }
+    }
+    fn worker_accepts_work(&self) -> bool {
+        let healthy = matches!(
+            self.metrics.worker_health,
+            WorkerHealth::Starting | WorkerHealth::Running
+        );
+        if !healthy {
+            return false;
+        }
+        match self.transport {
+            #[cfg(not(target_arch = "wasm32"))]
+            WorkerTransport::Native => self.native.is_some(),
+            WorkerTransport::External => true,
+        }
+    }
+    fn fail_new_desired(&mut self) {
+        let missing: Vec<_> = self
+            .desired
+            .values()
+            .filter(|demand| !self.resources.contains_key(&demand.key))
+            .copied()
+            .collect();
+        for demand in missing {
+            self.next_sequence += 1;
+            self.resources.insert(
+                demand.key,
+                ResourceEntry {
+                    token: RequestToken {
+                        source_generation: self.source_generation,
+                        demand_epoch: self.demand_epoch,
+                        sequence: self.next_sequence,
+                    },
+                    priority: demand.priority,
+                    state: EntryState::Failed,
+                    admitted: Instant::now(),
+                },
+            );
+            self.metrics.cache_misses += 1;
+            self.metrics.failed += 1;
+        }
+    }
+    fn fail_outstanding_work(&mut self) {
+        for entry in self.resources.values_mut() {
+            if matches!(entry.state, EntryState::Queued | EntryState::Dispatched) {
+                entry.state = EntryState::Failed;
+                self.metrics.failed += 1;
+            }
+        }
+        self.external_requests.clear();
+        self.browser_submitted.clear();
+        self.fail_new_desired();
+    }
+    fn stop_worker(&mut self, health: WorkerHealth, message: String) {
+        self.metrics.worker_health = health;
+        self.metrics.worker_failures += 1;
+        self.metrics.last_worker_error = message;
+        self.fail_outstanding_work();
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn dispatch_native(&mut self) {
+        let requests = self
+            .queued_requests()
+            .into_iter()
+            .take(self.config.scheduler_capacity);
+        let mut disconnected = false;
+        for request in requests {
+            let Some(native) = &self.native else {
+                disconnected = true;
+                break;
+            };
+            match native.requests.try_send(request.clone()) {
+                Ok(()) => {
+                    self.resources.get_mut(&request.key).unwrap().state = EntryState::Dispatched;
+                }
+                Err(crossbeam_channel::TrySendError::Full(_)) => {
+                    self.metrics.deferred_dispatches += 1;
+                    break;
+                }
+                Err(crossbeam_channel::TrySendError::Disconnected(_)) => {
+                    disconnected = true;
+                    break;
+                }
+            }
+        }
+        if disconnected {
+            self.stop_worker(
+                WorkerHealth::Stopped,
+                "native worker request channel disconnected".into(),
+            );
+        }
+    }
+    fn dispatch_external(&mut self) {
         for request in self
             .queued_requests()
             .into_iter()
             .take(self.config.scheduler_capacity)
         {
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(native) = &self.native {
-                match native.requests.try_send(request.clone()) {
-                    Ok(()) => {
-                        self.resources.get_mut(&request.key).unwrap().state =
-                            EntryState::Dispatched;
-                        continue;
-                    }
-                    Err(crossbeam_channel::TrySendError::Full(_)) => {
-                        self.metrics.deferred_dispatches += 1;
-                        break;
-                    }
-                    Err(crossbeam_channel::TrySendError::Disconnected(_)) => {
-                        self.metrics.worker_health = WorkerHealth::Stopped;
-                        self.metrics.worker_failures += 1;
-                        self.resources.get_mut(&request.key).unwrap().state = EntryState::Failed;
-                        continue;
-                    }
-                }
-            }
             if self.external_requests.len() >= self.config.external_capacity
                 || self.browser_submitted.len() + self.external_requests.len()
                     >= self.config.browser_credits
@@ -546,6 +634,9 @@ impl Runtime {
     }
     /// Browser-only pull. Taking a request consumes one fixed browser credit.
     pub fn take_external_request(&mut self) -> Option<DecodeRequest> {
+        if self.transport != WorkerTransport::External || !self.worker_accepts_work() {
+            return None;
+        }
         let request = self.external_requests.pop_front()?;
         if self.browser_submitted.len() >= self.config.browser_credits {
             self.external_requests.push_front(request);
@@ -642,14 +733,35 @@ impl Runtime {
     pub fn poll(&mut self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let events: Vec<_> = self
-                .native
-                .as_ref()
-                .map(|native| native.events.try_iter().collect())
-                .unwrap_or_default();
+            let (events, disconnected) = self.native.as_ref().map_or_else(
+                || (Vec::new(), false),
+                |native| {
+                    let mut events = Vec::new();
+                    let disconnected = loop {
+                        match native.events.try_recv() {
+                            Ok(event) => events.push(event),
+                            Err(crossbeam_channel::TryRecvError::Empty) => break false,
+                            Err(crossbeam_channel::TryRecvError::Disconnected) => break true,
+                        }
+                    };
+                    (events, disconnected)
+                },
+            );
             let count = events.len();
             for event in events {
                 self.accept_event(event);
+            }
+            if disconnected
+                && matches!(
+                    self.metrics.worker_health,
+                    WorkerHealth::Starting | WorkerHealth::Running
+                )
+            {
+                self.stop_worker(
+                    WorkerHealth::Stopped,
+                    "native worker event channel disconnected".into(),
+                );
+                self.update_metrics();
             }
             count
         }
@@ -671,14 +783,13 @@ impl Runtime {
         Some(event)
     }
     pub fn mark_resident(&mut self, key: TileKey, token: RequestToken) {
-        let obsolete = self
-            .resources
-            .get(&key)
-            .is_some_and(|entry| entry.token == token && entry.state == EntryState::Obsolete);
-        if obsolete {
-            self.resources.remove(&key);
-        } else if let Some(entry) = self.resources.get_mut(&key) {
-            if entry.token == token && entry.state == EntryState::HandedToRenderer {
+        if let Some(entry) = self.resources.get_mut(&key) {
+            if entry.token == token
+                && matches!(
+                    entry.state,
+                    EntryState::HandedToRenderer | EntryState::Obsolete
+                )
+            {
                 entry.state = EntryState::Resident;
             } else {
                 self.metrics.residency_rejected += 1;
@@ -907,6 +1018,14 @@ mod tests {
             decode_ms: 4.0,
         }
     }
+    fn external_runtime(config: RuntimeConfig) -> Runtime {
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut runtime = Runtime::without_native(config, WorkerHealth::Running);
+        #[cfg(target_arch = "wasm32")]
+        let mut runtime = Runtime::new_inner(config, WorkerHealth::Running);
+        runtime.transport = WorkerTransport::External;
+        runtime
+    }
     #[test]
     fn compact_request_prepares_off_scheduler_and_portably_encodes_le() {
         assert_eq!(
@@ -956,11 +1075,7 @@ mod tests {
     }
     #[test]
     fn retained_tokens_are_stable_and_priority_is_replaced() {
-        let mut runtime = Runtime::default();
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            runtime.native = None;
-        }
+        let mut runtime = external_runtime(RuntimeConfig::default());
         runtime.reconcile([demand(&runtime, key(0), DemandPriority::Prefetch)]);
         let token = runtime.token(key(0)).unwrap();
         runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
@@ -970,17 +1085,12 @@ mod tests {
     }
     #[test]
     fn browser_credits_and_external_queue_are_bounded() {
-        let mut runtime = Runtime::try_new(RuntimeConfig {
+        let mut runtime = external_runtime(RuntimeConfig {
             browser_credits: 1,
             external_capacity: 1,
             native_queue_capacity: 0,
             ..RuntimeConfig::default()
-        })
-        .unwrap();
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            runtime.native = None;
-        }
+        });
         runtime.reconcile([
             demand(&runtime, key(0), DemandPriority::Visible),
             demand(&runtime, key(1), DemandPriority::Visible),
@@ -992,17 +1102,12 @@ mod tests {
     }
     #[test]
     fn scheduler_admission_is_bounded_and_backfills_after_residency() {
-        let mut runtime = Runtime::try_new(RuntimeConfig {
+        let mut runtime = external_runtime(RuntimeConfig {
             scheduler_capacity: 4,
             external_capacity: 4,
             browser_credits: 4,
             ..RuntimeConfig::default()
-        })
-        .unwrap();
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            runtime.native = None;
-        }
+        });
         let demands: Vec<_> = (0..100)
             .map(|index| demand(&runtime, key(index), DemandPriority::Visible))
             .collect();
@@ -1021,11 +1126,7 @@ mod tests {
 
     #[test]
     fn stale_generation_demands_are_rejected_before_admission() {
-        let mut runtime = Runtime::default();
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            runtime.native = None;
-        }
+        let mut runtime = external_runtime(RuntimeConfig::default());
         let stale_generation = runtime.generation();
         runtime.invalidate();
         runtime.reconcile([TileDemand {
@@ -1039,12 +1140,51 @@ mod tests {
     }
 
     #[test]
+    fn invalid_pyramid_level_is_rejected_and_worker_fixture_is_defensive() {
+        let mut runtime = external_runtime(RuntimeConfig::default());
+        let invalid = TileKey {
+            level: 32,
+            ..key(0)
+        };
+        runtime.reconcile([demand(&runtime, invalid, DemandPriority::Visible)]);
+        assert_eq!(runtime.metrics.invalid_demands_rejected, 1);
+        assert_eq!(runtime.metrics.desired, 0);
+        assert!(runtime.token(invalid).is_none());
+        assert_eq!(
+            synthetic_scalar_tile(invalid).len(),
+            (TILE_SIZE * TILE_SIZE) as usize
+        );
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn native_event_disconnect_fails_the_last_dispatched_request() {
+        let config = RuntimeConfig::default();
+        let (requests, receive_requests) = crossbeam_channel::bounded(config.native_queue_capacity);
+        let (send_events, events) =
+            crossbeam_channel::bounded::<DecodeEvent>(config.native_event_capacity);
+        drop(send_events);
+        let native = NativeWorker {
+            requests,
+            events,
+            waker: Arc::new(parking_lot::Mutex::new(None)),
+        };
+        let mut runtime = Runtime::new_inner(config, Some(native), WorkerHealth::Running);
+        runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
+        assert_eq!(runtime.metrics.in_flight, 1);
+        assert!(receive_requests.try_recv().is_ok());
+
+        assert_eq!(runtime.poll(), 0);
+
+        assert_eq!(runtime.metrics.worker_health, WorkerHealth::Stopped);
+        assert_eq!(runtime.state(key(0)), ResourceState::Failed);
+        assert_eq!(runtime.metrics.queued, 0);
+        assert_eq!(runtime.metrics.in_flight, 0);
+    }
+
+    #[test]
     fn resident_re_demand_is_counted_as_a_cache_hit() {
-        let mut runtime = Runtime::default();
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            runtime.native = None;
-        }
+        let mut runtime = external_runtime(RuntimeConfig::default());
         runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
         let request = runtime.take_external_request().unwrap();
         runtime.accept_event(event(request.key, request.token));
@@ -1054,6 +1194,51 @@ mod tests {
         runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
         assert_eq!(runtime.metrics.cache_hits, 1);
         assert_eq!(runtime.state(key(0)), ResourceState::Resident);
+    }
+    #[test]
+    fn unavailable_native_worker_fails_new_demands_without_external_fallthrough() {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut runtime =
+                Runtime::without_native(RuntimeConfig::default(), WorkerHealth::Unavailable);
+            runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
+            assert_eq!(runtime.state(key(0)), ResourceState::Failed);
+            assert_eq!(runtime.metrics.queued, 0);
+            assert_eq!(runtime.metrics.in_flight, 0);
+            assert!(runtime.take_external_request().is_none());
+        }
+    }
+    #[test]
+    fn terminal_external_worker_failure_fails_later_demands() {
+        let mut runtime = external_runtime(RuntimeConfig::default());
+        runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
+        assert!(runtime.take_external_request().is_some());
+        runtime.record_browser_worker_unavailable("worker construction failed");
+        runtime.reconcile([
+            demand(&runtime, key(0), DemandPriority::Visible),
+            demand(&runtime, key(1), DemandPriority::Visible),
+        ]);
+        assert_eq!(runtime.state(key(0)), ResourceState::Failed);
+        assert_eq!(runtime.state(key(1)), ResourceState::Failed);
+        assert_eq!(runtime.metrics.queued, 0);
+        assert_eq!(runtime.metrics.in_flight, 0);
+        assert!(runtime.take_external_request().is_none());
+    }
+    #[test]
+    fn renderer_admission_of_obsolete_handoff_remains_a_cache_hit() {
+        let mut runtime = external_runtime(RuntimeConfig::default());
+        runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
+        let request = runtime.take_external_request().unwrap();
+        runtime.accept_event(event(request.key, request.token));
+        let decoded = runtime.take_decoded_for_renderer().unwrap();
+        runtime.reconcile([]);
+        runtime.mark_resident(decoded.key(), decoded.token());
+        assert_eq!(runtime.state(key(0)), ResourceState::Resident);
+
+        runtime.reconcile([demand(&runtime, key(0), DemandPriority::Visible)]);
+        assert_eq!(runtime.state(key(0)), ResourceState::Resident);
+        assert_eq!(runtime.metrics.cache_hits, 1);
+        assert!(runtime.take_external_request().is_none());
     }
     #[test]
     fn actual_percentiles_use_bounded_samples() {

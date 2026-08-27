@@ -1,0 +1,218 @@
+use super::*;
+
+impl PaneSurface<'_> {
+    pub(super) fn handle_annotations(
+        &mut self,
+        pane: PaneId,
+        camera: Camera,
+        rect: egui::Rect,
+        response: &egui::Response,
+    ) {
+        let to_screen = |world: WorldPoint| {
+            let image = ImageToWorld::default().world_to_image(world);
+            egui::pos2(
+                rect.center().x
+                    + ((image.x - camera.centre.x) / camera.pixels_per_screen_point) as f32,
+                rect.center().y
+                    + ((image.y - camera.centre.y) / camera.pixels_per_screen_point) as f32,
+            )
+        };
+        let tool = self
+            .active_tools
+            .get(&pane)
+            .copied()
+            .unwrap_or(ActiveTool::Navigate);
+        if tool == ActiveTool::Polygon && response.clicked() {
+            if let Some(pointer) = response.interact_pointer_pos() {
+                let image = screen_to_image(pointer, rect, camera);
+                let world = ImageToWorld::default().image_to_world(image);
+                match self.annotation_ui.get_mut() {
+                    Some(GesturePreview::Polygon { vertices, .. }) => vertices.push(world),
+                    _ => self.annotation_ui.set(GesturePreview::Polygon {
+                        layer: LayerId(1),
+                        vertices: vec![world],
+                    }),
+                }
+            }
+            if response.double_clicked() {
+                if matches!(self.annotation_ui.get(), Some(GesturePreview::Polygon { vertices, .. }) if vertices.len() >= 3)
+                {
+                    if let Some(GesturePreview::Polygon { layer, vertices }) =
+                        self.annotation_ui.take()
+                    {
+                        self.outputs
+                            .intents
+                            .push(ImageIntent::CommitPolygon { layer, vertices });
+                    }
+                }
+            }
+        }
+        if tool == ActiveTool::Polygon && response.secondary_clicked() {
+            if let Some(GesturePreview::Polygon { layer, vertices }) = self.annotation_ui.take() {
+                if vertices.len() >= 3 {
+                    self.outputs
+                        .intents
+                        .push(ImageIntent::CommitPolygon { layer, vertices });
+                }
+            }
+        }
+        if tool == ActiveTool::EditVertex {
+            if response.drag_started() {
+                if let Some(pointer) = response.interact_pointer_pos() {
+                    let nearest = self
+                        .document
+                        .annotations
+                        .iter()
+                        .flat_map(|polygon| {
+                            polygon
+                                .vertices
+                                .iter()
+                                .enumerate()
+                                .map(move |(index, vertex)| {
+                                    (
+                                        polygon.id,
+                                        index,
+                                        *vertex,
+                                        to_screen(*vertex).distance(pointer),
+                                    )
+                                })
+                        })
+                        .min_by(|a, b| a.3.total_cmp(&b.3));
+                    if let Some((annotation, vertex, original, _distance)) =
+                        nearest.filter(|item| item.3 < 16.0)
+                    {
+                        self.selected_annotation = Some(annotation);
+                        self.outputs
+                            .pane_intents
+                            .push(PaneIntent::SelectAnnotation(Some(annotation)));
+                        self.annotation_ui.set(GesturePreview::Vertex {
+                            annotation,
+                            vertex,
+                            original,
+                            preview: original,
+                        });
+                    }
+                }
+            }
+            if response.dragged() {
+                if let (Some(pointer), Some(GesturePreview::Vertex { preview, .. })) = (
+                    response.interact_pointer_pos(),
+                    self.annotation_ui.get_mut(),
+                ) {
+                    *preview = ImageToWorld::default()
+                        .image_to_world(screen_to_image(pointer, rect, camera));
+                    self.outputs.interaction_active = true;
+                }
+            }
+            if response.drag_stopped() {
+                if let Some(GesturePreview::Vertex {
+                    annotation,
+                    vertex,
+                    original,
+                    preview,
+                }) = self.annotation_ui.take()
+                {
+                    self.outputs.commands.push(Command::MoveVertex {
+                        annotation,
+                        vertex,
+                        before: original,
+                        after: preview,
+                    });
+                }
+            }
+        }
+    }
+}
+
+pub(super) fn paint_image_overlay(
+    painter: &egui::Painter,
+    overlay: &ImageOverlayRequest,
+    camera: Camera,
+    primary_camera: Camera,
+) {
+    let to_screen = |world: WorldPoint| {
+        let image = ImageToWorld::default().world_to_image(world);
+        egui::pos2(
+            overlay.rect.center().x
+                + ((image.x - camera.centre.x) / camera.pixels_per_screen_point) as f32,
+            overlay.rect.center().y
+                + ((image.y - camera.centre.y) / camera.pixels_per_screen_point) as f32,
+        )
+    };
+    for polygon in &overlay.annotations {
+        let mut points: Vec<_> = polygon.vertices.iter().copied().map(to_screen).collect();
+        if let Some(GesturePreview::Vertex {
+            annotation,
+            vertex,
+            preview,
+            ..
+        }) = &overlay.gesture
+            && *annotation == polygon.id
+            && *vertex < points.len()
+        {
+            points[*vertex] = to_screen(*preview);
+        }
+        if points.len() > 1 {
+            points.push(points[0]);
+            painter.add(egui::Shape::line(
+                points.clone(),
+                egui::Stroke::new(
+                    2.0,
+                    if overlay.selected_annotation == Some(polygon.id) {
+                        egui::Color32::from_rgb(255, 196, 74)
+                    } else {
+                        egui::Color32::from_rgb(105, 227, 210)
+                    },
+                ),
+            ));
+            for point in points.iter().take(points.len() - 1) {
+                painter.circle_filled(*point, 3.5, egui::Color32::from_rgb(240, 244, 238));
+            }
+        }
+    }
+    if let Some(GesturePreview::Polygon { vertices, .. }) = &overlay.gesture {
+        let mut points: Vec<_> = vertices.iter().copied().map(to_screen).collect();
+        if let Some(pointer) = overlay.hover {
+            points.push(pointer);
+        }
+        if points.len() > 1 {
+            painter.add(egui::Shape::line(
+                points,
+                egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 181, 64)),
+            ));
+        }
+    }
+    if overlay.pane == PaneId(3) {
+        let centre = egui::pos2(
+            overlay.rect.center().x
+                + ((primary_camera.centre.x - camera.centre.x) / camera.pixels_per_screen_point)
+                    as f32,
+            overlay.rect.center().y
+                + ((primary_camera.centre.y - camera.centre.y) / camera.pixels_per_screen_point)
+                    as f32,
+        );
+        let size = egui::vec2(
+            160.0 / camera.pixels_per_screen_point as f32
+                * primary_camera.pixels_per_screen_point as f32,
+            100.0 / camera.pixels_per_screen_point as f32
+                * primary_camera.pixels_per_screen_point as f32,
+        )
+        .max(egui::vec2(20.0, 14.0));
+        painter.rect_stroke(
+            egui::Rect::from_center_size(centre, size),
+            1.0,
+            egui::Stroke::new(2.0, egui::Color32::WHITE),
+            egui::StrokeKind::Inside,
+        );
+    }
+}
+
+pub(super) fn screen_to_image(point: egui::Pos2, rect: egui::Rect, camera: Camera) -> ImagePoint {
+    camera.image_at(
+        ViewportPoint::new(
+            (point.x - rect.left()) as f64,
+            (point.y - rect.top()) as f64,
+        ),
+        ViewportPoint::new(rect.width() as f64, rect.height() as f64),
+    )
+}

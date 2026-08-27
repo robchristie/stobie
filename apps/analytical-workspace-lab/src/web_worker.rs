@@ -77,3 +77,12 @@ impl BrowserWorker {
         self.failures.borrow_mut().drain(..).collect()
     }
 }
+
+impl Drop for BrowserWorker {
+    fn drop(&mut self) {
+        self.worker.set_onmessage(None);
+        self.worker.set_onerror(None);
+        self.worker.set_onmessageerror(None);
+        self.worker.terminate();
+    }
+}

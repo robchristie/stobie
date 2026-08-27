@@ -27,7 +27,7 @@ pub enum DisplayMap {
     Threshold,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DisplaySettings {
     pub window_low: f32,
     pub window_high: f32,
@@ -331,6 +331,24 @@ impl ScalarRenderer {
         }
     }
 
+    /// Perform renderer-owned work once per application frame, whether or not an image pane is
+    /// visible. The UI integration stages this before pane callbacks; `prepare` retains a fallback
+    /// call so an isolated image callback is still safe.
+    pub fn maintain_frame(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        frame_number: u64,
+        source_generation: u64,
+    ) {
+        self.ensure_generation(source_generation);
+        if self.last_upload_frame != frame_number {
+            self.last_upload_frame = frame_number;
+            self.begin_frame_metrics();
+            self.upload_pending(device, queue);
+        }
+    }
+
     pub fn prepare(
         &mut self,
         device: &wgpu::Device,
@@ -338,14 +356,9 @@ impl ScalarRenderer {
         frame_number: u64,
         request: &ImageRenderRequest,
     ) {
+        self.maintain_frame(device, queue, frame_number, request.source_generation);
         let started = Instant::now();
         let _span = info_span!("render_preparation", pane = request.pane.0).entered();
-        self.ensure_generation(request.source_generation);
-        if self.last_upload_frame != frame_number {
-            self.last_upload_frame = frame_number;
-            self.begin_frame_metrics();
-            self.upload_pending(device, queue);
-        }
         let map = match request.display.map {
             DisplayMap::Viridis => 0,
             DisplayMap::Greyscale => 1,
@@ -421,9 +434,10 @@ impl ScalarRenderer {
         let mut state = self.bridge.0.lock();
         state.metrics.gpu_viewports = 0;
         state.metrics.render_jobs = 0;
-        state.metrics.render_passes = 0;
+        state.metrics.paint_callbacks = 0;
         state.metrics.draw_calls = 0;
-        state.metrics.command_buffers = 0;
+        state.metrics.returned_command_buffers = 0;
+        state.metrics.actual_render_passes = None;
         state.metrics.uploaded_bytes = 0;
         state.metrics.prepare_ms = 0.0;
     }
@@ -528,8 +542,8 @@ impl ScalarRenderer {
         render_pass: &mut wgpu::RenderPass<'static>,
     ) {
         let _span = info_span!("viewport_rendering", pane = pane.0).entered();
-        // We do not own egui's render pass, but this callback has been invoked with one.
-        self.bridge.0.lock().metrics.render_passes += 1;
+        // Egui owns the enclosing render pass; the renderer can measure callback invocation only.
+        self.bridge.0.lock().metrics.paint_callbacks += 1;
         let Some(draw) = self.panes.get(&pane) else {
             return;
         };

@@ -144,6 +144,47 @@ try {
     },
   };
 
+  await semanticAction({ kind: 'queue_zero_viewport_upload' });
+  await page.waitForFunction(() => {
+    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    return JSON.stringify(snapshot.visible_panes) === JSON.stringify([5])
+      && snapshot.render.pending_upload_bytes === 0
+      && snapshot.render.gpu_viewports === 0
+      && snapshot.render.render_jobs === 0
+      && snapshot.render.paint_callbacks === 0
+      && snapshot.runtime.queued === 0
+      && snapshot.runtime.in_flight === 0;
+  }, null, { timeout: 10_000 });
+  const zeroViewport = await semanticSnapshot();
+  await page.waitForTimeout(500);
+  const zeroViewportIdleFrame = (await semanticSnapshot()).frame_number;
+  await page.waitForTimeout(700);
+  const zeroViewportIdleAfter = (await semanticSnapshot()).frame_number;
+  if (zeroViewportIdleAfter !== zeroViewportIdleFrame) {
+    throw new Error(`zero-viewport maintenance did not become idle (${zeroViewportIdleFrame} -> ${zeroViewportIdleAfter})`);
+  }
+  semanticEvidence.zero_viewport_maintenance = {
+    visible_panes: zeroViewport.visible_panes,
+    pending_upload_bytes: zeroViewport.render.pending_upload_bytes,
+    gpu_viewports: zeroViewport.render.gpu_viewports,
+    render_jobs: zeroViewport.render.render_jobs,
+    paint_callbacks: zeroViewport.render.paint_callbacks,
+    resident_texture_bytes: zeroViewport.render.resident_texture_bytes,
+    runtime_state: {
+      desired: zeroViewport.runtime.desired,
+      queued: zeroViewport.runtime.queued,
+      in_flight: zeroViewport.runtime.in_flight,
+      residency_rejected: zeroViewport.runtime.residency_rejected,
+    },
+    frame_before_idle: zeroViewportIdleFrame,
+    frame_after_idle: zeroViewportIdleAfter,
+  };
+  await semanticAction({ kind: 'restore_default_workspace' });
+  await page.waitForFunction(() => {
+    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    return snapshot.render.render_jobs > 0 && snapshot.visible_tile_keys.length > 0;
+  }, null, { timeout: 10_000 });
+
   const percentile = (values, p) => values.length ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * p))] : null;
   const observations = {};
   async function observe(name, action) {
@@ -251,7 +292,6 @@ try {
     p95_ms: percentile(restored.frame.cpu_frame_history_ms, 0.95),
   };
   await writeFile(join(evidenceRoot, 'browser-diagnostics.json'), JSON.stringify(restored, null, 2));
-  await writeFile(join(evidenceRoot, 'browser-semantic.json'), JSON.stringify(semanticEvidence, null, 2));
 
   const responsiveEvidence = [];
   for (const viewport of [
@@ -270,6 +310,35 @@ try {
     responsiveEvidence.push({ viewport: `${viewport.width}x${viewport.height}`, canvas });
     await page.screenshot({ path: join(evidenceRoot, `browser-${viewport.label}.png`) });
   }
+  const beforeUnavailable = await semanticSnapshot();
+  const unavailable = await semanticAction({ kind: 'make_worker_unavailable' });
+  if (unavailable.runtime.worker_health !== 'Unavailable'
+      || unavailable.runtime.failed <= beforeUnavailable.runtime.failed
+      || unavailable.runtime.queued !== 0
+      || unavailable.runtime.in_flight !== 0
+      || unavailable.runtime.worker_queue_depth !== 0
+      || unavailable.runtime.browser_credits_in_use !== 0) {
+    throw new Error(`unavailable Worker did not fail closed: ${JSON.stringify(unavailable.runtime)}`);
+  }
+  await page.waitForTimeout(500);
+  const unavailableIdleFrame = (await semanticSnapshot()).frame_number;
+  await page.waitForTimeout(700);
+  const unavailableIdleAfter = (await semanticSnapshot()).frame_number;
+  if (unavailableIdleAfter !== unavailableIdleFrame) {
+    throw new Error(`unavailable Worker state repainted continuously (${unavailableIdleFrame} -> ${unavailableIdleAfter})`);
+  }
+  semanticEvidence.worker_unavailable = {
+    health: unavailable.runtime.worker_health,
+    failed_before: beforeUnavailable.runtime.failed,
+    failed_after: unavailable.runtime.failed,
+    queued: unavailable.runtime.queued,
+    in_flight: unavailable.runtime.in_flight,
+    external_queue: unavailable.runtime.worker_queue_depth,
+    browser_credits_in_use: unavailable.runtime.browser_credits_in_use,
+    frame_before_idle: unavailableIdleFrame,
+    frame_after_idle: unavailableIdleAfter,
+  };
+  await writeFile(join(evidenceRoot, 'browser-semantic.json'), JSON.stringify(semanticEvidence, null, 2));
   await writeFile(join(evidenceRoot, 'browser-performance.json'), JSON.stringify({
     build: 'release',
     browser: browser.version(),

@@ -1,6 +1,6 @@
 use std::{env, fs, path::Path, process::Command};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 
 fn main() -> Result<()> {
     let command = env::args().nth(1).unwrap_or_else(|| "help".into());
@@ -127,6 +127,10 @@ fn architecture() -> Result<()> {
         "&mut Workspace",
         "&mut Session",
         "pub session:",
+        "&'a mut BTreeMap<PaneId, ActiveTool>",
+        "&'a mut BTreeMap<PaneId, DisplaySettings>",
+        "&'a mut Option<ResultId>",
+        "&'a mut Option<AnnotationId>",
         "&wgpu::Device",
         "&wgpu::Queue",
         "egui_wgpu::",
@@ -136,13 +140,54 @@ fn architecture() -> Result<()> {
             bail!("pane API contains forbidden broad access: {forbidden}");
         }
     }
+    let pane_root = fs::read_to_string("apps/analytical-workspace-lab/src/panes/mod.rs")?;
+    for feature in ["image", "camera_gestures", "annotations", "diagnostics"] {
+        let path = format!("apps/analytical-workspace-lab/src/panes/{feature}.rs");
+        if !Path::new(&path).is_file() {
+            bail!("pane feature boundary is missing: {path}");
+        }
+    }
+    for misplaced in [
+        "fn image_pane",
+        "fn handle_camera",
+        "fn handle_annotations",
+        "fn diagnostics_pane",
+    ] {
+        if pane_root.contains(misplaced) {
+            bail!("pane dispatcher contains feature implementation: {misplaced}");
+        }
+    }
+    let surface_start = pane_root
+        .find("pub struct PaneSurface")
+        .ok_or_else(|| anyhow!("PaneSurface is missing"))?;
+    let surface_end = pane_root[surface_start..]
+        .find("\n}\n")
+        .map(|offset| surface_start + offset)
+        .ok_or_else(|| anyhow!("PaneSurface boundary is malformed"))?;
+    if pane_root[surface_start..surface_end].contains("\n    pub ") {
+        bail!("PaneSurface exposes presentation fields instead of read models and feature state");
+    }
+    for required in ["PaneReadModel", "PaneFeatureState", "PaneIntent"] {
+        if !pane_root.contains(required) {
+            bail!("narrow pane API is missing {required}");
+        }
+    }
     let app_source = fs::read_to_string("apps/analytical-workspace-lab/src/app.rs")?;
-    if !app_source.contains("submit_render_plan(&outputs.render_plan") {
+    if !app_source.contains("if let Err(error) = submit_render_plan(&outputs.render_plan") {
         bail!("application shell must submit the complete typed frame render plan");
     }
     let egui_integration = fs::read_to_string("crates/polyorama-ui-egui/src/lib.rs")?;
     if egui_integration.contains("request_repaint") {
         bail!("egui integration must report interaction activity through FrameOutput");
+    }
+    for required in [
+        "RenderPlanSubmissionError",
+        "validate_plan_target_panes",
+        "stage_renderer_maintenance",
+    ] {
+        if !egui_integration.contains(required) {
+            bail!("egui integration is missing lifecycle enforcement: {required}");
+        }
     }
     let renderer_source = fs::read_to_string("crates/polyorama-render-wgpu/src/lib.rs")?;
     if renderer_source.contains("create_device") {

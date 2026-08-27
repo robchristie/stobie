@@ -8,14 +8,19 @@ use polyorama_render_wgpu::{
     DisplayMap, DisplaySettings, RenderBridge, ScalarRenderer, UploadAdmission,
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
-use polyorama_ui_egui::{DockBehaviour, dock_workspace, submit_render_plan};
+use polyorama_ui_egui::{
+    DockBehaviour, dock_workspace, stage_renderer_maintenance, submit_render_plan,
+};
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
 use web_time::Instant;
 
 use crate::{
     APPLICATION_NAME,
-    panes::{FrameOutput, PaneSurface, UiBehaviour},
+    panes::{
+        AnnotationUiState, FrameOutput, PaneFeatureState, PaneIntent, PaneReadModel, PaneSurface,
+        UiBehaviour,
+    },
     thumbnail_cache::ThumbnailCache,
 };
 
@@ -55,6 +60,9 @@ pub(crate) enum TestAction {
         node: u64,
         fraction: f32,
     },
+    QueueZeroViewportUpload,
+    RestoreDefaultWorkspace,
+    MakeWorkerUnavailable,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -69,6 +77,8 @@ pub(crate) struct TestSnapshot {
     workspace_hash: String,
     thumbnail_resident_keys: Vec<TileKey>,
     runtime: RuntimeMetrics,
+    render: RenderMetrics,
+    visible_panes: Vec<PaneId>,
     frame_number: u64,
     repaint_requests: u64,
 }
@@ -351,6 +361,72 @@ impl AnalyticalWorkspaceApp {
                     after: fraction,
                 }
             }
+            TestAction::QueueZeroViewportUpload => {
+                self.runtime.invalidate();
+                let key = TileKey {
+                    source: SourceId(1),
+                    level: 0,
+                    x: 7,
+                    y: 11,
+                };
+                self.runtime.reconcile([TileDemand {
+                    key,
+                    priority: DemandPriority::Visible,
+                    generation: self.runtime.generation(),
+                }]);
+                let request = self
+                    .runtime
+                    .take_external_request()
+                    .ok_or("zero-viewport probe could not acquire a worker request")?;
+                self.runtime.accept_event(DecodeEvent::Completed {
+                    key,
+                    token: request.token,
+                    scalar_u16_le: vec![0; (TILE_SIZE * TILE_SIZE * 2) as usize],
+                    preparation_ms: 0.0,
+                    decode_ms: 0.0,
+                });
+                let decoded = self
+                    .runtime
+                    .take_decoded_for_renderer()
+                    .ok_or("zero-viewport probe did not create a renderer hand-off")?;
+                if !self.render_bridge.push(decoded).accepted() {
+                    return Err("zero-viewport probe renderer bridge was full".into());
+                }
+                self.workspace.root = DockNode::Tabs {
+                    id: DockNodeId(1),
+                    tabs: (1..=8).map(PaneId).collect(),
+                    active: 4,
+                };
+                self.workspace.active_pane = PaneId(5);
+                let context = self.egui_context.clone();
+                self.request_repaint(&context, RepaintReason::PendingUpload);
+                return Ok(self.test_snapshot());
+            }
+            TestAction::RestoreDefaultWorkspace => {
+                self.workspace = Workspace::analytical_default();
+                let context = self.egui_context.clone();
+                self.request_repaint(&context, RepaintReason::Command);
+                return Ok(self.test_snapshot());
+            }
+            TestAction::MakeWorkerUnavailable => {
+                self.browser_worker = None;
+                self.runtime
+                    .record_browser_worker_unavailable("semantic probe: Worker unavailable");
+                let key = TileKey {
+                    source: SourceId(1),
+                    level: 0,
+                    x: 13,
+                    y: 17,
+                };
+                self.runtime.reconcile([TileDemand {
+                    key,
+                    priority: DemandPriority::Visible,
+                    generation: self.runtime.generation(),
+                }]);
+                let context = self.egui_context.clone();
+                self.request_repaint(&context, RepaintReason::WorkerCompletion);
+                return Ok(self.test_snapshot());
+            }
         };
         self.history.execute(
             command,
@@ -365,6 +441,8 @@ impl AnalyticalWorkspaceApp {
 
     #[cfg(target_arch = "wasm32")]
     pub(crate) fn test_snapshot(&self) -> TestSnapshot {
+        let mut visible_panes = Vec::new();
+        self.workspace.root.active_panes(&mut visible_panes);
         TestSnapshot {
             cameras: self.session.cameras.clone(),
             render_cameras: self.last_render_cameras.clone(),
@@ -375,6 +453,8 @@ impl AnalyticalWorkspaceApp {
             workspace_hash: format!("{:016x}", stable_workspace_hash(&self.workspace)),
             thumbnail_resident_keys: self.thumbnail_cache.keys(),
             runtime: self.runtime.metrics.clone(),
+            render: self.render_bridge.snapshot(),
+            visible_panes,
             frame_number: self.diagnostics.frame.frame_number,
             repaint_requests: self.diagnostics.frame.repaint_requests,
         }
@@ -411,12 +491,16 @@ impl AnalyticalWorkspaceApp {
                 |worker| (worker.drain(), worker.drain_failures()),
             );
             let count = events.len();
+            let terminal_failure = !failures.is_empty();
             for event in events {
                 self.runtime.accept_event(event);
             }
             for failure in failures {
                 self.status = failure.clone();
                 self.runtime.record_browser_worker_unavailable(failure);
+            }
+            if terminal_failure {
+                self.browser_worker = None;
             }
             count
         };
@@ -486,9 +570,16 @@ impl AnalyticalWorkspaceApp {
 
     fn apply_outputs(&mut self, ctx: &egui::Context, outputs: FrameOutput) {
         let command_count = outputs.commands.len();
-        let intent_count = outputs.intents.len();
+        let intent_count = outputs.intents.len() + outputs.pane_intents.len();
         let _span = info_span!("command_dispatch", command_count, intent_count).entered();
         let mut applied_commands = 0;
+        let mut applied_pane_intents = 0;
+        for intent in outputs.pane_intents {
+            match apply_pane_intent(intent, &self.document, &mut self.session, &mut self.display) {
+                Ok(()) => applied_pane_intents += 1,
+                Err(error) => self.status = error,
+            }
+        }
         for command in outputs.commands {
             self.history.execute(
                 command,
@@ -517,6 +608,9 @@ impl AnalyticalWorkspaceApp {
         self.diagnostics.frame.demand_ms = demand_started.elapsed().as_secs_f64() * 1000.0;
         if applied_commands > 0 {
             self.request_repaint(ctx, RepaintReason::Command);
+        }
+        if applied_pane_intents > 0 {
+            self.request_repaint(ctx, RepaintReason::Interaction);
         }
         if self.render_bridge.snapshot().pending_upload_bytes > 0
             || self.pending_renderer_upload.is_some()
@@ -649,40 +743,56 @@ impl eframe::App for AnalyticalWorkspaceApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(root_ui, |ui| {
-                let mut surface = PaneSurface {
-                    document: &self.document,
-                    cameras: &self.session.cameras,
-                    active_tools: &mut self.session.active_tools,
-                    gesture: &mut self.session.gesture,
-                    selected_result: &mut self.session.selected_result,
-                    selected_annotation: &mut self.session.selected_annotation,
-                    ui_behaviour: &mut self.ui_behaviour,
-                    display: &mut self.display,
-                    diagnostics: &diagnostics_view,
-                    virtualisation: &mut self.diagnostics.virtualisation,
-                    thumbnail_cache: &mut self.thumbnail_cache,
-                    generation: self.runtime.generation(),
+                stage_renderer_maintenance(
+                    ui,
+                    ui.max_rect(),
                     frame_number,
-                    active_pane,
-                    outputs: &mut outputs,
-                };
+                    self.runtime.generation(),
+                );
+                let mut surface = PaneSurface::new(
+                    PaneReadModel {
+                        document: &self.document,
+                        cameras: &self.session.cameras,
+                        active_tools: self.session.active_tools.clone(),
+                        selected_result: self.session.selected_result,
+                        selected_annotation: self.session.selected_annotation,
+                        display: self.display.clone(),
+                        diagnostics: &diagnostics_view,
+                        generation: self.runtime.generation(),
+                        frame_number,
+                        active_pane,
+                    },
+                    PaneFeatureState {
+                        annotation_ui: AnnotationUiState::new(&mut self.session.gesture),
+                        ui_behaviour: &mut self.ui_behaviour,
+                        virtualisation: &mut self.diagnostics.virtualisation,
+                        thumbnail_cache: &mut self.thumbnail_cache,
+                        outputs: &mut outputs,
+                    },
+                );
                 if let Some(command) = dock_workspace(
                     ui,
                     &mut self.workspace,
                     &mut self.dock_behaviour,
                     &mut surface,
                 ) {
-                    surface.outputs.commands.push(command);
+                    surface.push_shell_command(command);
                 }
-                surface.outputs.interaction_active |= self.dock_behaviour.interaction_active();
+                surface.record_shell_interaction(self.dock_behaviour.interaction_active());
             });
+        self.ui_behaviour
+            .finish_camera_gestures(Instant::now(), &mut outputs);
         outputs.finalise_camera_previews(
             &ctx,
             &self.ui_behaviour,
             &self.session.cameras,
             self.runtime.generation(),
         );
-        submit_render_plan(&outputs.render_plan, &outputs.render_targets);
+        if let Err(error) = submit_render_plan(&outputs.render_plan, &outputs.render_targets) {
+            tracing::error!(%error, "render plan submission rejected");
+            self.status = format!("Render plan rejected: {error}");
+            outputs.render_plan.images.clear();
+        }
         #[cfg(target_arch = "wasm32")]
         {
             self.last_render_cameras = outputs
@@ -770,6 +880,41 @@ fn default_display() -> BTreeMap<PaneId, DisplaySettings> {
         .collect()
 }
 
+fn apply_pane_intent(
+    intent: PaneIntent,
+    document: &Document,
+    session: &mut Session,
+    display: &mut BTreeMap<PaneId, DisplaySettings>,
+) -> Result<(), String> {
+    match intent {
+        PaneIntent::SetActiveTool { pane, tool } if (1..=4).contains(&pane.0) => {
+            session.active_tools.insert(pane, tool);
+        }
+        PaneIntent::SelectAnnotation(annotation)
+            if annotation.is_none()
+                || annotation.is_some_and(|annotation| {
+                    document
+                        .annotations
+                        .iter()
+                        .any(|polygon| polygon.id == annotation)
+                }) =>
+        {
+            session.selected_annotation = annotation;
+        }
+        PaneIntent::SetDisplay { pane, settings }
+            if (1..=4).contains(&pane.0)
+                && settings.window_low.is_finite()
+                && settings.window_high.is_finite()
+                && (0.0..settings.window_high).contains(&settings.window_low)
+                && settings.window_high <= 1.0 =>
+        {
+            display.insert(pane, settings);
+        }
+        _ => return Err("Rejected invalid pane presentation intent".into()),
+    }
+    Ok(())
+}
+
 fn configure_style(ctx: &egui::Context) {
     ctx.set_theme(egui::Theme::Dark);
     let mut visuals = egui::Visuals::dark();
@@ -838,5 +983,94 @@ mod tests {
         state.session.selected_annotation = None;
         state.display.get_mut(&PaneId(1)).unwrap().high = f32::NAN;
         assert!(!persisted_state_is_valid(&state));
+    }
+
+    #[test]
+    fn pane_intents_reduce_authoritative_tool_selection_and_display_state() {
+        let mut document = Document::default();
+        document.annotations.push(Polygon {
+            id: AnnotationId(7),
+            layer: LayerId(1),
+            vertices: vec![
+                WorldPoint::new(0.0, 0.0),
+                WorldPoint::new(1.0, 0.0),
+                WorldPoint::new(0.0, 1.0),
+            ],
+        });
+        let mut session = Session::default();
+        let mut display = default_display();
+        let settings = DisplaySettings {
+            window_low: 0.2,
+            window_high: 0.7,
+            map: DisplayMap::Threshold,
+        };
+
+        apply_pane_intent(
+            PaneIntent::SetActiveTool {
+                pane: PaneId(1),
+                tool: ActiveTool::EditVertex,
+            },
+            &document,
+            &mut session,
+            &mut display,
+        )
+        .unwrap();
+        apply_pane_intent(
+            PaneIntent::SelectAnnotation(Some(AnnotationId(7))),
+            &document,
+            &mut session,
+            &mut display,
+        )
+        .unwrap();
+        apply_pane_intent(
+            PaneIntent::SetDisplay {
+                pane: PaneId(1),
+                settings,
+            },
+            &document,
+            &mut session,
+            &mut display,
+        )
+        .unwrap();
+
+        assert_eq!(
+            session.active_tools.get(&PaneId(1)),
+            Some(&ActiveTool::EditVertex)
+        );
+        assert_eq!(session.selected_annotation, Some(AnnotationId(7)));
+        assert_eq!(display.get(&PaneId(1)), Some(&settings));
+    }
+
+    #[test]
+    fn invalid_pane_intents_do_not_mutate_authoritative_state() {
+        let document = Document::default();
+        let mut session = Session::default();
+        let original_session = session.clone();
+        let mut display = default_display();
+        let original_display = display.clone();
+
+        for intent in [
+            PaneIntent::SetActiveTool {
+                pane: PaneId(99),
+                tool: ActiveTool::Polygon,
+            },
+            PaneIntent::SelectAnnotation(Some(AnnotationId(99))),
+            PaneIntent::SetDisplay {
+                pane: PaneId(1),
+                settings: DisplaySettings {
+                    window_low: 0.9,
+                    window_high: 0.1,
+                    map: DisplayMap::Viridis,
+                },
+            },
+        ] {
+            assert!(apply_pane_intent(intent, &document, &mut session, &mut display).is_err());
+        }
+        assert_eq!(session.active_tools, original_session.active_tools);
+        assert_eq!(
+            session.selected_annotation,
+            original_session.selected_annotation
+        );
+        assert_eq!(display, original_display);
     }
 }

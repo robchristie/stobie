@@ -5,7 +5,7 @@ use polyorama_core::{
     Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,
     ViewportPoint, Workspace,
 };
-use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, ScalarRenderer};
+use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
 use std::sync::{Arc, RwLock};
 
 const TAB_HEIGHT: f32 = 28.0;
@@ -386,7 +386,7 @@ pub fn logical(point: Pos2) -> LogicalPoint {
 #[derive(Clone)]
 pub struct ScalarPaintCallback {
     pub frame_number: u64,
-    request: Arc<RwLock<ImageRenderRequest>>,
+    request: Arc<RwLock<Option<ImageRenderRequest>>>,
 }
 
 impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
@@ -400,7 +400,9 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
     ) -> Vec<wgpu::CommandBuffer> {
         if let Some(renderer) = resources.get_mut::<ScalarRenderer>() {
             let request = self.request.read().expect("render request lock poisoned");
-            renderer.prepare(device, queue, self.frame_number, &request);
+            if let Some(request) = request.as_ref() {
+                renderer.prepare(device, queue, self.frame_number, request);
+            }
         }
         Vec::new()
     }
@@ -414,11 +416,15 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
         let Some(renderer) = resources.get::<ScalarRenderer>() else {
             return;
         };
-        let pane = self
+        let Some(pane) = self
             .request
             .read()
             .expect("render request lock poisoned")
-            .pane;
+            .as_ref()
+            .map(|request| request.pane)
+        else {
+            return;
+        };
         let viewport = info.viewport_in_pixels();
         let clip = info.clip_rect_in_pixels();
         renderer.paint(
@@ -442,7 +448,8 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
 
 #[derive(Clone)]
 pub struct ImagePlanTarget {
-    request: Arc<RwLock<ImageRenderRequest>>,
+    pane: PaneId,
+    request: Arc<RwLock<Option<ImageRenderRequest>>>,
 }
 
 /// Stage an opaque callback in egui's correct paint list; its request is finalised later.
@@ -452,7 +459,8 @@ pub fn stage_render_callback(
     frame_number: u64,
     request: ImageRenderRequest,
 ) -> ImagePlanTarget {
-    let request = Arc::new(RwLock::new(request));
+    let pane = request.pane;
+    let request = Arc::new(RwLock::new(Some(request)));
     ui.painter().add(egui_wgpu::Callback::new_paint_callback(
         rect,
         ScalarPaintCallback {
@@ -460,23 +468,172 @@ pub fn stage_render_callback(
             request: request.clone(),
         },
     ));
-    ImagePlanTarget { request }
+    ImagePlanTarget { pane, request }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RenderPlanSubmissionError {
+    CountMismatch {
+        requests: usize,
+        targets: usize,
+    },
+    PaneMismatch {
+        index: usize,
+        request: PaneId,
+        target: PaneId,
+    },
+    DuplicatePane(PaneId),
+}
+
+impl std::fmt::Display for RenderPlanSubmissionError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CountMismatch { requests, targets } => write!(
+                formatter,
+                "render plan has {requests} requests but {targets} staged targets"
+            ),
+            Self::PaneMismatch {
+                index,
+                request,
+                target,
+            } => write!(
+                formatter,
+                "render plan request {index} is pane {} but its staged target is pane {}",
+                request.0, target.0
+            ),
+            Self::DuplicatePane(pane) => {
+                write!(
+                    formatter,
+                    "render plan contains pane {} more than once",
+                    pane.0
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for RenderPlanSubmissionError {}
+
+fn validate_plan_target_panes(
+    requests: &[PaneId],
+    targets: &[PaneId],
+) -> Result<(), RenderPlanSubmissionError> {
+    if requests.len() != targets.len() {
+        return Err(RenderPlanSubmissionError::CountMismatch {
+            requests: requests.len(),
+            targets: targets.len(),
+        });
+    }
+    let mut unique = std::collections::BTreeSet::new();
+    for (index, (request, target)) in requests.iter().zip(targets).enumerate() {
+        if !unique.insert(*request) {
+            return Err(RenderPlanSubmissionError::DuplicatePane(*request));
+        }
+        if request != target {
+            return Err(RenderPlanSubmissionError::PaneMismatch {
+                index,
+                request: *request,
+                target: *target,
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Publish the complete typed frame plan before callback preparation begins.
-pub fn submit_render_plan(plan: &polyorama_render_wgpu::RenderPlan, targets: &[ImagePlanTarget]) {
-    debug_assert_eq!(plan.images.len(), targets.len());
+/// Validation occurs before any target is changed. On failure, every staged image callback is
+/// disabled so a release build cannot silently paint stale or mismatched data.
+pub fn submit_render_plan(
+    plan: &RenderPlan,
+    targets: &[ImagePlanTarget],
+) -> Result<(), RenderPlanSubmissionError> {
+    let request_panes: Vec<_> = plan.images.iter().map(|request| request.pane).collect();
+    let target_panes: Vec<_> = targets.iter().map(|target| target.pane).collect();
+    if let Err(error) = validate_plan_target_panes(&request_panes, &target_panes) {
+        for target in targets {
+            *target
+                .request
+                .write()
+                .expect("render request lock poisoned") = None;
+        }
+        return Err(error);
+    }
     for (request, target) in plan.images.iter().cloned().zip(targets) {
         *target
             .request
             .write()
-            .expect("render request lock poisoned") = request;
+            .expect("render request lock poisoned") = Some(request);
     }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct RendererMaintenanceCallback {
+    frame_number: u64,
+    source_generation: u64,
+}
+
+impl egui_wgpu::CallbackTrait for RendererMaintenanceCallback {
+    fn prepare(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        _screen: &egui_wgpu::ScreenDescriptor,
+        _encoder: &mut wgpu::CommandEncoder,
+        resources: &mut egui_wgpu::CallbackResources,
+    ) -> Vec<wgpu::CommandBuffer> {
+        if let Some(renderer) = resources.get_mut::<ScalarRenderer>() {
+            renderer.maintain_frame(device, queue, self.frame_number, self.source_generation);
+        }
+        Vec::new()
+    }
+
+    fn paint(
+        &self,
+        _info: egui::PaintCallbackInfo,
+        _render_pass: &mut wgpu::RenderPass<'static>,
+        _resources: &egui_wgpu::CallbackResources,
+    ) {
+    }
+}
+
+/// Stage renderer maintenance before pane presentation so uploads and per-frame metrics progress
+/// even when the canonical workspace currently exposes no image callback.
+pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source_generation: u64) {
+    ui.painter().add(egui_wgpu::Callback::new_paint_callback(
+        rect,
+        RendererMaintenanceCallback {
+            frame_number,
+            source_generation,
+        },
+    ));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn render_plan_correspondence_rejects_count_order_and_duplicates() {
+        assert_eq!(
+            validate_plan_target_panes(&[PaneId(1)], &[]),
+            Err(RenderPlanSubmissionError::CountMismatch {
+                requests: 1,
+                targets: 0,
+            })
+        );
+        assert!(matches!(
+            validate_plan_target_panes(&[PaneId(1), PaneId(2)], &[PaneId(2), PaneId(1)]),
+            Err(RenderPlanSubmissionError::PaneMismatch { index: 0, .. })
+        ));
+        assert_eq!(
+            validate_plan_target_panes(&[PaneId(1), PaneId(1)], &[PaneId(1), PaneId(1)]),
+            Err(RenderPlanSubmissionError::DuplicatePane(PaneId(1)))
+        );
+        assert!(
+            validate_plan_target_panes(&[PaneId(1), PaneId(2)], &[PaneId(1), PaneId(2)]).is_ok()
+        );
+    }
 
     #[test]
     fn aborted_dock_gestures_stop_interaction_when_the_pointer_is_released() {
