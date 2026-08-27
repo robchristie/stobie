@@ -1,0 +1,11 @@
+{
+  "name": "polyorama-verification",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "scripts": {
+    "browser-smoke": "node tools/browser-smoke.mjs"
+  }
+}

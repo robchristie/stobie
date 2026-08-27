@@ -1,0 +1,43 @@
+[workspace]
+members = [
+    "crates/workspace-core",
+    "crates/workspace-runtime",
+    "crates/workspace-render-wgpu",
+    "crates/workspace-ui-egui",
+    "apps/analytical-workspace-lab",
+    "apps/tile-worker",
+    "xtask",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/robchristie/polyorama"
+
+[workspace.dependencies]
+anyhow = "1.0.100"
+bytemuck = { version = "1.24.0", features = ["derive"] }
+crossbeam-channel = "0.5.15"
+eframe = { version = "0.36.1", default-features = false, features = ["default_fonts", "persistence", "wgpu", "x11", "wayland"] }
+egui = { version = "0.36.1", features = ["serde"] }
+egui-wgpu = "0.36.1"
+lz4_flex = "0.12.0"
+log = "0.4.34"
+parking_lot = "0.12.5"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.149"
+tracing = { version = "0.1.44", features = ["log"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt"] }
+wasm-bindgen = "0.2.127"
+wasm-bindgen-futures = "0.4.57"
+web-sys = "0.3.82"
+web-time = "1.1.0"
+wgpu = "30.0.1"
+
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

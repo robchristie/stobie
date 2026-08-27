@@ -1,0 +1,13 @@
+[package]
+name = "workspace-ui-egui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+egui.workspace = true
+egui-wgpu.workspace = true
+wgpu.workspace = true
+workspace-core = { path = "../workspace-core" }
+workspace-render-wgpu = { path = "../workspace-render-wgpu" }

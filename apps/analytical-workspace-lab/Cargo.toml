@@ -1,0 +1,39 @@
+[package]
+name = "analytical-workspace-lab"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "analytical-workspace-lab"
+path = "src/main.rs"
+
+[dependencies]
+eframe.workspace = true
+egui.workspace = true
+egui-wgpu.workspace = true
+log.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+web-time.workspace = true
+workspace-core = { path = "../../crates/workspace-core" }
+workspace-render-wgpu = { path = "../../crates/workspace-render-wgpu" }
+workspace-runtime = { path = "../../crates/workspace-runtime" }
+workspace-ui-egui = { path = "../../crates/workspace-ui-egui" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-subscriber.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.7"
+js-sys = "0.3.82"
+serde-wasm-bindgen = "0.6.5"
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "DedicatedWorkerGlobalScope", "Document", "Element", "Event", "HtmlCanvasElement", "MessageEvent", "Url", "Window", "Worker", "WorkerOptions", "WorkerType"] }

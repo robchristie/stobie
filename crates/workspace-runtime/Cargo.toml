@@ -1,0 +1,15 @@
+[package]
+name = "workspace-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+crossbeam-channel.workspace = true
+lz4_flex.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+tracing.workspace = true
+web-time.workspace = true
+workspace-core = { path = "../workspace-core" }

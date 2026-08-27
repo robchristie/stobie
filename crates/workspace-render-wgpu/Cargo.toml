@@ -1,0 +1,15 @@
+[package]
+name = "workspace-render-wgpu"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+bytemuck.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+web-time.workspace = true
+wgpu.workspace = true
+workspace-core = { path = "../workspace-core" }
+workspace-runtime = { path = "../workspace-runtime" }
