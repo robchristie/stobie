@@ -107,29 +107,50 @@ fn build_web() -> Result<()> {
 
 fn architecture() -> Result<()> {
     assert_tree_excludes(
-        "workspace-core",
+        "polyorama-core",
         &["egui", "eframe", "wgpu", "web-sys", "winit"],
     )?;
-    assert_tree_excludes("workspace-runtime", &["egui", "eframe", "wgpu"])?;
-    let ui_source = fs::read_to_string("apps/analytical-workspace-lab/src/panes.rs")?;
+    assert_tree_excludes("polyorama-runtime", &["egui", "eframe", "wgpu"])?;
+    let mut pane_sources = Vec::new();
+    collect_rust_sources(
+        Path::new("apps/analytical-workspace-lab/src/panes"),
+        &mut pane_sources,
+    )?;
+    let ui_source = pane_sources
+        .iter()
+        .map(fs::read_to_string)
+        .collect::<std::io::Result<Vec<_>>>()?
+        .join("\n");
     for forbidden in [
         "&mut AppModel",
         "&mut Runtime",
         "&mut Workspace",
+        "&mut Session",
+        "pub session:",
         "&wgpu::Device",
         "&wgpu::Queue",
+        "egui_wgpu::",
+        "submit_scalar_callback",
     ] {
         if ui_source.contains(forbidden) {
             bail!("pane API contains forbidden broad access: {forbidden}");
         }
     }
-    let renderer_source = fs::read_to_string("crates/workspace-render-wgpu/src/lib.rs")?;
+    let app_source = fs::read_to_string("apps/analytical-workspace-lab/src/app.rs")?;
+    if !app_source.contains("submit_render_plan(&outputs.render_plan") {
+        bail!("application shell must submit the complete typed frame render plan");
+    }
+    let egui_integration = fs::read_to_string("crates/polyorama-ui-egui/src/lib.rs")?;
+    if egui_integration.contains("request_repaint") {
+        bail!("egui integration must report interaction activity through FrameOutput");
+    }
+    let renderer_source = fs::read_to_string("crates/polyorama-render-wgpu/src/lib.rs")?;
     if renderer_source.contains("create_device") {
         bail!("renderer or viewport creates an additional wgpu device");
     }
     let canonical_definitions = [
-        "crates/workspace-core/src/dock.rs",
-        "crates/workspace-ui-egui/src/lib.rs",
+        "crates/polyorama-core/src/dock.rs",
+        "crates/polyorama-ui-egui/src/lib.rs",
     ]
     .iter()
     .map(fs::read_to_string)
@@ -143,6 +164,19 @@ fn architecture() -> Result<()> {
     println!(
         "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, one workspace tree, no viewport device creation"
     );
+    Ok(())
+}
+
+fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(directory)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_rust_sources(&path, output)?;
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            output.push(path);
+        }
+    }
+    output.sort();
     Ok(())
 }
 

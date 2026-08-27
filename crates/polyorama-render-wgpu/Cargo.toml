@@ -1,5 +1,5 @@
 [package]
-name = "workspace-render-wgpu"
+name = "polyorama-render-wgpu"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,5 +11,5 @@ parking_lot.workspace = true
 tracing.workspace = true
 web-time.workspace = true
 wgpu.workspace = true
-workspace-core = { path = "../workspace-core" }
-workspace-runtime = { path = "../workspace-runtime" }
+polyorama-core = { path = "../polyorama-core" }
+polyorama-runtime = { path = "../polyorama-runtime" }

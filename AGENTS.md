@@ -2,17 +2,17 @@
 
 ## Boundaries
 
-- `workspace-core` owns document, session, canonical dock-tree, commands and
+- `polyorama-core` owns document, session, canonical dock-tree, commands and
   renderer-independent demand types. It must not depend on egui, eframe, wgpu or
   browser crates.
-- `workspace-runtime` owns demand reconciliation, workers and completion state;
+- `polyorama-runtime` owns demand reconciliation, workers and completion state;
   it must not depend on egui or wgpu.
-- `workspace-render-wgpu` owns all persistent GPU resources and typed render
+- `polyorama-render-wgpu` owns all persistent GPU resources and typed render
   requests. No pane or viewport may create a device or queue.
-- `workspace-ui-egui` is the sole framework crate that understands egui. Pane
+- `polyorama-ui-egui` is the sole framework crate that understands egui. Pane
   functions receive narrow views and feature intent/demand/render sinks, never
   mutable access to the complete application model or runtime.
-- The serialisable `workspace_core::Workspace` is the only authoritative dock
+- The serialisable `polyorama_core::Workspace` is the only authoritative dock
   tree. Do not introduce a second stateful docking tree.
 
 ## State and interaction

@@ -3,17 +3,20 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use eframe::egui;
+use polyorama_core::*;
+use polyorama_render_wgpu::{
+    DisplayMap, DisplaySettings, RenderBridge, ScalarRenderer, UploadAdmission,
+};
+use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
+use polyorama_ui_egui::{DockBehaviour, dock_workspace, submit_render_plan};
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
 use web_time::Instant;
-use workspace_core::*;
-use workspace_render_wgpu::{DisplayMap, DisplaySettings, RenderBridge, ScalarRenderer};
-use workspace_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
-use workspace_ui_egui::{DockBehaviour, dock_workspace};
 
 use crate::{
     APPLICATION_NAME,
-    panes::{PaneOutputs, PaneSurface, UiBehaviour},
+    panes::{FrameOutput, PaneSurface, UiBehaviour},
+    thumbnail_cache::ThumbnailCache,
 };
 
 const STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
@@ -32,6 +35,42 @@ struct DisplaySettingsDto {
     low: f32,
     high: f32,
     map: u8,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub(crate) enum TestAction {
+    SetCamera {
+        pane: u32,
+        centre_x: f64,
+        centre_y: f64,
+        pixels_per_screen_point: f64,
+    },
+    CommitPolygon {
+        vertices: Vec<(f64, f64)>,
+    },
+    Undo,
+    ResizeSplit {
+        node: u64,
+        fraction: f32,
+    },
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct TestSnapshot {
+    cameras: Vec<CameraState>,
+    render_cameras: Vec<CameraState>,
+    visible_tile_keys: Vec<TileKey>,
+    annotation_count: usize,
+    selected_annotation: Option<AnnotationId>,
+    undo_depth: usize,
+    workspace_hash: String,
+    thumbnail_resident_keys: Vec<TileKey>,
+    runtime: RuntimeMetrics,
+    frame_number: u64,
+    repaint_requests: u64,
 }
 
 impl From<DisplaySettings> for DisplaySettingsDto {
@@ -62,6 +101,58 @@ impl From<DisplaySettingsDto> for DisplaySettings {
     }
 }
 
+fn persisted_state_is_valid(state: &PersistedState) -> bool {
+    if state.schema_version != LAYOUT_SCHEMA_VERSION
+        || state.workspace.validate().is_err()
+        || state.session.validate_image_cameras().is_err()
+    {
+        return false;
+    }
+    let expected_panes: BTreeSet<_> = (1..=8).map(PaneId).collect();
+    let mut panes = Vec::new();
+    state.workspace.root.pane_ids(&mut panes);
+    if panes.into_iter().collect::<BTreeSet<_>>() != expected_panes
+        || !state.workspace.closed_optional_panes.is_empty()
+    {
+        return false;
+    }
+    let expected_images: BTreeSet<_> = (1..=4).map(PaneId).collect();
+    if state.display.keys().copied().collect::<BTreeSet<_>>() != expected_images
+        || state
+            .session
+            .active_tools
+            .keys()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            != expected_images
+        || state.display.values().any(|settings| {
+            !settings.low.is_finite()
+                || !settings.high.is_finite()
+                || settings.low < 0.0
+                || settings.high > 1.0
+                || settings.low >= settings.high
+                || settings.map > 2
+        })
+    {
+        return false;
+    }
+    if state
+        .session
+        .selected_result
+        .is_some_and(|result| result.0 >= RESULT_COUNT)
+        || state.session.selected_annotation.is_some_and(|selected| {
+            !state
+                .document
+                .annotations
+                .iter()
+                .any(|annotation| annotation.id == selected)
+        })
+    {
+        return false;
+    }
+    true
+}
+
 pub struct AnalyticalWorkspaceApp {
     workspace: Workspace,
     document: Document,
@@ -74,8 +165,15 @@ pub struct AnalyticalWorkspaceApp {
     display: BTreeMap<PaneId, DisplaySettings>,
     diagnostics: DiagnosticsSnapshot,
     frame_started: Instant,
-    resident_tiles: BTreeSet<TileKey>,
+    thumbnail_cache: ThumbnailCache,
+    pending_renderer_upload: Option<DecodeEvent>,
     status: String,
+    #[cfg(target_arch = "wasm32")]
+    egui_context: egui::Context,
+    #[cfg(target_arch = "wasm32")]
+    last_render_cameras: Vec<CameraState>,
+    #[cfg(target_arch = "wasm32")]
+    last_visible_tile_keys: Vec<TileKey>,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
 }
@@ -86,9 +184,7 @@ impl AnalyticalWorkspaceApp {
         let persisted = cc
             .storage
             .and_then(|storage| eframe::get_value::<PersistedState>(storage, STORAGE_KEY))
-            .filter(|state| {
-                state.schema_version == LAYOUT_SCHEMA_VERSION && state.workspace.validate().is_ok()
-            });
+            .filter(persisted_state_is_valid);
         let (workspace, document, session, display) = if let Some(saved) = persisted {
             (
                 saved.workspace,
@@ -141,12 +237,20 @@ impl AnalyticalWorkspaceApp {
                     render_bridge.clone(),
                 ));
         }
-        #[cfg(target_arch = "wasm32")]
-        let browser_worker = crate::web_worker::BrowserWorker::new(cc.egui_ctx.clone()).ok();
         #[cfg(not(target_arch = "wasm32"))]
         let mut runtime = Runtime::default();
         #[cfg(target_arch = "wasm32")]
-        let runtime = Runtime::default();
+        let mut runtime = Runtime::default();
+        #[cfg(target_arch = "wasm32")]
+        let browser_worker = match crate::web_worker::BrowserWorker::new(cc.egui_ctx.clone()) {
+            Ok(worker) => Some(worker),
+            Err(error) => {
+                runtime.record_browser_worker_unavailable(format!(
+                    "browser worker could not be created: {error:?}"
+                ));
+                None
+            }
+        };
         #[cfg(not(target_arch = "wasm32"))]
         runtime.set_repaint_waker(std::sync::Arc::new({
             let context = cc.egui_ctx.clone();
@@ -164,8 +268,15 @@ impl AnalyticalWorkspaceApp {
             display,
             diagnostics,
             frame_started: Instant::now(),
-            resident_tiles: BTreeSet::new(),
+            thumbnail_cache: ThumbnailCache::default(),
+            pending_renderer_upload: None,
             status: "Initialising progressive data…".into(),
+            #[cfg(target_arch = "wasm32")]
+            egui_context: cc.egui_ctx.clone(),
+            #[cfg(target_arch = "wasm32")]
+            last_render_cameras: Vec::new(),
+            #[cfg(target_arch = "wasm32")]
+            last_visible_tile_keys: Vec::new(),
             #[cfg(target_arch = "wasm32")]
             browser_worker,
         }
@@ -186,6 +297,89 @@ impl AnalyticalWorkspaceApp {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn test_action(&mut self, action: TestAction) -> Result<TestSnapshot, String> {
+        let command = match action {
+            TestAction::SetCamera {
+                pane,
+                centre_x,
+                centre_y,
+                pixels_per_screen_point,
+            } => validate_intent(
+                ImageIntent::SetCamera {
+                    pane: PaneId(pane),
+                    camera: Camera {
+                        centre: ImagePoint::new(centre_x, centre_y),
+                        pixels_per_screen_point,
+                    },
+                },
+                &mut self.document,
+                &self.session,
+            )?,
+            TestAction::CommitPolygon { vertices } => validate_intent(
+                ImageIntent::CommitPolygon {
+                    layer: LayerId(1),
+                    vertices: vertices
+                        .into_iter()
+                        .map(|(x, y)| WorldPoint::new(x, y))
+                        .collect(),
+                },
+                &mut self.document,
+                &self.session,
+            )?,
+            TestAction::Undo => {
+                if !self
+                    .history
+                    .undo(&mut self.document, &mut self.session, &mut self.workspace)
+                {
+                    return Err("nothing to undo".into());
+                }
+                let context = self.egui_context.clone();
+                self.request_repaint(&context, RepaintReason::Command);
+                return Ok(self.test_snapshot());
+            }
+            TestAction::ResizeSplit { node, fraction } => {
+                let node = DockNodeId(node);
+                let before = self
+                    .workspace
+                    .root
+                    .split_fraction(node)
+                    .ok_or("unknown split node")?;
+                Command::ResizeSplit {
+                    node,
+                    before,
+                    after: fraction,
+                }
+            }
+        };
+        self.history.execute(
+            command,
+            &mut self.document,
+            &mut self.session,
+            &mut self.workspace,
+        );
+        let context = self.egui_context.clone();
+        self.request_repaint(&context, RepaintReason::Command);
+        Ok(self.test_snapshot())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn test_snapshot(&self) -> TestSnapshot {
+        TestSnapshot {
+            cameras: self.session.cameras.clone(),
+            render_cameras: self.last_render_cameras.clone(),
+            visible_tile_keys: self.last_visible_tile_keys.clone(),
+            annotation_count: self.document.annotations.len(),
+            selected_annotation: self.session.selected_annotation,
+            undo_depth: self.history.undo_len(),
+            workspace_hash: format!("{:016x}", stable_workspace_hash(&self.workspace)),
+            thumbnail_resident_keys: self.thumbnail_cache.keys(),
+            runtime: self.runtime.metrics.clone(),
+            frame_number: self.diagnostics.frame.frame_number,
+            repaint_requests: self.diagnostics.frame.repaint_requests,
+        }
+    }
+
     fn request_repaint(&mut self, ctx: &egui::Context, reason: RepaintReason) {
         self.diagnostics.frame.repaint_requests += 1;
         self.diagnostics.frame.repaint_reason = reason.clone();
@@ -194,18 +388,35 @@ impl AnalyticalWorkspaceApp {
         ctx.request_repaint();
     }
 
+    fn request_repaint_after(
+        &mut self,
+        ctx: &egui::Context,
+        duration: std::time::Duration,
+        reason: RepaintReason,
+    ) {
+        self.diagnostics.frame.repaint_requests += 1;
+        self.diagnostics.frame.repaint_reason = reason.clone();
+        self.diagnostics.frame.recent_reasons.push_front(reason);
+        self.diagnostics.frame.recent_reasons.truncate(8);
+        ctx.request_repaint_after(duration);
+    }
+
     fn poll_runtime(&mut self, ctx: &egui::Context) {
         let started = Instant::now();
         let native_completed = self.runtime.poll();
         #[cfg(target_arch = "wasm32")]
         let browser_completed = {
-            let events = self
-                .browser_worker
-                .as_ref()
-                .map_or_else(Vec::new, |worker| worker.drain());
+            let (events, failures) = self.browser_worker.as_ref().map_or_else(
+                || (Vec::new(), Vec::new()),
+                |worker| (worker.drain(), worker.drain_failures()),
+            );
             let count = events.len();
             for event in events {
                 self.runtime.accept_event(event);
+            }
+            for failure in failures {
+                self.status = failure.clone();
+                self.runtime.record_browser_worker_unavailable(failure);
             }
             count
         };
@@ -214,42 +425,66 @@ impl AnalyticalWorkspaceApp {
         if native_completed + browser_completed > 0 {
             self.request_repaint(ctx, RepaintReason::WorkerCompletion);
         }
-        while let Some(event) = self.runtime.pop_decoded() {
-            match &event {
-                DecodeEvent::Completed { key, .. } if key.source == SourceId(2) => {
-                    self.resident_tiles.insert(*key);
-                    self.runtime.mark_resident(*key);
+        while let Some(event) = self
+            .pending_renderer_upload
+            .take()
+            .or_else(|| self.runtime.take_decoded_for_renderer())
+        {
+            match event {
+                DecodeEvent::Completed {
+                    key,
+                    token,
+                    scalar_u16_le,
+                    ..
+                } if key.source == SourceId(2) => {
+                    match self.thumbnail_cache.insert(ctx, key, token, &scalar_u16_le) {
+                        Ok(evicted) => {
+                            for (evicted_key, evicted_token) in evicted {
+                                self.runtime.mark_evicted(evicted_key, evicted_token);
+                            }
+                            self.runtime.mark_resident(key, token);
+                        }
+                        Err(error) => {
+                            self.status = error.clone();
+                            self.runtime.mark_handoff_failed(key, token, error);
+                        }
+                    }
                 }
-                _ => self.render_bridge.push(event),
+                event => match self.render_bridge.push(event) {
+                    UploadAdmission::Accepted => {}
+                    UploadAdmission::Rejected { event, .. } => {
+                        self.pending_renderer_upload = Some(event);
+                        break;
+                    }
+                },
             }
         }
-        for key in self.render_bridge.take_resident() {
-            self.resident_tiles.insert(key);
-            self.runtime.mark_resident(key);
+        for acknowledgement in self.render_bridge.take_evicted() {
+            self.runtime
+                .mark_evicted(acknowledgement.key, acknowledgement.token);
         }
-        for key in self.render_bridge.take_evicted() {
-            self.resident_tiles.remove(&key);
-            self.runtime.mark_evicted(key);
+        for acknowledgement in self.render_bridge.take_resident() {
+            self.runtime
+                .mark_resident(acknowledgement.key, acknowledgement.token);
         }
-        if !self.resident_tiles.is_empty() {
+        if self.thumbnail_cache.len() > 0 || self.diagnostics.render.resident_texture_bytes > 0 {
             self.status = "Workspace ready".into();
         }
         #[cfg(target_arch = "wasm32")]
         if let Some(worker) = &self.browser_worker {
             while let Some(request) = self.runtime.take_external_request() {
                 if worker.submit(&request).is_err() {
-                    self.runtime.accept_event(DecodeEvent::Failed {
-                        key: request.key,
-                        generation: request.generation,
-                        message: "browser Worker postMessage failed".into(),
-                    });
+                    self.runtime.record_browser_transport_failure(
+                        request,
+                        "browser Worker postMessage failed",
+                    );
                 }
             }
         }
         self.diagnostics.frame.runtime_poll_ms = started.elapsed().as_secs_f64() * 1000.0;
     }
 
-    fn apply_outputs(&mut self, ctx: &egui::Context, outputs: PaneOutputs) {
+    fn apply_outputs(&mut self, ctx: &egui::Context, outputs: FrameOutput) {
         let command_count = outputs.commands.len();
         let intent_count = outputs.intents.len();
         let _span = info_span!("command_dispatch", command_count, intent_count).entered();
@@ -283,12 +518,17 @@ impl AnalyticalWorkspaceApp {
         if applied_commands > 0 {
             self.request_repaint(ctx, RepaintReason::Command);
         }
-        if self.render_bridge.snapshot().pending_upload_bytes > 0 {
+        if self.render_bridge.snapshot().pending_upload_bytes > 0
+            || self.pending_renderer_upload.is_some()
+        {
             self.request_repaint(ctx, RepaintReason::PendingUpload);
         }
         self.diagnostics.frame.interaction_active = outputs.interaction_active;
         if outputs.interaction_active {
             self.request_repaint(ctx, RepaintReason::Interaction);
+        }
+        if let Some(duration) = outputs.repaint_after {
+            self.request_repaint_after(ctx, duration, RepaintReason::Scheduled);
         }
     }
 
@@ -307,8 +547,9 @@ impl AnalyticalWorkspaceApp {
         self.diagnostics.runtime = self.runtime.metrics.clone();
         self.diagnostics.cameras = self.session.cameras.clone();
         self.diagnostics.render = self.render_bridge.snapshot();
-        self.diagnostics.runtime.evictions = self.diagnostics.render.cache_evictions;
         self.diagnostics.frame.render_prepare_ms = self.diagnostics.render.prepare_ms;
+        self.diagnostics.virtualisation.resident_thumbnails = self.thumbnail_cache.len();
+        self.diagnostics.virtualisation.thumbnail_cache_bytes = self.thumbnail_cache.used();
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -352,6 +593,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.frame_started = Instant::now();
         self.diagnostics.frame.frame_number += 1;
         self.diagnostics.frame.repaint_reason = RepaintReason::None;
+        self.ui_behaviour.begin_frame();
         self.poll_runtime(&ctx);
         let mut save_now = false;
         egui::Panel::top("application-menu")
@@ -392,27 +634,33 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     ui.label(&self.status);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(format!(
-                            "{} resident · {} decoding",
-                            self.resident_tiles.len(),
+                            "{} decoded thumbnails · {} decoding",
+                            self.thumbnail_cache.len(),
                             self.runtime.metrics.in_flight
                         ));
                     });
                 });
             });
         let ui_started = Instant::now();
-        let mut outputs = PaneOutputs::default();
+        let mut outputs = FrameOutput::default();
         let frame_number = self.diagnostics.frame.frame_number;
         let active_pane = self.workspace.active_pane;
+        let diagnostics_view = self.diagnostics.clone();
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(root_ui, |ui| {
                 let mut surface = PaneSurface {
                     document: &self.document,
-                    session: &mut self.session,
+                    cameras: &self.session.cameras,
+                    active_tools: &mut self.session.active_tools,
+                    gesture: &mut self.session.gesture,
+                    selected_result: &mut self.session.selected_result,
+                    selected_annotation: &mut self.session.selected_annotation,
                     ui_behaviour: &mut self.ui_behaviour,
                     display: &mut self.display,
-                    diagnostics: &mut self.diagnostics,
-                    resident_tiles: &self.resident_tiles,
+                    diagnostics: &diagnostics_view,
+                    virtualisation: &mut self.diagnostics.virtualisation,
+                    thumbnail_cache: &mut self.thumbnail_cache,
                     generation: self.runtime.generation(),
                     frame_number,
                     active_pane,
@@ -426,7 +674,41 @@ impl eframe::App for AnalyticalWorkspaceApp {
                 ) {
                     surface.outputs.commands.push(command);
                 }
+                surface.outputs.interaction_active |= self.dock_behaviour.interaction_active();
             });
+        outputs.finalise_camera_previews(
+            &ctx,
+            &self.ui_behaviour,
+            &self.session.cameras,
+            self.runtime.generation(),
+        );
+        submit_render_plan(&outputs.render_plan, &outputs.render_targets);
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.last_render_cameras = outputs
+                .render_plan
+                .images
+                .iter()
+                .map(|request| CameraState {
+                    pane: request.pane,
+                    camera: request.camera,
+                    link: self
+                        .session
+                        .cameras
+                        .iter()
+                        .find(|state| state.pane == request.pane)
+                        .and_then(|state| state.link),
+                })
+                .collect();
+            self.last_visible_tile_keys = outputs
+                .demands
+                .iter()
+                .filter(|demand| demand.priority == DemandPriority::Visible)
+                .map(|demand| demand.key)
+                .collect();
+            self.last_visible_tile_keys.sort();
+            self.last_visible_tile_keys.dedup();
+        }
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();
@@ -451,6 +733,21 @@ impl eframe::App for AnalyticalWorkspaceApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, STORAGE_KEY, &self.persisted());
     }
+
+    #[cfg(target_arch = "wasm32")]
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn stable_workspace_hash(workspace: &Workspace) -> u64 {
+    serde_json::to_vec(workspace)
+        .unwrap_or_default()
+        .into_iter()
+        .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        })
 }
 
 fn default_display() -> BTreeMap<PaneId, DisplaySettings> {
@@ -486,4 +783,60 @@ fn configure_style(ctx: &egui::Context) {
     style.spacing.item_spacing = egui::vec2(7.0, 5.0);
     style.spacing.button_padding = egui::vec2(9.0, 4.0);
     ctx.set_style_of(egui::Theme::Dark, style);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn persisted(workspace: Workspace) -> PersistedState {
+        PersistedState {
+            schema_version: LAYOUT_SCHEMA_VERSION,
+            workspace,
+            document: Document::default(),
+            session: Session::default(),
+            display: default_display()
+                .into_iter()
+                .map(|(pane, settings)| (pane, settings.into()))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn restoration_rejects_a_structurally_valid_unknown_pane() {
+        let mut workspace = Workspace::analytical_default();
+        workspace.root = DockNode::Tabs {
+            id: DockNodeId(1),
+            tabs: vec![PaneId(99)],
+            active: 0,
+        };
+        workspace.active_pane = PaneId(99);
+        workspace.next_node_id = 2;
+        assert!(workspace.validate().is_ok());
+        assert!(!persisted_state_is_valid(&persisted(workspace)));
+    }
+
+    #[test]
+    fn restoration_rejects_missing_registered_panes() {
+        let mut workspace = Workspace::analytical_default();
+        workspace.root = DockNode::Tabs {
+            id: DockNodeId(1),
+            tabs: vec![PaneId(1)],
+            active: 0,
+        };
+        workspace.active_pane = PaneId(1);
+        workspace.next_node_id = 2;
+        assert!(workspace.validate().is_ok());
+        assert!(!persisted_state_is_valid(&persisted(workspace)));
+    }
+
+    #[test]
+    fn restoration_rejects_dangling_selection_and_invalid_display() {
+        let mut state = persisted(Workspace::analytical_default());
+        state.session.selected_annotation = Some(AnnotationId(42));
+        assert!(!persisted_state_is_valid(&state));
+        state.session.selected_annotation = None;
+        state.display.get_mut(&PaneId(1)).unwrap().high = f32::NAN;
+        assert!(!persisted_state_is_valid(&state));
+    }
 }

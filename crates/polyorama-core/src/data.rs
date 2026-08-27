@@ -114,6 +114,26 @@ impl Default for Session {
     }
 }
 
+impl Session {
+    /// Restored application sessions must contain one valid camera for every image pane.
+    pub fn validate_image_cameras(&self) -> Result<(), String> {
+        let expected: BTreeSet<_> = (1..=4).map(PaneId).collect();
+        let actual: BTreeSet<_> = self.cameras.iter().map(|state| state.pane).collect();
+        if actual != expected || actual.len() != self.cameras.len() {
+            return Err("session camera mappings must contain image panes 1–4 exactly once".into());
+        }
+        if self.cameras.iter().any(|state| {
+            !state.camera.centre.x.is_finite()
+                || !state.camera.centre.y.is_finite()
+                || !state.camera.pixels_per_screen_point.is_finite()
+                || state.camera.pixels_per_screen_point <= 0.0
+        }) {
+            return Err("session contains an invalid camera".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ResultRecord {
     pub id: ResultId,
@@ -229,6 +249,16 @@ mod tests {
         assert_eq!(RESULT_COUNT, 1_000_000);
         assert_eq!(THUMBNAIL_COUNT, 100_000);
         assert_eq!(result_at(7), result_at(7));
+    }
+
+    #[test]
+    fn restored_camera_mapping_must_be_complete_and_unambiguous() {
+        let mut session = Session::default();
+        assert!(session.validate_image_cameras().is_ok());
+        session.cameras.pop();
+        assert!(session.validate_image_cameras().is_err());
+        session.cameras.push(session.cameras[0]);
+        assert!(session.validate_image_cameras().is_err());
     }
 
     #[test]

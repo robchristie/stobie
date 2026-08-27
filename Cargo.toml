@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "crates/workspace-core",
-    "crates/workspace-runtime",
-    "crates/workspace-render-wgpu",
-    "crates/workspace-ui-egui",
+    "crates/polyorama-core",
+    "crates/polyorama-runtime",
+    "crates/polyorama-render-wgpu",
+    "crates/polyorama-ui-egui",
     "apps/analytical-workspace-lab",
     "apps/tile-worker",
     "xtask",
@@ -11,7 +11,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.95"
 license = "Apache-2.0"

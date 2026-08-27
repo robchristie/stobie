@@ -2,10 +2,13 @@
 
 mod app;
 mod panes;
+mod thumbnail_cache;
 #[cfg(target_arch = "wasm32")]
 mod web_worker;
 
 pub use app::AnalyticalWorkspaceApp;
+#[cfg(target_arch = "wasm32")]
+use app::TestAction;
 
 pub const APPLICATION_NAME: &str = "Analytical Workspace Lab";
 
@@ -43,6 +46,26 @@ impl WebHandle {
 
     pub fn destroy(&self) {
         self.runner.destroy();
+    }
+
+    pub fn test_action(&self, value: JsValue) -> Result<JsValue, JsValue> {
+        let action: TestAction = serde_wasm_bindgen::from_value(value)?;
+        let mut app = self
+            .runner
+            .app_mut::<AnalyticalWorkspaceApp>()
+            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+        let snapshot = app
+            .test_action(action)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_wasm_bindgen::to_value(&snapshot).map_err(Into::into)
+    }
+
+    pub fn test_snapshot(&self) -> Result<JsValue, JsValue> {
+        let app = self
+            .runner
+            .app_mut::<AnalyticalWorkspaceApp>()
+            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+        serde_wasm_bindgen::to_value(&app.test_snapshot()).map_err(Into::into)
     }
 }
 

@@ -11,4 +11,4 @@ crate-type = ["cdylib"]
 [dependencies]
 serde-wasm-bindgen = "0.6.5"
 wasm-bindgen.workspace = true
-workspace-runtime = { path = "../../crates/workspace-runtime" }
+polyorama-runtime = { path = "../../crates/polyorama-runtime" }

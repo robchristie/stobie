@@ -1,5 +1,5 @@
 [package]
-name = "workspace-ui-egui"
+name = "polyorama-ui-egui"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,5 +9,5 @@ license.workspace = true
 egui.workspace = true
 egui-wgpu.workspace = true
 wgpu.workspace = true
-workspace-core = { path = "../workspace-core" }
-workspace-render-wgpu = { path = "../workspace-render-wgpu" }
+polyorama-core = { path = "../polyorama-core" }
+polyorama-render-wgpu = { path = "../polyorama-render-wgpu" }

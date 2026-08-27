@@ -1,5 +1,5 @@
 [package]
-name = "workspace-runtime"
+name = "polyorama-runtime"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,4 +12,4 @@ parking_lot.workspace = true
 serde.workspace = true
 tracing.workspace = true
 web-time.workspace = true
-workspace-core = { path = "../workspace-core" }
+polyorama-core = { path = "../polyorama-core" }

@@ -50,7 +50,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "analytical-workspace-lab"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "console_error_panic_hook",
  "eframe",
@@ -59,6 +59,10 @@ dependencies = [
  "js-sys",
  "log",
  "parking_lot",
+ "polyorama-core",
+ "polyorama-render-wgpu",
+ "polyorama-runtime",
+ "polyorama-ui-egui",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -68,10 +72,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "web-time",
- "workspace-core",
- "workspace-render-wgpu",
- "workspace-runtime",
- "workspace-ui-egui",
 ]
 
 [[package]]
@@ -1899,12 +1899,58 @@ dependencies = [
 ]
 
 [[package]]
-name = "polyorama-tile-worker"
-version = "0.1.0"
+name = "polyorama-core"
+version = "0.1.1"
 dependencies = [
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "polyorama-render-wgpu"
+version = "0.1.1"
+dependencies = [
+ "bytemuck",
+ "parking_lot",
+ "polyorama-core",
+ "polyorama-runtime",
+ "tracing",
+ "web-time",
+ "wgpu",
+]
+
+[[package]]
+name = "polyorama-runtime"
+version = "0.1.1"
+dependencies = [
+ "crossbeam-channel",
+ "lz4_flex",
+ "parking_lot",
+ "polyorama-core",
+ "serde",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "polyorama-tile-worker"
+version = "0.1.1"
+dependencies = [
+ "polyorama-runtime",
  "serde-wasm-bindgen",
  "wasm-bindgen",
- "workspace-runtime",
+]
+
+[[package]]
+name = "polyorama-ui-egui"
+version = "0.1.1"
+dependencies = [
+ "egui",
+ "egui-wgpu",
+ "polyorama-core",
+ "polyorama-render-wgpu",
+ "wgpu",
 ]
 
 [[package]]
@@ -3439,52 +3485,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
-name = "workspace-core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "workspace-render-wgpu"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "parking_lot",
- "tracing",
- "web-time",
- "wgpu",
- "workspace-core",
- "workspace-runtime",
-]
-
-[[package]]
-name = "workspace-runtime"
-version = "0.1.0"
-dependencies = [
- "crossbeam-channel",
- "lz4_flex",
- "parking_lot",
- "serde",
- "tracing",
- "web-time",
- "workspace-core",
-]
-
-[[package]]
-name = "workspace-ui-egui"
-version = "0.1.0"
-dependencies = [
- "egui",
- "egui-wgpu",
- "wgpu",
- "workspace-core",
- "workspace-render-wgpu",
-]
-
-[[package]]
 name = "x11-dl"
 version = "2.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3549,7 +3549,7 @@ checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
 ]

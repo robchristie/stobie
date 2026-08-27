@@ -51,6 +51,99 @@ try {
   if (evidence.panes !== 8 || evidence.renderer !== 'wgpu-scalar') throw new Error(`unexpected readiness data: ${JSON.stringify(evidence)}`);
   await page.screenshot({ path: join(evidenceRoot, 'browser-default.png') });
 
+  const semanticSnapshot = () => page.evaluate(() => window.__POLYORAMA_HANDLE.test_snapshot());
+  const semanticAction = async (action) => {
+    const before = await semanticSnapshot();
+    await page.evaluate((value) => window.__POLYORAMA_HANDLE.test_action(value), action);
+    await page.waitForFunction(
+      (frame) => window.__POLYORAMA_HANDLE.test_snapshot().frame_number > frame,
+      before.frame_number,
+      { timeout: 10_000 },
+    );
+    return semanticSnapshot();
+  };
+  const initialSemantic = await semanticSnapshot();
+  if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
+  if (initialSemantic.runtime.worker_queue_depth > initialSemantic.runtime.external_queue_capacity
+      || initialSemantic.runtime.browser_credits_in_use > initialSemantic.runtime.browser_credit_capacity
+      || initialSemantic.runtime.scheduler_high_water > initialSemantic.runtime.scheduler_capacity
+      || initialSemantic.runtime.external_queue_high_water > initialSemantic.runtime.external_queue_capacity) {
+    throw new Error(`runtime exceeded a configured bound: ${JSON.stringify(initialSemantic.runtime)}`);
+  }
+
+  const cameraSemantic = await semanticAction({
+    kind: 'set_camera', pane: 1, centre_x: 32768, centre_y: 24576, pixels_per_screen_point: 8,
+  });
+  const primarySemantic = cameraSemantic.cameras.find((item) => item.pane === 1);
+  const linkedSemantic = cameraSemantic.cameras.find((item) => item.pane === 2);
+  const primaryRender = cameraSemantic.render_cameras.find((item) => item.pane === 1);
+  const linkedRender = cameraSemantic.render_cameras.find((item) => item.pane === 2);
+  if (JSON.stringify(primarySemantic.camera) !== JSON.stringify(linkedSemantic.camera)) {
+    throw new Error('semantic linked-camera command diverged');
+  }
+  if (JSON.stringify(primarySemantic.camera) !== JSON.stringify(primaryRender.camera)
+      || JSON.stringify(linkedSemantic.camera) !== JSON.stringify(linkedRender.camera)) {
+    throw new Error('render plan did not use the authoritative same-frame camera');
+  }
+  if (JSON.stringify(cameraSemantic.visible_tile_keys) === JSON.stringify(initialSemantic.visible_tile_keys)) {
+    throw new Error('semantic camera change did not change visible tile demand');
+  }
+  await semanticAction({ kind: 'undo' });
+
+  const polygonSemantic = await semanticAction({
+    kind: 'commit_polygon', vertices: [[10, 10], [90, 20], [40, 100]],
+  });
+  if (polygonSemantic.annotation_count !== initialSemantic.annotation_count + 1
+      || polygonSemantic.selected_annotation == null
+      || polygonSemantic.undo_depth !== initialSemantic.undo_depth + 1) {
+    throw new Error(`semantic polygon commit was not one selected undo record: ${JSON.stringify(polygonSemantic)}`);
+  }
+  const polygonUndone = await semanticAction({ kind: 'undo' });
+  if (polygonUndone.annotation_count !== initialSemantic.annotation_count) {
+    throw new Error('semantic polygon undo did not restore the document');
+  }
+
+  const resizedSemantic = await semanticAction({ kind: 'resize_split', node: 1, fraction: 0.61 });
+  if (resizedSemantic.workspace_hash === initialSemantic.workspace_hash) {
+    throw new Error('semantic dock resize did not change the canonical workspace');
+  }
+  const resizeUndone = await semanticAction({ kind: 'undo' });
+  if (resizeUndone.workspace_hash !== initialSemantic.workspace_hash) {
+    throw new Error('semantic dock undo did not exactly restore the canonical workspace');
+  }
+  const semanticEvidence = {
+    initial: {
+      visible_tile_keys: initialSemantic.visible_tile_keys,
+      worker_health: initialSemantic.runtime.worker_health,
+      worker_failures: initialSemantic.runtime.worker_failures,
+      scheduler_high_water: initialSemantic.runtime.scheduler_high_water,
+      scheduler_capacity: initialSemantic.runtime.scheduler_capacity,
+      external_queue_high_water: initialSemantic.runtime.external_queue_high_water,
+      external_queue_capacity: initialSemantic.runtime.external_queue_capacity,
+      browser_credits_in_use: initialSemantic.runtime.browser_credits_in_use,
+      browser_credit_capacity: initialSemantic.runtime.browser_credit_capacity,
+    },
+    linked_camera_and_render_plan: {
+      cameras: cameraSemantic.cameras.filter((item) => item.pane === 1 || item.pane === 2),
+      render_cameras: cameraSemantic.render_cameras.filter((item) => item.pane === 1 || item.pane === 2),
+      visible_tile_keys: cameraSemantic.visible_tile_keys,
+      demand_changed: JSON.stringify(cameraSemantic.visible_tile_keys) !== JSON.stringify(initialSemantic.visible_tile_keys),
+    },
+    polygon: {
+      before_count: initialSemantic.annotation_count,
+      committed_count: polygonSemantic.annotation_count,
+      selected_annotation: polygonSemantic.selected_annotation,
+      undo_depth_before: initialSemantic.undo_depth,
+      undo_depth_after_commit: polygonSemantic.undo_depth,
+      count_after_undo: polygonUndone.annotation_count,
+    },
+    dock: {
+      before_hash: initialSemantic.workspace_hash,
+      resized_hash: resizedSemantic.workspace_hash,
+      hash_after_undo: resizeUndone.workspace_hash,
+    },
+  };
+
   const percentile = (values, p) => values.length ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * p))] : null;
   const observations = {};
   async function observe(name, action) {
@@ -67,36 +160,30 @@ try {
     median_ms: percentile(evidence.diagnostics.frame.cpu_frame_history_ms, 0.5),
     p95_ms: percentile(evidence.diagnostics.frame.cpu_frame_history_ms, 0.95),
   };
-  const camera = async (pane) => page.evaluate((target) =>
-    window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === target), pane);
   const rasterBeforePan = await page.screenshot({ path: join(evidenceRoot, 'browser-pan-before.png') });
-  const primaryBeforePan = await camera(1);
+  const panHistoryBefore = await semanticSnapshot();
   await observe('four_viewports_panning', async () => {
     await page.mouse.move(300, 300); await page.mouse.down(); await page.mouse.move(390, 350, { steps: 12 }); await page.mouse.up();
   });
-  const primaryAfterPan = await camera(1);
-  const linkedAfterPan = await camera(2);
-  if (primaryAfterPan.camera.centre.x === primaryBeforePan.camera.centre.x
-      && primaryAfterPan.camera.centre.y === primaryBeforePan.camera.centre.y) {
-    throw new Error('primary camera did not change after pan');
-  }
-  if (JSON.stringify(primaryAfterPan.camera) !== JSON.stringify(linkedAfterPan.camera)) {
-    throw new Error('linked camera did not receive the primary pan');
-  }
   const rasterAfterPan = await page.screenshot({ path: join(evidenceRoot, 'browser-pan-after.png') });
   if (rasterAfterPan.equals(rasterBeforePan)) throw new Error('rendered canvas did not change after pan');
+  const panHistoryAfter = await semanticSnapshot();
+  if (panHistoryAfter.undo_depth !== panHistoryBefore.undo_depth + 1) {
+    throw new Error('one completed camera drag did not create exactly one history record');
+  }
 
-  const primaryBeforeZoom = await camera(1);
+  const zoomHistoryBefore = await semanticSnapshot();
   await observe('rapid_zoom_transitions', async () => {
     await page.mouse.move(300, 300); for (let index = 0; index < 6; index += 1) await page.mouse.wheel(0, -120);
   });
-  const primaryAfterZoom = await camera(1);
-  const linkedAfterZoom = await camera(2);
-  if (primaryAfterZoom.camera.pixels_per_screen_point === primaryBeforeZoom.camera.pixels_per_screen_point) {
-    throw new Error('primary camera scale did not change after zoom');
-  }
-  if (JSON.stringify(primaryAfterZoom.camera) !== JSON.stringify(linkedAfterZoom.camera)) {
-    throw new Error('linked camera did not receive the primary zoom');
+  await page.waitForFunction(
+    (depth) => window.__POLYORAMA_HANDLE.test_snapshot().undo_depth === depth + 1,
+    zoomHistoryBefore.undo_depth,
+    { timeout: 2_000 },
+  );
+  const zoomHistoryAfter = await semanticSnapshot();
+  if (zoomHistoryAfter.undo_depth !== zoomHistoryBefore.undo_depth + 1) {
+    throw new Error(`wheel zoom burst did not coalesce into one history record (${zoomHistoryBefore.undo_depth} -> ${zoomHistoryAfter.undo_depth})`);
   }
   await page.mouse.click(244, 77);
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === null);
@@ -116,6 +203,16 @@ try {
     await page.mouse.click(1170, 53); await page.mouse.move(1180, 270); await page.mouse.wheel(0, 1500);
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-thumbnails.png') });
+  const thumbnailSemantic = await semanticSnapshot();
+  if (!thumbnailSemantic.thumbnail_resident_keys.length
+      || thumbnailSemantic.thumbnail_resident_keys.length > 256) {
+    throw new Error(`decoded thumbnail cache is empty or unbounded: ${thumbnailSemantic.thumbnail_resident_keys.length}`);
+  }
+  semanticEvidence.thumbnail_cache = {
+    resident_keys: thumbnailSemantic.thumbnail_resident_keys,
+    resident_count: thumbnailSemantic.thumbnail_resident_keys.length,
+    configured_item_bound: 256,
+  };
   await observe('polygon_editing', async () => {
     await page.mouse.click(110, 77);
     await page.mouse.click(180, 180); await page.mouse.click(360, 200); await page.mouse.click(270, 340);
@@ -141,6 +238,7 @@ try {
   const idleFrameAfter = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number);
   if (idleFrameAfter !== idleFrame) throw new Error(`idle workspace repainted continuously (${idleFrame} -> ${idleFrameAfter})`);
   observations.warmed_idle = { frame_before: idleFrame, frame_after: idleFrameAfter, deliberate_continuous_repaint: false };
+  semanticEvidence.warmed_idle = observations.warmed_idle;
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.locator('#polyorama-canvas[data-polyorama-ready="true"]').waitFor({ timeout: 30_000 });
@@ -153,6 +251,7 @@ try {
     p95_ms: percentile(restored.frame.cpu_frame_history_ms, 0.95),
   };
   await writeFile(join(evidenceRoot, 'browser-diagnostics.json'), JSON.stringify(restored, null, 2));
+  await writeFile(join(evidenceRoot, 'browser-semantic.json'), JSON.stringify(semanticEvidence, null, 2));
 
   const responsiveEvidence = [];
   for (const viewport of [

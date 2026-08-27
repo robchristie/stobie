@@ -347,10 +347,10 @@ Inspect the existing repository before changing its structure. Adapt the followi
 
 ```text
 crates/
-  workspace-core/
-  workspace-runtime/
-  workspace-render-wgpu/
-  workspace-ui-egui/
+  polyorama-core/
+  polyorama-runtime/
+  polyorama-render-wgpu/
+  polyorama-ui-egui/
 
 apps/
   analytical-workspace-lab/
@@ -359,7 +359,7 @@ xtask/
 docs/
 ```
 
-## `workspace-core`
+## `polyorama-core`
 
 Owns:
 
@@ -382,7 +382,7 @@ It must not depend on:
 * `web-sys`;
 * or platform windowing crates.
 
-## `workspace-runtime`
+## `polyorama-runtime`
 
 Owns:
 
@@ -397,7 +397,7 @@ Owns:
 
 It must not depend on egui or direct UI concepts.
 
-## `workspace-render-wgpu`
+## `polyorama-render-wgpu`
 
 Owns:
 
@@ -412,7 +412,7 @@ Owns:
 
 It should depend on wgpu but not on egui.
 
-## `workspace-ui-egui`
+## `polyorama-ui-egui`
 
 Owns:
 
@@ -985,8 +985,8 @@ Keep JavaScript glue narrow and platform-oriented.
 
 Add an automated or documented check confirming:
 
-* `workspace-core` has no egui, eframe, wgpu or browser dependency;
-* `workspace-runtime` has no egui dependency;
+* `polyorama-core` has no egui, eframe, wgpu or browser dependency;
+* `polyorama-runtime` has no egui dependency;
 * domain reducers can run without a GPU;
 * pane UI APIs do not receive mutable access to the complete application model;
 * there is one canonical workspace tree;
@@ -1330,4 +1330,3 @@ The Goal is complete only when all of the following are true:
 * [ ] No mandatory criterion is marked complete based only on expectation, compilation or narrative reasoning.
 
 The finish line is a verified application-shaped slice and an evidence-backed architectural assessment—not the declaration of a stable general-purpose GUI framework.
-

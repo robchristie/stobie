@@ -56,6 +56,41 @@ pub struct CameraState {
     pub link: Option<LinkGroupId>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CameraChange {
+    pub pane: PaneId,
+    pub before: Camera,
+    pub after: Camera,
+}
+
+pub fn linked_camera_changes(
+    cameras: &[CameraState],
+    source: PaneId,
+    updated: Camera,
+) -> Vec<CameraChange> {
+    let group = cameras
+        .iter()
+        .find(|entry| entry.pane == source)
+        .and_then(|entry| entry.link);
+    cameras
+        .iter()
+        .filter(|entry| entry.pane == source || (group.is_some() && entry.link == group))
+        .map(|entry| CameraChange {
+            pane: entry.pane,
+            before: entry.camera,
+            after: updated,
+        })
+        .collect()
+}
+
+pub fn apply_camera_changes(cameras: &mut [CameraState], changes: &[CameraChange], after: bool) {
+    for change in changes {
+        if let Some(entry) = cameras.iter_mut().find(|entry| entry.pane == change.pane) {
+            entry.camera = if after { change.after } else { change.before };
+        }
+    }
+}
+
 pub fn propagate_linked_camera(cameras: &mut [CameraState], source: PaneId, updated: Camera) {
     let group = cameras
         .iter()
@@ -97,5 +132,33 @@ mod tests {
         propagate_linked_camera(&mut cameras, PaneId(1), changed);
         assert_eq!(cameras[1].camera, changed);
         assert_ne!(cameras[2].camera, changed);
+    }
+
+    #[test]
+    fn linked_camera_changes_capture_exact_original_values() {
+        let group = Some(LinkGroupId(1));
+        let mut second = Camera::default();
+        second.centre.x = 12.0;
+        let cameras = [
+            CameraState {
+                pane: PaneId(1),
+                camera: Camera::default(),
+                link: group,
+            },
+            CameraState {
+                pane: PaneId(2),
+                camera: second,
+                link: group,
+            },
+        ];
+        let mut updated = Camera::default();
+        updated.centre.x = 42.0;
+
+        let changes = linked_camera_changes(&cameras, PaneId(1), updated);
+
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0].before, Camera::default());
+        assert_eq!(changes[1].before, second);
+        assert!(changes.iter().all(|change| change.after == updated));
     }
 }

@@ -1,11 +1,12 @@
 //! Immediate-mode presentation and semantic pane interfaces.
 
 use egui::{Pos2, Rect, Ui};
-use workspace_core::{
+use polyorama_core::{
     Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,
     ViewportPoint, Workspace,
 };
-use workspace_render_wgpu::{ImageRenderRequest, PixelRect, ScalarRenderer};
+use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, ScalarRenderer};
+use std::sync::{Arc, RwLock};
 
 const TAB_HEIGHT: f32 = 28.0;
 const SPLITTER: f32 = 5.0;
@@ -15,6 +16,21 @@ pub struct DockBehaviour {
     pub dragging: Option<PaneId>,
     pending: Option<DockAction>,
     split_preview: Option<SplitPreview>,
+    interaction_active: bool,
+}
+
+impl DockBehaviour {
+    pub fn interaction_active(&self) -> bool {
+        self.interaction_active
+    }
+
+    fn finish_frame(&mut self, pointer_down: bool) {
+        if !pointer_down {
+            self.dragging = None;
+            self.split_preview = None;
+        }
+        self.interaction_active = self.split_preview.is_some() || self.dragging.is_some();
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -40,7 +56,7 @@ enum DockAction {
 
 pub trait PanePresenter {
     fn title(&self, pane: PaneId) -> &'static str;
-    fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId);
+    fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect);
 }
 
 pub fn dock_workspace(
@@ -49,8 +65,10 @@ pub fn dock_workspace(
     behaviour: &mut DockBehaviour,
     presenter: &mut impl PanePresenter,
 ) -> Option<Command> {
+    behaviour.interaction_active = false;
     let rect = ui.available_rect_before_wrap();
     render_node(ui, &mut workspace.root, rect, behaviour, presenter);
+    behaviour.finish_frame(ui.input(|input| input.pointer.any_down()));
     if let Some(action) = behaviour.pending.take() {
         match action {
             DockAction::Activate(pane) => {
@@ -129,7 +147,6 @@ fn render_node(
                     before,
                     after: ((before * length + delta) / length).clamp(0.1, 0.9),
                 });
-                ui.ctx().request_repaint();
             }
             let shown_fraction = behaviour
                 .split_preview
@@ -278,7 +295,7 @@ fn render_node(
                     egui::UiBuilder::new()
                         .max_rect(body)
                         .layout(egui::Layout::top_down(egui::Align::Min)),
-                    |ui| presenter.pane_ui(ui, target),
+                    |ui| presenter.pane_ui(ui, target, body),
                 );
             }
         }
@@ -369,7 +386,7 @@ pub fn logical(point: Pos2) -> LogicalPoint {
 #[derive(Clone)]
 pub struct ScalarPaintCallback {
     pub frame_number: u64,
-    pub request: ImageRenderRequest,
+    request: Arc<RwLock<ImageRenderRequest>>,
 }
 
 impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
@@ -382,7 +399,8 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
         resources: &mut egui_wgpu::CallbackResources,
     ) -> Vec<wgpu::CommandBuffer> {
         if let Some(renderer) = resources.get_mut::<ScalarRenderer>() {
-            renderer.prepare(device, queue, self.frame_number, &self.request);
+            let request = self.request.read().expect("render request lock poisoned");
+            renderer.prepare(device, queue, self.frame_number, &request);
         }
         Vec::new()
     }
@@ -396,10 +414,15 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
         let Some(renderer) = resources.get::<ScalarRenderer>() else {
             return;
         };
+        let pane = self
+            .request
+            .read()
+            .expect("render request lock poisoned")
+            .pane;
         let viewport = info.viewport_in_pixels();
         let clip = info.clip_rect_in_pixels();
         renderer.paint(
-            self.request.pane,
+            pane,
             PixelRect {
                 x: viewport.left_px.max(0) as u32,
                 y: viewport.top_px.max(0) as u32,
@@ -417,12 +440,74 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
     }
 }
 
-pub fn submit_scalar_callback(ui: &Ui, rect: Rect, frame_number: u64, request: ImageRenderRequest) {
+#[derive(Clone)]
+pub struct ImagePlanTarget {
+    request: Arc<RwLock<ImageRenderRequest>>,
+}
+
+/// Stage an opaque callback in egui's correct paint list; its request is finalised later.
+pub fn stage_render_callback(
+    ui: &Ui,
+    rect: Rect,
+    frame_number: u64,
+    request: ImageRenderRequest,
+) -> ImagePlanTarget {
+    let request = Arc::new(RwLock::new(request));
     ui.painter().add(egui_wgpu::Callback::new_paint_callback(
         rect,
         ScalarPaintCallback {
             frame_number,
-            request,
+            request: request.clone(),
         },
     ));
+    ImagePlanTarget { request }
+}
+
+/// Publish the complete typed frame plan before callback preparation begins.
+pub fn submit_render_plan(plan: &polyorama_render_wgpu::RenderPlan, targets: &[ImagePlanTarget]) {
+    debug_assert_eq!(plan.images.len(), targets.len());
+    for (request, target) in plan.images.iter().cloned().zip(targets) {
+        *target
+            .request
+            .write()
+            .expect("render request lock poisoned") = request;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aborted_dock_gestures_stop_interaction_when_the_pointer_is_released() {
+        let mut behaviour = DockBehaviour {
+            dragging: Some(PaneId(4)),
+            split_preview: Some(SplitPreview {
+                node: DockNodeId(2),
+                before: 0.5,
+                after: 0.6,
+            }),
+            interaction_active: true,
+            ..Default::default()
+        };
+
+        behaviour.finish_frame(false);
+
+        assert!(behaviour.dragging.is_none());
+        assert!(behaviour.split_preview.is_none());
+        assert!(!behaviour.interaction_active());
+    }
+
+    #[test]
+    fn active_dock_gesture_keeps_the_recorded_interaction_signal() {
+        let mut behaviour = DockBehaviour {
+            dragging: Some(PaneId(4)),
+            ..Default::default()
+        };
+
+        behaviour.finish_frame(true);
+
+        assert_eq!(behaviour.dragging, Some(PaneId(4)));
+        assert!(behaviour.interaction_active());
+    }
 }

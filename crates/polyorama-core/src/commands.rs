@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AnnotationId, Camera, DockNodeId, Document, GesturePreview, LayerId, LinkGroupId, PaneId,
-    Polygon, ResultId, Session, Workspace, WorldPoint, propagate_linked_camera, result_at,
+    AnnotationId, Camera, CameraChange, DockNodeId, Document, GesturePreview, LayerId, LinkGroupId,
+    PaneId, Polygon, ResultId, Session, Workspace, WorldPoint, apply_camera_changes,
+    linked_camera_changes, result_at,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -38,15 +39,15 @@ pub enum ImageIntent {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Command {
-    SetCamera {
-        pane: PaneId,
-        before: Camera,
-        after: Camera,
+    SetCameras {
+        changes: Vec<CameraChange>,
     },
     SetCameraLink {
         pane: PaneId,
         before: Option<LinkGroupId>,
         after: Option<LinkGroupId>,
+        before_camera: Camera,
+        after_camera: Camera,
     },
     AddPolygon {
         polygon: Polygon,
@@ -70,6 +71,27 @@ pub enum Command {
         before: f32,
         after: f32,
     },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UndoScope {
+    Document,
+    View,
+    Selection,
+    Workspace,
+}
+
+impl Command {
+    pub fn undo_scope(&self) -> UndoScope {
+        match self {
+            Self::AddPolygon { .. } | Self::MoveVertex { .. } | Self::DeletePolygon { .. } => {
+                UndoScope::Document
+            }
+            Self::SetCameras { .. } | Self::SetCameraLink { .. } => UndoScope::View,
+            Self::SelectResult { .. } => UndoScope::Selection,
+            Self::ResizeSplit { .. } => UndoScope::Workspace,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -131,29 +153,33 @@ pub fn validate_intent(
 ) -> Result<Command, String> {
     match intent {
         ImageIntent::SetCamera { pane, camera } => {
-            let before = session
-                .cameras
-                .iter()
-                .find(|state| state.pane == pane)
-                .ok_or("unknown camera pane")?
-                .camera;
-            Ok(Command::SetCamera {
-                pane,
-                before,
-                after: camera,
+            if !session.cameras.iter().any(|state| state.pane == pane) {
+                return Err("unknown camera pane".into());
+            }
+            Ok(Command::SetCameras {
+                changes: linked_camera_changes(&session.cameras, pane, camera),
             })
         }
         ImageIntent::SetCameraLink { pane, link } => {
-            let before = session
+            let state = session
                 .cameras
                 .iter()
                 .find(|state| state.pane == pane)
-                .ok_or("unknown camera pane")?
-                .link;
+                .ok_or("unknown camera pane")?;
+            let after_camera = link
+                .and_then(|group| {
+                    session
+                        .cameras
+                        .iter()
+                        .find(|candidate| candidate.pane != pane && candidate.link == Some(group))
+                })
+                .map_or(state.camera, |candidate| candidate.camera);
             Ok(Command::SetCameraLink {
                 pane,
-                before,
+                before: state.link,
                 after: link,
+                before_camera: state.camera,
+                after_camera,
             })
         }
         ImageIntent::CommitPolygon { layer, vertices } => {
@@ -211,16 +237,8 @@ pub fn validate_intent(
                 .ok_or("unknown camera pane")?
                 .camera;
             after.centre = result_at(result.0).position;
-            let before = session
-                .cameras
-                .iter()
-                .find(|state| state.pane == pane)
-                .unwrap()
-                .camera;
-            Ok(Command::SetCamera {
-                pane,
-                before,
-                after,
+            Ok(Command::SetCameras {
+                changes: linked_camera_changes(&session.cameras, pane, after),
             })
         }
     }
@@ -254,12 +272,18 @@ fn apply(
     workspace: &mut Workspace,
 ) {
     match command {
-        Command::SetCamera { pane, after, .. } => {
-            propagate_linked_camera(&mut session.cameras, *pane, *after)
+        Command::SetCameras { changes } => {
+            apply_camera_changes(&mut session.cameras, changes, true)
         }
-        Command::SetCameraLink { pane, after, .. } => {
+        Command::SetCameraLink {
+            pane,
+            after,
+            after_camera,
+            ..
+        } => {
             if let Some(camera) = session.cameras.iter_mut().find(|state| state.pane == *pane) {
                 camera.link = *after;
+                camera.camera = *after_camera;
             }
         }
         Command::AddPolygon { polygon } => {
@@ -300,12 +324,18 @@ fn revert(
     workspace: &mut Workspace,
 ) {
     match command {
-        Command::SetCamera { pane, before, .. } => {
-            propagate_linked_camera(&mut session.cameras, *pane, *before)
+        Command::SetCameras { changes } => {
+            apply_camera_changes(&mut session.cameras, changes, false)
         }
-        Command::SetCameraLink { pane, before, .. } => {
+        Command::SetCameraLink {
+            pane,
+            before,
+            before_camera,
+            ..
+        } => {
             if let Some(camera) = session.cameras.iter_mut().find(|state| state.pane == *pane) {
                 camera.link = *before;
+                camera.camera = *before_camera;
             }
         }
         Command::AddPolygon { polygon } => {
@@ -464,5 +494,88 @@ mod tests {
         assert_eq!(workspace.root.split_fraction(node), Some(before));
         assert!(history.redo(&mut document, &mut session, &mut workspace));
         assert_eq!(workspace.root.split_fraction(node), Some(0.61));
+    }
+
+    #[test]
+    fn linked_camera_undo_restores_exact_snapshot_after_topology_changes() {
+        let mut document = Document::default();
+        let mut session = Session::default();
+        let mut workspace = Workspace::analytical_default();
+        session.cameras[1].camera.centre.x = 17.0;
+        let original = session.cameras.clone();
+        let mut updated = session.cameras[0].camera;
+        updated.centre.x = 91.0;
+        let command = validate_intent(
+            ImageIntent::SetCamera {
+                pane: PaneId(1),
+                camera: updated,
+            },
+            &mut document,
+            &session,
+        )
+        .unwrap();
+        let mut history = CommandHistory::default();
+
+        history.execute(command, &mut document, &mut session, &mut workspace);
+        assert_eq!(session.cameras[0].camera, updated);
+        assert_eq!(session.cameras[1].camera, updated);
+        session.cameras[1].link = None;
+
+        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert_eq!(session.cameras[0].camera, original[0].camera);
+        assert_eq!(session.cameras[1].camera, original[1].camera);
+        assert_eq!(session.cameras[1].link, None);
+        assert!(history.redo(&mut document, &mut session, &mut workspace));
+        assert_eq!(session.cameras[0].camera, updated);
+        assert_eq!(session.cameras[1].camera, updated);
+        assert_eq!(session.cameras[1].link, None);
+    }
+
+    #[test]
+    fn joining_camera_link_synchronises_and_undo_restores_camera() {
+        let mut document = Document::default();
+        let mut session = Session::default();
+        let mut workspace = Workspace::analytical_default();
+        session.cameras[2].camera.centre.x = 8_192.0;
+        let before = session.cameras[2].camera;
+        let linked = session.cameras[0].camera;
+        let command = validate_intent(
+            ImageIntent::SetCameraLink {
+                pane: PaneId(3),
+                link: Some(LinkGroupId(1)),
+            },
+            &mut document,
+            &session,
+        )
+        .unwrap();
+        let mut history = CommandHistory::default();
+
+        history.execute(command, &mut document, &mut session, &mut workspace);
+        assert_eq!(session.cameras[2].link, Some(LinkGroupId(1)));
+        assert_eq!(session.cameras[2].camera, linked);
+        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert_eq!(session.cameras[2].link, None);
+        assert_eq!(session.cameras[2].camera, before);
+    }
+
+    #[test]
+    fn command_undo_scope_is_explicit() {
+        assert_eq!(
+            Command::SelectResult {
+                before: None,
+                after: Some(ResultId(1)),
+            }
+            .undo_scope(),
+            UndoScope::Selection
+        );
+        assert_eq!(
+            Command::ResizeSplit {
+                node: DockNodeId(1),
+                before: 0.5,
+                after: 0.6,
+            }
+            .undo_scope(),
+            UndoScope::Workspace
+        );
     }
 }
