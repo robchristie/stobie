@@ -42,6 +42,7 @@ struct SplitPreview {
     node: DockNodeId,
     before: f32,
     after: f32,
+    pointer_origin: Pos2,
 }
 
 enum DockAction {
@@ -136,23 +137,28 @@ fn render_node(
                     node,
                     before: *fraction,
                     after: *fraction,
+                    pointer_origin: response
+                        .interact_pointer_pos()
+                        .unwrap_or_else(|| hit_rect.center()),
                 });
             }
             if response.dragged() || response.drag_stopped() {
-                let delta = if horizontal {
-                    response.drag_delta().x
-                } else {
-                    response.drag_delta().y
-                };
-                let before = behaviour
+                let pointer = response.interact_pointer_pos();
+                if let Some(preview) = behaviour
                     .split_preview
+                    .as_mut()
                     .filter(|preview| preview.node == node)
-                    .map_or(*fraction, |preview| preview.before);
-                behaviour.split_preview = Some(SplitPreview {
-                    node,
-                    before,
-                    after: ((before * length + delta) / length).clamp(0.1, 0.9),
-                });
+                    && let Some(pointer) = pointer
+                {
+                    let total_delta = pointer - preview.pointer_origin;
+                    let axis_delta = if horizontal {
+                        total_delta.x
+                    } else {
+                        total_delta.y
+                    };
+                    preview.after =
+                        ((preview.before * length + axis_delta) / length).clamp(0.1, 0.9);
+                }
             }
             let shown_fraction = behaviour
                 .split_preview
@@ -166,6 +172,7 @@ fn render_node(
                     .split_preview
                     .take()
                     .filter(|preview| preview.node == node)
+                && preview.before != preview.after
             {
                 behaviour.pending = Some(DockAction::Resize {
                     node,
@@ -303,7 +310,10 @@ fn render_node(
                     egui::UiBuilder::new()
                         .max_rect(body)
                         .layout(egui::Layout::top_down(egui::Align::Min)),
-                    |ui| presenter.pane_ui(ui, target, body),
+                    |ui| {
+                        ui.set_clip_rect(ui.clip_rect().intersect(body));
+                        presenter.pane_ui(ui, target, body);
+                    },
                 );
             }
         }
@@ -619,6 +629,8 @@ pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source
 
 #[cfg(test)]
 mod tests {
+    use polyorama_core::{CommandHistory, Document, Session};
+
     use super::*;
 
     #[derive(Default)]
@@ -626,6 +638,7 @@ mod tests {
         tabs: Vec<(PaneId, Rect)>,
         bodies: Vec<(PaneId, Rect)>,
         splitters: Vec<(DockNodeId, Rect)>,
+        greedy_pane: Option<PaneId>,
     }
 
     impl PanePresenter for GeometryPresenter {
@@ -633,8 +646,15 @@ mod tests {
             "Pane"
         }
 
-        fn pane_ui(&mut self, _ui: &mut Ui, pane: PaneId, pane_rect: Rect) {
+        fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect) {
             self.bodies.push((pane, pane_rect));
+            if self.greedy_pane == Some(pane) {
+                ui.interact(
+                    Rect::EVERYTHING,
+                    ui.id().with("greedy-pane-interaction"),
+                    egui::Sense::drag(),
+                );
+            }
         }
 
         fn record_tab_rect(&mut self, pane: PaneId, rect: Rect) {
@@ -643,6 +663,65 @@ mod tests {
 
         fn record_splitter_rect(&mut self, node: DockNodeId, rect: Rect) {
             self.splitters.push((node, rect));
+        }
+    }
+
+    impl GeometryPresenter {
+        fn splitter(&self, node: DockNodeId) -> Rect {
+            self.splitters
+                .iter()
+                .find_map(|(candidate, rect)| (*candidate == node).then_some(*rect))
+                .expect("requested splitter is presented")
+        }
+    }
+
+    fn dock_frame(
+        context: &egui::Context,
+        workspace: &mut Workspace,
+        behaviour: &mut DockBehaviour,
+        events: Vec<egui::Event>,
+    ) -> (Option<Command>, GeometryPresenter) {
+        dock_frame_with_presenter(
+            context,
+            workspace,
+            behaviour,
+            events,
+            GeometryPresenter::default(),
+        )
+    }
+
+    fn dock_frame_with_presenter(
+        context: &egui::Context,
+        workspace: &mut Workspace,
+        behaviour: &mut DockBehaviour,
+        events: Vec<egui::Event>,
+        mut presenter: GeometryPresenter,
+    ) -> (Option<Command>, GeometryPresenter) {
+        let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
+        let input = egui::RawInput {
+            screen_rect: Some(root),
+            focused: true,
+            events,
+            ..Default::default()
+        };
+        let mut command = None;
+        let mut output = context.run_ui(input, |ui| {
+            command = ui
+                .scope_builder(egui::UiBuilder::new().max_rect(root), |ui| {
+                    dock_workspace(ui, workspace, behaviour, &mut presenter)
+                })
+                .inner;
+        });
+        output.textures_delta.clear();
+        (command, presenter)
+    }
+
+    fn pointer_button(position: Pos2, pressed: bool) -> egui::Event {
+        egui::Event::PointerButton {
+            pos: position,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
         }
     }
 
@@ -676,6 +755,7 @@ mod tests {
                 node: DockNodeId(2),
                 before: 0.5,
                 after: 0.6,
+                pointer_origin: Pos2::ZERO,
             }),
             interaction_active: true,
             ..Default::default()
@@ -734,5 +814,158 @@ mod tests {
                     .all(|(_, rect)| rect.is_positive() && root.contains_rect(*rect))
             );
         });
+    }
+
+    #[test]
+    fn splitter_preview_tracks_total_drag_and_release_commits_the_final_sample() {
+        let context = egui::Context::default();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let node = DockNodeId(1);
+        let before_fraction = workspace.root.split_fraction(node).unwrap();
+        let (_, initial) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let initial_rect = initial.splitter(node);
+        let origin = initial_rect.center();
+
+        let (pressed, _) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(origin),
+                pointer_button(origin, true),
+            ],
+        );
+        assert!(pressed.is_none());
+
+        let moved_pointer = origin - egui::vec2(80.0, 0.0);
+        let (moving, moved) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![egui::Event::PointerMoved(moved_pointer)],
+        );
+        assert!(moving.is_none());
+        assert!((moved.splitter(node).center().x - (origin.x - 80.0)).abs() < 0.001);
+
+        let (idle, retained) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        assert!(idle.is_none());
+        assert_eq!(retained.splitter(node), moved.splitter(node));
+
+        let released_pointer = origin - egui::vec2(100.0, 0.0);
+        let (command, released) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(released_pointer),
+                pointer_button(released_pointer, false),
+            ],
+        );
+        assert!((released.splitter(node).center().x - (origin.x - 100.0)).abs() < 0.001);
+        let command = command.expect("split resize is committed on release");
+        let Command::ResizeSplit {
+            node: changed_node,
+            before,
+            after,
+        } = command.clone()
+        else {
+            panic!("unexpected splitter command");
+        };
+        assert_eq!(changed_node, node);
+        assert_eq!(before, before_fraction);
+        assert!((after - (before_fraction - 100.0 / 800.0)).abs() < f32::EPSILON);
+
+        let mut history = CommandHistory::default();
+        let mut document = Document::default();
+        let mut session = Session::default();
+        history.execute(command, &mut document, &mut session, &mut workspace);
+        assert_eq!(workspace.root.split_fraction(node), Some(after));
+        assert_eq!(history.undo_len(), 1);
+        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert_eq!(workspace.root.split_fraction(node), Some(before_fraction));
+    }
+
+    #[test]
+    fn splitter_drag_returning_to_origin_emits_no_command() {
+        let context = egui::Context::default();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let node = DockNodeId(1);
+        let (_, initial) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let initial_rect = initial.splitter(node);
+        let origin = initial_rect.center();
+
+        let _ = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(origin),
+                pointer_button(origin, true),
+            ],
+        );
+        let (_, moved) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![egui::Event::PointerMoved(origin - egui::vec2(60.0, 0.0))],
+        );
+        assert_eq!(moved.splitter(node).center().x, origin.x - 60.0);
+        let (command, released) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(origin),
+                pointer_button(origin, false),
+            ],
+        );
+
+        assert!(command.is_none());
+        assert_eq!(released.splitter(node), initial_rect);
+        assert_eq!(workspace.root.split_fraction(node), Some(0.72));
+        assert!(!behaviour.interaction_active());
+    }
+
+    #[test]
+    fn pane_interactions_are_clipped_before_they_can_steal_an_adjacent_splitter() {
+        let context = egui::Context::default();
+        let mut workspace = Workspace::analytical_default();
+        workspace.activate(PaneId(6));
+        let mut behaviour = DockBehaviour::default();
+        let node = DockNodeId(1);
+        let greedy = || GeometryPresenter {
+            greedy_pane: Some(PaneId(6)),
+            ..Default::default()
+        };
+        let (_, initial) = dock_frame_with_presenter(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            Vec::new(),
+            greedy(),
+        );
+        let origin = initial.splitter(node).center();
+
+        let _ = dock_frame_with_presenter(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(origin),
+                pointer_button(origin, true),
+            ],
+            greedy(),
+        );
+        let (_, moved) = dock_frame_with_presenter(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![egui::Event::PointerMoved(origin - egui::vec2(40.0, 0.0))],
+            greedy(),
+        );
+
+        assert!((moved.splitter(node).center().x - (origin.x - 40.0)).abs() < 0.001);
     }
 }

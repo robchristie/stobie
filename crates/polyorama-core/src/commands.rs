@@ -112,6 +112,9 @@ impl CommandHistory {
             &command,
             Command::SetCameras { changes }
                 if changes.is_empty() || changes.iter().all(|change| change.before == change.after)
+        ) || matches!(
+            &command,
+            Command::ResizeSplit { before, after, .. } if before == after
         ) {
             return;
         }
@@ -560,6 +563,30 @@ mod tests {
         );
 
         assert_eq!(session.cameras, original);
+        assert_eq!(history.undo_len(), 0);
+        assert!(!history.undo(&mut document, &mut session, &mut workspace));
+    }
+
+    #[test]
+    fn no_op_split_resize_is_not_recorded() {
+        let mut document = Document::default();
+        let mut session = Session::default();
+        let mut workspace = Workspace::analytical_default();
+        let original = workspace.clone();
+        let mut history = CommandHistory::default();
+
+        history.execute(
+            Command::ResizeSplit {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: 0.72,
+            },
+            &mut document,
+            &mut session,
+            &mut workspace,
+        );
+
+        assert_eq!(workspace, original);
         assert_eq!(history.undo_len(), 0);
         assert!(!history.undo(&mut document, &mut session, &mut workspace));
     }

@@ -297,7 +297,6 @@ try {
     const samples = await page.evaluate((start) => window.__POLYORAMA_DIAGNOSTICS.frame.cpu_frame_history_ms.slice(start), before.samples);
     observations[name] = { samples, median_ms: percentile(samples, 0.5), p95_ms: percentile(samples, 0.95) };
   }
-
   observations.initial_loading = {
     samples: evidence.diagnostics.frame.cpu_frame_history_ms,
     median_ms: percentile(evidence.diagnostics.frame.cpu_frame_history_ms, 0.5),
@@ -468,10 +467,71 @@ try {
     await page.mouse.click(third.x, third.y, { button: 'right' });
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-polygon.png') });
+  const splitterBefore = await semanticSnapshot();
+  const splitterRectBefore = splitterBefore.ui_geometry.splitters.find((item) => item.node === 1)?.rect;
+  if (!splitterRectBefore) throw new Error('primary splitter geometry is unavailable before resize');
+  const splitterTrace = [];
   await observe('dock_splitter_interaction', async () => {
-    const start = await targetPoint({ kind: 'splitter', node: 1 });
-    await page.mouse.move(start.x, start.y); await page.mouse.down(); await page.mouse.move(start.x - 47, start.y, { steps: 6 }); await page.mouse.up();
+    const start = await targetPoint({ kind: 'splitter', node: 1 }, 0.5, 0.25);
+    await page.mouse.move(start.x, start.y); await page.mouse.down();
+    for (let step = 1; step <= 6; step += 1) {
+      await page.mouse.move(start.x - 47 * step / 6, start.y);
+      await page.waitForTimeout(30);
+      const snapshot = await semanticSnapshot();
+      const rect = snapshot.ui_geometry.splitters.find((item) => item.node === 1)?.rect;
+      splitterTrace.push(rect ? (rect.min_x + rect.max_x) * 0.5 : null);
+    }
+    await page.mouse.up();
   });
+  const splitterAfter = await semanticSnapshot();
+  const splitterRectAfter = splitterAfter.ui_geometry.splitters.find((item) => item.node === 1)?.rect;
+  const splitterCentreBefore = (splitterRectBefore.min_x + splitterRectBefore.max_x) * 0.5;
+  const splitterCentreAfter = (splitterRectAfter?.min_x + splitterRectAfter?.max_x) * 0.5;
+  const splitterPreviewTracked = splitterTrace.length === 6 && splitterTrace.every(
+    (centre, index) => Math.abs(centre - (splitterCentreBefore - 47 * (index + 1) / 6)) <= 1,
+  );
+  if (!splitterRectAfter
+      || splitterAfter.workspace_hash === splitterBefore.workspace_hash
+      || !splitterPreviewTracked
+      || Math.abs(splitterCentreAfter - (splitterCentreBefore - 47)) > 1
+      || splitterAfter.undo_depth !== splitterBefore.undo_depth + 1) {
+    throw new Error(`physical splitter resize did not commit its final displacement: ${JSON.stringify({ splitterRectBefore, splitterRectAfter, splitterCentreBefore, splitterCentreAfter, splitterTrace, hashBefore: splitterBefore.workspace_hash, hashAfter: splitterAfter.workspace_hash, undoBefore: splitterBefore.undo_depth, undoAfter: splitterAfter.undo_depth })}`);
+  }
+  await clickTarget({ kind: 'control', name: 'undo' });
+  await page.waitForFunction(
+    (before) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === before,
+    splitterBefore.workspace_hash,
+  );
+  await clickTarget({ kind: 'control', name: 'redo' });
+  await page.waitForFunction(
+    (after) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === after,
+    splitterAfter.workspace_hash,
+  );
+  const splitterNoOpBefore = await semanticSnapshot();
+  const splitterNoOpStart = await targetPoint({ kind: 'splitter', node: 1 }, 0.5, 0.25);
+  await page.mouse.move(splitterNoOpStart.x, splitterNoOpStart.y); await page.mouse.down();
+  await page.mouse.move(splitterNoOpStart.x - 30, splitterNoOpStart.y, { steps: 4 });
+  await page.mouse.move(splitterNoOpStart.x, splitterNoOpStart.y, { steps: 4 }); await page.mouse.up();
+  await page.waitForTimeout(150);
+  const splitterNoOpAfter = await semanticSnapshot();
+  if (splitterNoOpAfter.workspace_hash !== splitterNoOpBefore.workspace_hash
+      || splitterNoOpAfter.undo_depth !== splitterNoOpBefore.undo_depth) {
+    throw new Error('physical splitter drag returning to origin created workspace or history state');
+  }
+  semanticEvidence.physical_splitter_resize = {
+    pointer_delta_x: -47,
+    splitter_centre_before: splitterCentreBefore,
+    splitter_centre_after: splitterCentreAfter,
+    splitter_preview_trace: splitterTrace,
+    preview_tracked_pointer: splitterPreviewTracked,
+    workspace_hash_before: splitterBefore.workspace_hash,
+    workspace_hash_after: splitterAfter.workspace_hash,
+    undo_depth_before: splitterBefore.undo_depth,
+    undo_depth_after: splitterAfter.undo_depth,
+    undo_restored_original: true,
+    redo_restored_resize: true,
+    out_and_back_no_op: true,
+  };
   await observe('dock_pane_drag', async () => {
     const source = await targetPoint({ kind: 'tabs', pane: 4 });
     const target = await targetPoint({ kind: 'rightmost_pane_body' }, 0.5, 0.25);

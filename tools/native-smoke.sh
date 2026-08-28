@@ -312,12 +312,78 @@ move_target pane_bodies 8 "" 0.8 0.75
 xdo click --repeat 6 --delay 50 5
 sleep 1
 capture native-diagnostics.png
-move_target splitter 1 ""
+SPLITTER_HASH_BEFORE="$(jq -r '.workspace_hash' "$SNAPSHOT")"
+SPLITTER_UNDO_BEFORE="$(jq -r '.undo_depth' "$SNAPSHOT")"
+SPLITTER_X_BEFORE="$(jq -r '.ui_geometry.splitters[] | select(.node == 1) | ((.rect.min_x + .rect.max_x) * 0.5)' "$SNAPSHOT")"
+move_target splitter 1 "" 0.5 0.25
 xdo mousedown 1
-move_target splitter 1 "" 0.5 0.5 -47 0
+move_target splitter 1 "" 0.5 0.25 -47 0
 xdo mouseup 1
 sleep 0.5
 snapshot
+SPLITTER_HASH_AFTER="$(jq -r '.workspace_hash' "$SNAPSHOT")"
+SPLITTER_UNDO_AFTER="$(jq -r '.undo_depth' "$SNAPSHOT")"
+SPLITTER_X_AFTER="$(jq -r '.ui_geometry.splitters[] | select(.node == 1) | ((.rect.min_x + .rect.max_x) * 0.5)' "$SNAPSHOT")"
+jq -ne \
+  --arg before_hash "$SPLITTER_HASH_BEFORE" \
+  --arg after_hash "$SPLITTER_HASH_AFTER" \
+  --argjson undo_before "$SPLITTER_UNDO_BEFORE" \
+  --argjson undo_after "$SPLITTER_UNDO_AFTER" \
+  --argjson x_before "$SPLITTER_X_BEFORE" \
+  --argjson x_after "$SPLITTER_X_AFTER" '
+    ($after_hash != $before_hash)
+      and ($undo_after == ($undo_before + 1))
+      and (($x_after - ($x_before - 47)) > -1)
+      and (($x_after - ($x_before - 47)) < 1)
+  ' >/dev/null
+move_target control 0 undo
+xdo click 1
+sleep 0.5
+snapshot
+test "$(jq -r '.workspace_hash' "$SNAPSHOT")" = "$SPLITTER_HASH_BEFORE"
+move_target control 0 redo
+xdo click 1
+sleep 0.5
+snapshot
+test "$(jq -r '.workspace_hash' "$SNAPSHOT")" = "$SPLITTER_HASH_AFTER"
+
+SPLITTER_NO_OP_HASH="$(jq -r '.workspace_hash' "$SNAPSHOT")"
+SPLITTER_NO_OP_UNDO="$(jq -r '.undo_depth' "$SNAPSHOT")"
+move_target splitter 1 "" 0.5 0.25
+xdo mousedown 1
+move_target splitter 1 "" 0.5 0.25 -30 0
+move_target splitter 1 "" 0.5 0.25
+xdo mouseup 1
+sleep 0.5
+snapshot
+test "$(jq -r '.workspace_hash' "$SNAPSHOT")" = "$SPLITTER_NO_OP_HASH"
+test "$(jq -r '.undo_depth' "$SNAPSHOT")" = "$SPLITTER_NO_OP_UNDO"
+
+SEMANTIC_UPDATE="$ROOT/.tools/runtime/native-semantic-update.json"
+jq \
+  --arg before_hash "$SPLITTER_HASH_BEFORE" \
+  --arg after_hash "$SPLITTER_HASH_AFTER" \
+  --argjson undo_before "$SPLITTER_UNDO_BEFORE" \
+  --argjson undo_after "$SPLITTER_UNDO_AFTER" \
+  --argjson x_before "$SPLITTER_X_BEFORE" \
+  --argjson x_after "$SPLITTER_X_AFTER" '
+    . + {
+      physical_splitter_resize: {
+        pointer_delta_x: -47,
+        splitter_centre_before: $x_before,
+        splitter_centre_after: $x_after,
+        workspace_hash_before: $before_hash,
+        workspace_hash_after: $after_hash,
+        undo_depth_before: $undo_before,
+        undo_depth_after: $undo_after,
+        undo_restored_original: true,
+        redo_restored_resize: true,
+        out_and_back_no_op: true
+      }
+    }
+  ' docs/vertical-slice-evidence/native-semantic.json >"$SEMANTIC_UPDATE"
+mv "$SEMANTIC_UPDATE" docs/vertical-slice-evidence/native-semantic.json
+
 move_target tabs 4 ""
 xdo mousedown 1
 sleep 1
