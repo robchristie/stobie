@@ -19,9 +19,10 @@ use crate::{
     APPLICATION_NAME,
     panes::{
         AnnotationUiState, FrameOutput, PaneFeatureState, PaneIntent, PaneReadModel, PaneSurface,
-        UiBehaviour,
+        UiBehaviour, should_cancel_camera_drag,
     },
     thumbnail_cache::ThumbnailCache,
+    ui_geometry::UiGeometry,
 };
 
 const STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
@@ -82,6 +83,7 @@ pub(crate) struct TestSnapshot {
     frame_number: u64,
     repaint_requests: u64,
     physical_wheel_events: u64,
+    ui_geometry: UiGeometry,
 }
 
 impl From<DisplaySettings> for DisplaySettingsDto {
@@ -183,6 +185,7 @@ pub struct AnalyticalWorkspaceApp {
     egui_context: egui::Context,
     last_render_cameras: Vec<CameraState>,
     last_visible_tile_keys: Vec<TileKey>,
+    last_ui_geometry: UiGeometry,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
 }
@@ -284,6 +287,7 @@ impl AnalyticalWorkspaceApp {
             egui_context: cc.egui_ctx.clone(),
             last_render_cameras: Vec::new(),
             last_visible_tile_keys: Vec::new(),
+            last_ui_geometry: UiGeometry::default(),
             #[cfg(target_arch = "wasm32")]
             browser_worker,
         }
@@ -457,6 +461,7 @@ impl AnalyticalWorkspaceApp {
             frame_number: self.diagnostics.frame.frame_number,
             repaint_requests: self.diagnostics.frame.repaint_requests,
             physical_wheel_events: self.diagnostics.frame.physical_wheel_events,
+            ui_geometry: self.last_ui_geometry.clone(),
         }
     }
 
@@ -705,16 +710,23 @@ impl eframe::App for AnalyticalWorkspaceApp {
                 .filter(|event| matches!(event, egui::Event::MouseWheel { .. }))
                 .count() as u64
         });
+        let cancel_camera_drag = root_ui.input(should_cancel_camera_drag);
+        if cancel_camera_drag {
+            self.ui_behaviour.cancel_camera_drags();
+        }
         self.ui_behaviour.begin_frame();
         self.poll_runtime(&ctx);
         let mut save_now = false;
-        egui::Panel::top("application-menu")
+        let mut ui_geometry = UiGeometry::new(root_ui.max_rect(), ctx.pixels_per_point());
+        let menu = egui::Panel::top("application-menu")
             .exact_size(38.0)
             .show(root_ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.strong(APPLICATION_NAME);
                     ui.separator();
-                    if ui.button("Undo").clicked()
+                    let undo = ui.button("Undo");
+                    ui_geometry.control(None, "undo", undo.rect);
+                    if undo.clicked()
                         && self.history.undo(
                             &mut self.document,
                             &mut self.session,
@@ -723,7 +735,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    if ui.button("Redo").clicked()
+                    let redo = ui.button("Redo");
+                    ui_geometry.control(None, "redo", redo.rect);
+                    if redo.clicked()
                         && self.history.redo(
                             &mut self.document,
                             &mut self.session,
@@ -732,11 +746,15 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    if ui.button("Save layout").clicked() {
+                    let save = ui.button("Save layout");
+                    ui_geometry.control(None, "save_layout", save.rect);
+                    if save.clicked() {
                         save_now = true;
                         self.status = "Workspace saved".into();
                     }
-                    if ui.button("Reset workspace").clicked() {
+                    let reset = ui.button("Reset workspace");
+                    ui_geometry.control(None, "reset_workspace", reset.rect);
+                    if reset.clicked() {
                         self.workspace = Workspace::analytical_default();
                         self.session = Session::default();
                         self.status = "Default workspace restored".into();
@@ -753,8 +771,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     });
                 });
             });
+        ui_geometry.menu = Some(menu.response.rect.into());
         let ui_started = Instant::now();
-        let mut outputs = FrameOutput::default();
+        let mut outputs = FrameOutput::with_ui_geometry(ui_geometry);
         let frame_number = self.diagnostics.frame.frame_number;
         let active_pane = self.workspace.active_pane;
         let diagnostics_view = self.diagnostics.clone();
@@ -835,6 +854,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.last_visible_tile_keys.sort();
         self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
+        self.last_ui_geometry = outputs.ui_geometry.clone();
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();
         #[cfg(not(target_arch = "wasm32"))]

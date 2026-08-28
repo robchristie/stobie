@@ -61,6 +61,8 @@ enum DockAction {
 pub trait PanePresenter {
     fn title(&self, pane: PaneId) -> &'static str;
     fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect);
+    fn record_tab_rect(&mut self, _pane: PaneId, _rect: Rect) {}
+    fn record_splitter_rect(&mut self, _node: DockNodeId, _rect: Rect) {}
 }
 
 pub fn dock_workspace(
@@ -158,6 +160,7 @@ fn render_node(
                 .map_or(*fraction, |preview| preview.after);
             let (first_rect, split_rect, second_rect) =
                 split_rects(rect, horizontal, shown_fraction);
+            presenter.record_splitter_rect(node, split_rect);
             if response.drag_stopped()
                 && let Some(preview) = behaviour
                     .split_preview
@@ -207,6 +210,7 @@ fn render_node(
                     ui.id().with(("tab", pane.0)),
                     egui::Sense::click_and_drag(),
                 );
+                presenter.record_tab_rect(pane, item_rect);
                 if response.clicked() {
                     behaviour.pending = Some(DockAction::Activate(pane));
                     *active = index;
@@ -617,6 +621,31 @@ pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct GeometryPresenter {
+        tabs: Vec<(PaneId, Rect)>,
+        bodies: Vec<(PaneId, Rect)>,
+        splitters: Vec<(DockNodeId, Rect)>,
+    }
+
+    impl PanePresenter for GeometryPresenter {
+        fn title(&self, _pane: PaneId) -> &'static str {
+            "Pane"
+        }
+
+        fn pane_ui(&mut self, _ui: &mut Ui, pane: PaneId, pane_rect: Rect) {
+            self.bodies.push((pane, pane_rect));
+        }
+
+        fn record_tab_rect(&mut self, pane: PaneId, rect: Rect) {
+            self.tabs.push((pane, rect));
+        }
+
+        fn record_splitter_rect(&mut self, node: DockNodeId, rect: Rect) {
+            self.splitters.push((node, rect));
+        }
+    }
+
     #[test]
     fn render_plan_correspondence_rejects_count_order_and_duplicates() {
         assert_eq!(
@@ -670,5 +699,40 @@ mod tests {
 
         assert_eq!(behaviour.dragging, Some(PaneId(4)));
         assert!(behaviour.interaction_active());
+    }
+
+    #[test]
+    fn dock_reports_current_semantic_tab_body_and_splitter_geometry() {
+        egui::__run_test_ui(|ui| {
+            let root = Rect::from_min_size(ui.min_rect().min, egui::vec2(800.0, 600.0));
+            let mut workspace = Workspace::analytical_default();
+            let mut expected_bodies = Vec::new();
+            workspace.root.active_panes(&mut expected_bodies);
+            let mut behaviour = DockBehaviour::default();
+            let mut presenter = GeometryPresenter::default();
+
+            ui.scope_builder(egui::UiBuilder::new().max_rect(root), |ui| {
+                dock_workspace(ui, &mut workspace, &mut behaviour, &mut presenter)
+            });
+
+            assert_eq!(presenter.tabs.len(), 8);
+            assert_eq!(presenter.bodies.len(), expected_bodies.len());
+            assert!(!presenter.splitters.is_empty());
+            for (_, rect) in presenter
+                .tabs
+                .iter()
+                .chain(&presenter.bodies)
+                .map(|(id, rect)| (*id, *rect))
+            {
+                assert!(rect.is_positive());
+                assert!(root.contains_rect(rect));
+            }
+            assert!(
+                presenter
+                    .splitters
+                    .iter()
+                    .all(|(_, rect)| rect.is_positive() && root.contains_rect(*rect))
+            );
+        });
     }
 }

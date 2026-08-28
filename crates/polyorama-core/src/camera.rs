@@ -113,6 +113,10 @@ impl CameraDragSession {
 
     pub fn update_total(&mut self, total_delta: ViewportPoint) -> &[CameraState] {
         self.total_delta = total_delta;
+        if total_delta == ViewportPoint::default() {
+            self.preview.clone_from(&self.before);
+            return &self.preview;
+        }
         let mut after = self
             .before
             .iter()
@@ -135,6 +139,9 @@ impl CameraDragSession {
     }
 
     pub fn finish(self) -> Vec<CameraChange> {
+        if self.total_delta == ViewportPoint::default() {
+            return Vec::new();
+        }
         let after = self
             .preview
             .iter()
@@ -142,6 +149,9 @@ impl CameraDragSession {
             .expect("camera drag source was validated at construction")
             .camera;
         linked_camera_changes(&self.before, self.source, after)
+            .into_iter()
+            .filter(|change| change.before != change.after)
+            .collect()
     }
 }
 
@@ -292,5 +302,35 @@ mod tests {
         assert!(restored.iter().all(|state| state.camera == expected));
         apply_camera_changes(&mut restored, &changes, false);
         assert_eq!(restored, before);
+    }
+
+    #[test]
+    fn camera_drag_returning_to_its_origin_is_an_exact_no_op() {
+        let group = Some(LinkGroupId(1));
+        let linked = Camera {
+            centre: ImagePoint::new(12.0, 34.0),
+            ..Camera::default()
+        };
+        let before = vec![
+            CameraState {
+                pane: PaneId(1),
+                camera: Camera::default(),
+                link: group,
+            },
+            CameraState {
+                pane: PaneId(2),
+                camera: linked,
+                link: group,
+            },
+        ];
+        let origin = ViewportPoint::new(10.0, 20.0);
+        let mut drag = CameraDragSession::new_at(PaneId(1), before.clone(), origin).unwrap();
+
+        drag.update_pointer(ViewportPoint::new(100.0, 70.0));
+        let preview = drag.update_pointer(origin).to_vec();
+
+        assert_eq!(preview, before);
+        assert_eq!(drag.total_delta(), ViewportPoint::default());
+        assert!(drag.finish().is_empty());
     }
 }

@@ -112,6 +112,7 @@ pub fn show(
     virtualisation.thumbnail_scroll_offset_y = output.scroll_offset_y;
     virtualisation.thumbnail_content_height = output.content_height;
     virtualisation.thumbnail_viewport_height = output.viewport_height;
+    outputs.ui_geometry.thumbnail_scroll = Some(output.viewport_rect.into());
     if output.wheel_delta_y != 0.0 {
         virtualisation.thumbnail_wheel_input_frames += 1;
         virtualisation.thumbnail_wheel_delta_y += output.wheel_delta_y;

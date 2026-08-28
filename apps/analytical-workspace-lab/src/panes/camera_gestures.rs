@@ -35,6 +35,19 @@ pub(super) fn drag_pointer_sample(response: &egui::Response) -> Option<ViewportP
         .map(|pointer| ViewportPoint::new(pointer.x as f64, pointer.y as f64))
 }
 
+pub fn should_cancel_camera_drag(input: &egui::InputState) -> bool {
+    !input.focused
+        || input
+            .events
+            .iter()
+            .any(|event| matches!(event, egui::Event::WindowFocused(false)))
+        || (!input.pointer.primary_down()
+            && input
+                .events
+                .iter()
+                .any(|event| matches!(event, egui::Event::PointerGone)))
+}
+
 impl UiBehaviour {
     #[cfg(test)]
     pub(super) fn wheel_gesture_count(&self) -> usize {
@@ -54,6 +67,28 @@ impl UiBehaviour {
                 .flat_map(|gesture| gesture.preview.iter().cloned()),
         );
         self.expose_preview(&previews);
+    }
+
+    pub fn cancel_camera_drags(&mut self) -> bool {
+        let cancelled = !self.camera_drags.is_empty();
+        self.camera_drags.clear();
+        self.frame_camera_overrides.clear();
+        cancelled
+    }
+
+    fn start_camera_drag(
+        &mut self,
+        pane: PaneId,
+        before: Vec<CameraState>,
+        pointer_origin: Option<ViewportPoint>,
+    ) {
+        let drag = match pointer_origin {
+            Some(origin) => CameraDragSession::new_at(pane, before, origin),
+            None => CameraDragSession::new(pane, before),
+        };
+        if let Some(drag) = drag {
+            self.camera_drags.insert(pane, drag);
+        }
     }
 
     pub(super) fn camera(&self, pane: PaneId, committed: &[CameraState]) -> Camera {
@@ -154,9 +189,10 @@ impl UiBehaviour {
             .map(|state| state.camera)
             .unwrap_or_default();
         self.expose_preview(&gesture.preview);
-        outputs.commands.push(Command::SetCameras {
-            changes: linked_camera_changes(&gesture.before, gesture.source_pane, after),
-        });
+        push_camera_changes(
+            outputs,
+            linked_camera_changes(&gesture.before, gesture.source_pane, after),
+        );
         Some(gesture.preview)
     }
 
@@ -213,13 +249,8 @@ impl PaneSurface<'_> {
                 .input(|input| input.pointer.press_origin())
                 .or_else(|| response.interact_pointer_pos())
                 .map(|pointer| ViewportPoint::new(pointer.x as f64, pointer.y as f64));
-            let drag = match pointer_origin {
-                Some(origin) => CameraDragSession::new_at(pane, before, origin),
-                None => CameraDragSession::new(pane, before),
-            };
-            if let Some(drag) = drag {
-                self.ui_behaviour.camera_drags.insert(pane, drag);
-            }
+            self.ui_behaviour
+                .start_camera_drag(pane, before, pointer_origin);
         }
         if let Some(pointer) = drag_pointer_sample(response) {
             if let Some(drag) = self.ui_behaviour.camera_drags.get_mut(&pane) {
@@ -231,9 +262,7 @@ impl PaneSurface<'_> {
         if response.drag_stopped() {
             if let Some(drag) = self.ui_behaviour.camera_drags.remove(&pane) {
                 self.ui_behaviour.expose_preview(drag.preview());
-                self.outputs.commands.push(Command::SetCameras {
-                    changes: drag.finish(),
-                });
+                push_camera_changes(self.outputs, drag.finish());
             }
         }
         if response.hovered() {
@@ -275,6 +304,13 @@ impl PaneSurface<'_> {
     }
 }
 
+fn push_camera_changes(outputs: &mut FrameOutput, mut changes: Vec<CameraChange>) {
+    changes.retain(|change| change.before != change.after);
+    if !changes.is_empty() {
+        outputs.commands.push(Command::SetCameras { changes });
+    }
+}
+
 pub(super) fn derive_image_frame(
     behaviour: &UiBehaviour,
     pane: PaneId,
@@ -304,4 +340,83 @@ pub(super) fn image_demands(
         generation,
     });
     demands
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
+    use super::*;
+
+    #[test]
+    fn drag_returning_to_origin_emits_no_command() {
+        let committed = Session::default().cameras;
+        let origin = ViewportPoint::new(10.0, 20.0);
+        let mut behaviour = UiBehaviour::default();
+        behaviour.start_camera_drag(PaneId(1), committed, Some(origin));
+        let drag = behaviour.camera_drags.get_mut(&PaneId(1)).unwrap();
+        drag.update_pointer(ViewportPoint::new(100.0, 70.0));
+        drag.update_pointer(origin);
+        let drag = behaviour.camera_drags.remove(&PaneId(1)).unwrap();
+        let mut output = FrameOutput::default();
+
+        push_camera_changes(&mut output, drag.finish());
+
+        assert!(output.commands.is_empty());
+    }
+
+    #[test]
+    fn focus_loss_and_terminal_pointer_gone_cancel_without_committing_preview() {
+        fn cancellation_for(input: egui::RawInput) -> bool {
+            let observed = Rc::new(RefCell::new(None));
+            let output = observed.clone();
+            let context = egui::Context::default();
+            let mut full_output = context.run_ui(input, |ui| {
+                *output.borrow_mut() = Some(ui.input(should_cancel_camera_drag));
+            });
+            full_output.textures_delta.clear();
+            observed.borrow_mut().take().unwrap()
+        }
+
+        assert!(cancellation_for(egui::RawInput {
+            focused: false,
+            events: vec![egui::Event::WindowFocused(false)],
+            ..Default::default()
+        }));
+        assert!(cancellation_for(egui::RawInput {
+            focused: true,
+            events: vec![egui::Event::PointerGone],
+            ..Default::default()
+        }));
+        assert!(!cancellation_for(egui::RawInput {
+            focused: true,
+            events: vec![egui::Event::PointerButton {
+                pos: egui::pos2(100.0, 70.0),
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+            ..Default::default()
+        }));
+
+        let committed = Session::default().cameras;
+        let mut behaviour = UiBehaviour::default();
+        behaviour.start_camera_drag(
+            PaneId(1),
+            committed.clone(),
+            Some(ViewportPoint::new(10.0, 20.0)),
+        );
+        let preview = behaviour
+            .camera_drags
+            .get_mut(&PaneId(1))
+            .unwrap()
+            .update_pointer(ViewportPoint::new(100.0, 70.0))
+            .to_vec();
+        behaviour.expose_preview(&preview);
+        assert_ne!(behaviour.camera(PaneId(1), &committed), committed[0].camera);
+
+        assert!(behaviour.cancel_camera_drags());
+        assert_eq!(behaviour.camera(PaneId(1), &committed), committed[0].camera);
+        assert!(!behaviour.cancel_camera_drags());
+    }
 }

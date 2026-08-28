@@ -108,6 +108,13 @@ impl CommandHistory {
         session: &mut Session,
         workspace: &mut Workspace,
     ) {
+        if matches!(
+            &command,
+            Command::SetCameras { changes }
+                if changes.is_empty() || changes.iter().all(|change| change.before == change.after)
+        ) {
+            return;
+        }
         apply(&command, document, session, workspace);
         self.undo.push(command);
         self.redo.clear();
@@ -529,6 +536,32 @@ mod tests {
         assert_eq!(session.cameras[0].camera, updated);
         assert_eq!(session.cameras[1].camera, updated);
         assert_eq!(session.cameras[1].link, None);
+    }
+
+    #[test]
+    fn no_op_camera_command_is_not_recorded() {
+        let mut document = Document::default();
+        let mut session = Session::default();
+        let original = session.cameras.clone();
+        let mut workspace = Workspace::analytical_default();
+        let mut history = CommandHistory::default();
+
+        history.execute(
+            Command::SetCameras {
+                changes: vec![CameraChange {
+                    pane: PaneId(1),
+                    before: original[0].camera,
+                    after: original[0].camera,
+                }],
+            },
+            &mut document,
+            &mut session,
+            &mut workspace,
+        );
+
+        assert_eq!(session.cameras, original);
+        assert_eq!(history.undo_len(), 0);
+        assert!(!history.undo(&mut document, &mut session, &mut workspace));
     }
 
     #[test]

@@ -11,6 +11,7 @@ use polyorama_ui_egui::{ImagePlanTarget, PanePresenter, allocate_viewport, stage
 use web_time::Instant;
 
 use crate::thumbnail_cache::ThumbnailCache;
+use crate::ui_geometry::{PaneUiRect, SplitterUiRect, UiGeometry};
 
 mod annotations;
 mod camera_gestures;
@@ -21,9 +22,9 @@ mod results;
 mod thumbnails;
 
 use annotations::paint_image_overlay;
-pub use camera_gestures::UiBehaviour;
 #[cfg(test)]
 use camera_gestures::{CameraGestureKey, WHEEL_GESTURE_IDLE, drag_pointer_sample};
+pub use camera_gestures::{UiBehaviour, should_cancel_camera_drag};
 use camera_gestures::{derive_image_frame, image_demands};
 
 #[derive(Default)]
@@ -38,6 +39,7 @@ pub struct FrameOutput {
     statuses: Vec<ImageStatusRequest>,
     pub interaction_active: bool,
     pub repaint_after: Option<Duration>,
+    pub ui_geometry: UiGeometry,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -102,6 +104,13 @@ struct ImageStatusRequest {
 }
 
 impl FrameOutput {
+    pub fn with_ui_geometry(ui_geometry: UiGeometry) -> Self {
+        Self {
+            ui_geometry,
+            ..Self::default()
+        }
+    }
+
     pub fn finalise_camera_previews(
         &mut self,
         context: &egui::Context,
@@ -287,6 +296,10 @@ impl PanePresenter for PaneSurface<'_> {
     }
 
     fn pane_ui(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
+        self.outputs.ui_geometry.pane_bodies.push(PaneUiRect {
+            pane,
+            rect: pane_rect.into(),
+        });
         ui.push_id(("window", 1_u32, "pane", pane.0), |ui| match pane.0 {
             1..=4 => self.image_pane(ui, pane, pane_rect),
             5 => self.results_pane(ui),
@@ -296,6 +309,20 @@ impl PanePresenter for PaneSurface<'_> {
             _ => {
                 ui.label("Unknown pane");
             }
+        });
+    }
+
+    fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect) {
+        self.outputs.ui_geometry.tabs.push(PaneUiRect {
+            pane,
+            rect: rect.into(),
+        });
+    }
+
+    fn record_splitter_rect(&mut self, node: DockNodeId, rect: egui::Rect) {
+        self.outputs.ui_geometry.splitters.push(SplitterUiRect {
+            node,
+            rect: rect.into(),
         });
     }
 }

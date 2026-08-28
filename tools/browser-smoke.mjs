@@ -96,6 +96,51 @@ try {
   await page.screenshot({ path: join(evidenceRoot, 'browser-default.png') });
 
   const semanticSnapshot = () => page.evaluate(() => window.__POLYORAMA_HANDLE.test_snapshot());
+  const targetPoint = async (target, fractionX = 0.5, fractionY = 0.5, deltaX = 0, deltaY = 0) => {
+    const snapshot = await semanticSnapshot();
+    const geometry = snapshot.ui_geometry;
+    const root = geometry.root;
+    let rect;
+    if (target.kind === 'control') {
+      rect = geometry.controls.find((item) => item.name === target.name
+        && (target.pane == null || item.pane === target.pane))?.rect;
+    } else if (target.kind === 'splitter') {
+      rect = geometry.splitters.find((item) => item.node === target.node)?.rect;
+    } else if (target.kind === 'thumbnail_scroll' || target.kind === 'results_scroll') {
+      rect = geometry[target.kind];
+    } else if (target.kind === 'rightmost_pane_body') {
+      rect = geometry.pane_bodies.reduce(
+        (rightmost, item) => !rightmost || item.rect.min_x > rightmost.min_x ? item.rect : rightmost,
+        null,
+      );
+    } else if (target.kind === 'first_result_row') {
+      rect = geometry.result_rows[0]?.rect;
+    } else {
+      rect = geometry[target.kind].find((item) => item.pane === target.pane)?.rect;
+    }
+    if (!root || !rect) throw new Error(`missing Rust UI geometry for ${JSON.stringify(target)}`);
+    const values = [root.min_x, root.min_y, root.max_x, root.max_y, rect.min_x, rect.min_y, rect.max_x, rect.max_y];
+    if (!values.every(Number.isFinite) || rect.max_x <= rect.min_x || rect.max_y <= rect.min_y) {
+      throw new Error(`invalid Rust UI geometry for ${JSON.stringify(target)}: ${JSON.stringify(rect)}`);
+    }
+    const canvas = await page.locator('#polyorama-canvas').boundingBox();
+    if (!canvas || root.max_x <= root.min_x || root.max_y <= root.min_y) throw new Error('canvas/root geometry is unavailable');
+    const logicalX = rect.min_x + (rect.max_x - rect.min_x) * fractionX + deltaX;
+    const logicalY = rect.min_y + (rect.max_y - rect.min_y) * fractionY + deltaY;
+    const point = {
+      x: canvas.x + (logicalX - root.min_x) * canvas.width / (root.max_x - root.min_x),
+      y: canvas.y + (logicalY - root.min_y) * canvas.height / (root.max_y - root.min_y),
+    };
+    if (point.x < canvas.x || point.x > canvas.x + canvas.width
+      || point.y < canvas.y || point.y > canvas.y + canvas.height) {
+      throw new Error(`Rust UI target fell outside canvas: ${JSON.stringify({ target, point, canvas })}`);
+    }
+    return point;
+  };
+  const clickTarget = async (target, options = {}) => {
+    const point = await targetPoint(target);
+    await page.mouse.click(point.x, point.y, options);
+  };
   const semanticAction = async (action) => {
     const before = await semanticSnapshot();
     await page.evaluate((value) => window.__POLYORAMA_HANDLE.test_action(value), action);
@@ -107,6 +152,11 @@ try {
     return semanticSnapshot();
   };
   const initialSemantic = await semanticSnapshot();
+  if (!initialSemantic.ui_geometry.root
+      || initialSemantic.ui_geometry.tabs.length !== 8
+      || initialSemantic.ui_geometry.image_viewports.length < 4) {
+    throw new Error(`Rust semantic UI geometry is incomplete: ${JSON.stringify(initialSemantic.ui_geometry)}`);
+  }
   if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
   if (initialSemantic.runtime.worker_queue_depth > initialSemantic.runtime.external_queue_capacity
       || initialSemantic.runtime.browser_credits_in_use > initialSemantic.runtime.browser_credit_capacity
@@ -156,6 +206,14 @@ try {
     throw new Error('semantic dock undo did not exactly restore the canonical workspace');
   }
   const semanticEvidence = {
+    ui_geometry: {
+      root: initialSemantic.ui_geometry.root,
+      tab_panes: initialSemantic.ui_geometry.tabs.map((item) => item.pane),
+      visible_pane_bodies: initialSemantic.ui_geometry.pane_bodies.map((item) => item.pane),
+      image_viewports: initialSemantic.ui_geometry.image_viewports,
+      control_names: initialSemantic.ui_geometry.controls.map((item) => `${item.pane ?? 'global'}:${item.name}`),
+      results_scroll: initialSemantic.ui_geometry.results_scroll,
+    },
     initial: {
       visible_tile_keys: initialSemantic.visible_tile_keys,
       worker_health: initialSemantic.runtime.worker_health,
@@ -250,7 +308,9 @@ try {
   const primaryBeforePan = panHistoryBefore.cameras.find((item) => item.pane === 1);
   const linkedBeforePan = panHistoryBefore.cameras.find((item) => item.pane === 2);
   await observe('four_viewports_panning', async () => {
-    await page.mouse.move(300, 300); await page.mouse.down(); await page.mouse.move(390, 350, { steps: 12 }); await page.mouse.up();
+    const start = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.35, 0.45);
+    const end = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.35, 0.45, 90, 50);
+    await page.mouse.move(start.x, start.y); await page.mouse.down(); await page.mouse.move(end.x, end.y, { steps: 12 }); await page.mouse.up();
   });
   const rasterAfterPan = await page.screenshot({ path: join(evidenceRoot, 'browser-pan-after.png') });
   if (rasterAfterPan.equals(rasterBeforePan)) throw new Error('rendered canvas did not change after pan');
@@ -293,9 +353,29 @@ try {
     undo_depth_after: panHistoryAfter.undo_depth,
   };
 
+  const noOpBefore = await semanticSnapshot();
+  const noOpStart = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.35, 0.45);
+  const noOpAway = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.35, 0.45, 60, 30);
+  await page.mouse.move(noOpStart.x, noOpStart.y); await page.mouse.down();
+  await page.mouse.move(noOpAway.x, noOpAway.y, { steps: 6 });
+  await page.mouse.move(noOpStart.x, noOpStart.y, { steps: 6 }); await page.mouse.up();
+  await page.waitForTimeout(200);
+  const noOpAfter = await semanticSnapshot();
+  if (noOpAfter.undo_depth !== noOpBefore.undo_depth
+      || JSON.stringify(noOpAfter.cameras) !== JSON.stringify(noOpBefore.cameras)) {
+    throw new Error('physical camera drag returning to origin created model or history state');
+  }
+  semanticEvidence.physical_no_op_pan = {
+    pointer_path: [{ x: 0, y: 0 }, { x: 60, y: 30 }, { x: 0, y: 0 }],
+    undo_depth_before: noOpBefore.undo_depth,
+    undo_depth_after: noOpAfter.undo_depth,
+    cameras_unchanged: true,
+  };
+
   const zoomHistoryBefore = await semanticSnapshot();
   await observe('rapid_zoom_transitions', async () => {
-    await page.mouse.move(300, 300); for (let index = 0; index < 6; index += 1) await page.mouse.wheel(0, -120);
+    const point = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.35, 0.45);
+    await page.mouse.move(point.x, point.y); for (let index = 0; index < 6; index += 1) await page.mouse.wheel(0, -120);
   });
   await page.waitForFunction(
     (depth) => window.__POLYORAMA_HANDLE.test_snapshot().undo_depth === depth + 1,
@@ -306,11 +386,11 @@ try {
   if (zoomHistoryAfter.undo_depth !== zoomHistoryBefore.undo_depth + 1) {
     throw new Error(`wheel zoom burst did not coalesce into one history record (${zoomHistoryBefore.undo_depth} -> ${zoomHistoryAfter.undo_depth})`);
   }
-  await page.mouse.click(244, 77);
+  await clickTarget({ kind: 'control', pane: 1, name: 'link_a' });
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === null);
-  await page.mouse.click(244, 77);
+  await clickTarget({ kind: 'control', pane: 1, name: 'link_a' });
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === 1);
-  await page.mouse.click(211, 77);
+  await clickTarget({ kind: 'control', pane: 1, name: 'fit' });
   await page.waitForFunction(() => {
     const cameras = window.__POLYORAMA_DIAGNOSTICS.cameras;
     const primary = cameras.find((item) => item.pane === 1)?.camera;
@@ -318,9 +398,10 @@ try {
     return primary?.pixels_per_screen_point < 512 && JSON.stringify(primary) === JSON.stringify(linked);
   });
   await observe('million_row_scroll', async () => {
-    await page.mouse.move(1180, 270); await page.mouse.wheel(0, 1800);
+    const point = await targetPoint({ kind: 'results_scroll' });
+    await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, 1800);
   });
-  await page.mouse.click(1170, 53);
+  await clickTarget({ kind: 'tabs', pane: 6 });
   await page.waitForFunction(() => {
     const virtualisation = window.__POLYORAMA_DIAGNOSTICS.virtualisation;
     return virtualisation.thumbnail_content_height > virtualisation.thumbnail_viewport_height
@@ -328,7 +409,8 @@ try {
   }, null, { timeout: 10_000 });
   const thumbnailBeforeScroll = await semanticSnapshot();
   await observe('thumbnail_scroll', async () => {
-    await page.mouse.move(1100, 150); await page.waitForTimeout(300);
+    const point = await targetPoint({ kind: 'thumbnail_scroll' });
+    await page.mouse.move(point.x, point.y); await page.waitForTimeout(300);
     for (let index = 0; index < 5; index += 1) {
       await page.mouse.wheel(0, 300); await page.waitForTimeout(50);
     }
@@ -375,23 +457,29 @@ try {
     ),
     physical_wheel_events_before: thumbnailBeforeScroll.physical_wheel_events,
     physical_wheel_events_after: thumbnailAfterScroll.physical_wheel_events,
+    semantic_scroll_rect: thumbnailAfterScroll.ui_geometry.thumbnail_scroll,
   };
   await observe('polygon_editing', async () => {
-    await page.mouse.click(110, 77);
-    await page.mouse.click(180, 180); await page.mouse.click(360, 200); await page.mouse.click(270, 340);
-    await page.mouse.click(270, 340, { button: 'right' });
+    await clickTarget({ kind: 'control', pane: 1, name: 'polygon' });
+    const first = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.2, 0.2);
+    const second = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.65, 0.25);
+    const third = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.4, 0.65);
+    await page.mouse.click(first.x, first.y); await page.mouse.click(second.x, second.y); await page.mouse.click(third.x, third.y);
+    await page.mouse.click(third.x, third.y, { button: 'right' });
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-polygon.png') });
   await observe('dock_splitter_interaction', async () => {
-    await page.mouse.move(1037, 400); await page.mouse.down(); await page.mouse.move(990, 400, { steps: 6 }); await page.mouse.up();
+    const start = await targetPoint({ kind: 'splitter', node: 1 });
+    await page.mouse.move(start.x, start.y); await page.mouse.down(); await page.mouse.move(start.x - 47, start.y, { steps: 6 }); await page.mouse.up();
   });
   await observe('dock_pane_drag', async () => {
-    await page.mouse.move(550, 642); await page.mouse.down(); await page.waitForTimeout(150);
-    await page.mouse.move(800, 500, { steps: 6 });
-    await page.mouse.move(1150, 200, { steps: 6 }); await page.waitForTimeout(150); await page.mouse.up();
+    const source = await targetPoint({ kind: 'tabs', pane: 4 });
+    const target = await targetPoint({ kind: 'rightmost_pane_body' }, 0.5, 0.25);
+    await page.mouse.move(source.x, source.y); await page.mouse.down(); await page.waitForTimeout(150);
+    await page.mouse.move(target.x, target.y, { steps: 12 }); await page.waitForTimeout(150); await page.mouse.up();
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-rearranged-dock.png') });
-  await page.mouse.click(325, 18);
+  await clickTarget({ kind: 'control', name: 'save_layout' });
   await page.waitForTimeout(250);
   const persistedKeys = await page.evaluate(() => Object.keys(localStorage));
   if (persistedKeys.length === 0) throw new Error('Save layout did not create browser persistence');

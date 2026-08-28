@@ -19,15 +19,38 @@ impl PaneSurface<'_> {
             .copied()
             .unwrap_or(ActiveTool::Navigate);
         let mut active_tool = before_tool;
-        ui.horizontal(|ui| {
+        let toolbar = ui.horizontal(|ui| {
             if pane.0 <= 2 {
-                for (tool, label) in [(ActiveTool::Navigate, "Navigate"), (ActiveTool::Polygon, "Polygon"), (ActiveTool::EditVertex, "Edit")] {
-                    if ui.selectable_label(active_tool == tool, label).clicked() { active_tool = tool; }
+                for (tool, label, control) in [
+                    (ActiveTool::Navigate, "Navigate", "navigate"),
+                    (ActiveTool::Polygon, "Polygon", "polygon"),
+                    (ActiveTool::EditVertex, "Edit", "edit_vertex"),
+                ] {
+                    let response = ui.selectable_label(active_tool == tool, label);
+                    self.outputs
+                        .ui_geometry
+                        .control(Some(pane), control, response.rect);
+                    if response.clicked() {
+                        active_tool = tool;
+                    }
                 }
             }
-            fit = ui.small_button("Fit").clicked();
+            let fit_button = ui.small_button("Fit");
+            self.outputs
+                .ui_geometry
+                .control(Some(pane), "fit", fit_button.rect);
+            fit = fit_button.clicked();
             let mut linked = self.cameras[camera_index].link.is_some();
-            if ui.checkbox(&mut linked, "Link A").changed() { self.outputs.intents.push(ImageIntent::SetCameraLink { pane, link: linked.then_some(LinkGroupId(1)) }); }
+            let link = ui.checkbox(&mut linked, "Link A");
+            self.outputs
+                .ui_geometry
+                .control(Some(pane), "link_a", link.rect);
+            if link.changed() {
+                self.outputs.intents.push(ImageIntent::SetCameraLink {
+                    pane,
+                    link: linked.then_some(LinkGroupId(1)),
+                });
+            }
             egui::ComboBox::from_id_salt((pane.0, "map")).selected_text(match display.map { DisplayMap::Viridis => "Viridis", DisplayMap::Greyscale => "Greyscale", DisplayMap::Threshold => "Threshold" }).show_ui(ui, |ui| {
                 ui.selectable_value(&mut display.map, DisplayMap::Viridis, "Viridis");
                 ui.selectable_value(&mut display.map, DisplayMap::Greyscale, "Greyscale");
@@ -40,6 +63,13 @@ impl PaneSurface<'_> {
             }
             if self.selected_annotation.is_some() { delete_annotation = ui.small_button("Delete").clicked(); }
         });
+        self.outputs
+            .ui_geometry
+            .image_toolbars
+            .push(crate::ui_geometry::PaneUiRect {
+                pane,
+                rect: toolbar.response.rect.into(),
+            });
         if active_tool != before_tool {
             self.active_tools.insert(pane, active_tool);
             self.outputs.pane_intents.push(PaneIntent::SetActiveTool {
@@ -95,6 +125,13 @@ impl PaneSurface<'_> {
         );
         let (allocation, response) = allocate_viewport(ui, pane, desired);
         let rect = allocation.logical_rect;
+        self.outputs
+            .ui_geometry
+            .image_viewports
+            .push(crate::ui_geometry::PaneUiRect {
+                pane,
+                rect: rect.into(),
+            });
         ui.painter()
             .rect_filled(rect, 0.0, egui::Color32::from_rgb(8, 12, 15));
         paint_placeholder(ui, rect, pane);

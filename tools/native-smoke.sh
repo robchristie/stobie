@@ -38,6 +38,8 @@ LD_LIBRARY_PATH="$LIBS" ui_sandbox "$SYSROOT/usr/bin/Xvfb" "$DISPLAY_NUMBER" \
 XVFB_PID=$!
 APP_PID=""
 WINDOW_ID=""
+WINDOW_WIDTH=""
+WINDOW_HEIGHT=""
 cleanup() {
   if [[ -n "$APP_PID" ]]; then kill "$APP_PID" 2>/dev/null || true; fi
   kill "$XVFB_PID" 2>/dev/null || true
@@ -57,6 +59,8 @@ launch_app() {
   kill -0 "$APP_PID"
   WINDOW_ID="$(xdo search --onlyvisible --name 'Analytical Workspace Lab' | head -n 1)"
   xdo windowfocus --sync "$WINDOW_ID"
+  WINDOW_WIDTH="$(xdo getwindowgeometry --shell "$WINDOW_ID" | sed -n 's/^WIDTH=//p')"
+  WINDOW_HEIGHT="$(xdo getwindowgeometry --shell "$WINDOW_ID" | sed -n 's/^HEIGHT=//p')"
 }
 
 xdo() {
@@ -77,20 +81,79 @@ snapshot() {
   exit 1
 }
 
+target_point() {
+  local kind="$1"
+  local pane="$2"
+  local name="$3"
+  local fraction_x="${4:-0.5}"
+  local fraction_y="${5:-0.5}"
+  local delta_x="${6:-0}"
+  local delta_y="${7:-0}"
+  jq -er \
+    --arg kind "$kind" \
+    --arg name "$name" \
+    --argjson pane "$pane" \
+    --argjson fraction_x "$fraction_x" \
+    --argjson fraction_y "$fraction_y" \
+    --argjson delta_x "$delta_x" \
+    --argjson delta_y "$delta_y" \
+    --argjson window_width "$WINDOW_WIDTH" \
+    --argjson window_height "$WINDOW_HEIGHT" '
+      .ui_geometry as $geometry
+      | (if $kind == "control" then
+           $geometry.controls[] | select(.name == $name and ($pane == 0 or .pane == $pane))
+         elif $kind == "splitter" then
+           $geometry.splitters[] | select(.node == $pane)
+         elif $kind == "thumbnail_scroll" or $kind == "results_scroll" then
+           {rect: $geometry[$kind]}
+         elif $kind == "rightmost_pane_body" then
+           $geometry.pane_bodies | max_by(.rect.min_x)
+         elif $kind == "first_result_row" then
+           $geometry.result_rows[0]
+         else
+           $geometry[$kind][] | select(.pane == $pane)
+         end) as $target
+      | $geometry.root as $root
+      | $target.rect as $rect
+      | select($root != null and $rect != null)
+      | select($rect.max_x > $rect.min_x and $rect.max_y > $rect.min_y)
+      | [
+          (((($rect.min_x + ($rect.max_x - $rect.min_x) * $fraction_x + $delta_x) - $root.min_x)
+            * $window_width / ($root.max_x - $root.min_x)) | round),
+          (((($rect.min_y + ($rect.max_y - $rect.min_y) * $fraction_y + $delta_y) - $root.min_y)
+            * $window_height / ($root.max_y - $root.min_y)) | round)
+        ]
+      | select(.[0] >= 0 and .[0] <= $window_width and .[1] >= 0 and .[1] <= $window_height)
+      | @tsv
+    ' "$SNAPSHOT"
+}
+
+move_target() {
+  local point
+  point="$(target_point "$@")"
+  local x="${point%%$'\t'*}"
+  local y="${point#*$'\t'}"
+  xdo mousemove --window "$WINDOW_ID" "$x" "$y"
+}
+
 : >"$APP_LOG"
 launch_app
 capture native-default.png
+snapshot
+UI_GEOMETRY_INITIAL="$(jq -c '.ui_geometry' "$SNAPSHOT")"
 
 # Pointer-centred zoom and a coalesced linked-camera drag.
-xdo mousemove 300 300 click --repeat 3 --delay 80 4
+move_target image_viewports 1 "" 0.35 0.45
+xdo click --repeat 3 --delay 80 4
 sleep 0.5
 snapshot
 PAN_BEFORE="$(jq -c '.cameras[] | select(.pane == 1).camera' "$SNAPSHOT")"
 LINKED_BEFORE="$(jq -c '.cameras[] | select(.pane == 2).camera' "$SNAPSHOT")"
 UNDO_BEFORE="$(jq -r '.undo_depth' "$SNAPSHOT")"
-xdo mousemove 300 300 mousedown 1
+move_target image_viewports 1 "" 0.35 0.45
+xdo mousedown 1
 for step in 1 2 3 4 5 6 7 8 9 10; do
-  xdo mousemove --sync "$((300 + step * 9))" "$((300 + step * 5))"
+  move_target image_viewports 1 "" 0.35 0.45 "$((step * 9))" "$((step * 5))"
   sleep 0.03
 done
 xdo mouseup 1
@@ -108,7 +171,8 @@ jq -e --argjson before "$PAN_BEFORE" --argjson undo "$UNDO_BEFORE" '
     and ($primary.centre.y == ($before.centre.y - 50 * $before.pixels_per_screen_point))
     and (.undo_depth == ($undo + 1))
 ' "$SNAPSHOT" >/dev/null
-xdo mousemove 195 18 click 1
+move_target control 0 undo
+xdo click 1
 sleep 0.5
 snapshot
 PAN_UNDONE="$(jq -c '.cameras[] | select(.pane == 1).camera' "$SNAPSHOT")"
@@ -118,33 +182,54 @@ jq -e --argjson primary "$PAN_BEFORE" --argjson linked "$LINKED_BEFORE" --argjso
   and ((.cameras[] | select(.pane == 2).camera) == $linked)
   and (.undo_depth == $undo)
 ' "$SNAPSHOT" >/dev/null
-xdo mousemove 250 18 click 1
-xdo mousemove 211 77 click 1
+move_target control 0 redo
+xdo click 1
+move_target control 1 fit
+xdo click 1
 sleep 1
 
 # Construct, commit, edit, undo and redo a world-coordinate polygon.
-xdo mousemove 110 77 click 1
+move_target control 1 polygon
+xdo click 1
 sleep 1
-xdo mousemove 180 180 click 1
-xdo mousemove 360 200 click 1
-xdo mousemove 270 340 click 1
+move_target image_viewports 1 "" 0.2 0.2
+xdo click 1
+move_target image_viewports 1 "" 0.65 0.25
+xdo click 1
+move_target image_viewports 1 "" 0.4 0.65
+xdo click 1
 sleep 1
-xdo mousemove 270 340 click 3
+xdo click 3
 sleep 2
 capture native-polygon.png
-xdo mousemove 165 77 click 1
-xdo mousemove 180 180 mousedown 1 mousemove --sync 215 205 mouseup 1
-xdo mousemove 195 18 click 1
-xdo mousemove 250 18 click 1
+snapshot
+move_target control 1 edit_vertex
+xdo click 1
+move_target image_viewports 1 "" 0.2 0.2
+xdo mousedown 1
+move_target image_viewports 1 "" 0.2 0.2 35 25
+xdo mouseup 1
+move_target control 0 undo
+xdo click 1
+move_target control 0 redo
+xdo click 1
 xdo key Delete
-xdo mousemove 195 18 click 1
-xdo mousemove 250 18 click 1
-xdo mousemove 195 18 click 1
+move_target control 0 undo
+xdo click 1
+move_target control 0 redo
+xdo click 1
+move_target control 0 undo
+xdo click 1
 
 # Result selection/recentring and progressive thumbnail virtualisation.
-xdo mousemove 1120 105 click 1
-xdo mousemove 1260 77 click 1
-xdo mousemove 1170 53 click 1
+move_target first_result_row 0 ""
+xdo click 1
+sleep 0.5
+snapshot
+move_target control 5 recenter_primary
+xdo click 1
+move_target tabs 6 ""
+xdo click 1
 sleep 0.5
 snapshot
 THUMBNAILS_BEFORE="$(jq -c '.virtualisation' "$SNAPSHOT")"
@@ -158,7 +243,8 @@ THUMBNAIL_FRONTIER_BEFORE="$(jq '
 THUMBNAIL_OFFSET_BEFORE="$(jq -r '.virtualisation.thumbnail_scroll_offset_y' "$SNAPSHOT")"
 THUMBNAIL_START_BEFORE="$(jq -r '.virtualisation.visible_thumbnails[0]' "$SNAPSHOT")"
 WHEEL_EVENTS_BEFORE="$(jq -r '.physical_wheel_events' "$SNAPSHOT")"
-xdo mousemove 1100 150 click --repeat 5 --delay 50 5
+move_target thumbnail_scroll 0 ""
+xdo click --repeat 5 --delay 50 5
 sleep 2
 capture native-thumbnails.png
 snapshot
@@ -192,8 +278,10 @@ jq -n \
   --argjson wheel_before "$WHEEL_EVENTS_BEFORE" \
   --argjson wheel_after "$WHEEL_EVENTS_AFTER" \
   --argjson visible_keys_after "$VISIBLE_KEYS_AFTER" \
-  --argjson resident_keys "$THUMBNAIL_RESIDENT_KEYS" '
+  --argjson resident_keys "$THUMBNAIL_RESIDENT_KEYS" \
+  --argjson ui_geometry_initial "$UI_GEOMETRY_INITIAL" '
   {
+    ui_geometry: $ui_geometry_initial,
     physical_pan: {
       pointer_delta: {x: 90, y: 50},
       before: [$pan_before, $linked_before],
@@ -216,21 +304,30 @@ jq -n \
 ' >docs/vertical-slice-evidence/native-semantic.json
 
 # Diagnostics, then a dock split resize and pane drag/drop.
-xdo mousemove 1180 505 click 1
-xdo mousemove 1220 770 click --repeat 6 --delay 50 5
+move_target tabs 8 ""
+xdo click 1
+sleep 0.5
+snapshot
+move_target pane_bodies 8 "" 0.8 0.75
+xdo click --repeat 6 --delay 50 5
 sleep 1
 capture native-diagnostics.png
-xdo mousemove 1037 400 mousedown 1 mousemove --sync 990 400 mouseup 1
-xdo mousemove 550 642 mousedown 1
+move_target splitter 1 ""
+xdo mousedown 1
+move_target splitter 1 "" 0.5 0.5 -47 0
+xdo mouseup 1
+sleep 0.5
+snapshot
+move_target tabs 4 ""
+xdo mousedown 1
 sleep 1
-xdo mousemove 800 500
-sleep 1
-xdo mousemove 1150 200
+move_target rightmost_pane_body 0 "" 0.5 0.25
 sleep 1
 xdo mouseup 1
 sleep 2
 capture native-rearranged-dock.png
-xdo mousemove 325 18 click 1
+move_target control 0 save_layout
+xdo click 1
 sleep 1
 
 kill "$APP_PID"

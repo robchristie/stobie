@@ -13,18 +13,22 @@ pub fn show(
 ) {
     ui.horizontal(|ui| {
         ui.label(format!("{} logical detections", RESULT_COUNT));
-        if let Some(selected) = selected_result
-            && ui.button("Recenter Primary").clicked()
-        {
-            outputs.intents.push(ImageIntent::RecenterOnResult {
-                result: selected,
-                pane: PaneId(1),
-            });
+        if let Some(selected) = selected_result {
+            let recenter = ui.button("Recenter Primary");
+            outputs
+                .ui_geometry
+                .control(Some(PaneId(5)), "recenter_primary", recenter.rect);
+            if recenter.clicked() {
+                outputs.intents.push(ImageIntent::RecenterOnResult {
+                    result: selected,
+                    pane: PaneId(1),
+                });
+            }
         }
     });
     const ROW_HEIGHT: f32 = 23.0;
     const OVERSCAN_ROWS: usize = 8;
-    egui::ScrollArea::vertical()
+    let output = egui::ScrollArea::vertical()
         .id_salt("million-row-results")
         .show_viewport(ui, |ui, viewport| {
             let rows = virtual_rows(
@@ -48,10 +52,16 @@ pub fn show(
                 );
                 ui.scope_builder(egui::UiBuilder::new().max_rect(row_rect), |ui| {
                     ui.horizontal(|ui| {
-                        if ui
-                            .selectable_label(selected, format!("#{:07}", result.id.0))
-                            .clicked()
-                        {
+                        let selection =
+                            ui.selectable_label(selected, format!("#{:07}", result.id.0));
+                        outputs
+                            .ui_geometry
+                            .result_rows
+                            .push(crate::ui_geometry::ResultUiRect {
+                                result: result.id,
+                                rect: selection.rect.into(),
+                            });
+                        if selection.clicked() {
                             outputs
                                 .intents
                                 .push(ImageIntent::SelectResult { result: result.id });
@@ -66,4 +76,5 @@ pub fn show(
                 });
             }
         });
+    outputs.ui_geometry.results_scroll = Some(output.inner_rect.into());
 }
