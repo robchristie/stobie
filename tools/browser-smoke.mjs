@@ -465,6 +465,56 @@ try {
     const third = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.4, 0.65);
     await page.mouse.click(first.x, first.y); await page.mouse.click(second.x, second.y); await page.mouse.click(third.x, third.y);
     await page.mouse.click(third.x, third.y, { button: 'right' });
+    const beforeEdit = await semanticSnapshot();
+    const annotation = beforeEdit.annotations.find(
+      (candidate) => candidate.id === beforeEdit.selected_annotation,
+    );
+    const camera = beforeEdit.cameras.find((candidate) => candidate.pane === 1)?.camera;
+    if (!annotation || !camera) throw new Error('physical polygon was not available for vertex editing');
+    const originalVertex = annotation.vertices[0];
+    await clickTarget({ kind: 'control', pane: 1, name: 'edit_vertex' });
+    const editStart = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.2, 0.2);
+    await page.mouse.move(editStart.x, editStart.y); await page.mouse.down();
+    await page.mouse.move(editStart.x + 35, editStart.y + 25, { steps: 5 }); await page.mouse.up();
+    const afterEdit = await semanticSnapshot();
+    const editedVertex = afterEdit.annotations.find(
+      (candidate) => candidate.id === annotation.id,
+    )?.vertices[0];
+    const expectedVertex = {
+      x: originalVertex.x + 35 * camera.pixels_per_screen_point * 2,
+      y: originalVertex.y - 25 * camera.pixels_per_screen_point * 2,
+    };
+    if (!editedVertex
+        || Math.abs(editedVertex.x - expectedVertex.x) > 0.01
+        || Math.abs(editedVertex.y - expectedVertex.y) > 0.01
+        || afterEdit.undo_depth !== beforeEdit.undo_depth + 1) {
+      throw new Error(`physical vertex edit did not commit its release position: ${JSON.stringify({ originalVertex, editedVertex, expectedVertex, undoBefore: beforeEdit.undo_depth, undoAfter: afterEdit.undo_depth })}`);
+    }
+    await clickTarget({ kind: 'control', name: 'undo' });
+    const afterUndo = await semanticSnapshot();
+    const undoneVertex = afterUndo.annotations.find(
+      (candidate) => candidate.id === annotation.id,
+    )?.vertices[0];
+    await clickTarget({ kind: 'control', name: 'redo' });
+    const afterRedo = await semanticSnapshot();
+    const redoneVertex = afterRedo.annotations.find(
+      (candidate) => candidate.id === annotation.id,
+    )?.vertices[0];
+    if (JSON.stringify(undoneVertex) !== JSON.stringify(originalVertex)
+        || JSON.stringify(redoneVertex) !== JSON.stringify(editedVertex)) {
+      throw new Error('physical vertex edit did not round-trip through exact undo/redo');
+    }
+    semanticEvidence.physical_vertex_edit = {
+      screen_delta: { x: 35, y: 25 },
+      original_vertex: originalVertex,
+      expected_vertex: expectedVertex,
+      committed_vertex: editedVertex,
+      undo_depth_before: beforeEdit.undo_depth,
+      undo_depth_after: afterEdit.undo_depth,
+      undo_restored_original: true,
+      redo_restored_edit: true,
+      release_frame_preview_regression: 'covered by deterministic Rust frame-output test',
+    };
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-polygon.png') });
   const splitterBefore = await semanticSnapshot();

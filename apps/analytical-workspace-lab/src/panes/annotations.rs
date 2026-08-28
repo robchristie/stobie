@@ -57,76 +57,73 @@ impl PaneSurface<'_> {
             }
         }
         if tool == ActiveTool::EditVertex {
-            if response.drag_started() {
-                if let Some(pointer) = response.interact_pointer_pos() {
-                    let nearest = self
-                        .document
-                        .annotations
-                        .iter()
-                        .flat_map(|polygon| {
-                            polygon
-                                .vertices
-                                .iter()
-                                .enumerate()
-                                .map(move |(index, vertex)| {
-                                    (
-                                        polygon.id,
-                                        index,
-                                        *vertex,
-                                        to_screen(*vertex).distance(pointer),
-                                    )
-                                })
-                        })
-                        .min_by(|a, b| a.3.total_cmp(&b.3));
-                    if let Some((annotation, vertex, original, _distance)) =
-                        nearest.filter(|item| item.3 < 16.0)
-                    {
-                        self.selected_annotation = Some(annotation);
-                        self.outputs
-                            .pane_intents
-                            .push(PaneIntent::SelectAnnotation(Some(annotation)));
-                        self.annotation_ui.set(GesturePreview::Vertex {
-                            annotation,
-                            vertex,
-                            original,
-                            preview: original,
-                        });
-                    }
+            if let Some(pointer) = drag_start_pointer_sample(response) {
+                let nearest = self
+                    .document
+                    .annotations
+                    .iter()
+                    .flat_map(|polygon| {
+                        polygon
+                            .vertices
+                            .iter()
+                            .enumerate()
+                            .map(move |(index, vertex)| {
+                                (
+                                    polygon.id,
+                                    index,
+                                    *vertex,
+                                    to_screen(*vertex).distance(pointer),
+                                )
+                            })
+                    })
+                    .min_by(|a, b| a.3.total_cmp(&b.3));
+                if let Some((annotation, vertex, original, _distance)) =
+                    nearest.filter(|item| item.3 < 16.0)
+                {
+                    self.selected_annotation = Some(annotation);
+                    self.outputs
+                        .pane_intents
+                        .push(PaneIntent::SelectAnnotation(Some(annotation)));
+                    self.annotation_ui.set(GesturePreview::Vertex {
+                        annotation,
+                        vertex,
+                        original,
+                        preview: original,
+                    });
                 }
             }
-            if response.dragged() {
-                if let (Some(pointer), Some(GesturePreview::Vertex { preview, .. })) = (
-                    response.interact_pointer_pos(),
-                    self.annotation_ui.get_mut(),
-                ) {
+            if let Some(pointer) = camera_gestures::drag_pointer_sample(response) {
+                if let Some(GesturePreview::Vertex { preview, .. }) = self.annotation_ui.get_mut() {
+                    let pointer = egui::pos2(pointer.x as f32, pointer.y as f32);
                     *preview = ImageToWorld::default()
                         .image_to_world(screen_to_image(pointer, rect, camera));
                     self.outputs.interaction_active = true;
                 }
             }
             if response.drag_stopped() {
-                if let Some(GesturePreview::Vertex {
-                    annotation,
-                    vertex,
-                    original,
-                    preview,
-                }) = self.annotation_ui.take()
-                {
-                    self.outputs.commands.push(Command::MoveVertex {
-                        annotation,
-                        vertex,
-                        before: original,
-                        after: preview,
-                    });
+                if let Some(gesture @ GesturePreview::Vertex { .. }) = self.annotation_ui.take() {
+                    self.outputs.finish_vertex_drag(gesture);
                 }
             }
         }
     }
 }
 
+pub(super) fn drag_start_pointer_sample(response: &egui::Response) -> Option<egui::Pos2> {
+    response
+        .drag_started()
+        .then(|| {
+            response
+                .interact_pointer_pos()
+                .map(|pointer| pointer - response.drag_delta())
+        })
+        .flatten()
+}
+
 pub(super) fn paint_image_overlay(
     painter: &egui::Painter,
     overlay: &ImageOverlayRequest,
+    gesture: Option<&GesturePreview>,
     camera: Camera,
     primary_camera: Camera,
 ) {
@@ -146,7 +143,7 @@ pub(super) fn paint_image_overlay(
             vertex,
             preview,
             ..
-        }) = &overlay.gesture
+        }) = gesture
             && *annotation == polygon.id
             && *vertex < points.len()
         {
@@ -170,7 +167,7 @@ pub(super) fn paint_image_overlay(
             }
         }
     }
-    if let Some(GesturePreview::Polygon { vertices, .. }) = &overlay.gesture {
+    if let Some(GesturePreview::Polygon { vertices, .. }) = gesture {
         let mut points: Vec<_> = vertices.iter().copied().map(to_screen).collect();
         if let Some(pointer) = overlay.hover {
             points.push(pointer);

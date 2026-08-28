@@ -36,6 +36,7 @@ pub struct FrameOutput {
     pub render_plan: RenderPlan,
     pub render_targets: Vec<ImagePlanTarget>,
     overlays: Vec<ImageOverlayRequest>,
+    annotation_release_preview: Option<GesturePreview>,
     statuses: Vec<ImageStatusRequest>,
     pub interaction_active: bool,
     pub repaint_after: Option<Duration>,
@@ -142,6 +143,7 @@ impl FrameOutput {
             paint_image_overlay(
                 &painter,
                 overlay,
+                self.annotation_gesture_for(overlay),
                 camera,
                 behaviour.camera(PaneId(1), committed),
             );
@@ -208,6 +210,34 @@ impl FrameOutput {
                     style.visuals.text_color(),
                 );
         }
+    }
+
+    fn finish_vertex_drag(&mut self, gesture: GesturePreview) {
+        let GesturePreview::Vertex {
+            annotation,
+            vertex,
+            original,
+            preview,
+        } = &gesture
+        else {
+            return;
+        };
+        self.commands.push(Command::MoveVertex {
+            annotation: *annotation,
+            vertex: *vertex,
+            before: *original,
+            after: *preview,
+        });
+        self.annotation_release_preview = Some(gesture);
+    }
+
+    fn annotation_gesture_for<'a>(
+        &'a self,
+        overlay: &'a ImageOverlayRequest,
+    ) -> Option<&'a GesturePreview> {
+        self.annotation_release_preview
+            .as_ref()
+            .or(overlay.gesture.as_ref())
     }
 }
 
@@ -384,7 +414,8 @@ mod tests {
                 ..Default::default()
             };
             let mut full_output = context.run_ui(input, |ui| {
-                let response = ui.allocate_response(egui::vec2(180.0, 140.0), egui::Sense::drag());
+                let response =
+                    ui.allocate_response(egui::vec2(180.0, 140.0), egui::Sense::click_and_drag());
                 *output.borrow_mut() =
                     Some((response.drag_stopped(), drag_pointer_sample(&response)));
             });
@@ -428,6 +459,106 @@ mod tests {
         );
         assert!(stopped);
         assert_eq!(final_sample, Some(ViewportPoint::new(100.0, 70.0)));
+    }
+
+    #[test]
+    fn delayed_vertex_drag_recognition_retains_the_press_origin_for_hit_testing() {
+        use std::{cell::RefCell, rc::Rc};
+
+        fn frame(context: &egui::Context, events: Vec<egui::Event>) -> Option<egui::Pos2> {
+            let observed = Rc::new(RefCell::new(None));
+            let output = observed.clone();
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(200.0, 160.0),
+                )),
+                events,
+                focused: true,
+                ..Default::default()
+            };
+            let mut full_output = context.run_ui(input, |ui| {
+                let response =
+                    ui.allocate_response(egui::vec2(180.0, 140.0), egui::Sense::click_and_drag());
+                *output.borrow_mut() = annotations::drag_start_pointer_sample(&response);
+            });
+            full_output.textures_delta.clear();
+            *observed.borrow()
+        }
+
+        let context = egui::Context::default();
+        let origin = egui::pos2(30.0, 40.0);
+        frame(&context, vec![egui::Event::PointerMoved(origin)]);
+        frame(
+            &context,
+            vec![
+                egui::Event::PointerMoved(origin),
+                egui::Event::PointerButton {
+                    pos: origin,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+
+        let recognised_at = origin + egui::vec2(35.0, 25.0);
+        assert_eq!(
+            frame(&context, vec![egui::Event::PointerMoved(recognised_at)]),
+            Some(origin)
+        );
+    }
+
+    #[test]
+    fn vertex_release_frame_keeps_the_final_preview_until_the_command_is_visible() {
+        let annotation = AnnotationId(7);
+        let original = WorldPoint::new(10.0, 20.0);
+        let stale_preview = WorldPoint::new(30.0, 40.0);
+        let final_preview = WorldPoint::new(50.0, 60.0);
+        let mut output = FrameOutput::default();
+        output.overlays.push(ImageOverlayRequest {
+            pane: PaneId(1),
+            rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(640.0, 480.0)),
+            annotations: vec![Polygon {
+                id: annotation,
+                layer: LayerId(1),
+                vertices: vec![
+                    original,
+                    WorldPoint::new(80.0, 20.0),
+                    WorldPoint::new(40.0, 90.0),
+                ],
+            }],
+            gesture: Some(GesturePreview::Vertex {
+                annotation,
+                vertex: 0,
+                original,
+                preview: stale_preview,
+            }),
+            selected_annotation: Some(annotation),
+            hover: None,
+        });
+        let release = GesturePreview::Vertex {
+            annotation,
+            vertex: 0,
+            original,
+            preview: final_preview,
+        };
+
+        output.finish_vertex_drag(release.clone());
+
+        assert_eq!(
+            output.annotation_gesture_for(&output.overlays[0]),
+            Some(&release)
+        );
+        assert_eq!(
+            output.commands,
+            vec![Command::MoveVertex {
+                annotation,
+                vertex: 0,
+                before: original,
+                after: final_preview,
+            }]
+        );
     }
 
     #[test]

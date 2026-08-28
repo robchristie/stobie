@@ -203,16 +203,47 @@ xdo click 3
 sleep 2
 capture native-polygon.png
 snapshot
+POLYGON_ID="$(jq -r '.selected_annotation' "$SNAPSHOT")"
+POLYGON_ORIGINAL="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
+POLYGON_CAMERA_SCALE="$(jq -r '.cameras[] | select(.pane == 1) | .camera.pixels_per_screen_point' "$SNAPSHOT")"
+POLYGON_UNDO_BEFORE="$(jq -r '.undo_depth' "$SNAPSHOT")"
 move_target control 1 edit_vertex
 xdo click 1
 move_target image_viewports 1 "" 0.2 0.2
 xdo mousedown 1
-move_target image_viewports 1 "" 0.2 0.2 35 25
+for step in 1 2 3 4 5; do
+  move_target image_viewports 1 "" 0.2 0.2 "$((7 * step))" "$((5 * step))"
+  sleep 0.03
+done
 xdo mouseup 1
+sleep 0.5
+snapshot
+POLYGON_EDITED="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
+POLYGON_UNDO_AFTER="$(jq -r '.undo_depth' "$SNAPSHOT")"
+POLYGON_EXPECTED="$(jq -cn --argjson before "$POLYGON_ORIGINAL" --argjson scale "$POLYGON_CAMERA_SCALE" '{x: ($before.x + 35 * $scale * 2), y: ($before.y - 25 * $scale * 2)}')"
+jq -ne \
+  --argjson actual "$POLYGON_EDITED" \
+  --argjson expected "$POLYGON_EXPECTED" \
+  --argjson undo_before "$POLYGON_UNDO_BEFORE" \
+  --argjson undo_after "$POLYGON_UNDO_AFTER" '
+    ($undo_after == ($undo_before + 1))
+      and (($actual.x - $expected.x) > -0.01)
+      and (($actual.x - $expected.x) < 0.01)
+      and (($actual.y - $expected.y) > -0.01)
+      and (($actual.y - $expected.y) < 0.01)
+  ' >/dev/null
 move_target control 0 undo
 xdo click 1
+sleep 0.5
+snapshot
+POLYGON_UNDONE="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
+test "$POLYGON_UNDONE" = "$POLYGON_ORIGINAL"
 move_target control 0 redo
 xdo click 1
+sleep 0.5
+snapshot
+POLYGON_REDONE="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
+test "$POLYGON_REDONE" = "$POLYGON_EDITED"
 xdo key Delete
 move_target control 0 undo
 xdo click 1
@@ -279,6 +310,11 @@ jq -n \
   --argjson wheel_after "$WHEEL_EVENTS_AFTER" \
   --argjson visible_keys_after "$VISIBLE_KEYS_AFTER" \
   --argjson resident_keys "$THUMBNAIL_RESIDENT_KEYS" \
+  --argjson polygon_original "$POLYGON_ORIGINAL" \
+  --argjson polygon_expected "$POLYGON_EXPECTED" \
+  --argjson polygon_edited "$POLYGON_EDITED" \
+  --argjson polygon_undo_before "$POLYGON_UNDO_BEFORE" \
+  --argjson polygon_undo_after "$POLYGON_UNDO_AFTER" \
   --argjson ui_geometry_initial "$UI_GEOMETRY_INITIAL" '
   {
     ui_geometry: $ui_geometry_initial,
@@ -299,6 +335,17 @@ jq -n \
       physical_wheel_events_after: $wheel_after,
       visible_keys_after: $visible_keys_after,
       resident_keys: $resident_keys
+    },
+    physical_vertex_edit: {
+      screen_delta: {x: 35, y: 25},
+      original_vertex: $polygon_original,
+      expected_vertex: $polygon_expected,
+      committed_vertex: $polygon_edited,
+      undo_depth_before: $polygon_undo_before,
+      undo_depth_after: $polygon_undo_after,
+      undo_restored_original: true,
+      redo_restored_edit: true,
+      release_frame_preview_regression: "covered by deterministic Rust frame-output test"
     }
   }
 ' >docs/vertical-slice-evidence/native-semantic.json
