@@ -5,6 +5,7 @@ members = [
     "crates/polyorama-render-wgpu",
     "crates/polyorama-ui-egui",
     "apps/analytical-workspace-lab",
+    "apps/polyorama-gallery",
     "apps/tile-worker",
     "xtask",
 ]

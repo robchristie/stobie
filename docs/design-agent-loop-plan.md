@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increment 3 landed; increment 4 canonically verified candidate
+Status: active; increment 4 landed; increment 5 implementation candidate
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,21 +20,28 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 3 is landed. Increment 4 now has an implementation
-candidate for the reusable dock shell: token-aware visual versus minimum-hit
-geometry, bounded visible tabs plus overflow, focus rings, roving tab keys,
-and exact-step keyboard/AccessKit splitter adjustment. It preserves the
-canonical dock command path and current geometry callbacks. Dock tabs,
-tab-lists, pane bodies and splitters now derive stable widget IDs from their
-domain IDs. Focus locks prevent egui's spatial navigation from stealing tab
-or splitter arrows; activation-frame tests keep selected semantics, focus and
-the shown pane coherent, including hidden overflow targets. Splitters use
-click-and-drag arbitration, exact 0.05 keyboard/AccessKit steps, retain the true
-press origin after delayed recognition, and pass native physical resize,
-undo/redo and out-and-back no-op checks. This is compatible
-egui AccessKit tree generation only; the eframe native adapter remains off and
-the current web integration discards updates, so OS/browser screen-reader
-delivery is not claimed.
+Increment 4 landed as PR #12 at merge `f551711`: token-aware visual versus
+minimum-hit geometry, bounded visible tabs plus overflow, focus rings, stable
+domain-derived widget IDs, same-frame selected semantics, roving tab keys and
+exact-step keyboard/AccessKit splitter adjustment. Its final repair cancels
+egui's pending spatial navigation in the same pass as an owned arrow, so first
+and consecutive inputs need no settling frame. Native physical resize,
+undo/redo and out-and-back no-op evidence passes. This remains compatible egui
+AccessKit tree generation only; OS/browser screen-reader delivery is not
+claimed.
+
+Increment 5 now has a runnable native/browser gallery candidate. A closed,
+serialisable Rust catalogue owns 18 stable stories, including the required
+button, dock, toolbar, property, status, virtual-grid and six composed
+reference scenes. The app supports light/dark, standard/high contrast,
+compact/comfortable density, 100/125/150% font scale and narrow/regular/wide
+story surfaces without a runtime UI DSL. Gallery scenes call the production
+dock and token-derived action, property, result, status and thumbnail recipes;
+they use bounded deterministic fixture data and never materialise a logical
+collection. A four-configuration representative matrix renders every story
+headlessly with an empty measured-text audit. Browser WebGPU and native
+GL/llvmpipe launch smokes retain manifests, Rust snapshots and selected
+captures; the warmed browser frame counter remains stopped while idle.
 
 The UI layer owns typed measured-text
 roles, five explicit overflow policies, horizontal and vertical alignment,
@@ -45,14 +52,13 @@ character-count width estimate. Application `TestSnapshot`/`UiGeometry`
 exports eight bounded tab observations and the audit without enumerating
 ordinary labels or virtualised collections.
 
-Canonical `cargo xtask verify` passes 117 tests, token drift, architecture,
+The last landed canonical gate passes 117 tests, token drift, architecture,
 native and Wasm clippy, release native/Wasm builds, browser WebGPU and native
-GL/llvmpipe physical smokes. Retained browser/native observations report an
-empty text audit; a hardware-WebGPU Lantern run at 1279×756 is console-,
-network- and layout-clean. The new explicit evidence directory also prevents
-the canonical gate from overwriting tracked baseline artefacts. Complete
-shell/content text migration remains increment 8; increment 4's dock-shell
-candidate now owns pathological tab allocation and overflow.
+GL/llvmpipe physical smokes. Increment 5 focused checks add three catalogue /
+matrix tests, two idempotent-style tests and production-component semantic
+coverage. Exact-head canonical verification remains the candidate landing
+gate. Complete shell/content migration remains increment 8; action identity
+and the reusable semantic snapshot remain increment 6.
 
 ## Baseline evidence
 
@@ -102,8 +108,8 @@ of selected evidence remains increment 7.
 | 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
 | 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
 | 3 | Measured text roles, overflow, observations and layout audit | 2 | Landed | PR #11, text fixtures, exported tab observations and empty audit |
-| 4 | Reusable accessible shell components and keyboard focus | 2–3 | Candidate; canonical verification passes | 31 focused UI tests, AccessKit tree checks and native physical smoke |
-| 5 | Native/browser gallery, stories and reference scenes | 3–4 | Pending | Gallery captures and manifests |
+| 4 | Reusable accessible shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
+| 5 | Native/browser gallery, stories and reference scenes | 3–4 | Candidate; focused native/browser evidence passes | 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Pending | Semantic/keyboard tests |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Pending | CI runs and failure bundle probe |
 | 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Pending | Required capture matrix |
@@ -131,7 +137,8 @@ show that the change is intentional.
 
 ## Next action
 
-Complete increment 4 native/Wasm and physical evidence, independently review
-the exact head, repair any blocking finding and land it. Then begin the
-native/browser gallery and typed story catalogue. Application-wide text and
-component migration remains deferred.
+Run the complete exact-head gate for increment 5, inspect the regenerated
+application and gallery evidence, independently review and repair the same
+head, then land it. Begin the action registry and reusable semantic snapshot
+only after this gallery contract is stable. Application-wide migration remains
+deferred.

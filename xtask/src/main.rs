@@ -59,6 +59,8 @@ fn verify() -> Result<()> {
             "-p",
             "analytical-workspace-lab",
             "-p",
+            "polyorama-gallery",
+            "-p",
             "polyorama-tile-worker",
             "--",
             "-D",
@@ -75,8 +77,18 @@ fn verify() -> Result<()> {
     run("npm", &["ci"])?;
     run("npx", &["playwright", "install", "chromium"])?;
     run_with_environment("npm", &["run", "browser-smoke"], &evidence_environment)?;
+    run_with_environment(
+        "npm",
+        &["run", "gallery-browser-smoke"],
+        &evidence_environment,
+    )?;
     if cfg!(target_os = "linux") {
         run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
+        run_with_environment(
+            "bash",
+            &["tools/gallery-native-smoke.sh"],
+            &evidence_environment,
+        )?;
     }
     println!(
         "Polyorama verification passed: format, lint, tests, architecture, release native, release WASM, browser and native runtime smoke"
@@ -96,6 +108,8 @@ fn build_web() -> Result<()> {
             "-p",
             "analytical-workspace-lab",
             "-p",
+            "polyorama-gallery",
+            "-p",
             "polyorama-tile-worker",
         ],
     )?;
@@ -107,6 +121,16 @@ fn build_web() -> Result<()> {
             "--out-dir",
             "apps/analytical-workspace-lab/web/pkg",
             "target/wasm32-unknown-unknown/release/analytical_workspace_lab.wasm",
+        ],
+    )?;
+    run(
+        "wasm-bindgen",
+        &[
+            "--target",
+            "web",
+            "--out-dir",
+            "apps/polyorama-gallery/web/pkg",
+            "target/wasm32-unknown-unknown/release/polyorama_gallery.wasm",
         ],
     )?;
     run(

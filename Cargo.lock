@@ -1908,6 +1908,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "polyorama-gallery"
+version = "0.1.6"
+dependencies = [
+ "console_error_panic_hook",
+ "eframe",
+ "egui",
+ "log",
+ "polyorama-core",
+ "polyorama-ui-egui",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "polyorama-render-wgpu"
 version = "0.1.6"
 dependencies = [

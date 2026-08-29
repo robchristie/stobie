@@ -197,6 +197,13 @@ impl From<Rect> for TextRect {
 pub enum TextComponentKind {
     DockTabStrip,
     DockTab,
+    ActionButton,
+    PropertyRow,
+    ResultRow,
+    StatusBadge,
+    ThumbnailCell,
+    DiagnosticRow,
+    GalleryHeading,
     TextSample,
 }
 

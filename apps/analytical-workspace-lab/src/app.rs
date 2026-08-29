@@ -9,9 +9,9 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    AppearancePreference, DensityPreference, DockBehaviour, DockTextContext, MotionPreference,
-    UiPreferences, application_bar_frame, application_bar_height, audit_text_layouts,
-    dock_workspace, stage_renderer_maintenance, submit_render_plan,
+    DockBehaviour, DockTextContext, UiPreferences, application_bar_frame, application_bar_height,
+    apply_design_system, audit_text_layouts, dock_workspace, stage_renderer_maintenance,
+    submit_render_plan,
 };
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
@@ -207,7 +207,7 @@ impl AnalyticalWorkspaceApp {
             .map_or_else(UiPreferences::default, |saved| {
                 saved.preferences.validated()
             });
-        configure_style(&cc.egui_ctx, preferences);
+        apply_design_system(&cc.egui_ctx, preferences);
         let (workspace, document, session, display) = if let Some(saved) = persisted {
             (
                 saved.workspace,
@@ -982,38 +982,6 @@ fn apply_pane_intent(
         _ => return Err("Rejected invalid pane presentation intent".into()),
     }
     Ok(())
-}
-
-fn configure_style(ctx: &egui::Context, preferences: UiPreferences) {
-    match preferences.appearance {
-        AppearancePreference::Light => ctx.set_theme(egui::Theme::Light),
-        AppearancePreference::Dark | AppearancePreference::Unknown => {
-            ctx.set_theme(egui::Theme::Dark)
-        }
-        AppearancePreference::System => ctx.set_theme(egui::ThemePreference::System),
-    }
-    let mut visuals = egui::Visuals::dark();
-    visuals.panel_fill = egui::Color32::from_rgb(19, 23, 27);
-    visuals.extreme_bg_color = egui::Color32::from_rgb(11, 15, 18);
-    visuals.selection.bg_fill = egui::Color32::from_rgb(26, 133, 145);
-    visuals.selection.stroke.color = egui::Color32::from_rgb(112, 222, 210);
-    visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(3);
-    ctx.set_visuals_of(egui::Theme::Dark, visuals);
-    ctx.set_visuals_of(egui::Theme::Light, egui::Visuals::light());
-    let density_scale = match preferences.density {
-        DensityPreference::Compact => 0.8,
-        DensityPreference::Comfortable | DensityPreference::Unknown => 1.0,
-    };
-    ctx.all_styles_mut(|style| {
-        for font_id in style.text_styles.values_mut() {
-            font_id.size *= preferences.font_scale;
-        }
-        style.spacing.item_spacing = egui::vec2(7.0, 5.0) * density_scale;
-        style.spacing.button_padding = egui::vec2(9.0, 4.0) * density_scale;
-        if matches!(preferences.motion, MotionPreference::Reduced) {
-            style.animation_time = 0.0;
-        }
-    });
 }
 
 #[cfg(test)]

@@ -5,4 +5,5 @@
 /.tools/
 /apps/analytical-workspace-lab/web/pkg/
 /apps/analytical-workspace-lab/web/worker-pkg/
+/apps/polyorama-gallery/web/pkg/
 *.profraw

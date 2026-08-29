@@ -1,6 +1,6 @@
 # Polyorama design language
 
-Status: increment 4 dock-shell component candidate
+Status: increment 5 gallery implementation candidate
 
 ## Visual thesis
 
@@ -162,9 +162,9 @@ secondary context but must not materialise complete result or thumbnail
 collections. Exact breakpoints are typed component policy, not token aliases;
 later gallery stories and physical checks will calibrate them.
 
-`PaneWidthClass`, `PaneHeightClass` and `PaneSizeClass` now encode these exact
-breakpoints. Increment 3 applies the width class only to dock-tab text policy;
-toolbar, inspector, results and diagnostic migrations remain later work.
+`PaneWidthClass`, `PaneHeightClass` and `PaneSizeClass` encode these exact
+breakpoints. The gallery exercises narrow and regular/wide reference recipes;
+complete application migration remains later work.
 
 ## Token source and supported subset
 
@@ -210,6 +210,32 @@ ratio, weight and duration fields. Runtime UI code selects `ThemeVariant` and
 first application-bar recipe and increment 3 applies typography, colour and
 spacing tokens to dock-tab text. Broader pane and control migration waits for
 reusable component increments.
+
+## Gallery and reference recipes
+
+`polyorama-gallery` is a native and browser application, not a second widget
+implementation. Its typed Rust catalogue has 18 stable story IDs and fixed
+metadata for description, component group, recommended viewport, applicable
+appearance/density variants and interaction scenarios. It supports the four
+light/dark and standard/high-contrast combinations, both densities, 100%, 125%
+and 150% font scale, and narrow/regular/wide story surfaces. Verification uses
+a representative matrix rather than a needless full Cartesian snapshot suite.
+
+The gallery calls the same production `dock_workspace`, application bar,
+measured action button, property row, result row, status badge and thumbnail
+cell recipes available to application code. Reference data is fixed and
+bounded: no clocks, randomness, workers, complete result rows or complete
+thumbnail collections participate. Action buttons, result rows and thumbnail
+cells expose full role/name/state/click semantics, stable author IDs, visible
+focus and measured labels; the future `ActionId` contract remains increment 6.
+
+Every typed story renders headlessly through the production recipes at four
+representative configurations. Its `TextLayoutObservation` values must pass
+the strict audit. Native and browser launch smokes additionally retain selected
+screenshots, the serialised manifest and current Rust-owned story snapshot. The
+gallery never requests a frame unconditionally; a warmed browser frame counter
+must remain unchanged while idle. Strict expected/actual/diff baseline
+management and `cargo xtask ui` commands remain increment 7.
 
 ## Preferences and licence
 

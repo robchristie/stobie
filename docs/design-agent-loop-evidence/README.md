@@ -62,3 +62,53 @@ drift and architecture checks, native and Wasm lint/release builds, browser
 WebGPU smoke and native GL/llvmpipe physical smoke. The screenshot is visual
 support; truncation, alignment and bounds are established by the measured-text
 fixtures, responsive dock tests and exported semantic observations.
+
+## Increment 5: native/browser component gallery
+
+The gallery implementation source revision is
+`d2fabcbc701afe3f949da80e57ac06d1909cb840`. The retained evidence was produced
+directly from that revision; the subsequent commit records only these evidence
+files and their metadata.
+
+- `gallery-manifest.json` contains 18 unique typed story records;
+- `gallery-browser-overview.png` shows the dark/standard/comfortable canonical
+  dock reference at 1440×900 CSS pixels;
+- `gallery-browser-high-contrast-narrow.png` shows the narrow diagnostics
+  reference at light/high contrast, compact density and 150% font scale;
+- `gallery-browser-splitter-states.png` shows the four deterministic hover,
+  pressed, keyboard-focus and active-drag treatments painted by the same
+  production splitter recipe;
+- `gallery-native-overview.png` shows the same application-shell story under
+  native GL/llvmpipe at 1440×900;
+- `gallery-browser-snapshot.json` and `gallery-native-snapshot.json` retain the
+  Rust-owned story configuration, bounded geometry, text observations and
+  empty audit result;
+- `gallery-browser-evidence.json` records Chrome 151.0.7922.34, Playwright
+  1.62.1, browser WebGPU via eframe/wgpu and unchanged warmed idle frame 16;
+  and
+- the native runtime/Xvfb logs retain the software-rendering environment and
+  contain no panic or wgpu failure.
+
+Exact capture commands were:
+
+```text
+cargo build --release -p polyorama-gallery
+cargo build --release --target wasm32-unknown-unknown -p polyorama-gallery
+wasm-bindgen --target web --out-dir apps/polyorama-gallery/web/pkg target/wasm32-unknown-unknown/release/polyorama_gallery.wasm
+POLYORAMA_EVIDENCE_DIR=docs/design-agent-loop-evidence npm run gallery-browser-smoke
+POLYORAMA_EVIDENCE_DIR=docs/design-agent-loop-evidence bash tools/gallery-native-smoke.sh
+```
+
+SHA-256 values:
+
+```text
+b0585d8ccb277b75d5afe4f30ff4c14997d0aecdcf65f0a32f352b33a72d72e0  gallery-browser-overview.png
+2a6ef827dc9b5ef026bfc7bdaf4a2bb97a8d442b716f378fd398fc7746c9208e  gallery-browser-high-contrast-narrow.png
+cef0fe8af19ec5651b5a97924537caf9792f12e0034439037668b22583cf8130  gallery-browser-splitter-states.png
+6009a91e6a255d955b53413294c74ac786776e8d0181856d4c395a6554a958ae  gallery-native-overview.png
+b974a5602eeaad62f00cf167128680d76ede60f4e06447d5c60b8d58131288b5  gallery-manifest.json
+```
+
+The screenshots support visual review. Catalogue invariants, all-story text
+layout, component semantics, launch behaviour and idle repaint are established
+by executable tests and the native/browser smoke assertions.

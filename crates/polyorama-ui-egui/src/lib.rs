@@ -6,12 +6,14 @@ mod components;
 mod generated_tokens;
 mod preferences;
 mod responsive;
+mod style;
 mod text;
 
 pub use components::*;
 pub use generated_tokens::*;
 pub use preferences::*;
 pub use responsive::*;
+pub use style::*;
 pub use text::*;
 pub use virtual_grid::*;
 
@@ -24,7 +26,6 @@ use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRen
 use std::sync::{Arc, RwLock};
 
 const TAB_VISUAL_HEIGHT: f32 = 24.0;
-const SPLITTER: f32 = 5.0;
 const SPLITTER_KEY_STEP: f32 = 0.05;
 
 #[derive(Clone, Copy)]
@@ -285,23 +286,19 @@ fn render_node(
                     after: preview.after,
                 });
             }
-            ui.painter().rect_filled(
+            paint_splitter(
+                ui.painter(),
                 split_rect,
-                0.0,
-                if response.hovered() {
-                    ui.visuals().selection.bg_fill
-                } else {
-                    ui.visuals().widgets.noninteractive.bg_fill
+                SplitterVisualState {
+                    hovered: response.hovered(),
+                    active: response.is_pointer_button_down_on()
+                        || behaviour
+                            .split_preview
+                            .is_some_and(|preview| preview.node == node),
+                    focused: response.has_focus(),
                 },
+                &text_context.tokens,
             );
-            if response.has_focus() {
-                ui.painter().rect_stroke(
-                    split_rect,
-                    0.0,
-                    egui::Stroke::new(1.0, text_context.tokens.colours.focus_ring),
-                    egui::StrokeKind::Inside,
-                );
-            }
             render_node(ui, first, first_rect, behaviour, presenter, text_context);
             render_node(ui, second, second_rect, behaviour, presenter, text_context);
         }
@@ -588,16 +585,16 @@ fn split_rects(rect: Rect, horizontal: bool, fraction: f32) -> (Rect, Rect, Rect
     } else {
         rect.height()
     };
-    let first_length = (length * fraction - SPLITTER * 0.5).max(40.0);
+    let first_length = (length * fraction - SPLITTER_VISUAL_WIDTH * 0.5).max(40.0);
     if horizontal {
         let cut = rect.left() + first_length;
         (
             Rect::from_min_max(rect.min, Pos2::new(cut, rect.bottom())),
             Rect::from_min_max(
                 Pos2::new(cut, rect.top()),
-                Pos2::new(cut + SPLITTER, rect.bottom()),
+                Pos2::new(cut + SPLITTER_VISUAL_WIDTH, rect.bottom()),
             ),
-            Rect::from_min_max(Pos2::new(cut + SPLITTER, rect.top()), rect.max),
+            Rect::from_min_max(Pos2::new(cut + SPLITTER_VISUAL_WIDTH, rect.top()), rect.max),
         )
     } else {
         let cut = rect.top() + first_length;
@@ -605,9 +602,12 @@ fn split_rects(rect: Rect, horizontal: bool, fraction: f32) -> (Rect, Rect, Rect
             Rect::from_min_max(rect.min, Pos2::new(rect.right(), cut)),
             Rect::from_min_max(
                 Pos2::new(rect.left(), cut),
-                Pos2::new(rect.right(), cut + SPLITTER),
+                Pos2::new(rect.right(), cut + SPLITTER_VISUAL_WIDTH),
             ),
-            Rect::from_min_max(Pos2::new(rect.left(), cut + SPLITTER), rect.max),
+            Rect::from_min_max(
+                Pos2::new(rect.left(), cut + SPLITTER_VISUAL_WIDTH),
+                rect.max,
+            ),
         )
     }
 }

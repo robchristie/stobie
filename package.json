@@ -6,6 +6,7 @@
     "playwright": "1.62.1"
   },
   "scripts": {
-    "browser-smoke": "node tools/browser-smoke.mjs"
+    "browser-smoke": "node tools/browser-smoke.mjs",
+    "gallery-browser-smoke": "node tools/gallery-browser-smoke.mjs"
   }
 }
