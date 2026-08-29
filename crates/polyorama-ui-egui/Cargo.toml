@@ -11,3 +11,7 @@ egui-wgpu.workspace = true
 wgpu.workspace = true
 polyorama-core = { path = "../polyorama-core" }
 polyorama-render-wgpu = { path = "../polyorama-render-wgpu" }
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

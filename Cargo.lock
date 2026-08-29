@@ -1950,6 +1950,8 @@ dependencies = [
  "egui-wgpu",
  "polyorama-core",
  "polyorama-render-wgpu",
+ "serde",
+ "serde_json",
  "wgpu",
 ]
 
@@ -3552,6 +3554,7 @@ name = "xtask"
 version = "0.1.6"
 dependencies = [
  "anyhow",
+ "serde_json",
 ]
 
 [[package]]

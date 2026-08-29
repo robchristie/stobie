@@ -1,0 +1,133 @@
+{
+  "$description": "Polyorama visual primitives and semantic UI roles. See docs/design-language.md for the supported subset.",
+  "colour": {
+    "palette": {
+      "canvas": { "$type": "color", "$value": "#0b0f12" },
+      "panel": { "$type": "color", "$value": "#13181d" },
+      "raised": { "$type": "color", "$value": "#1b2229" },
+      "border": { "$type": "color", "$value": "#45535e" },
+      "text": { "$type": "color", "$value": "#e7edf2" },
+      "muted": { "$type": "color", "$value": "#9daab3" },
+      "accent": { "$type": "color", "$value": "#2babb5" },
+      "onAccent": { "$type": "color", "$value": "#061012" },
+      "selection": { "$type": "color", "$value": "#164d52" },
+      "focus": { "$type": "color", "$value": "#70ded2" },
+      "success": { "$type": "color", "$value": "#63c49a" },
+      "warning": { "$type": "color", "$value": "#e1b75a" },
+      "error": { "$type": "color", "$value": "#ef817d" }
+    },
+    "surface": {
+      "canvas": { "$type": "color", "$value": "{colour.palette.canvas}" },
+      "panel": { "$type": "color", "$value": "{colour.palette.panel}" },
+      "raised": { "$type": "color", "$value": "{colour.palette.raised}" }
+    },
+    "border": {
+      "subtle": { "$type": "color", "$value": "{colour.palette.border}" }
+    },
+    "text": {
+      "primary": { "$type": "color", "$value": "{colour.palette.text}" },
+      "muted": { "$type": "color", "$value": "{colour.palette.muted}" }
+    },
+    "accent": {
+      "primary": { "$type": "color", "$value": "{colour.palette.accent}" },
+      "onAccent": { "$type": "color", "$value": "{colour.palette.onAccent}" }
+    },
+    "selection": {
+      "background": { "$type": "color", "$value": "{colour.palette.selection}" }
+    },
+    "focus": {
+      "ring": { "$type": "color", "$value": "{colour.palette.focus}" }
+    },
+    "status": {
+      "success": { "$type": "color", "$value": "{colour.palette.success}" },
+      "warning": { "$type": "color", "$value": "{colour.palette.warning}" },
+      "error": { "$type": "color", "$value": "{colour.palette.error}" }
+    }
+  },
+  "spacing": {
+    "unit": { "$type": "dimension", "$value": 4 },
+    "inline": { "$type": "dimension", "$value": 7 },
+    "block": { "$type": "dimension", "$value": 5 },
+    "section": { "$type": "dimension", "$value": 12 }
+  },
+  "geometry": {
+    "applicationBarHeight": { "$type": "dimension", "$value": 38 },
+    "controlHeight": { "$type": "dimension", "$value": 28 },
+    "controlPaddingX": { "$type": "dimension", "$value": 9 },
+    "controlPaddingY": { "$type": "dimension", "$value": 4 },
+    "controlRadius": { "$type": "dimension", "$value": 3 },
+    "minimumHitSize": { "$type": "dimension", "$value": 32 }
+  },
+  "typography": {
+    "bodySize": { "$type": "fontSize", "$value": 13 },
+    "bodyWeight": { "$type": "fontWeight", "$value": 400 },
+    "labelSize": { "$type": "fontSize", "$value": 12.5 },
+    "labelWeight": { "$type": "fontWeight", "$value": 600 },
+    "lineHeight": { "$type": "number", "$value": 1.35 }
+  },
+  "motion": {
+    "quick": { "$type": "duration", "$value": 120 }
+  },
+  "$themes": {
+    "dark": {
+      "colour": { "palette": {
+        "canvas": { "$value": "#0b0f12" }, "panel": { "$value": "#13181d" },
+        "raised": { "$value": "#1b2229" }, "border": { "$value": "#45535e" },
+        "text": { "$value": "#e7edf2" }, "muted": { "$value": "#9daab3" },
+        "accent": { "$value": "#2babb5" }, "onAccent": { "$value": "#061012" },
+        "selection": { "$value": "#164d52" }, "focus": { "$value": "#70ded2" },
+        "success": { "$value": "#63c49a" }, "warning": { "$value": "#e1b75a" },
+        "error": { "$value": "#ef817d" }
+      } }
+    },
+    "light": {
+      "colour": { "palette": {
+        "canvas": { "$value": "#f3f5f6" }, "panel": { "$value": "#ffffff" },
+        "raised": { "$value": "#e7ecef" }, "border": { "$value": "#89969f" },
+        "text": { "$value": "#172027" }, "muted": { "$value": "#53616a" },
+        "accent": { "$value": "#087781" }, "onAccent": { "$value": "#ffffff" },
+        "selection": { "$value": "#c7eceb" }, "focus": { "$value": "#006f78" },
+        "success": { "$value": "#19734c" }, "warning": { "$value": "#865f00" },
+        "error": { "$value": "#a52d32" }
+      } }
+    },
+    "dark-high-contrast": {
+      "colour": { "palette": {
+        "canvas": { "$value": "#000000" }, "panel": { "$value": "#090d0f" },
+        "raised": { "$value": "#11191d" }, "border": { "$value": "#b7c5ce" },
+        "text": { "$value": "#ffffff" }, "muted": { "$value": "#d5dde2" },
+        "accent": { "$value": "#71fff5" }, "onAccent": { "$value": "#000000" },
+        "selection": { "$value": "#063f42" }, "focus": { "$value": "#ffffff" },
+        "success": { "$value": "#8fffc8" }, "warning": { "$value": "#ffe18a" },
+        "error": { "$value": "#ffaaa6" }
+      } }
+    },
+    "light-high-contrast": {
+      "colour": { "palette": {
+        "canvas": { "$value": "#ffffff" }, "panel": { "$value": "#ffffff" },
+        "raised": { "$value": "#edf1f3" }, "border": { "$value": "#263238" },
+        "text": { "$value": "#000000" }, "muted": { "$value": "#303b42" },
+        "accent": { "$value": "#005c62" }, "onAccent": { "$value": "#ffffff" },
+        "selection": { "$value": "#c4f5f1" }, "focus": { "$value": "#000000" },
+        "success": { "$value": "#075f3b" }, "warning": { "$value": "#684900" },
+        "error": { "$value": "#862027" }
+      } }
+    }
+  },
+  "$densities": {
+    "comfortable": {
+      "spacing": { "inline": { "$value": 7 }, "block": { "$value": 5 }, "section": { "$value": 12 } },
+      "geometry": {
+        "applicationBarHeight": { "$value": 38 }, "controlHeight": { "$value": 28 },
+        "controlPaddingX": { "$value": 9 }, "controlPaddingY": { "$value": 4 }
+      }
+    },
+    "compact": {
+      "spacing": { "inline": { "$value": 5 }, "block": { "$value": 3 }, "section": { "$value": 8 } },
+      "geometry": {
+        "applicationBarHeight": { "$value": 32 }, "controlHeight": { "$value": 24 },
+        "controlPaddingX": { "$value": 7 }, "controlPaddingY": { "$value": 3 }
+      }
+    }
+  }
+}

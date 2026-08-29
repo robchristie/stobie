@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; baseline candidate complete
+Status: active; increment 2 canonically verified candidate
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,11 +20,14 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-The baseline and design audit is complete and awaiting ordinary review and
-landing. The clean baseline passed `cargo xtask verify` on 29 August 2026. The
-next coherent increment is the visual language and token compiler, including a
-single isolated production consumer. Do not restyle the complete application
-until typed tokens and measured text primitives exist.
+The baseline and design audit has landed. Increment 2 is a canonically verified
+candidate: the documented visual language, bounded token source and compiler,
+generated typed variants, versioned UI preferences and one isolated
+application-bar consumer. `cargo xtask verify` passes 99 tests, architecture,
+release native/Wasm builds and both physical smokes. A fresh hardware-WebGPU
+Lantern run was console-, network- and layout-clean after the loading shell's
+missing favicon declaration was corrected. Do not restyle the complete
+application until typed tokens and measured text primitives exist.
 
 ## Baseline evidence
 
@@ -70,8 +73,8 @@ ignored output directory before adding CI evidence publication.
 
 | Increment | Outcome | Depends on | Status | Durable evidence |
 | --- | --- | --- | --- | --- |
-| 1 | Baseline, audit, goal and campaign control plane | — | Candidate complete | This plan and baseline gate |
-| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Pending | PR and token tests |
+| 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
+| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Candidate; canonically verified | Token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
 | 3 | Measured text roles, overflow, observations and layout audit | 2 | Pending | Text fixtures and audit output |
 | 4 | Reusable accessible shell components and keyboard focus | 2–3 | Pending | Component tests and captures |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Pending | Gallery captures and manifests |
@@ -102,8 +105,7 @@ show that the change is intentional.
 
 ## Next action
 
-Complete increment 1, independently review and land it, then dispatch a fresh
-bounded implementation context for increment 2. The token increment must prove
-validation, alias resolution, cycle detection, deterministic generation,
-no-drift checking, coherent variants and one isolated sample consumer before
-application-wide migration begins.
+Complete increment 2 verification, exact-head review and landing. Prove native
+and Wasm lint/build, token drift, preference migration, contrast pairs and the
+isolated application-bar consumer; then start measured text and overflow as a
+fresh increment. Application-wide migration remains deferred.

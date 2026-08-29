@@ -9,7 +9,9 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    DockBehaviour, dock_workspace, stage_renderer_maintenance, submit_render_plan,
+    AppearancePreference, DensityPreference, DockBehaviour, MotionPreference, UiPreferences,
+    application_bar_frame, application_bar_height, dock_workspace, stage_renderer_maintenance,
+    submit_render_plan,
 };
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
@@ -30,6 +32,8 @@ const STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
 #[derive(Clone, Serialize, Deserialize)]
 struct PersistedState {
     schema_version: u32,
+    #[serde(default)]
+    preferences: UiPreferences,
     workspace: Workspace,
     document: Document,
     session: Session,
@@ -182,6 +186,7 @@ pub struct AnalyticalWorkspaceApp {
     thumbnail_cache: ThumbnailCache,
     pending_renderer_upload: Option<DecodeEvent>,
     status: String,
+    preferences: UiPreferences,
     #[cfg(target_arch = "wasm32")]
     egui_context: egui::Context,
     last_render_cameras: Vec<CameraState>,
@@ -193,11 +198,16 @@ pub struct AnalyticalWorkspaceApp {
 
 impl AnalyticalWorkspaceApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        configure_style(&cc.egui_ctx);
         let persisted = cc
             .storage
             .and_then(|storage| eframe::get_value::<PersistedState>(storage, STORAGE_KEY))
             .filter(persisted_state_is_valid);
+        let preferences = persisted
+            .as_ref()
+            .map_or_else(UiPreferences::default, |saved| {
+                saved.preferences.validated()
+            });
+        configure_style(&cc.egui_ctx, preferences);
         let (workspace, document, session, display) = if let Some(saved) = persisted {
             (
                 saved.workspace,
@@ -284,6 +294,7 @@ impl AnalyticalWorkspaceApp {
             thumbnail_cache: ThumbnailCache::default(),
             pending_renderer_upload: None,
             status: "Initialising progressive data…".into(),
+            preferences,
             #[cfg(target_arch = "wasm32")]
             egui_context: cc.egui_ctx.clone(),
             last_render_cameras: Vec::new(),
@@ -298,6 +309,7 @@ impl AnalyticalWorkspaceApp {
         let _span = info_span!("layout_serialisation").entered();
         PersistedState {
             schema_version: LAYOUT_SCHEMA_VERSION,
+            preferences: self.preferences.validated(),
             workspace: self.workspace.clone(),
             document: self.document.clone(),
             session: self.session.clone(),
@@ -718,13 +730,20 @@ impl eframe::App for AnalyticalWorkspaceApp {
         }
         self.ui_behaviour.begin_frame();
         self.poll_runtime(&ctx);
+        let system_dark = ctx
+            .system_theme()
+            .is_none_or(|theme| theme == egui::Theme::Dark);
+        let tokens = self.preferences.tokens(system_dark);
         let mut save_now = false;
         let mut ui_geometry = UiGeometry::new(root_ui.max_rect(), ctx.pixels_per_point());
         let menu = egui::Panel::top("application-menu")
-            .exact_size(38.0)
+            .frame(application_bar_frame(&tokens))
+            .exact_size(application_bar_height(&tokens, self.preferences.font_scale))
             .show(root_ui, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.strong(APPLICATION_NAME);
+                    ui.strong(
+                        egui::RichText::new(APPLICATION_NAME).color(tokens.colours.text_primary),
+                    );
                     ui.separator();
                     let undo = ui.button("Undo");
                     ui_geometry.control(None, "undo", undo.rect);
@@ -763,13 +782,16 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
                     ui.separator();
-                    ui.label(&self.status);
+                    ui.label(egui::RichText::new(&self.status).color(tokens.colours.text_primary));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(format!(
-                            "{} decoded thumbnails · {} decoding",
-                            self.thumbnail_cache.len(),
-                            self.runtime.metrics.in_flight
-                        ));
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{} decoded thumbnails · {} decoding",
+                                self.thumbnail_cache.len(),
+                                self.runtime.metrics.in_flight
+                            ))
+                            .color(tokens.colours.text_muted),
+                        );
                     });
                 });
             });
@@ -957,8 +979,14 @@ fn apply_pane_intent(
     Ok(())
 }
 
-fn configure_style(ctx: &egui::Context) {
-    ctx.set_theme(egui::Theme::Dark);
+fn configure_style(ctx: &egui::Context, preferences: UiPreferences) {
+    match preferences.appearance {
+        AppearancePreference::Light => ctx.set_theme(egui::Theme::Light),
+        AppearancePreference::Dark | AppearancePreference::Unknown => {
+            ctx.set_theme(egui::Theme::Dark)
+        }
+        AppearancePreference::System => ctx.set_theme(egui::ThemePreference::System),
+    }
     let mut visuals = egui::Visuals::dark();
     visuals.panel_fill = egui::Color32::from_rgb(19, 23, 27);
     visuals.extreme_bg_color = egui::Color32::from_rgb(11, 15, 18);
@@ -966,10 +994,21 @@ fn configure_style(ctx: &egui::Context) {
     visuals.selection.stroke.color = egui::Color32::from_rgb(112, 222, 210);
     visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(3);
     ctx.set_visuals_of(egui::Theme::Dark, visuals);
-    let mut style = (*ctx.style_of(egui::Theme::Dark)).clone();
-    style.spacing.item_spacing = egui::vec2(7.0, 5.0);
-    style.spacing.button_padding = egui::vec2(9.0, 4.0);
-    ctx.set_style_of(egui::Theme::Dark, style);
+    ctx.set_visuals_of(egui::Theme::Light, egui::Visuals::light());
+    let density_scale = match preferences.density {
+        DensityPreference::Compact => 0.8,
+        DensityPreference::Comfortable | DensityPreference::Unknown => 1.0,
+    };
+    ctx.all_styles_mut(|style| {
+        for font_id in style.text_styles.values_mut() {
+            font_id.size *= preferences.font_scale;
+        }
+        style.spacing.item_spacing = egui::vec2(7.0, 5.0) * density_scale;
+        style.spacing.button_padding = egui::vec2(9.0, 4.0) * density_scale;
+        if matches!(preferences.motion, MotionPreference::Reduced) {
+            style.animation_time = 0.0;
+        }
+    });
 }
 
 #[cfg(test)]
@@ -979,6 +1018,7 @@ mod tests {
     fn persisted(workspace: Workspace) -> PersistedState {
         PersistedState {
             schema_version: LAYOUT_SCHEMA_VERSION,
+            preferences: UiPreferences::default(),
             workspace,
             document: Document::default(),
             session: Session::default(),
@@ -1025,6 +1065,15 @@ mod tests {
         state.session.selected_annotation = None;
         state.display.get_mut(&PaneId(1)).unwrap().high = f32::NAN;
         assert!(!persisted_state_is_valid(&state));
+    }
+
+    #[test]
+    fn persisted_state_without_preferences_migrates_to_safe_defaults() {
+        let mut value = serde_json::to_value(persisted(Workspace::analytical_default())).unwrap();
+        value.as_object_mut().unwrap().remove("preferences");
+        let restored: PersistedState = serde_json::from_value(value).unwrap();
+        assert_eq!(restored.preferences, UiPreferences::default());
+        assert!(persisted_state_is_valid(&restored));
     }
 
     #[test]

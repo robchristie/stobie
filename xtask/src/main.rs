@@ -2,24 +2,35 @@ use std::{env, fs, path::Path, process::Command};
 
 use anyhow::{Context, Result, anyhow, bail};
 
+mod tokens;
+
 fn main() -> Result<()> {
     let command = env::args().nth(1).unwrap_or_else(|| "help".into());
     match command.as_str() {
         "verify" => verify(),
         "build-web" => build_web(),
         "architecture" => architecture(),
+        "tokens" => match env::args().nth(2).as_deref() {
+            Some("generate") => tokens::generate(Path::new(".")),
+            Some("check") => tokens::check(Path::new(".")),
+            Some(action) => bail!("unknown tokens action {action:?}; expected generate or check"),
+            None => bail!("tokens requires an action: generate or check"),
+        },
         _ => {
             println!(
                 "cargo xtask verify      run the complete native/browser verification surface"
             );
             println!("cargo xtask build-web   build release WASM application and Worker packages");
             println!("cargo xtask architecture check dependency boundaries");
+            println!("cargo xtask tokens generate generate typed Rust from the token source");
+            println!("cargo xtask tokens check    validate tokens and check generated drift");
             Ok(())
         }
     }
 }
 
 fn verify() -> Result<()> {
+    tokens::check(Path::new("."))?;
     run("cargo", &["fmt", "--all", "--check"])?;
     run(
         "cargo",
