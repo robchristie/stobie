@@ -28,6 +28,11 @@ current action or state; `selection.background` preserves readable primary
 text. `focus.ring` is visually independent of selection. Success, warning and
 error communicate status, never category or decoration.
 
+Scientific overlays use the separate `overlay.annotation`,
+`overlay.selected`, `overlay.vertex` and `overlay.footprint` roles. These
+high-chroma foregrounds are authored for variable raster imagery and therefore
+do not follow panel text colours when the application theme changes.
+
 Light and dark are equal authored modes. High contrast is an orthogonal
 preference with a light and dark result, not a colour inversion. Authored
 foreground/background text pairs target at least WCAG 2.2 AA 4.5:1 in standard

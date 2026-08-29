@@ -9,9 +9,10 @@ use polyorama_render_wgpu::{
 };
 use polyorama_ui_egui::{
     ActionButtonSpec, ActionEmphasis, ActionId, ActionScope, ActionTarget, Availability,
-    DesignTokens, DomainReference, ImagePlanTarget, PanePresenter, SemanticUiId,
+    DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter, SemanticUiId,
     TextLayoutObservation, UiNode, UiRole, action_button, action_spec, allocate_viewport,
-    consume_action_shortcut, stage_render_callback,
+    choice_control, consume_action_shortcut, diagnostic_row, image_status_height,
+    paint_image_status, range_control, section_heading, stage_render_callback,
 };
 use web_time::Instant;
 
@@ -147,6 +148,7 @@ struct ImageOverlayRequest {
     gesture: Option<GesturePreview>,
     selected_annotation: Option<AnnotationId>,
     hover: Option<egui::Pos2>,
+    tokens: DesignTokens,
 }
 
 struct ImageStatusRequest {
@@ -155,6 +157,8 @@ struct ImageStatusRequest {
     viewport: egui::Rect,
     pointer_local: Option<ViewportPoint>,
     fallback_pointer: ImagePoint,
+    tokens: DesignTokens,
+    font_scale: f32,
 }
 
 impl FrameOutput {
@@ -199,6 +203,7 @@ impl FrameOutput {
                 self.annotation_gesture_for(overlay),
                 camera,
                 behaviour.camera(PaneId(1), committed),
+                &overlay.tokens,
             );
         }
         for status in &self.statuses {
@@ -216,52 +221,47 @@ impl FrameOutput {
                 })
                 .unwrap_or(status.fallback_pointer);
             let world = ImageToWorld::default().image_to_world(pointer);
-            let style = context.style_of(egui::Theme::Dark);
             let painter = context
                 .layer_painter(egui::LayerId::new(
                     egui::Order::Foreground,
                     egui::Id::new(("image-status", status.pane.0)),
                 ))
                 .with_clip_rect(status.rect);
-            painter.rect_filled(status.rect, 0.0, egui::Color32::from_rgb(19, 23, 27));
-            let right_width = 88.0_f32.min(status.rect.width() * 0.35);
-            painter
-                .with_clip_rect(egui::Rect::from_min_max(
-                    status.rect.min,
-                    egui::pos2(status.rect.right() - right_width, status.rect.bottom()),
-                ))
-                .text(
-                    status.rect.left_center(),
-                    egui::Align2::LEFT_CENTER,
-                    format!(
-                        "image {:>8.1}, {:>8.1}  ·  world {:>10.1}, {:>10.1}",
-                        pointer.x, pointer.y, world.x, world.y
-                    ),
-                    egui::TextStyle::Monospace.resolve(&style),
-                    style.visuals.text_color(),
-                );
             let tile_count = self
                 .render_plan
                 .images
                 .iter()
                 .find(|request| request.pane == status.pane)
                 .map_or(0, |request| request.desired_tiles.len());
-            painter
-                .with_clip_rect(egui::Rect::from_min_max(
-                    egui::pos2(status.rect.right() - right_width, status.rect.top()),
-                    status.rect.max,
-                ))
-                .text(
-                    status.rect.right_center(),
-                    egui::Align2::RIGHT_CENTER,
-                    format!(
-                        "L{} · {} tiles",
-                        camera.pixels_per_screen_point.log2().round().max(0.0) as u8,
-                        tile_count
-                    ),
-                    egui::TextStyle::Body.resolve(&style),
-                    style.visuals.text_color(),
-                );
+            let coordinates = format!(
+                "image {:>8.1}, {:>8.1}  ·  world {:>10.1}, {:>10.1}",
+                pointer.x, pointer.y, world.x, world.y
+            );
+            let detail = format!(
+                "L{} · {} tiles",
+                camera.pixels_per_screen_point.log2().round().max(0.0) as u8,
+                tile_count
+            );
+            let status_id = format!("pane.{}.image_status", status.pane.0);
+            if let Some(node) = self
+                .ui_geometry
+                .semantic_nodes
+                .iter_mut()
+                .find(|node| node.id.0 == status_id)
+            {
+                node.description = Some(format!("{coordinates}; {detail}"));
+            }
+            self.ui_geometry.text_layouts.extend(paint_image_status(
+                &painter,
+                ImageStatusSpec {
+                    instance: u64::from(status.pane.0),
+                    rect: status.rect,
+                    coordinates: &coordinates,
+                    detail: &detail,
+                },
+                &status.tokens,
+                status.font_scale,
+            ));
         }
     }
 
@@ -406,7 +406,17 @@ impl PanePresenter for PaneSurface<'_> {
             7 => self.inspector_pane(ui),
             8 => self.diagnostics_pane(ui),
             _ => {
-                ui.label("Unknown pane");
+                polyorama_ui_egui::measured_content_label(
+                    ui,
+                    u64::from(pane.0),
+                    "Unknown pane",
+                    polyorama_ui_egui::TextRole::Error,
+                    polyorama_ui_egui::TextOverflow::Wrap,
+                    2,
+                    &self.tokens,
+                    self.font_scale,
+                    &mut self.outputs.ui_geometry.text_layouts,
+                );
             }
         });
     }
@@ -490,8 +500,12 @@ impl PaneSurface<'_> {
     fn thumbnails_pane(&mut self, ui: &mut egui::Ui) {
         thumbnails::show(
             ui,
-            self.selected_result,
-            self.generation,
+            thumbnails::ThumbnailPaneView {
+                selected_result: self.selected_result,
+                generation: self.generation,
+                tokens: &self.tokens,
+                font_scale: self.font_scale,
+            },
             self.thumbnail_cache,
             self.virtualisation,
             self.outputs,
@@ -664,6 +678,10 @@ mod tests {
             }),
             selected_annotation: Some(annotation),
             hover: None,
+            tokens: DesignTokens::resolve(
+                polyorama_ui_egui::ThemeVariant::Dark,
+                polyorama_ui_egui::DensityVariant::Comfortable,
+            ),
         });
         let release = GesturePreview::Vertex {
             annotation,
@@ -914,8 +932,12 @@ mod tests {
                     ui.set_clip_rect(thumbnails_rect);
                     thumbnails::show(
                         ui,
-                        Some(ResultId(0)),
-                        1,
+                        thumbnails::ThumbnailPaneView {
+                            selected_result: Some(ResultId(0)),
+                            generation: 1,
+                            tokens: &tokens,
+                            font_scale: 1.0,
+                        },
                         &mut thumbnail_cache,
                         &mut virtualisation,
                         &mut output,

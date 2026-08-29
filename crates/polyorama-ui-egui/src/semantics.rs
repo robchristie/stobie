@@ -88,6 +88,9 @@ pub enum UiRole {
     ApplicationBar,
     Toolbar,
     Button,
+    RadioButton,
+    ComboBox,
+    Slider,
     Tab,
     Splitter,
     Pane,
@@ -96,6 +99,7 @@ pub enum UiRole {
     ResultRow,
     ThumbnailCell,
     Status,
+    Section,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -279,6 +283,7 @@ pub enum AccessKitMismatch {
     Enabled { id: SemanticUiId },
     Selected { id: SemanticUiId },
     Description { id: SemanticUiId },
+    Checked { id: SemanticUiId },
     ClickAction { id: SemanticUiId },
     AdjustAction { id: SemanticUiId },
     Bounds { id: SemanticUiId },
@@ -302,6 +307,9 @@ pub fn audit_accesskit(
         matches!(
             node.role,
             UiRole::Button
+                | UiRole::RadioButton
+                | UiRole::ComboBox
+                | UiRole::Slider
                 | UiRole::Tab
                 | UiRole::Splitter
                 | UiRole::ResultRow
@@ -323,6 +331,9 @@ pub fn audit_accesskit(
         let node = candidates[0];
         let expected_role = match semantic.role {
             UiRole::Button => egui::accesskit::Role::Button,
+            UiRole::RadioButton => egui::accesskit::Role::RadioButton,
+            UiRole::ComboBox => egui::accesskit::Role::ComboBox,
+            UiRole::Slider => egui::accesskit::Role::Slider,
             UiRole::Tab => egui::accesskit::Role::Tab,
             UiRole::Splitter => egui::accesskit::Role::Splitter,
             UiRole::ResultRow | UiRole::ThumbnailCell => egui::accesskit::Role::ListBoxOption,
@@ -366,10 +377,28 @@ pub fn audit_accesskit(
                 id: semantic.id.clone(),
             });
         }
+        if semantic.role == UiRole::RadioButton {
+            let expected = semantic.checked.map(|checked| {
+                if checked {
+                    egui::accesskit::Toggled::True
+                } else {
+                    egui::accesskit::Toggled::False
+                }
+            });
+            if node.toggled() != expected {
+                findings.push(AccessKitMismatch::Checked {
+                    id: semantic.id.clone(),
+                });
+            }
+        }
         let should_click = semantic.enabled
             && matches!(
                 semantic.role,
-                UiRole::Button | UiRole::Tab | UiRole::ResultRow | UiRole::ThumbnailCell
+                UiRole::Button
+                    | UiRole::RadioButton
+                    | UiRole::Tab
+                    | UiRole::ResultRow
+                    | UiRole::ThumbnailCell
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
         if (should_click && !supports_click)
@@ -379,7 +408,7 @@ pub fn audit_accesskit(
                 id: semantic.id.clone(),
             });
         }
-        if semantic.role == UiRole::Splitter
+        if matches!(semantic.role, UiRole::Splitter | UiRole::Slider)
             && (!node.supports_action(egui::accesskit::Action::Increment)
                 || !node.supports_action(egui::accesskit::Action::Decrement))
         {

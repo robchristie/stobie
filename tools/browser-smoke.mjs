@@ -167,6 +167,8 @@ try {
     if (target.kind === 'action') {
       rect = semantic.nodes.find((node) => node.actions.includes(target.action)
         && (target.pane == null || node.pane === target.pane))?.rect;
+    } else if (target.kind === 'semantic_id') {
+      rect = semantic.nodes.find((node) => node.id === target.id)?.rect;
     } else if (target.kind === 'control') {
       rect = geometry.controls.find((item) => item.name === target.name
         && (target.pane == null || item.pane === target.pane))?.rect;
@@ -216,12 +218,70 @@ try {
     const point = await targetPoint(target);
     await page.mouse.click(point.x, point.y, options);
   };
-  const semanticAction = async (action) => {
-    const before = await semanticSnapshot();
-    await page.evaluate((value) => window.__POLYORAMA_HANDLE.test_action(value), action);
+  const preferenceNodeId = (field, value) => `application.bar.preferences.${field}.${value}`;
+  const physicallyClickSemanticControl = async (id) => {
+    let point = await targetPoint({ kind: 'semantic_id', id });
+    const beforeHover = await semanticSnapshot();
+    await page.mouse.move(point.x, point.y);
     await page.waitForFunction(
       (frame) => window.__POLYORAMA_HANDLE.test_snapshot().frame_number > frame,
-      before.frame_number,
+      beforeHover.frame_number,
+      { timeout: 10_000 },
+    );
+    // Hover can change egui layout. Refresh the Rust-owned rectangle before the
+    // held click, and allow headed Chromium to deliver down and up separately.
+    point = await targetPoint({ kind: 'semantic_id', id });
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.waitForTimeout(50);
+    await page.mouse.up();
+  };
+  const openFreshAppearance = async () => {
+    const open = await page.evaluate(() => window.__POLYORAMA_HANDLE.test_snapshot()
+      .ui_snapshot.nodes.some((node) => node.id === 'application.bar.preferences.appearance.light'));
+    if (open) {
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+        .some((node) => node.id === 'application.bar.preferences.appearance.light'), null, { timeout: 10_000 });
+    }
+    await clickTarget({ kind: 'action', action: 'appearance_settings' });
+    await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+      .some((node) => node.id === 'application.bar.preferences.appearance.light'), null, { timeout: 10_000 });
+  };
+  const choosePreference = async (field, value) => {
+    await openFreshAppearance();
+    await physicallyClickSemanticControl(preferenceNodeId(field, value));
+    await page.waitForFunction(
+      ({ field, value }) => window.__POLYORAMA_HANDLE.test_snapshot().preferences[field] === value,
+      { field, value },
+      { timeout: 10_000 },
+    );
+    return semanticSnapshot();
+  };
+  const chooseFontScale = async (value) => {
+    await openFreshAppearance();
+    const id = preferenceNodeId('font_scale', 'value');
+    const start = await targetPoint({ kind: 'semantic_id', id }, 0.15, 0.5);
+    const end = await targetPoint({ kind: 'semantic_id', id }, value === 1.5 ? 0.99 : 0.01, 0.5);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(
+      (expected) => window.__POLYORAMA_HANDLE.test_snapshot().preferences.font_scale === expected,
+      value,
+      { timeout: 10_000 },
+    );
+    return semanticSnapshot();
+  };
+  const semanticAction = async (action) => {
+    const applied = await page.evaluate(
+      (value) => window.__POLYORAMA_HANDLE.test_action(value),
+      action,
+    );
+    await page.waitForFunction(
+      (frame) => window.__POLYORAMA_HANDLE.test_snapshot().frame_number > frame,
+      applied.frame_number,
       { timeout: 10_000 },
     );
     return semanticSnapshot();
@@ -232,7 +292,12 @@ try {
       || initialSemantic.ui_snapshot.semantic_audit.length !== 0
       || initialSemantic.ui_snapshot.nodes.length >= 1_000
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('undo'))
+      || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('appearance_settings'))
+      || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('display_settings') && node.pane === 1)
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('fit_view') && node.pane === 1)
+      || !initialSemantic.ui_snapshot.nodes.some((node) => node.id === 'pane.1.image_status'
+        && node.description?.includes('image ')
+        && node.description?.includes(' tiles'))
       || initialSemantic.ui_geometry.tabs.length !== 8
       || initialSemantic.ui_geometry.image_viewports.length < 4
       || initialSemantic.ui_geometry.text_layouts.filter((item) => item.role === 'tab_label').length !== 8
@@ -258,10 +323,64 @@ try {
       || initialSemantic.runtime.external_queue_high_water > initialSemantic.runtime.external_queue_capacity) {
     throw new Error(`runtime exceeded a configured bound: ${JSON.stringify(initialSemantic.runtime)}`);
   }
+  await clickTarget({ kind: 'action', action: 'display_settings', pane: 1 });
+  await page.waitForFunction(() => {
+    const nodes = window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes;
+    return nodes.some((node) => node.id === 'pane.1.display_map' && node.role === 'combo_box')
+      && nodes.some((node) => node.id === 'pane.1.display_low' && node.role === 'slider')
+      && nodes.some((node) => node.id === 'pane.1.display_high' && node.role === 'slider');
+  }, null, { timeout: 10_000 });
+  const displayMenu = await semanticSnapshot();
+  const displayNodes = displayMenu.ui_snapshot.nodes
+    .filter((node) => node.id.startsWith('pane.1.display_'));
+  if (displayNodes.length !== 3
+      || displayMenu.ui_snapshot.semantic_audit.length !== 0
+      || displayNodes.some((node) => !node.actions.includes('display_settings'))
+      || displayNodes.some((node) => node.rect.max_x <= node.rect.min_x
+        || node.rect.max_y <= node.rect.min_y)) {
+    throw new Error(`image display controls are incomplete: ${JSON.stringify(displayNodes)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-display-controls.png') });
+  await page.keyboard.press('Escape');
+  await clickTarget({ kind: 'action', action: 'appearance_settings' });
+  await page.waitForFunction(() => {
+    const nodes = window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes;
+    return nodes.some((node) => node.id === 'application.bar.preferences.appearance.light')
+      && nodes.some((node) => node.id === 'application.bar.preferences.font_scale.value')
+      && nodes.some((node) => node.id === 'application.bar.preferences.motion.reduced');
+  }, null, { timeout: 10_000 });
+  const preferenceMenu = await semanticSnapshot();
+  const preferenceNodes = preferenceMenu.ui_snapshot.nodes
+    .filter((node) => node.id.startsWith('application.bar.preferences.'));
+  if (preferenceNodes.length !== 10
+      || preferenceMenu.ui_snapshot.semantic_audit.length !== 0
+      || preferenceNodes.some((node) => !node.actions.includes('appearance_settings'))
+      || preferenceNodes.some((node) => node.rect.max_x <= node.rect.min_x
+        || node.rect.max_y <= node.rect.min_y)) {
+    throw new Error(`appearance controls are incomplete: ${JSON.stringify(preferenceNodes)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-appearance-controls.png') });
+  await page.keyboard.press('Escape');
 
-  const cameraSemantic = await semanticAction({
+  await semanticAction({
     kind: 'set_camera', pane: 1, centre_x: 32768, centre_y: 24576, pixels_per_screen_point: 8,
   });
+  await page.waitForFunction(() => {
+    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    const primary = snapshot.cameras.find((item) => item.pane === 1)?.camera;
+    const linked = snapshot.cameras.find((item) => item.pane === 2)?.camera;
+    const primaryRender = snapshot.render_cameras.find((item) => item.pane === 1)?.camera;
+    const linkedRender = snapshot.render_cameras.find((item) => item.pane === 2)?.camera;
+    const expected = JSON.stringify({
+      centre: { x: 32768, y: 24576 },
+      pixels_per_screen_point: 8,
+    });
+    return JSON.stringify(primary) === expected
+      && JSON.stringify(linked) === expected
+      && JSON.stringify(primaryRender) === expected
+      && JSON.stringify(linkedRender) === expected;
+  }, null, { timeout: 10_000 });
+  const cameraSemantic = await semanticSnapshot();
   const primarySemantic = cameraSemantic.cameras.find((item) => item.pane === 1);
   const linkedSemantic = cameraSemantic.cameras.find((item) => item.pane === 2);
   const primaryRender = cameraSemantic.render_cameras.find((item) => item.pane === 1);
@@ -327,6 +446,20 @@ try {
       external_queue_capacity: initialSemantic.runtime.external_queue_capacity,
       browser_credits_in_use: initialSemantic.runtime.browser_credits_in_use,
       browser_credit_capacity: initialSemantic.runtime.browser_credit_capacity,
+    },
+    appearance_controls: {
+      action: 'appearance_settings',
+      node_count: preferenceNodes.length,
+      ids: preferenceNodes.map((node) => node.id),
+      actions: preferenceNodes.map((node) => node.actions),
+    },
+    display_controls: {
+      action: 'display_settings',
+      nodes: displayNodes.map((node) => ({ id: node.id, role: node.role, actions: node.actions })),
+    },
+    viewport_status: {
+      description: initialSemantic.ui_snapshot.nodes
+        .find((node) => node.id === 'pane.1.image_status').description,
     },
     linked_camera_and_render_plan: {
       cameras: cameraSemantic.cameras.filter((item) => item.pane === 1 || item.pane === 2),
@@ -697,6 +830,35 @@ try {
     await page.mouse.move(target.x, target.y, { steps: 12 }); await page.waitForTimeout(150); await page.mouse.up();
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-rearranged-dock.png') });
+  await semanticAction({ kind: 'restore_default_workspace' });
+  const lightPreferences = await choosePreference('appearance', 'light');
+  if (lightPreferences.preferences.appearance !== 'light'
+      || lightPreferences.preferences.contrast !== 'standard') {
+    throw new Error(`standard light preferences did not apply: ${JSON.stringify(lightPreferences.preferences)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-light.png') });
+  await choosePreference('contrast', 'high');
+  await choosePreference('density', 'compact');
+  await chooseFontScale(1.5);
+  const changedPreferences = await choosePreference('motion', 'reduced');
+  if (JSON.stringify(changedPreferences.preferences) !== JSON.stringify({
+    schema_version: 1,
+    appearance: 'light',
+    contrast: 'high',
+    density: 'compact',
+    font_scale: 1.5,
+    motion: 'reduced',
+  })) {
+    throw new Error(`physical preference controls did not retain the validated value: ${JSON.stringify(changedPreferences.preferences)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-light-high-contrast-150.png') });
+  semanticEvidence.preferences = {
+    selected: changedPreferences.preferences,
+    physical_controls: ['appearance.light', 'contrast.high', 'density.compact', 'font_scale.1.5', 'motion.reduced'],
+    repaint_reason: changedPreferences.ui_snapshot.frame > preferenceMenu.ui_snapshot.frame
+      ? 'recorded in diagnostics'
+      : 'missing frame advance',
+  };
   await clickTarget({ kind: 'action', action: 'save_layout' });
   await page.waitForTimeout(250);
   const persistedKeys = await page.evaluate(() => Object.keys(localStorage));
@@ -713,6 +875,11 @@ try {
   await page.locator('#polyorama-canvas[data-polyorama-ready="true"]').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS?.render?.draw_calls > 0, null, { timeout: 30_000 });
   await page.screenshot({ path: join(evidenceRoot, 'browser-reloaded.png') });
+  const restoredSemantic = await semanticSnapshot();
+  if (JSON.stringify(restoredSemantic.preferences) !== JSON.stringify(changedPreferences.preferences)) {
+    throw new Error(`appearance preferences were not restored: ${JSON.stringify(restoredSemantic.preferences)}`);
+  }
+  semanticEvidence.preferences.restored = restoredSemantic.preferences;
   const restored = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS);
   observations.saved_workspace_restore = {
     samples: restored.frame.cpu_frame_history_ms,

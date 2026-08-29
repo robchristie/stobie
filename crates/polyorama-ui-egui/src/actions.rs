@@ -12,26 +12,32 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 #[repr(u8)]
 pub enum ActionId {
-    Undo,
-    Redo,
-    SaveLayout,
-    ResetWorkspace,
-    FitView,
-    LinkViews,
-    NavigateTool,
-    PolygonTool,
-    EditVerticesTool,
-    CommitPolygon,
-    DeleteAnnotation,
-    RecenterPrimary,
+    Undo = 0,
+    Redo = 1,
+    SaveLayout = 2,
+    ResetWorkspace = 3,
+    FitView = 4,
+    LinkViews = 5,
+    NavigateTool = 6,
+    PolygonTool = 7,
+    EditVerticesTool = 8,
+    CommitPolygon = 9,
+    DeleteAnnotation = 10,
+    RecenterPrimary = 11,
+    AppearanceSettings = 12,
+    CopyDiagnostics = 13,
+    DisplaySettings = 14,
 }
 
 impl ActionId {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 15] = [
         Self::Undo,
         Self::Redo,
         Self::SaveLayout,
         Self::ResetWorkspace,
+        Self::AppearanceSettings,
+        Self::DisplaySettings,
+        Self::CopyDiagnostics,
         Self::FitView,
         Self::LinkViews,
         Self::NavigateTool,
@@ -48,6 +54,9 @@ impl ActionId {
             Self::Redo => "redo",
             Self::SaveLayout => "save_layout",
             Self::ResetWorkspace => "reset_workspace",
+            Self::AppearanceSettings => "appearance_settings",
+            Self::DisplaySettings => "display_settings",
+            Self::CopyDiagnostics => "copy_diagnostics",
             Self::FitView => "fit_view",
             Self::LinkViews => "link_views",
             Self::NavigateTool => "navigate_tool",
@@ -221,6 +230,30 @@ pub const fn action_spec(id: ActionId) -> ActionSpec {
             shortcut: None,
             scope: ActionScope::Application,
         },
+        ActionId::AppearanceSettings => ActionSpec {
+            id,
+            label: "Appearance",
+            description: "Adjust theme, contrast, density, text scale and motion",
+            compact_label: Some("Display"),
+            shortcut: None,
+            scope: ActionScope::Application,
+        },
+        ActionId::DisplaySettings => ActionSpec {
+            id,
+            label: "Display",
+            description: "Adjust the image colour map and scalar window",
+            compact_label: None,
+            shortcut: None,
+            scope: ActionScope::Pane,
+        },
+        ActionId::CopyDiagnostics => ActionSpec {
+            id,
+            label: "Copy diagnostics",
+            description: "Copy the current diagnostic snapshot as JSON",
+            compact_label: Some("Copy JSON"),
+            shortcut: None,
+            scope: ActionScope::Pane,
+        },
         ActionId::FitView => ActionSpec {
             id,
             label: "Fit view",
@@ -380,6 +413,17 @@ mod tests {
             ActionTarget::pane(ActionId::FitView, PaneId(3)).semantic_id(),
             "action.fit_view.pane.3"
         );
+    }
+
+    #[test]
+    fn existing_numeric_action_identity_does_not_shift_when_actions_are_added() {
+        assert_eq!(ActionId::Undo as u8, 0);
+        assert_eq!(ActionId::ResetWorkspace as u8, 3);
+        assert_eq!(ActionId::FitView as u8, 4);
+        assert_eq!(ActionId::RecenterPrimary as u8, 11);
+        assert_eq!(ActionId::AppearanceSettings as u8, 12);
+        assert_eq!(ActionId::CopyDiagnostics as u8, 13);
+        assert_eq!(ActionId::DisplaySettings as u8, 14);
     }
 
     #[test]

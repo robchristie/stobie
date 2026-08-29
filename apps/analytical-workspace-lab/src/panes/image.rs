@@ -34,7 +34,7 @@ impl PaneSurface<'_> {
             ..Default::default()
         };
         let compact_toolbar = ui.available_width() < 720.0;
-        let toolbar = ui.horizontal(|ui| {
+        let toolbar = ui.horizontal_wrapped(|ui| {
             if pane.0 <= 2 {
                 for (tool, action, control) in [
                     (ActiveTool::Navigate, ActionId::NavigateTool, "navigate"),
@@ -94,27 +94,62 @@ impl PaneSurface<'_> {
                     link: (!linked).then_some(LinkGroupId(1)),
                 });
             }
-            egui::ComboBox::from_id_salt((pane.0, "map"))
-                .selected_text(match display.map {
-                    DisplayMap::Viridis => "Viridis",
-                    DisplayMap::Greyscale => "Greyscale",
-                    DisplayMap::Threshold => "Threshold",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut display.map, DisplayMap::Viridis, "Viridis");
-                    ui.selectable_value(&mut display.map, DisplayMap::Greyscale, "Greyscale");
-                    ui.selectable_value(&mut display.map, DisplayMap::Threshold, "Threshold");
+            if !compact_toolbar {
+                present_display_controls(
+                    ui,
+                    pane,
+                    &toolbar_id,
+                    &mut display,
+                    &self.tokens,
+                    self.outputs,
+                );
+            } else {
+                let target = ActionTarget::pane(ActionId::DisplaySettings, pane);
+                let control_availability = availability(ActionId::DisplaySettings, action_context);
+                let response = action_button(
+                    ui,
+                    ActionButtonSpec {
+                        target,
+                        availability: control_availability.clone(),
+                        selected: false,
+                        emphasis: ActionEmphasis::Quiet,
+                        compact: true,
+                    },
+                    &self.tokens,
+                    self.font_scale,
+                    &mut self.outputs.ui_geometry.text_layouts,
+                );
+                let inside_root = self
+                    .outputs
+                    .ui_geometry
+                    .root
+                    .is_some_and(|root| root.contains(response.rect.into(), 1.0));
+                if inside_root && response.rect.intersects(ui.clip_rect()) {
+                    self.outputs
+                        .ui_geometry
+                        .control(Some(pane), "display_settings", response.rect);
+                    self.outputs.ui_geometry.action(
+                        toolbar_id.clone(),
+                        target,
+                        &control_availability,
+                        false,
+                        &response,
+                    );
+                }
+                let _ = egui::Popup::menu(&response).show(|ui| {
+                    ui.set_width(self.tokens.geometry.minimum_hit_size.0 * 7.0);
+                    ui.vertical(|ui| {
+                        present_display_controls(
+                            ui,
+                            pane,
+                            &toolbar_id,
+                            &mut display,
+                            &self.tokens,
+                            self.outputs,
+                        );
+                    });
                 });
-            ui.add(
-                egui::Slider::new(&mut display.window_low, 0.0..=0.8)
-                    .show_value(false)
-                    .text("low"),
-            );
-            ui.add(
-                egui::Slider::new(&mut display.window_high, 0.2..=1.0)
-                    .show_value(false)
-                    .text("high"),
-            );
+            }
             if self.annotation_ui.get().is_some() {
                 commit_polygon = present_action(
                     ui,
@@ -199,11 +234,11 @@ impl PaneSurface<'_> {
             }
         }
 
-        let status_height = 22.0;
+        let status_height = image_status_height(&self.tokens, self.font_scale);
         let available = ui.available_rect_before_wrap().intersect(pane_rect);
         let desired = egui::vec2(
             available.width(),
-            (available.height() - status_height).max(64.0),
+            (available.height() - status_height).max(self.tokens.geometry.minimum_hit_size.0 * 2.0),
         );
         let (allocation, response) = allocate_viewport(ui, pane, desired);
         let rect = allocation.logical_rect;
@@ -232,8 +267,8 @@ impl PaneSurface<'_> {
             disabled_reason: None,
         });
         ui.painter()
-            .rect_filled(rect, 0.0, egui::Color32::from_rgb(8, 12, 15));
-        paint_placeholder(ui, rect, pane);
+            .rect_filled(rect, 0.0, self.tokens.colours.surface_canvas);
+        paint_placeholder(ui, rect, pane, &self.tokens);
 
         self.handle_camera(ui, pane, rect, &response);
         let frame = derive_image_frame(
@@ -275,6 +310,7 @@ impl PaneSurface<'_> {
             gesture: self.annotation_ui.cloned(),
             selected_annotation: self.selected_annotation,
             hover: response.hover_pos(),
+            tokens: self.tokens,
         });
         if response.clicked() && self.active_tools.get(&pane) == Some(&ActiveTool::Navigate) {
             if let Some(pointer) = response.interact_pointer_pos() {
@@ -330,12 +366,114 @@ impl PaneSurface<'_> {
             viewport: rect,
             pointer_local: allocation.pointer_local,
             fallback_pointer,
+            tokens: self.tokens,
+            font_scale: self.font_scale,
         });
+        let mut status_node = UiNode::container(
+            SemanticUiId::new(format!("pane.{}.image_status", pane.0)),
+            Some(SemanticUiId::pane(pane)),
+            UiRole::Status,
+            status_rect.into(),
+        );
+        status_node.name = "Image coordinates and tile level".into();
+        status_node.pane = Some(pane);
+        status_node.domain_reference = Some(DomainReference::Pane(pane));
+        self.outputs.ui_geometry.record_node(status_node);
     }
 }
 
-fn paint_placeholder(ui: &egui::Ui, rect: egui::Rect, pane: PaneId) {
-    let cell = 20.0;
+fn present_display_controls(
+    ui: &mut egui::Ui,
+    pane: PaneId,
+    parent: &SemanticUiId,
+    display: &mut DisplaySettings,
+    tokens: &DesignTokens,
+    outputs: &mut FrameOutput,
+) {
+    normalise_display_window(display);
+    let map = choice_control(
+        ui,
+        SemanticUiId::new(format!("pane.{}.display_map", pane.0)),
+        parent.clone(),
+        "Display map",
+        &mut display.map,
+        &[
+            (DisplayMap::Viridis, "Viridis"),
+            (DisplayMap::Greyscale, "Greyscale"),
+            (DisplayMap::Threshold, "Threshold"),
+        ],
+        ActionId::DisplaySettings,
+        tokens,
+    );
+    record_display_control(ui, pane, map, outputs);
+    let low = range_control(
+        ui,
+        SemanticUiId::new(format!("pane.{}.display_low", pane.0)),
+        parent.clone(),
+        "Low",
+        &mut display.window_low,
+        low_window_range(display.window_high),
+        ActionId::DisplaySettings,
+        tokens,
+    );
+    record_display_control(ui, pane, low, outputs);
+    let high = range_control(
+        ui,
+        SemanticUiId::new(format!("pane.{}.display_high", pane.0)),
+        parent.clone(),
+        "High",
+        &mut display.window_high,
+        high_window_range(display.window_low),
+        ActionId::DisplaySettings,
+        tokens,
+    );
+    record_display_control(ui, pane, high, outputs);
+}
+
+const DISPLAY_WINDOW_GAP: f32 = 0.01;
+
+fn normalise_display_window(display: &mut DisplaySettings) {
+    display.window_high = if display.window_high.is_finite() {
+        display.window_high.clamp(DISPLAY_WINDOW_GAP, 1.0)
+    } else {
+        DisplaySettings::default().window_high
+    };
+    display.window_low = if display.window_low.is_finite() {
+        display
+            .window_low
+            .clamp(0.0, display.window_high - DISPLAY_WINDOW_GAP)
+    } else {
+        DisplaySettings::default().window_low
+    };
+}
+
+fn low_window_range(high: f32) -> std::ops::RangeInclusive<f32> {
+    0.0..=(high - DISPLAY_WINDOW_GAP).max(0.0)
+}
+
+fn high_window_range(low: f32) -> std::ops::RangeInclusive<f32> {
+    (low + DISPLAY_WINDOW_GAP).min(1.0)..=1.0
+}
+
+fn record_display_control(
+    ui: &egui::Ui,
+    pane: PaneId,
+    mut control: polyorama_ui_egui::SemanticControlOutput,
+    outputs: &mut FrameOutput,
+) {
+    let inside_root = outputs
+        .ui_geometry
+        .root
+        .is_some_and(|root| root.contains(control.response.rect.into(), 1.0));
+    if inside_root && control.response.rect.intersects(ui.clip_rect()) {
+        control.node.pane = Some(pane);
+        control.node.domain_reference = Some(DomainReference::Pane(pane));
+        outputs.ui_geometry.record_node(control.node);
+    }
+}
+
+fn paint_placeholder(ui: &egui::Ui, rect: egui::Rect, pane: PaneId, tokens: &DesignTokens) {
+    let cell = tokens.spacing.unit.0 * 5.0;
     for row in 0..(rect.height() / cell).ceil() as usize {
         for column in 0..(rect.width() / cell).ceil() as usize {
             if (row + column + pane.0 as usize).is_multiple_of(2) {
@@ -343,9 +481,36 @@ fn paint_placeholder(ui: &egui::Ui, rect: egui::Rect, pane: PaneId) {
                 ui.painter().rect_filled(
                     egui::Rect::from_min_size(min, egui::vec2(cell, cell)).intersect(rect),
                     0.0,
-                    egui::Color32::from_rgb(14, 20, 23),
+                    tokens.colours.surface_panel,
                 );
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_window_controls_always_retain_a_strict_ordering() {
+        for mut display in [
+            DisplaySettings {
+                window_low: 0.9,
+                window_high: 0.1,
+                ..DisplaySettings::default()
+            },
+            DisplaySettings {
+                window_low: f32::INFINITY,
+                window_high: f32::NAN,
+                ..DisplaySettings::default()
+            },
+        ] {
+            normalise_display_window(&mut display);
+            assert!((0.0..display.window_high).contains(&display.window_low));
+            assert!(display.window_high <= 1.0);
+            assert!(low_window_range(display.window_high).contains(&display.window_low));
+            assert!(high_window_range(display.window_low).contains(&display.window_high));
         }
     }
 }

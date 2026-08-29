@@ -146,6 +146,27 @@ try {
   }
   await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-high-contrast-narrow.png') });
 
+  current = await selectStory('property-row/long-value');
+  if (current.text.length < 2 || current.text_audit.length !== 0
+      || current.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error(`long-text property story failed: ${JSON.stringify(current)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-long-text.png') });
+
+  current = await selectStory('status/error-long-message');
+  if (current.text.length !== 1 || current.text_audit.length !== 0
+      || current.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error(`error-status story failed: ${JSON.stringify(current)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-error.png') });
+
+  current = await selectStory('virtual-grid/loading');
+  if (current.text.length === 0 || current.text_audit.length !== 0
+      || current.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error(`loading-grid story failed: ${JSON.stringify(current)}`);
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-loading.png') });
+
   await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.set_configuration({
     appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1.0, width: 'wide',
   }));

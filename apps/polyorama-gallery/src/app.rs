@@ -10,8 +10,9 @@ use polyorama_ui_egui::{
     DomainReference, PanePresenter, SemanticUiId, SplitterVisualState, StatusTone,
     TextAuditFinding, TextLayoutObservation, ThumbnailCellSpec, ThumbnailState, UiNode,
     UiPreferences, UiRole, UiSnapshot, action_button, action_semantic_node, application_bar_frame,
-    application_bar_height, apply_design_system, audit_text_layouts, dock_workspace,
-    paint_splitter, property_row, result_row, status_badge, thumbnail_cell,
+    application_bar_height, apply_design_system, audit_text_layouts, choice_control,
+    dock_workspace, paint_splitter, property_row, range_control, result_row, status_badge,
+    thumbnail_cell,
 };
 use serde::{Deserialize, Serialize};
 
@@ -621,6 +622,43 @@ fn toolbar_story(
                 semantic_nodes,
             );
         }
+        let parent = SemanticUiId::new("gallery.story");
+        let mut map = 0_u8;
+        let map = choice_control(
+            ui,
+            SemanticUiId::new("gallery.image-toolbar.display-map"),
+            parent.clone(),
+            "Display map",
+            &mut map,
+            &[(0, "Viridis"), (1, "Greyscale"), (2, "Threshold")],
+            ActionId::DisplaySettings,
+            tokens,
+        );
+        semantic_nodes.push(map.node);
+        let mut low = 0.1;
+        let low = range_control(
+            ui,
+            SemanticUiId::new("gallery.image-toolbar.low"),
+            parent.clone(),
+            "Low",
+            &mut low,
+            0.0..=0.8,
+            ActionId::DisplaySettings,
+            tokens,
+        );
+        semantic_nodes.push(low.node);
+        let mut high = 0.9;
+        let high = range_control(
+            ui,
+            SemanticUiId::new("gallery.image-toolbar.high"),
+            parent,
+            "High",
+            &mut high,
+            0.2..=1.0,
+            ActionId::DisplaySettings,
+            tokens,
+        );
+        semantic_nodes.push(high.node);
     });
     ui.add_space(tokens.spacing.section.0);
     status_badge(
@@ -810,6 +848,7 @@ fn thumbnail_grid(
                     label: &format!("Tile {:06}", 120_000 + index),
                     state,
                     selected: index == 0,
+                    texture: None,
                 },
                 tokens,
                 font_scale,

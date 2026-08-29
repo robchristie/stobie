@@ -3,25 +3,54 @@ use polyorama_core::{
     DemandPriority, ImageIntent, PaneId, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
     VirtualisationMetrics,
 };
-use polyorama_ui_egui::{DomainReference, SemanticUiId, UiNode, UiRole, VirtualGridPresenter};
+use polyorama_ui_egui::{
+    DesignTokens, DomainReference, SemanticUiId, TextOverflow, TextRole, ThumbnailCellSpec,
+    ThumbnailState, UiNode, UiRole, VirtualGridPresenter, measured_content_label, thumbnail_cell,
+    thumbnail_cell_side,
+};
 
 use crate::thumbnail_cache::ThumbnailCache;
 
 use super::FrameOutput;
 
+#[derive(Clone, Copy)]
+pub struct ThumbnailPaneView<'a> {
+    pub selected_result: Option<ResultId>,
+    pub generation: u64,
+    pub tokens: &'a DesignTokens,
+    pub font_scale: f32,
+}
+
 pub fn show(
     ui: &mut egui::Ui,
-    selected_result: Option<ResultId>,
-    generation: u64,
+    view: ThumbnailPaneView<'_>,
     cache: &mut ThumbnailCache,
     virtualisation: &mut VirtualisationMetrics,
     outputs: &mut FrameOutput,
 ) {
-    ui.label(format!(
-        "{} logical thumbnails · progressive worker decode",
-        THUMBNAIL_COUNT
-    ));
-    let cell = egui::vec2(106.0, 96.0);
+    let ThumbnailPaneView {
+        selected_result,
+        generation,
+        tokens,
+        font_scale,
+    } = view;
+    measured_content_label(
+        ui,
+        6_000,
+        &format!(
+            "{} logical thumbnails · progressive worker decode",
+            THUMBNAIL_COUNT
+        ),
+        TextRole::Secondary,
+        TextOverflow::Ellipsis,
+        1,
+        tokens,
+        font_scale,
+        &mut outputs.ui_geometry.text_layouts,
+    );
+    let side = thumbnail_cell_side(tokens, font_scale);
+    let gap = tokens.spacing.inline.0;
+    let cell = egui::vec2(side + gap, side + gap);
     let output = VirtualGridPresenter::new(cell, 2).show(
         ui,
         ui.id().with("thumbnail-grid"),
@@ -32,7 +61,7 @@ pub fn show(
                 let column = index % layout.columns;
                 let rect = egui::Rect::from_min_size(
                     origin + egui::vec2(column as f32 * cell.x, row as f32 * cell.y),
-                    egui::vec2(cell.x - 7.0, cell.y - 7.0),
+                    egui::vec2(side, side),
                 );
                 let key = TileKey {
                     source: SourceId(2),
@@ -50,35 +79,31 @@ pub fn show(
                     generation,
                 });
                 let texture = cache.texture(key);
-                let response = grid_ui.interact(
-                    rect,
-                    grid_ui.id().with(("thumbnail", index)),
-                    egui::Sense::click(),
-                );
                 let selected = selected_result == Some(ResultId(index as u64));
-                let semantic_name = format!("Thumbnail result #{index}");
-                let resident = texture.is_some();
-                response.widget_info(|| {
-                    egui::WidgetInfo::selected(
-                        egui::WidgetType::SelectableLabel,
-                        true,
-                        selected,
-                        &semantic_name,
-                    )
-                });
-                grid_ui.ctx().accesskit_node_builder(response.id, |node| {
-                    use egui::accesskit::{Action, Role};
-                    node.set_role(Role::ListBoxOption);
-                    node.set_label(semantic_name.clone());
-                    node.set_description(if resident {
-                        "Decoded thumbnail is resident"
-                    } else {
-                        "Thumbnail is loading"
-                    });
-                    node.set_author_id(format!("thumbnail.{index}"));
-                    node.set_selected(selected);
-                    node.add_action(Action::Click);
-                });
+                let state = if texture.is_some() {
+                    ThumbnailState::Resident
+                } else {
+                    ThumbnailState::Loading
+                };
+                let label = format!("Result #{index}");
+                let response = grid_ui
+                    .scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+                        ui.set_width(side);
+                        thumbnail_cell(
+                            ui,
+                            ThumbnailCellSpec {
+                                instance: index as u64,
+                                label: &label,
+                                state,
+                                selected,
+                                texture,
+                            },
+                            tokens,
+                            font_scale,
+                            &mut outputs.ui_geometry.text_layouts,
+                        )
+                    })
+                    .inner;
                 if response.clicked() {
                     outputs.intents.push(ImageIntent::SelectResult {
                         result: ResultId(index as u64),
@@ -90,15 +115,11 @@ pub fn show(
                     .is_some_and(|root| root.contains(response.rect.into(), 1.0));
                 if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
                     outputs.ui_geometry.record_node(UiNode {
-                        id: SemanticUiId::new(format!("thumbnail.{index}")),
+                        id: SemanticUiId::new(format!("polyorama.thumbnail-cell.{index}")),
                         parent: Some(SemanticUiId::pane(PaneId(6))),
                         role: UiRole::ThumbnailCell,
-                        name: semantic_name,
-                        description: Some(if resident {
-                            "Decoded thumbnail is resident".into()
-                        } else {
-                            "Thumbnail is loading".into()
-                        }),
+                        name: format!("{label}; {state:?}"),
+                        description: None,
                         rect: response.rect.into(),
                         enabled: true,
                         focused: response.has_focus(),
@@ -110,40 +131,6 @@ pub fn show(
                         actions: Vec::new(),
                         disabled_reason: None,
                     });
-                }
-                grid_ui
-                    .painter()
-                    .rect_filled(rect, 3.0, egui::Color32::from_rgb(34, 39, 42));
-                if let Some(texture) = texture {
-                    grid_ui.painter().image(
-                        texture,
-                        rect.shrink(2.0),
-                        egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
-                        egui::Color32::WHITE,
-                    );
-                } else {
-                    grid_ui.painter().text(
-                        rect.center(),
-                        egui::Align2::CENTER_CENTER,
-                        "pending",
-                        egui::FontId::proportional(11.0),
-                        egui::Color32::GRAY,
-                    );
-                }
-                grid_ui.painter().text(
-                    rect.left_bottom() + egui::vec2(5.0, -5.0),
-                    egui::Align2::LEFT_BOTTOM,
-                    format!("#{index}"),
-                    egui::FontId::monospace(10.0),
-                    egui::Color32::WHITE,
-                );
-                if selected {
-                    grid_ui.painter().rect_stroke(
-                        rect,
-                        3.0,
-                        egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 190, 72)),
-                        egui::StrokeKind::Inside,
-                    );
                 }
             }
         },

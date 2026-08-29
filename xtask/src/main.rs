@@ -209,6 +209,39 @@ fn architecture() -> Result<()> {
             }
         }
     }
+    let mut application_ui_sources = pane_sources.clone();
+    application_ui_sources.push(Path::new("apps/analytical-workspace-lab/src/app.rs").into());
+    for path in &application_ui_sources {
+        let source = fs::read_to_string(path)?;
+        for forbidden in [
+            "egui::Color32",
+            "egui::RichText",
+            "egui::TextStyle",
+            "egui::FontId",
+            "egui::CornerRadius",
+            "egui::Margin",
+            "ui.button(",
+            "ui.selectable_label(",
+            "ui.strong(",
+            "ui.monospace(",
+        ] {
+            if source.contains(forbidden) {
+                bail!(
+                    "production UI source {} contains unmanaged style or control primitive {forbidden:?}; use typed tokens and a polyorama-ui-egui recipe",
+                    path.display()
+                );
+            }
+        }
+        for (line_index, line) in source.lines().enumerate() {
+            if line.contains("ui.add_space(") && !line.contains("tokens.") {
+                bail!(
+                    "production UI source {}:{} contains unmanaged spacing; use typed spacing tokens",
+                    path.display(),
+                    line_index + 1
+                );
+            }
+        }
+    }
     let pane_root = fs::read_to_string("apps/analytical-workspace-lab/src/panes/mod.rs")?;
     for feature in ["image", "camera_gestures", "annotations", "diagnostics"] {
         let path = format!("apps/analytical-workspace-lab/src/panes/{feature}.rs");

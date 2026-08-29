@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use egui::{Color32, Frame, Margin, Painter, Rect, Response, Sense, Stroke};
 
 #[cfg(test)]
@@ -235,6 +237,221 @@ pub fn action_semantic_node(
     }
 }
 
+pub struct SemanticControlOutput {
+    pub response: Response,
+    pub node: UiNode,
+}
+
+/// Present a bounded labelled choice using egui's native combo-box behaviour
+/// while fixing stable Polyorama and AccessKit identity at the recipe boundary.
+#[allow(clippy::too_many_arguments)]
+pub fn choice_control<T: Copy + Eq>(
+    ui: &mut egui::Ui,
+    semantic_id: SemanticUiId,
+    parent: SemanticUiId,
+    label: &str,
+    value: &mut T,
+    options: &[(T, &'static str)],
+    action: crate::ActionId,
+    tokens: &DesignTokens,
+) -> SemanticControlOutput {
+    let selected_before = options
+        .iter()
+        .find_map(|(candidate, name)| (*candidate == *value).then_some(*name))
+        .unwrap_or("Unavailable");
+    let response = egui::ComboBox::from_id_salt(semantic_id.0.clone())
+        .selected_text(selected_before)
+        .width(tokens.geometry.minimum_hit_size.0 * 3.0)
+        .show_ui(ui, |ui| {
+            for (candidate, name) in options {
+                ui.selectable_value(value, *candidate, *name);
+            }
+        })
+        .response;
+    let selected = options
+        .iter()
+        .find_map(|(candidate, name)| (*candidate == *value).then_some(*name))
+        .unwrap_or("Unavailable");
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, label));
+    ui.ctx().accesskit_node_builder(response.id, |node| {
+        use egui::accesskit::{Action, Role};
+        node.set_role(Role::ComboBox);
+        node.set_label(label);
+        node.set_description(format!("Current value: {selected}"));
+        node.set_author_id(semantic_id.0.clone());
+        node.add_action(Action::Click);
+    });
+    SemanticControlOutput {
+        node: UiNode {
+            id: semantic_id,
+            parent: Some(parent),
+            role: UiRole::ComboBox,
+            name: label.to_owned(),
+            description: Some(format!("Current value: {selected}")),
+            rect: response.rect.into(),
+            enabled: response.enabled(),
+            focused: response.has_focus(),
+            selected: false,
+            checked: None,
+            expanded: None,
+            pane: None,
+            domain_reference: None,
+            actions: vec![action],
+            disabled_reason: None,
+        },
+        response,
+    }
+}
+
+/// Present a stable, token-sized range control with matching AccessKit and
+/// augmented snapshot semantics.
+#[allow(clippy::too_many_arguments)]
+pub fn range_control(
+    ui: &mut egui::Ui,
+    semantic_id: SemanticUiId,
+    parent: SemanticUiId,
+    label: &str,
+    value: &mut f32,
+    range: RangeInclusive<f32>,
+    action: crate::ActionId,
+    tokens: &DesignTokens,
+) -> SemanticControlOutput {
+    let minimum = *range.start();
+    let maximum = *range.end();
+    let response = ui
+        .push_id(semantic_id.0.clone(), |ui| {
+            ui.add_sized(
+                egui::vec2(
+                    tokens.geometry.minimum_hit_size.0 * 3.0,
+                    tokens.geometry.minimum_hit_size.0,
+                ),
+                egui::Slider::new(value, range)
+                    .clamping(egui::SliderClamping::Always)
+                    .show_value(false)
+                    .text(label),
+            )
+        })
+        .inner;
+    ui.ctx().accesskit_node_builder(response.id, |node| {
+        use egui::accesskit::{Action, Role};
+        node.set_role(Role::Slider);
+        node.set_label(label);
+        node.set_author_id(semantic_id.0.clone());
+        node.set_numeric_value(f64::from(*value));
+        node.set_min_numeric_value(f64::from(minimum));
+        node.set_max_numeric_value(f64::from(maximum));
+        node.add_action(Action::Increment);
+        node.add_action(Action::Decrement);
+    });
+    SemanticControlOutput {
+        node: UiNode {
+            id: semantic_id,
+            parent: Some(parent),
+            role: UiRole::Slider,
+            name: label.to_owned(),
+            description: None,
+            rect: response.rect.into(),
+            enabled: response.enabled(),
+            focused: response.has_focus(),
+            selected: false,
+            checked: None,
+            expanded: None,
+            pane: None,
+            domain_reference: None,
+            actions: vec![action],
+            disabled_reason: None,
+        },
+        response,
+    }
+}
+
+pub fn image_status_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    (tokens.typography.body_size.0 * font_scale.clamp(1.0, 1.5) * tokens.typography.line_height.0
+        + tokens.spacing.block.0 * 2.0)
+        .max(tokens.geometry.minimum_hit_size.0)
+}
+
+pub struct ImageStatusSpec<'a> {
+    pub instance: u64,
+    pub rect: Rect,
+    pub coordinates: &'a str,
+    pub detail: &'a str,
+}
+
+/// Paint a clipped analytical viewport status strip from semantic tokens.
+pub fn paint_image_status(
+    painter: &Painter,
+    spec: ImageStatusSpec<'_>,
+    tokens: &DesignTokens,
+    font_scale: f32,
+) -> Vec<crate::TextLayoutObservation> {
+    painter.rect_filled(spec.rect, 0.0, tokens.colours.surface_panel);
+    painter.line_segment(
+        [spec.rect.left_top(), spec.rect.right_top()],
+        Stroke::new(1.0, tokens.colours.border_subtle),
+    );
+    let padding = tokens.spacing.inline.0;
+    let right_width = (tokens.geometry.minimum_hit_size.0 * 3.0).min(spec.rect.width() * 0.35);
+    let left = Rect::from_min_max(
+        spec.rect.min + egui::vec2(padding, 0.0),
+        egui::pos2(
+            (spec.rect.right() - right_width - padding).max(spec.rect.left()),
+            spec.rect.bottom(),
+        ),
+    );
+    let right = Rect::from_min_max(
+        egui::pos2(
+            (spec.rect.right() - right_width).max(spec.rect.left()),
+            spec.rect.top(),
+        ),
+        spec.rect.max - egui::vec2(padding, 0.0),
+    );
+    let parent = TextComponentId::new(crate::TextComponentKind::ImageStatus, spec.instance);
+    let mut observations = Vec::new();
+    for (index, (text, rect, role, alignment)) in [
+        (
+            spec.coordinates,
+            left,
+            TextRole::MonospaceTechnical,
+            HorizontalTextAlignment::Start,
+        ),
+        (
+            spec.detail,
+            right,
+            TextRole::Caption,
+            HorizontalTextAlignment::End,
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let text_spec = TextSpec {
+            horizontal_alignment: alignment,
+            ..TextSpec::single_line(role, TextOverflow::Ellipsis)
+        };
+        if let Ok(measured) = measure_text(
+            painter,
+            text,
+            text_spec,
+            tokens,
+            font_scale,
+            rect.width().max(0.5),
+        ) {
+            observations.push(paint_measured_text(
+                &painter.with_clip_rect(rect),
+                &measured,
+                rect,
+                TextComponentId::new(
+                    crate::TextComponentKind::ImageStatus,
+                    spec.instance * 4 + index as u64,
+                ),
+                Some(parent),
+            ));
+        }
+    }
+    observations
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StatusTone {
     Neutral,
@@ -397,6 +614,14 @@ pub struct ResultRowSpec<'a> {
     pub selected: bool,
 }
 
+pub fn result_row_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    tokens.geometry.control_height.0.max(
+        tokens.typography.body_size.0
+            * font_scale.clamp(1.0, 1.5)
+            * tokens.typography.line_height.0,
+    )
+}
+
 pub fn result_row(
     ui: &mut egui::Ui,
     spec: ResultRowSpec<'_>,
@@ -405,11 +630,7 @@ pub fn result_row(
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
     let width = ui.available_width().max(1.0);
-    let height = tokens
-        .geometry
-        .control_height
-        .0
-        .max(tokens.typography.body_size.0 * font_scale * tokens.typography.line_height.0);
+    let height = result_row_height(tokens, font_scale);
     let (_, rect) = ui.allocate_space(egui::vec2(width, height));
     let response = ui.interact(
         rect,
@@ -456,7 +677,7 @@ pub fn result_row(
     let parent = TextComponentId::new(crate::TextComponentKind::ResultRow, spec.instance);
     let values = [
         (spec.identifier, 0.18, HorizontalTextAlignment::Start),
-        (spec.position, 0.42, HorizontalTextAlignment::Start),
+        (spec.position, 0.42, HorizontalTextAlignment::End),
         (spec.confidence, 0.20, HorizontalTextAlignment::End),
         (spec.category, 0.20, HorizontalTextAlignment::Start),
     ];
@@ -482,7 +703,7 @@ pub fn result_row(
                 spec: TextSpec {
                     horizontal_alignment: alignment,
                     ..TextSpec::single_line(
-                        if index == 2 {
+                        if index == 1 || index == 2 {
                             TextRole::TabularValue
                         } else {
                             TextRole::Body
@@ -518,6 +739,12 @@ pub struct ThumbnailCellSpec<'a> {
     pub label: &'a str,
     pub state: ThumbnailState,
     pub selected: bool,
+    /// Optional progressively decoded content for the resident state.
+    pub texture: Option<egui::TextureId>,
+}
+
+pub fn thumbnail_cell_side(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    tokens.geometry.control_height.0 * 3.0 * font_scale.clamp(1.0, 1.5)
 }
 
 pub fn thumbnail_cell(
@@ -527,7 +754,8 @@ pub fn thumbnail_cell(
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
-    let side = ui.available_width().clamp(76.0, 132.0);
+    let side = thumbnail_cell_side(tokens, font_scale)
+        .min(ui.available_width().max(tokens.geometry.minimum_hit_size.0));
     let (_, rect) = ui.allocate_space(egui::vec2(side, side));
     let response = ui.interact(
         rect,
@@ -592,14 +820,23 @@ pub fn thumbnail_cell(
             );
         }
         ThumbnailState::Resident => {
-            ui.painter()
-                .rect_filled(image_rect, 1.0, tokens.colours.selection_background);
-            let centre = image_rect.center();
-            ui.painter().circle_filled(
-                centre,
-                image_rect.width().min(image_rect.height()) * 0.27,
-                tokens.colours.accent_primary,
-            );
+            if let Some(texture) = spec.texture {
+                ui.painter().image(
+                    texture,
+                    image_rect,
+                    Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            } else {
+                ui.painter()
+                    .rect_filled(image_rect, 1.0, tokens.colours.selection_background);
+                let centre = image_rect.center();
+                ui.painter().circle_filled(
+                    centre,
+                    image_rect.width().min(image_rect.height()) * 0.27,
+                    tokens.colours.accent_primary,
+                );
+            }
         }
         ThumbnailState::Error => {
             ui.painter()
@@ -1025,6 +1262,7 @@ mod tests {
         context.enable_accesskit();
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Compact);
         let mut observations = Vec::new();
+        let mut control_nodes = Vec::new();
         let root = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 420.0));
         let mut output = context.run_ui(
             egui::RawInput {
@@ -1076,6 +1314,7 @@ mod tests {
                         label: "Tile 13",
                         state: ThumbnailState::Resident,
                         selected: true,
+                        texture: None,
                     },
                     &tokens,
                     1.0,
@@ -1084,6 +1323,35 @@ mod tests {
                 assert_eq!(
                     thumbnail.id,
                     egui::Id::new(("polyorama.thumbnail-cell", 13_u64))
+                );
+                let parent = SemanticUiId::root();
+                let mut choice = 1_u8;
+                control_nodes.push(
+                    choice_control(
+                        ui,
+                        SemanticUiId::new("test.display-map"),
+                        parent.clone(),
+                        "Display map",
+                        &mut choice,
+                        &[(0, "Viridis"), (1, "Greyscale")],
+                        ActionId::DisplaySettings,
+                        &tokens,
+                    )
+                    .node,
+                );
+                let mut low = 0.2;
+                control_nodes.push(
+                    range_control(
+                        ui,
+                        SemanticUiId::new("test.display-low"),
+                        parent,
+                        "Low",
+                        &mut low,
+                        0.0..=0.8,
+                        ActionId::DisplaySettings,
+                        &tokens,
+                    )
+                    .node,
                 );
             },
         );
@@ -1127,7 +1395,64 @@ mod tests {
         assert_eq!(thumbnail.label(), Some("Tile 13; Resident"));
         assert_eq!(thumbnail.is_selected(), Some(true));
         assert!(thumbnail.supports_action(egui::accesskit::Action::Click));
+        let choice = node("test.display-map");
+        assert_eq!(choice.role(), egui::accesskit::Role::ComboBox);
+        assert_eq!(choice.label(), Some("Display map"));
+        assert!(choice.supports_action(egui::accesskit::Action::Click));
+        let range = node("test.display-low");
+        assert_eq!(range.role(), egui::accesskit::Role::Slider);
+        assert_eq!(range.label(), Some("Low"));
+        assert!(range.supports_action(egui::accesskit::Action::Increment));
+        assert!(range.supports_action(egui::accesskit::Action::Decrement));
+        assert_eq!(control_nodes[0].role, UiRole::ComboBox);
+        assert_eq!(control_nodes[1].role, UiRole::Slider);
+        assert!(
+            control_nodes
+                .iter()
+                .all(|node| node.actions == vec![ActionId::DisplaySettings])
+        );
         assert!(observations.len() >= 6);
+    }
+
+    #[test]
+    fn image_status_uses_measured_clipped_text_at_all_supported_scales() {
+        let context = egui::Context::default();
+        let tokens =
+            DesignTokens::resolve(ThemeVariant::LightHighContrast, DensityVariant::Compact);
+        for font_scale in [1.0, 1.25, 1.5] {
+            let root = Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(280.0, image_status_height(&tokens, font_scale)),
+            );
+            let mut observations = Vec::new();
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(root),
+                    ..Default::default()
+                },
+                |ui| {
+                    observations = paint_image_status(
+                        ui.painter(),
+                        ImageStatusSpec {
+                            instance: 1,
+                            rect: root,
+                            coordinates: "image 123456.7, 765432.1 · world 1234567890.1, 9876543210.2",
+                            detail: "L12 · 64 tiles",
+                        },
+                        &tokens,
+                        font_scale,
+                    );
+                },
+            );
+            output.textures_delta.clear();
+            assert_eq!(observations.len(), 2);
+            assert!(crate::audit_text_layouts(&observations).is_empty());
+            assert!(
+                observations
+                    .iter()
+                    .all(|item| item.allocated_rect.max_x >= item.allocated_rect.min_x)
+            );
+        }
     }
 
     #[test]

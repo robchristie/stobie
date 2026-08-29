@@ -14,6 +14,7 @@ pub enum RepaintReason {
     PendingUpload,
     Animation,
     Scheduled,
+    Preferences,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increments 1–6 landed; increment 7 implementation candidate
+Status: active; increments 1–7 landed; increment 8 review repairs verified and awaiting exact-head re-review
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,14 +20,8 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 6 landed as PR #14 at merge `a116903`. One closed `ActionId`
-registry now drives controls, shortcuts, AccessKit metadata, bounded semantic
-snapshots and native/browser physical targeting. Current-frame `UiSnapshot`
-geometry covers the dock, viewports, visible virtualised rows/cells and
-representative actions with empty semantic audits and without a second
-application tree.
-
-Increment 7 candidate `6dbd18c` adds five typed `cargo xtask ui` operations,
+Increment 7 landed as PR #15 at merge `fe20cd9`. It adds five typed
+`cargo xtask ui` operations,
 five selected zero-tolerance browser-WebGPU fixtures, canonical semantic/text
 comparison, complete failure bundles and an explicit read-only baseline policy.
 The checked-in CI workflow runs the canonical verifier and uploads ignored
@@ -35,12 +29,14 @@ failure evidence. Focused component, pane, interaction, token, accessibility
 and review guides point agents to production boundaries and deterministic
 evidence. Six frozen gallery tasks use a four-dimension 0–2 scoring rubric.
 
-The exact candidate head passes 147 tests, token drift, architecture, native
-and Wasm clippy/release builds, application/gallery browser WebGPU smokes, five
-deterministic UI fixtures and both native GL/llvmpipe physical smokes. A
-negative mismatch, capture-failure, missing-baseline and unsafe-output probes
-all exited 1 with retained evidence and no source mutation. Complete
-shell/content migration remains increment 8.
+Increment 8 implementation head `ec6483c` passes 157 tests, token drift,
+architecture, native and Wasm clippy/release builds, application/gallery
+browser WebGPU smokes, five deterministic UI fixtures and both native
+GL/llvmpipe physical smokes. Its first independent review found invalid display
+ranges, missing custom-control action identity, incomplete semantics for
+ellipsised viewport status text and non-physical appearance evidence. All four
+are repaired with refreshed selected native/browser evidence. Exact-head
+re-review and landing are the remaining increment gates.
 
 ## Baseline evidence
 
@@ -93,8 +89,8 @@ now publishes that ignored evidence only when CI fails.
 | 4 | Reusable accessible shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
-| 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Candidate; canonical gate and failure probe pass | [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
-| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Pending | Required capture matrix |
+| 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
+| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Review repairs verified; exact-head re-review pending | [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
 | 9 | Final performance/idle/native/browser hardening and report | 8 | Pending | Final report and canonical gate |
 
 The graph may be refined only at phase boundaries when evidence reveals a
@@ -119,7 +115,6 @@ show that the change is intentional.
 
 ## Next action
 
-Independently review increment 7 against its exact head, repair and reverify
-any blocking finding, then land it. Begin the full Analytical Workspace Lab
-shell/content migration and required visual selection only after the tooling
-contract is stable.
+Complete exact-head independent review, repair any blocking finding on the same
+branch, land increment 8, then begin increment 9 final performance, idle,
+native/browser reconciliation and the criterion-by-criterion final report.

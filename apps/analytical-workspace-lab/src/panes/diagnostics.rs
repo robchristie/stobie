@@ -2,17 +2,57 @@ use super::*;
 
 impl PaneSurface<'_> {
     pub(super) fn diagnostics_pane(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.strong("Live diagnostics");
-            if ui.button("Copy JSON snapshot").clicked() {
-                if let Ok(json) = self.diagnostics.json_pretty() {
-                    ui.ctx().copy_text(json);
-                }
+        let pane = PaneId(8);
+        let pane_id = SemanticUiId::pane(pane);
+        section_heading(
+            ui,
+            8_000,
+            "Live diagnostics",
+            &self.tokens,
+            self.font_scale,
+            &mut self.outputs.ui_geometry.text_layouts,
+        );
+        let toolbar_id = SemanticUiId::new("pane.8.toolbar");
+        let toolbar = ui.horizontal(|ui| {
+            let context = crate::actions::ActionContext {
+                active_pane: self.active_pane,
+                target_pane: Some(pane),
+                ..Default::default()
+            };
+            if present_action(
+                ui,
+                self.outputs,
+                &self.tokens,
+                self.font_scale,
+                &toolbar_id,
+                ActionTarget::pane(ActionId::CopyDiagnostics, pane),
+                crate::actions::availability(ActionId::CopyDiagnostics, context),
+                false,
+                false,
+                self.active_pane == pane,
+                "copy_diagnostics",
+            ) && let Ok(json) = self.diagnostics.json_pretty()
+            {
+                ui.ctx().copy_text(json);
             }
         });
-        egui::ScrollArea::vertical().show(ui, |ui| {
+        let mut toolbar_node = UiNode::container(
+            toolbar_id,
+            Some(pane_id.clone()),
+            UiRole::Toolbar,
+            toolbar.response.rect.into(),
+        );
+        toolbar_node.name = "Diagnostic actions".into();
+        toolbar_node.pane = Some(pane);
+        self.outputs.ui_geometry.record_node(toolbar_node);
+
+        let tokens = self.tokens;
+        let font_scale = self.font_scale;
+        let observations = &mut self.outputs.ui_geometry.text_layouts;
+        let scroll = egui::ScrollArea::vertical().show(ui, |ui| {
             metric_section(
                 ui,
+                1,
                 "Frame and UI",
                 &[
                     ("Frame", self.diagnostics.frame.frame_number.to_string()),
@@ -53,9 +93,13 @@ impl PaneSurface<'_> {
                         self.diagnostics.frame.interaction_active.to_string(),
                     ),
                 ],
+                &tokens,
+                font_scale,
+                observations,
             );
             metric_section(
                 ui,
+                2,
                 "Workspace",
                 &[
                     (
@@ -79,9 +123,13 @@ impl PaneSurface<'_> {
                         format!("{} bytes", self.diagnostics.workspace.serialised_bytes),
                     ),
                 ],
+                &tokens,
+                font_scale,
+                observations,
             );
             metric_section(
                 ui,
+                3,
                 "Rendering",
                 &[
                     (
@@ -136,9 +184,13 @@ impl PaneSurface<'_> {
                             .map_or_else(|| "unavailable".into(), |value| format!("{value:.3} ms")),
                     ),
                 ],
+                &tokens,
+                font_scale,
+                observations,
             );
             metric_section(
                 ui,
+                4,
                 "Tiles and workers",
                 &[
                     (
@@ -245,9 +297,13 @@ impl PaneSurface<'_> {
                         ),
                     ),
                 ],
+                &tokens,
+                font_scale,
+                observations,
             );
             metric_section(
                 ui,
+                5,
                 "Virtualisation",
                 &[
                     (
@@ -313,22 +369,43 @@ impl PaneSurface<'_> {
                         ),
                     ),
                 ],
+                &tokens,
+                font_scale,
+                observations,
             );
         });
+        let mut scroll_node = UiNode::container(
+            SemanticUiId::new("pane.8.diagnostics.scroll"),
+            Some(pane_id),
+            UiRole::ScrollArea,
+            scroll.inner_rect.into(),
+        );
+        scroll_node.name = "Diagnostic metrics".into();
+        scroll_node.pane = Some(pane);
+        self.outputs.ui_geometry.record_node(scroll_node);
     }
 }
 
-fn metric_section(ui: &mut egui::Ui, title: &str, rows: &[(&str, String)]) {
-    ui.strong(title);
-    egui::Grid::new(("metrics", title))
-        .num_columns(2)
-        .striped(true)
-        .show(ui, |ui| {
-            for (label, value) in rows {
-                ui.label(*label);
-                ui.monospace(value);
-                ui.end_row();
-            }
-        });
-    ui.add_space(8.0);
+fn metric_section(
+    ui: &mut egui::Ui,
+    section: u64,
+    title: &str,
+    rows: &[(&str, String)],
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) {
+    section_heading(ui, 8_000 + section, title, tokens, font_scale, observations);
+    for (index, (label, value)) in rows.iter().enumerate() {
+        diagnostic_row(
+            ui,
+            section * 100 + index as u64,
+            label,
+            value,
+            tokens,
+            font_scale,
+            observations,
+        );
+    }
+    ui.add_space(tokens.spacing.section.0);
 }

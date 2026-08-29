@@ -20,10 +20,17 @@ pub fn availability(id: ActionId, context: ActionContext) -> Availability {
         ActionId::Redo if context.redo_depth == 0 => Availability::Disabled {
             reason: "Nothing has been undone".into(),
         },
-        ActionId::Undo | ActionId::Redo | ActionId::SaveLayout | ActionId::ResetWorkspace => {
-            Availability::Enabled
+        ActionId::Undo
+        | ActionId::Redo
+        | ActionId::SaveLayout
+        | ActionId::ResetWorkspace
+        | ActionId::AppearanceSettings => Availability::Enabled,
+        ActionId::CopyDiagnostics if context.target_pane != Some(PaneId(8)) => {
+            Availability::Disabled {
+                reason: "The Diagnostics pane is required".into(),
+            }
         }
-        ActionId::FitView | ActionId::LinkViews
+        ActionId::FitView | ActionId::LinkViews | ActionId::DisplaySettings
             if !context
                 .target_pane
                 .is_some_and(|pane| (1..=4).contains(&pane.0)) =>
@@ -52,12 +59,14 @@ pub fn availability(id: ActionId, context: ActionContext) -> Availability {
         },
         ActionId::FitView
         | ActionId::LinkViews
+        | ActionId::DisplaySettings
         | ActionId::NavigateTool
         | ActionId::PolygonTool
         | ActionId::EditVerticesTool
         | ActionId::CommitPolygon
         | ActionId::DeleteAnnotation
-        | ActionId::RecenterPrimary => Availability::Enabled,
+        | ActionId::RecenterPrimary
+        | ActionId::CopyDiagnostics => Availability::Enabled,
     }
 }
 

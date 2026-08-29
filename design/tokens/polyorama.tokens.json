@@ -38,6 +38,12 @@
     "focus": {
       "ring": { "$type": "color", "$value": "{colour.palette.focus}" }
     },
+    "overlay": {
+      "annotation": { "$type": "color", "$value": "#69e3d2", "$description": "Annotation geometry over scientific imagery" },
+      "selected": { "$type": "color", "$value": "#ffc44a", "$description": "Selected annotation geometry over scientific imagery" },
+      "vertex": { "$type": "color", "$value": "#f0f4ee", "$description": "Editable annotation handles over scientific imagery" },
+      "footprint": { "$type": "color", "$value": "#ffffff", "$description": "Linked viewport footprint over scientific imagery" }
+    },
     "status": {
       "success": { "$type": "color", "$value": "{colour.palette.success}" },
       "warning": { "$type": "color", "$value": "{colour.palette.warning}" },

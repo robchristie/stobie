@@ -126,6 +126,7 @@ pub(super) fn paint_image_overlay(
     gesture: Option<&GesturePreview>,
     camera: Camera,
     primary_camera: Camera,
+    tokens: &DesignTokens,
 ) {
     let to_screen = |world: WorldPoint| {
         let image = ImageToWorld::default().world_to_image(world);
@@ -151,19 +152,21 @@ pub(super) fn paint_image_overlay(
         }
         if points.len() > 1 {
             points.push(points[0]);
+            let colour = if overlay.selected_annotation == Some(polygon.id) {
+                tokens.colours.overlay_selected
+            } else {
+                tokens.colours.overlay_annotation
+            };
             painter.add(egui::Shape::line(
                 points.clone(),
-                egui::Stroke::new(
-                    2.0,
-                    if overlay.selected_annotation == Some(polygon.id) {
-                        egui::Color32::from_rgb(255, 196, 74)
-                    } else {
-                        egui::Color32::from_rgb(105, 227, 210)
-                    },
-                ),
+                egui::Stroke::new(tokens.spacing.unit.0 * 0.5, colour),
             ));
             for point in points.iter().take(points.len() - 1) {
-                painter.circle_filled(*point, 3.5, egui::Color32::from_rgb(240, 244, 238));
+                painter.circle_filled(
+                    *point,
+                    tokens.spacing.unit.0 * 0.875,
+                    tokens.colours.overlay_vertex,
+                );
             }
         }
     }
@@ -175,7 +178,7 @@ pub(super) fn paint_image_overlay(
         if points.len() > 1 {
             painter.add(egui::Shape::line(
                 points,
-                egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 181, 64)),
+                egui::Stroke::new(tokens.spacing.unit.0 * 0.5, tokens.colours.overlay_selected),
             ));
         }
     }
@@ -198,7 +201,10 @@ pub(super) fn paint_image_overlay(
         painter.rect_stroke(
             egui::Rect::from_center_size(centre, size),
             1.0,
-            egui::Stroke::new(2.0, egui::Color32::WHITE),
+            egui::Stroke::new(
+                tokens.spacing.unit.0 * 0.5,
+                tokens.colours.overlay_footprint,
+            ),
             egui::StrokeKind::Inside,
         );
     }
