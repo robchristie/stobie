@@ -7,4 +7,6 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+polyorama-gallery = { path = "../apps/polyorama-gallery" }
+serde.workspace = true
 serde_json.workspace = true

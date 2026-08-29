@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "action.fit_view.pane.1",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Fit view",
+      "description": "Fit the complete image into the active viewport",
+      "rect": {
+        "min_x": 534,
+        "min_y": 117,
+        "max_x": 594.65625,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": true,
+      "selected": false,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": [
+        "fit_view"
+      ]
+    },
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "button/keyboard-focus",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 214
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

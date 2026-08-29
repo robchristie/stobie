@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 1
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 701
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 547,
+        "min_y": 121,
+        "max_x": 632.835205078125,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 547.1988525390625,
+        "min_y": 126,
+        "max_x": 632.6363525390625,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 547,
+        "min_y": 121,
+        "max_x": 632.835205078125,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 2
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 701
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 653.835205078125,
+        "min_y": 121,
+        "max_x": 739.67041015625,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 657.0340576171875,
+        "min_y": 126,
+        "max_x": 736.4715576171875,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 653.835205078125,
+        "min_y": 121,
+        "max_x": 739.67041015625,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 3
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 701
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 760.67041015625,
+        "min_y": 121,
+        "max_x": 793.5847778320312,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 763.4088134765625,
+        "min_y": 126,
+        "max_x": 790.8463134765625,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 760.67041015625,
+        "min_y": 121,
+        "max_x": 793.5847778320312,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 4
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 701
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 814.5847778320312,
+        "min_y": 121,
+        "max_x": 900.4199829101562,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 816.7836303710938,
+        "min_y": 126,
+        "max_x": 898.2211303710938,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 814.5847778320312,
+        "min_y": 121,
+        "max_x": 900.4199829101562,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 5
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 702
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 931.4200439453125,
+        "min_y": 121,
+        "max_x": 983.6700439453125,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 931.5450439453125,
+        "min_y": 126,
+        "max_x": 983.5450439453125,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 931.4200439453125,
+        "min_y": 121,
+        "max_x": 983.6700439453125,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "dock_tab",
+        "instance": 6
+      },
+      "parent_id": {
+        "kind": "dock_tab_strip",
+        "instance": 702
+      },
+      "role": "tab_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 1004.6700439453125,
+        "min_y": 121,
+        "max_x": 1118.6700439453125,
+        "max_y": 145
+      },
+      "painted_rect": {
+        "min_x": 1005.9512939453125,
+        "min_y": 126,
+        "max_x": 1117.3887939453125,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 1004.6700439453125,
+        "min_y": 121,
+        "max_x": 1118.6700439453125,
+        "max_y": 145
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    }
+  ],
+  "audit": []
+}

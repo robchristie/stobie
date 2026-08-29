@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "fixture_id": "splitter-states",
+  "story": "splitter/hover-active",
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  },
+  "configuration": {
+    "appearance": "dark",
+    "contrast": "standard",
+    "density": "comfortable",
+    "font_scale": 1,
+    "width": "regular"
+  },
+  "data_fixture": "gallery-seed-v1",
+  "fonts": "egui-default-fonts-0.36.1",
+  "renderer": "browser-webgpu-eframe-wgpu-swiftshader",
+  "pixel_comparison": {
+    "colour_space": "srgb8",
+    "tolerance": 0
+  }
+}

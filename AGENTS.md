@@ -38,3 +38,9 @@
   tests, release native build, WASM build, architecture checks and browser smoke.
 - Do not allocate the complete raster, one million result rows, or one hundred
   thousand thumbnail widgets.
+
+## UI guidance
+
+- Start UI implementation and review from [docs/ui-guides/README.md](docs/ui-guides/README.md);
+  use the frozen [UI evaluation seed](docs/ui-evaluation-seed.md) for repeatable
+  component and semantic evidence.

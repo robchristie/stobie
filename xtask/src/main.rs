@@ -3,6 +3,7 @@ use std::{env, fs, path::Path, process::Command};
 use anyhow::{Context, Result, anyhow, bail};
 
 mod tokens;
+mod ui;
 
 fn main() -> Result<()> {
     let command = env::args().nth(1).unwrap_or_else(|| "help".into());
@@ -16,6 +17,7 @@ fn main() -> Result<()> {
             Some(action) => bail!("unknown tokens action {action:?}; expected generate or check"),
             None => bail!("tokens requires an action: generate or check"),
         },
+        "ui" => ui::run(Path::new("."), env::args().skip(2).collect()),
         _ => {
             println!(
                 "cargo xtask verify      run the complete native/browser verification surface"
@@ -24,6 +26,7 @@ fn main() -> Result<()> {
             println!("cargo xtask architecture check dependency boundaries");
             println!("cargo xtask tokens generate generate typed Rust from the token source");
             println!("cargo xtask tokens check    validate tokens and check generated drift");
+            println!("cargo xtask ui list|render|inspect|audit-text|verify --output-dir <path>");
             Ok(())
         }
     }
@@ -82,6 +85,7 @@ fn verify() -> Result<()> {
         &["run", "gallery-browser-smoke"],
         &evidence_environment,
     )?;
+    ui::verify(Path::new("."), &evidence_directory.join("ui-snapshots"))?;
     if cfg!(target_os = "linux") {
         run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
         run_with_environment(
@@ -91,7 +95,7 @@ fn verify() -> Result<()> {
         )?;
     }
     println!(
-        "Polyorama verification passed: format, lint, tests, architecture, release native, release WASM, browser and native runtime smoke"
+        "Polyorama verification passed: format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
     );
     Ok(())
 }

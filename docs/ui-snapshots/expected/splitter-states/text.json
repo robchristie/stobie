@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "status_badge",
+        "instance": 46
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 541,
+        "min_y": 275,
+        "max_x": 1143,
+        "max_y": 293
+      },
+      "painted_rect": {
+        "min_x": 541,
+        "min_y": 275,
+        "max_x": 1028.40625,
+        "max_y": 293
+      },
+      "clip_rect": {
+        "min_x": 541,
+        "min_y": 275,
+        "max_x": 1143,
+        "max_y": 293
+      },
+      "overflow": "wrap",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": []
+}

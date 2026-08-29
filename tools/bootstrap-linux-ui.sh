@@ -2,6 +2,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+  echo "using system Linux UI libraries"
+  exit 0
+fi
+
 PACKAGES="$ROOT/.tools/packages"
 SYSROOT="$ROOT/.tools/sysroot"
 mkdir -p "$PACKAGES" "$SYSROOT"
@@ -21,6 +26,11 @@ fetch libxcomposite https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxco
 fetch libxdamage https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxdamage-1.1.7-1-x86_64.pkg.tar.zst
 fetch libxrandr https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxrandr-1.5.5-1-x86_64.pkg.tar.zst
 fetch alsa-lib https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/alsa-lib-1.2.16.1-1-x86_64.pkg.tar.zst
+fetch cairo https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/cairo-1.18.4-1-x86_64.pkg.tar.zst
+fetch fribidi https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/fribidi-1.0.16-2-x86_64.pkg.tar.zst
+fetch libdatrie https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libdatrie-0.2.14-1-x86_64.pkg.tar.zst
+fetch libthai https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libthai-0.1.30-1-x86_64.pkg.tar.zst
+fetch pango https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/pango-1%3A1.58.2-1-x86_64.pkg.tar.zst
 fetch xorg-server-xvfb https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/xorg-server-xvfb-21.1.24-1-x86_64.pkg.tar.zst
 fetch xorg-server-common https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/xorg-server-common-21.1.24-1-x86_64.pkg.tar.zst
 fetch libxcvt https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxcvt-0.1.3-1-x86_64.pkg.tar.zst

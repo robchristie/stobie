@@ -1,0 +1,70 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    env:
+      POLYORAMA_USE_SYSTEM_UI_LIBS: "1"
+      POLYORAMA_BROWSER_HEADFUL: "1"
+      DISPLAY: ":95"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 25.8.2
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Restore wasm-bindgen CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Install Linux UI prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Install wasm-bindgen CLI
+        run: command -v wasm-bindgen || cargo install --locked wasm-bindgen-cli --version 0.2.127
+
+      - name: Verify
+        run: |
+          mkdir -p .tools/runtime/verification-evidence
+          Xvfb "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX \
+            >.tools/runtime/verification-evidence/browser-xvfb.log 2>&1 &
+          browser_xvfb_pid=$!
+          trap 'kill "$browser_xvfb_pid" 2>/dev/null || true' EXIT
+          sleep 1
+          set -o pipefail
+          cargo xtask verify 2>&1 | tee .tools/runtime/verification-evidence/cargo-xtask-verify.log
+
+      - name: Upload verification evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-evidence
+          path: .tools/runtime/verification-evidence
+          if-no-files-found: warn

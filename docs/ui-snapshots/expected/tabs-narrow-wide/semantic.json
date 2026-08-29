@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "tabs/narrow",
+      "rect": {
+        "min_x": 362,
+        "min_y": 54,
+        "max_x": 1322,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "pane.4",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Results: one million deterministic rows",
+      "rect": {
+        "min_x": 374,
+        "min_y": 149,
+        "max_x": 670,
+        "max_y": 342
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 4,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 4
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.1",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Primary image — Antarctic reconstruction sector 04",
+      "rect": {
+        "min_x": 378,
+        "min_y": 117,
+        "max_x": 426.973388671875,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.2",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Secondary linked scalar image with expanded label",
+      "rect": {
+        "min_x": 429.97332763671875,
+        "min_y": 117,
+        "max_x": 478.94671630859375,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 2,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 2
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.3",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Overview",
+      "rect": {
+        "min_x": 481.94671630859375,
+        "min_y": 117,
+        "max_x": 520.56103515625,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 3,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 3
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.4",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Results: one million deterministic rows",
+      "rect": {
+        "min_x": 523.56103515625,
+        "min_y": 117,
+        "max_x": 572.534423828125,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "pane": 4,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 4
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.5",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Inspector",
+      "rect": {
+        "min_x": 575.5343627929688,
+        "min_y": 117,
+        "max_x": 614.0266723632812,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 5,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 5
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.6",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Diagnostics and worker request provenance",
+      "rect": {
+        "min_x": 617.026611328125,
+        "min_y": 117,
+        "max_x": 666,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 6,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 6
+      },
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

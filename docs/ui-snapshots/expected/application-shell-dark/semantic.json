@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "reference/application-shell",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 594
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "pane.1",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Primary image — Antarctic reconstruction sector 04",
+      "rect": {
+        "min_x": 534,
+        "min_y": 149,
+        "max_x": 913.4200439453125,
+        "max_y": 582
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": []
+    },
+    {
+      "id": "pane.5",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Inspector",
+      "rect": {
+        "min_x": 918.4200439453125,
+        "min_y": 149,
+        "max_x": 1150,
+        "max_y": 582
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 5,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 5
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.splitter.700",
+      "parent": "gallery.story",
+      "role": "splitter",
+      "name": "Vertical splitter",
+      "description": "Resize adjacent dock panes",
+      "rect": {
+        "min_x": 899.9200439453125,
+        "min_y": 117,
+        "max_x": 931.9200439453125,
+        "max_y": 582
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "dock_node",
+        "value": 700
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.1",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Primary image — Antarctic reconstruction sector 04",
+      "rect": {
+        "min_x": 538,
+        "min_y": 117,
+        "max_x": 641.835205078125,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.2",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Secondary linked scalar image with expanded label",
+      "rect": {
+        "min_x": 644.835205078125,
+        "min_y": 117,
+        "max_x": 748.67041015625,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 2,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 2
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.3",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Overview",
+      "rect": {
+        "min_x": 751.67041015625,
+        "min_y": 117,
+        "max_x": 802.584716796875,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 3,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 3
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.4",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Results: one million deterministic rows",
+      "rect": {
+        "min_x": 805.5847778320312,
+        "min_y": 117,
+        "max_x": 909.4199829101562,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 4,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 4
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.5",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Inspector",
+      "rect": {
+        "min_x": 922.4200439453125,
+        "min_y": 117,
+        "max_x": 992.6700439453125,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "pane": 5,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 5
+      },
+      "actions": []
+    },
+    {
+      "id": "polyorama.dock.tab.6",
+      "parent": "gallery.story",
+      "role": "tab",
+      "name": "Diagnostics and worker request provenance",
+      "rect": {
+        "min_x": 995.6700439453125,
+        "min_y": 117,
+        "max_x": 1127.6700439453125,
+        "max_y": 149
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 6,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 6
+      },
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

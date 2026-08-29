@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 17179869185
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 543,
+        "min_y": 119,
+        "max_x": 585.65625,
+        "max_y": 147
+      },
+      "painted_rect": {
+        "min_x": 543,
+        "min_y": 126,
+        "max_x": 585.65625,
+        "max_y": 140
+      },
+      "clip_rect": {
+        "min_x": 543,
+        "min_y": 119,
+        "max_x": 585.65625,
+        "max_y": 147
+      },
+      "overflow": "ellipsis",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": []
+}

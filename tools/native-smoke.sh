@@ -6,15 +6,23 @@ cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
 EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/docs/vertical-slice-evidence}"
 
-command -v bwrap >/dev/null
 command -v import >/dev/null
 IMPORT="$(command -v import)"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 rm -f .tools/runtime/native-storage.ron
 
 SYSROOT="$ROOT/.tools/sysroot"
-LIBS="$SYSROOT/usr/lib"
-XDO="$SYSROOT/usr/bin/xdotool"
+if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+  command -v Xvfb >/dev/null
+  command -v xdotool >/dev/null
+  XDO="$(command -v xdotool)"
+  XVFB="$(command -v Xvfb)"
+else
+  command -v bwrap >/dev/null
+  export LD_LIBRARY_PATH="$SYSROOT/usr/lib"
+  XDO="$SYSROOT/usr/bin/xdotool"
+  XVFB="$SYSROOT/usr/bin/Xvfb"
+fi
 DISPLAY_NUMBER=:97
 XVFB_LOG="$EVIDENCE_DIR/native-xvfb.log"
 APP_LOG="$EVIDENCE_DIR/native-runtime.log"
@@ -27,14 +35,18 @@ find "$SMOKE_TMP/.X11-unix" -mindepth 1 -delete
 chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
 
 ui_sandbox() {
-  bwrap --ro-bind / / --bind "$SMOKE_TMP" /tmp --ro-bind /usr/bin /opt \
-    --ro-bind "$SYSROOT/usr/bin" /usr/bin \
-    --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime" \
-    --bind "$EVIDENCE_DIR" "$EVIDENCE_DIR" \
-    --dev-bind /dev /dev --proc /proc "$@"
+  if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+    "$@"
+  else
+    bwrap --ro-bind / / --bind "$SMOKE_TMP" /tmp --ro-bind /usr/bin /opt \
+      --ro-bind "$SYSROOT/usr/bin" /usr/bin \
+      --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime" \
+      --bind "$EVIDENCE_DIR" "$EVIDENCE_DIR" \
+      --dev-bind /dev /dev --proc /proc "$@"
+  fi
 }
 
-LD_LIBRARY_PATH="$LIBS" ui_sandbox "$SYSROOT/usr/bin/Xvfb" "$DISPLAY_NUMBER" \
+ui_sandbox "$XVFB" "$DISPLAY_NUMBER" \
   -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$XVFB_LOG" 2>&1 &
 XVFB_PID=$!
 APP_PID=""
@@ -51,7 +63,7 @@ trap cleanup EXIT
 sleep 1
 
 launch_app() {
-  DISPLAY="$DISPLAY_NUMBER" LD_LIBRARY_PATH="$LIBS" WGPU_BACKEND=gl RUST_LOG=info \
+  DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl RUST_LOG=info \
     POLYORAMA_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
     POLYORAMA_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
     ui_sandbox target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1 &
@@ -65,7 +77,7 @@ launch_app() {
 }
 
 xdo() {
-  DISPLAY="$DISPLAY_NUMBER" LD_LIBRARY_PATH="$LIBS" ui_sandbox "$XDO" "$@"
+  DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$XDO" "$@"
 }
 capture() {
   DISPLAY="$DISPLAY_NUMBER" \
