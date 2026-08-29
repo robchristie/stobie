@@ -5,10 +5,14 @@ mod virtual_grid;
 mod components;
 mod generated_tokens;
 mod preferences;
+mod responsive;
+mod text;
 
 pub use components::*;
 pub use generated_tokens::*;
 pub use preferences::*;
+pub use responsive::*;
+pub use text::*;
 pub use virtual_grid::*;
 
 use egui::{Pos2, Rect, Ui};
@@ -21,6 +25,12 @@ use std::sync::{Arc, RwLock};
 
 const TAB_HEIGHT: f32 = 28.0;
 const SPLITTER: f32 = 5.0;
+
+#[derive(Clone, Copy)]
+pub struct DockTextContext {
+    pub tokens: DesignTokens,
+    pub font_scale: f32,
+}
 
 #[derive(Default)]
 pub struct DockBehaviour {
@@ -70,6 +80,7 @@ pub trait PanePresenter {
     fn title(&self, pane: PaneId) -> &'static str;
     fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect);
     fn record_tab_rect(&mut self, _pane: PaneId, _rect: Rect) {}
+    fn record_text_layout(&mut self, _observation: TextLayoutObservation) {}
     fn record_splitter_rect(&mut self, _node: DockNodeId, _rect: Rect) {}
 }
 
@@ -78,10 +89,18 @@ pub fn dock_workspace(
     workspace: &mut Workspace,
     behaviour: &mut DockBehaviour,
     presenter: &mut impl PanePresenter,
+    text_context: DockTextContext,
 ) -> Option<Command> {
     behaviour.interaction_active = false;
     let rect = ui.available_rect_before_wrap();
-    render_node(ui, &mut workspace.root, rect, behaviour, presenter);
+    render_node(
+        ui,
+        &mut workspace.root,
+        rect,
+        behaviour,
+        presenter,
+        text_context,
+    );
     behaviour.finish_frame(ui.input(|input| input.pointer.any_down()));
     if let Some(action) = behaviour.pending.take() {
         match action {
@@ -113,6 +132,7 @@ fn render_node(
     rect: Rect,
     behaviour: &mut DockBehaviour,
     presenter: &mut impl PanePresenter,
+    text_context: DockTextContext,
 ) {
     match node {
         DockNode::Split {
@@ -196,10 +216,10 @@ fn render_node(
                     ui.visuals().widgets.noninteractive.bg_fill
                 },
             );
-            render_node(ui, first, first_rect, behaviour, presenter);
-            render_node(ui, second, second_rect, behaviour, presenter);
+            render_node(ui, first, first_rect, behaviour, presenter, text_context);
+            render_node(ui, second, second_rect, behaviour, presenter, text_context);
         }
-        DockNode::Tabs { tabs, active, .. } => {
+        DockNode::Tabs { id, tabs, active } => {
             if tabs.is_empty() {
                 ui.painter()
                     .rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
@@ -212,9 +232,48 @@ fn render_node(
             );
             let body = Rect::from_min_max(Pos2::new(rect.left(), tab_rect.bottom()), rect.max);
             ui.painter().rect_filled(rect, 0.0, ui.visuals().panel_fill);
-            let mut x = tab_rect.left() + 4.0;
-            for (index, pane) in tabs.iter().copied().enumerate() {
-                let width = (presenter.title(pane).len() as f32 * 7.2 + 22.0).clamp(72.0, 180.0);
+            let strip_padding = text_context.tokens.spacing.unit.0;
+            let gap = (text_context.tokens.spacing.unit.0 - 1.0).max(0.0);
+            let tab_padding = text_context.tokens.geometry.control_padding_x.0;
+            let width_class = PaneWidthClass::from_points(rect.width());
+            let maximum_tab_width = match width_class {
+                PaneWidthClass::Narrow => 132.0,
+                PaneWidthClass::Regular => 180.0,
+                PaneWidthClass::Wide => 220.0,
+            };
+            let intrinsic_spec = TextSpec {
+                horizontal_alignment: HorizontalTextAlignment::Centre,
+                ..TextSpec::single_line(TextRole::TabLabel, TextOverflow::Expand)
+            };
+            let desired_widths = tabs
+                .iter()
+                .map(|pane| {
+                    measure_text(
+                        ui.painter(),
+                        presenter.title(*pane),
+                        intrinsic_spec,
+                        &text_context.tokens,
+                        text_context.font_scale,
+                        1.0,
+                    )
+                    .map(|text| (text.size().x + tab_padding * 2.0).min(maximum_tab_width))
+                    .unwrap_or(maximum_tab_width)
+                })
+                .collect::<Vec<_>>();
+            let gaps_width = gap * tabs.len().saturating_sub(1) as f32;
+            let available_width = (tab_rect.width() - strip_padding * 2.0 - gaps_width).max(1.0);
+            let desired_total = desired_widths.iter().sum::<f32>().max(1.0);
+            let fit_scale = (available_width / desired_total).min(1.0);
+            let mut x = tab_rect.left() + strip_padding;
+            let parent_id = TextComponentId::new(TextComponentKind::DockTabStrip, id.0);
+            for (index, (pane, desired_width)) in
+                tabs.iter().copied().zip(desired_widths).enumerate()
+            {
+                let width = if index + 1 == tabs.len() && fit_scale < 1.0 {
+                    (tab_rect.right() - strip_padding - x).max(0.5)
+                } else {
+                    (desired_width * fit_scale).max(0.5)
+                };
                 let item_rect = Rect::from_min_size(
                     Pos2::new(x, tab_rect.top() + 3.0),
                     egui::vec2(width, TAB_HEIGHT - 4.0),
@@ -232,6 +291,14 @@ fn render_node(
                 if response.drag_started() {
                     behaviour.dragging = Some(pane);
                 }
+                response.widget_info(|| {
+                    egui::WidgetInfo::selected(
+                        egui::WidgetType::SelectableLabel,
+                        ui.is_enabled(),
+                        index == *active,
+                        presenter.title(pane),
+                    )
+                });
                 let fill = if index == *active {
                     ui.visuals().extreme_bg_color
                 } else if response.hovered() {
@@ -240,14 +307,34 @@ fn render_node(
                     ui.visuals().widgets.inactive.bg_fill
                 };
                 ui.painter().rect_filled(item_rect, 4.0, fill);
-                ui.painter().text(
-                    item_rect.center(),
-                    egui::Align2::CENTER_CENTER,
+                let horizontal_padding = tab_padding.min((item_rect.width() - 0.5).max(0.0) * 0.25);
+                let label_rect = item_rect.shrink2(egui::vec2(horizontal_padding, 0.0));
+                let spec = TextSpec {
+                    horizontal_alignment: HorizontalTextAlignment::Centre,
+                    ..TextSpec::single_line(TextRole::TabLabel, TextOverflow::Ellipsis)
+                };
+                if let Ok(measured) = measure_text(
+                    ui.painter(),
                     presenter.title(pane),
-                    egui::FontId::proportional(12.5),
-                    ui.visuals().text_color(),
-                );
-                x += width + 3.0;
+                    spec,
+                    &text_context.tokens,
+                    text_context.font_scale,
+                    label_rect.width().max(0.5),
+                ) {
+                    let observation = paint_measured_text(
+                        &ui.painter_at(label_rect),
+                        &measured,
+                        label_rect,
+                        TextComponentId::new(TextComponentKind::DockTab, u64::from(pane.0)),
+                        Some(parent_id),
+                    );
+                    let truncated = observation.truncated;
+                    presenter.record_text_layout(observation);
+                    if truncated {
+                        response.on_hover_text(presenter.title(pane));
+                    }
+                }
+                x += width + gap;
             }
             ui.painter().hline(
                 tab_rect.x_range(),
@@ -640,17 +727,38 @@ mod tests {
 
     use super::*;
 
-    #[derive(Default)]
+    fn dock_text_context() -> DockTextContext {
+        DockTextContext {
+            tokens: DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable),
+            font_scale: 1.0,
+        }
+    }
+
     struct GeometryPresenter {
         tabs: Vec<(PaneId, Rect)>,
         bodies: Vec<(PaneId, Rect)>,
         splitters: Vec<(DockNodeId, Rect)>,
+        text_layouts: Vec<TextLayoutObservation>,
         greedy_pane: Option<PaneId>,
+        title: &'static str,
+    }
+
+    impl Default for GeometryPresenter {
+        fn default() -> Self {
+            Self {
+                tabs: Vec::new(),
+                bodies: Vec::new(),
+                splitters: Vec::new(),
+                text_layouts: Vec::new(),
+                greedy_pane: None,
+                title: "Pane",
+            }
+        }
     }
 
     impl PanePresenter for GeometryPresenter {
         fn title(&self, _pane: PaneId) -> &'static str {
-            "Pane"
+            self.title
         }
 
         fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect) {
@@ -666,6 +774,10 @@ mod tests {
 
         fn record_tab_rect(&mut self, pane: PaneId, rect: Rect) {
             self.tabs.push((pane, rect));
+        }
+
+        fn record_text_layout(&mut self, observation: TextLayoutObservation) {
+            self.text_layouts.push(observation);
         }
 
         fn record_splitter_rect(&mut self, node: DockNodeId, rect: Rect) {
@@ -715,7 +827,13 @@ mod tests {
         let mut output = context.run_ui(input, |ui| {
             command = ui
                 .scope_builder(egui::UiBuilder::new().max_rect(root), |ui| {
-                    dock_workspace(ui, workspace, behaviour, &mut presenter)
+                    dock_workspace(
+                        ui,
+                        workspace,
+                        behaviour,
+                        &mut presenter,
+                        dock_text_context(),
+                    )
                 })
                 .inner;
         });
@@ -799,10 +917,23 @@ mod tests {
             let mut presenter = GeometryPresenter::default();
 
             ui.scope_builder(egui::UiBuilder::new().max_rect(root), |ui| {
-                dock_workspace(ui, &mut workspace, &mut behaviour, &mut presenter)
+                dock_workspace(
+                    ui,
+                    &mut workspace,
+                    &mut behaviour,
+                    &mut presenter,
+                    dock_text_context(),
+                )
             });
 
             assert_eq!(presenter.tabs.len(), 8);
+            assert_eq!(presenter.text_layouts.len(), 8);
+            let findings = audit_text_layouts(&presenter.text_layouts);
+            assert!(
+                findings.is_empty(),
+                "{findings:?}: {:?}",
+                presenter.text_layouts
+            );
             assert_eq!(presenter.bodies.len(), expected_bodies.len());
             assert!(!presenter.splitters.is_empty());
             for (_, rect) in presenter
@@ -821,6 +952,78 @@ mod tests {
                     .all(|(_, rect)| rect.is_positive() && root.contains_rect(*rect))
             );
         });
+    }
+
+    #[test]
+    fn dock_tabs_are_measured_bounded_and_auditable_across_responsive_cases() {
+        let labels = [
+            "Results",
+            "Results and linked measurements from the active selection",
+            "results_without_any_available_line_break_opportunity_0123456789",
+        ];
+        let widths = [280.0, 500.0, 900.0];
+        let densities = [DensityVariant::Compact, DensityVariant::Comfortable];
+        let scales = [1.0, 1.25, 1.5];
+
+        for label in labels {
+            for width in widths {
+                for density in densities {
+                    for scale in scales {
+                        let context = egui::Context::default();
+                        let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(width, 320.0));
+                        let input = egui::RawInput {
+                            screen_rect: Some(root),
+                            focused: true,
+                            ..Default::default()
+                        };
+                        let mut workspace = Workspace::analytical_default();
+                        workspace.root = DockNode::Tabs {
+                            id: DockNodeId(41),
+                            tabs: vec![PaneId(1), PaneId(2), PaneId(3)],
+                            active: 0,
+                        };
+                        workspace.active_pane = PaneId(1);
+                        let mut behaviour = DockBehaviour::default();
+                        let mut presenter = GeometryPresenter {
+                            title: label,
+                            ..Default::default()
+                        };
+                        let mut output = context.run_ui(input, |ui| {
+                            let _ = dock_workspace(
+                                ui,
+                                &mut workspace,
+                                &mut behaviour,
+                                &mut presenter,
+                                DockTextContext {
+                                    tokens: DesignTokens::resolve(ThemeVariant::Dark, density),
+                                    font_scale: scale,
+                                },
+                            );
+                        });
+                        output.textures_delta.clear();
+
+                        assert_eq!(presenter.tabs.len(), 3);
+                        assert_eq!(presenter.text_layouts.len(), 3);
+                        assert!(
+                            presenter
+                                .tabs
+                                .iter()
+                                .all(|(_, tab)| root.contains_rect(*tab))
+                        );
+                        assert!(
+                            presenter
+                                .tabs
+                                .windows(2)
+                                .all(|pair| pair[0].1.right() <= pair[1].1.left())
+                        );
+                        assert!(
+                            audit_text_layouts(&presenter.text_layouts).is_empty(),
+                            "label={label:?} width={width} density={density:?} scale={scale}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]

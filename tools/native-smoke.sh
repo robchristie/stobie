@@ -4,19 +4,20 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
+EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/docs/vertical-slice-evidence}"
 
 command -v bwrap >/dev/null
 command -v import >/dev/null
 IMPORT="$(command -v import)"
-mkdir -p docs/vertical-slice-evidence .tools/runtime
+mkdir -p "$EVIDENCE_DIR" .tools/runtime
 rm -f .tools/runtime/native-storage.ron
 
 SYSROOT="$ROOT/.tools/sysroot"
 LIBS="$SYSROOT/usr/lib"
 XDO="$SYSROOT/usr/bin/xdotool"
 DISPLAY_NUMBER=:97
-XVFB_LOG=docs/vertical-slice-evidence/native-xvfb.log
-APP_LOG=docs/vertical-slice-evidence/native-runtime.log
+XVFB_LOG="$EVIDENCE_DIR/native-xvfb.log"
+APP_LOG="$EVIDENCE_DIR/native-runtime.log"
 SNAPSHOT="$ROOT/.tools/runtime/native-physical-snapshot.json"
 SMOKE_TMP="$ROOT/.tools/runtime/native-x11-tmp"
 
@@ -29,7 +30,7 @@ ui_sandbox() {
   bwrap --ro-bind / / --bind "$SMOKE_TMP" /tmp --ro-bind /usr/bin /opt \
     --ro-bind "$SYSROOT/usr/bin" /usr/bin \
     --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime" \
-    --bind "$ROOT/docs/vertical-slice-evidence" "$ROOT/docs/vertical-slice-evidence" \
+    --bind "$EVIDENCE_DIR" "$EVIDENCE_DIR" \
     --dev-bind /dev /dev --proc /proc "$@"
 }
 
@@ -68,7 +69,7 @@ xdo() {
 }
 capture() {
   DISPLAY="$DISPLAY_NUMBER" \
-    ui_sandbox "$IMPORT" -window root "$ROOT/docs/vertical-slice-evidence/$1"
+    ui_sandbox "$IMPORT" -window root "$EVIDENCE_DIR/$1"
 }
 snapshot() {
   : >"$SNAPSHOT"
@@ -141,6 +142,15 @@ launch_app
 capture native-default.png
 snapshot
 UI_GEOMETRY_INITIAL="$(jq -c '.ui_geometry' "$SNAPSHOT")"
+jq -e '
+  (.ui_geometry.text_layouts | length) == 8
+  and (.ui_geometry.text_audit | length) == 0
+  and all(.ui_geometry.text_layouts[];
+    .baseline == null
+    and .role == "tab_label"
+    and .overflow == "ellipsis"
+    and .line_count == 1)
+' "$SNAPSHOT" >/dev/null
 
 # Pointer-centred zoom and a coalesced linked-camera drag.
 move_target image_viewports 1 "" 0.35 0.45
@@ -348,7 +358,7 @@ jq -n \
       release_frame_preview_regression: "covered by deterministic Rust frame-output test"
     }
   }
-' >docs/vertical-slice-evidence/native-semantic.json
+' >"$EVIDENCE_DIR/native-semantic.json"
 
 # Diagnostics, then a dock split resize and pane drag/drop.
 move_target tabs 8 ""
@@ -428,8 +438,8 @@ jq \
         out_and_back_no_op: true
       }
     }
-  ' docs/vertical-slice-evidence/native-semantic.json >"$SEMANTIC_UPDATE"
-mv "$SEMANTIC_UPDATE" docs/vertical-slice-evidence/native-semantic.json
+  ' "$EVIDENCE_DIR/native-semantic.json" >"$SEMANTIC_UPDATE"
+mv "$SEMANTIC_UPDATE" "$EVIDENCE_DIR/native-semantic.json"
 
 move_target tabs 4 ""
 xdo mousedown 1

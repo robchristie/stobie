@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
-const evidenceRoot = join(process.cwd(), 'docs/vertical-slice-evidence');
+const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
+  ?? join(process.cwd(), 'docs/vertical-slice-evidence'));
 await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
 const server = createServer(async (request, response) => {
@@ -154,7 +155,13 @@ try {
   const initialSemantic = await semanticSnapshot();
   if (!initialSemantic.ui_geometry.root
       || initialSemantic.ui_geometry.tabs.length !== 8
-      || initialSemantic.ui_geometry.image_viewports.length < 4) {
+      || initialSemantic.ui_geometry.image_viewports.length < 4
+      || initialSemantic.ui_geometry.text_layouts.length !== 8
+      || initialSemantic.ui_geometry.text_audit.length !== 0
+      || initialSemantic.ui_geometry.text_layouts.some((item) => item.baseline != null
+        || item.role !== 'tab_label'
+        || item.overflow !== 'ellipsis'
+        || item.line_count !== 1)) {
     throw new Error(`Rust semantic UI geometry is incomplete: ${JSON.stringify(initialSemantic.ui_geometry)}`);
   }
   if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
@@ -213,6 +220,8 @@ try {
       image_viewports: initialSemantic.ui_geometry.image_viewports,
       control_names: initialSemantic.ui_geometry.controls.map((item) => `${item.pane ?? 'global'}:${item.name}`),
       results_scroll: initialSemantic.ui_geometry.results_scroll,
+      text_layouts: initialSemantic.ui_geometry.text_layouts,
+      text_audit: initialSemantic.ui_geometry.text_audit,
     },
     initial: {
       visible_tile_keys: initialSemantic.visible_tile_keys,

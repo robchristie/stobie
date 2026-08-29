@@ -7,7 +7,9 @@ use polyorama_core::*;
 use polyorama_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
-use polyorama_ui_egui::{ImagePlanTarget, PanePresenter, allocate_viewport, stage_render_callback};
+use polyorama_ui_egui::{
+    ImagePlanTarget, PanePresenter, TextLayoutObservation, allocate_viewport, stage_render_callback,
+};
 use web_time::Instant;
 
 use crate::thumbnail_cache::ThumbnailCache;
@@ -347,6 +349,10 @@ impl PanePresenter for PaneSurface<'_> {
             pane,
             rect: rect.into(),
         });
+    }
+
+    fn record_text_layout(&mut self, observation: TextLayoutObservation) {
+        self.outputs.ui_geometry.text_layouts.push(observation);
     }
 
     fn record_splitter_rect(&mut self, node: DockNodeId, rect: egui::Rect) {

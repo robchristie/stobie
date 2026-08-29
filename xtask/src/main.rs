@@ -30,6 +30,12 @@ fn main() -> Result<()> {
 }
 
 fn verify() -> Result<()> {
+    let evidence_directory = env::current_dir()
+        .context("resolve verification working directory")?
+        .join(".tools/runtime/verification-evidence");
+    fs::create_dir_all(&evidence_directory)
+        .context("create ignored verification evidence directory")?;
+    let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence_directory.as_path())];
     tokens::check(Path::new("."))?;
     run("cargo", &["fmt", "--all", "--check"])?;
     run(
@@ -68,9 +74,9 @@ fn verify() -> Result<()> {
     }
     run("npm", &["ci"])?;
     run("npx", &["playwright", "install", "chromium"])?;
-    run("npm", &["run", "browser-smoke"])?;
+    run_with_environment("npm", &["run", "browser-smoke"], &evidence_environment)?;
     if cfg!(target_os = "linux") {
-        run("bash", &["tools/native-smoke.sh"])?;
+        run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
     }
     println!(
         "Polyorama verification passed: format, lint, tests, architecture, release native, release WASM, browser and native runtime smoke"
@@ -151,6 +157,30 @@ fn architecture() -> Result<()> {
             bail!("pane API contains forbidden broad access: {forbidden}");
         }
     }
+    let mut production_ui_sources = pane_sources.clone();
+    collect_rust_sources(
+        Path::new("crates/polyorama-ui-egui/src"),
+        &mut production_ui_sources,
+    )?;
+    production_ui_sources.push(Path::new("apps/analytical-workspace-lab/src/app.rs").into());
+    production_ui_sources.sort();
+    production_ui_sources.dedup();
+    for path in &production_ui_sources {
+        let source = fs::read_to_string(path)?;
+        for forbidden in [
+            "title.len()",
+            ".chars().count()",
+            ".len() as f32",
+            ".len() as f64",
+        ] {
+            if source.contains(forbidden) {
+                bail!(
+                    "production UI source {} contains forbidden character-count text sizing pattern {forbidden:?}; use egui galley measurement",
+                    path.display()
+                );
+            }
+        }
+    }
     let pane_root = fs::read_to_string("apps/analytical-workspace-lab/src/panes/mod.rs")?;
     for feature in ["image", "camera_gestures", "annotations", "diagnostics"] {
         let path = format!("apps/analytical-workspace-lab/src/panes/{feature}.rs");
@@ -218,7 +248,7 @@ fn architecture() -> Result<()> {
         bail!("expected exactly one canonical Workspace definition, found {canonical_definitions}");
     }
     println!(
-        "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }
@@ -271,12 +301,23 @@ fn ensure_wasm_bindgen_version(expected: &str) -> Result<()> {
 }
 
 fn run(program: &str, arguments: &[&str]) -> Result<()> {
+    run_with_environment(program, arguments, &[])
+}
+
+fn run_with_environment(
+    program: &str,
+    arguments: &[&str],
+    environment: &[(&str, &Path)],
+) -> Result<()> {
     if !Path::new("Cargo.toml").exists() {
         bail!("run xtask from the repository root");
     }
     println!("+ {program} {}", arguments.join(" "));
     let mut command = Command::new(program);
     command.args(arguments);
+    for (name, value) in environment {
+        command.env(name, value);
+    }
     if program == "cargo" {
         let temporary_directory = env::current_dir()
             .context("resolve verification working directory")?

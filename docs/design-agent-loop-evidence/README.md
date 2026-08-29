@@ -36,3 +36,29 @@ python3 -m http.server 4173 --bind 0.0.0.0 --directory apps/analytical-workspace
 The screenshot is supporting visual evidence. Token correctness and variant
 coverage are established by generated-code, contrast, preference and compiler
 tests rather than by this single dark/comfortable capture.
+
+## Increment 3: measured dock-tab text
+
+`increment-3-measured-tabs.png`
+
+- application source revision:
+  `7e21dc4cb42bed9c4249eab19a9cd580027df13e`;
+- captured: 29 August 2026;
+- viewport: 1279×756 CSS pixels;
+- application: release Wasm `analytical-workspace-lab`;
+- browser: Chrome 151.0.7922.47 in a disposable Lantern session;
+- backend: hardware WebGPU, `nvidia.com/gpu=0`, unsafe WebGPU explicitly enabled;
+- result: all eight dock-tab labels use egui galley measurement, remain centred
+  and legible, and exhibit no overlap or accidental clipping;
+- companion native and browser semantic smokes each exported eight bounded
+  `TextLayoutObservation` values and zero text-audit findings;
+- Lantern result: zero console messages, exceptions, failed requests, HTTP
+  errors or layout findings; and
+- SHA-256:
+  `dfe76a31cd4e4250e470860fe172182e12af3ac2dbbed2deaf49554a7929f025`.
+
+The exact source revision passed `cargo xtask verify`: 106 Rust tests, token
+drift and architecture checks, native and Wasm lint/release builds, browser
+WebGPU smoke and native GL/llvmpipe physical smoke. The screenshot is visual
+support; truncation, alignment and bounds are established by the measured-text
+fixtures, responsive dock tests and exported semantic observations.

@@ -1,5 +1,6 @@
 use eframe::egui;
 use polyorama_core::{DockNodeId, PaneId, ResultId};
+use polyorama_ui_egui::{TextAuditFinding, TextLayoutObservation};
 use serde::Serialize;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
@@ -65,6 +66,9 @@ pub struct UiGeometry {
     pub result_rows: Vec<ResultUiRect>,
     pub results_scroll: Option<UiRect>,
     pub thumbnail_scroll: Option<UiRect>,
+    /// Bounded observations for Polyorama-owned text components only.
+    pub text_layouts: Vec<TextLayoutObservation>,
+    pub text_audit: Vec<TextAuditFinding>,
 }
 
 impl UiGeometry {
@@ -106,5 +110,13 @@ mod tests {
             ),
             (50.0, 45.0)
         );
+    }
+
+    #[test]
+    fn geometry_serialises_the_bounded_text_observation_surface() {
+        let geometry = UiGeometry::default();
+        let value = serde_json::to_value(geometry).unwrap();
+        assert_eq!(value["text_layouts"], serde_json::json!([]));
+        assert_eq!(value["text_audit"], serde_json::json!([]));
     }
 }

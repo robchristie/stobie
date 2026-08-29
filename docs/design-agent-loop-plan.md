@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increment 2 canonically verified candidate
+Status: active; increment 3 verified candidate
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,14 +20,23 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-The baseline and design audit has landed. Increment 2 is a canonically verified
-candidate: the documented visual language, bounded token source and compiler,
-generated typed variants, versioned UI preferences and one isolated
-application-bar consumer. `cargo xtask verify` passes 99 tests, architecture,
-release native/Wasm builds and both physical smokes. A fresh hardware-WebGPU
-Lantern run was console-, network- and layout-clean after the loading shell's
-missing favicon declaration was corrected. Do not restyle the complete
-application until typed tokens and measured text primitives exist.
+Increment 3 is a verified candidate. The UI layer now owns typed measured-text
+roles, five explicit overflow policies, horizontal and vertical alignment,
+bounded line counts, responsive pane classes, serialisable observations and a
+deterministic one-point-tolerance audit. Dock tabs use egui galley measurement,
+single-line ellipsis, full semantic names and stable geometry without the old
+character-count width estimate. Application `TestSnapshot`/`UiGeometry`
+exports eight bounded tab observations and the audit without enumerating
+ordinary labels or virtualised collections.
+
+Canonical `cargo xtask verify` passes 106 tests, token drift, architecture,
+native and Wasm clippy, release native/Wasm builds, browser WebGPU and native
+GL/llvmpipe physical smokes. Retained browser/native observations report an
+empty text audit; a hardware-WebGPU Lantern run at 1279×756 is console-,
+network- and layout-clean. The new explicit evidence directory also prevents
+the canonical gate from overwriting tracked baseline artefacts. Complete
+shell/content text migration, pathological-strip minimum tab hit size and a
+tab overflow control remain increments 4 and 8.
 
 ## Baseline evidence
 
@@ -54,8 +63,8 @@ ignored output directory before adding CI evidence publication.
   tokens or component recipes.
 - Seventeen static production UI colours remain outside generated scientific
   thumbnail data; typography and component geometry use scattered literals.
-- Dock tab width is `title.len() * 7.2 + 22`, the strongest current violation
-  of measured-text requirements.
+- Dock tab width used `title.len() * 7.2 + 22`; increment 3 replaces this
+  violation with egui galley measurement and an architecture source check.
 - Custom tabs, splitters, thumbnail cells and annotation controls expose
   physical geometry but no explicit AccessKit metadata.
 - Standard buttons provide egui semantics, while keyboard routing is local and
@@ -75,7 +84,7 @@ ignored output directory before adding CI evidence publication.
 | --- | --- | --- | --- | --- |
 | 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
 | 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Candidate; canonically verified | Token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
-| 3 | Measured text roles, overflow, observations and layout audit | 2 | Pending | Text fixtures and audit output |
+| 3 | Measured text roles, overflow, observations and layout audit | 2 | Candidate; canonically verified | Text fixtures, exported tab observations and empty audit |
 | 4 | Reusable accessible shell components and keyboard focus | 2–3 | Pending | Component tests and captures |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Pending | Gallery captures and manifests |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Pending | Semantic/keyboard tests |
@@ -105,7 +114,8 @@ show that the change is intentional.
 
 ## Next action
 
-Complete increment 2 verification, exact-head review and landing. Prove native
-and Wasm lint/build, token drift, preference migration, contrast pairs and the
-isolated application-bar consumer; then start measured text and overflow as a
-fresh increment. Application-wide migration remains deferred.
+Commit the canonically verified increment 3 candidate, independently review
+its exact head, repair any blocking finding and land it. Increment 4 can then
+build reusable accessible shell components, including a minimum-hit/overflow
+solution for pathological tab strips. Application-wide text and component
+migration remains deferred.

@@ -9,9 +9,9 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    AppearancePreference, DensityPreference, DockBehaviour, MotionPreference, UiPreferences,
-    application_bar_frame, application_bar_height, dock_workspace, stage_renderer_maintenance,
-    submit_render_plan,
+    AppearancePreference, DensityPreference, DockBehaviour, DockTextContext, MotionPreference,
+    UiPreferences, application_bar_frame, application_bar_height, audit_text_layouts,
+    dock_workspace, stage_renderer_maintenance, submit_render_plan,
 };
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
@@ -836,6 +836,10 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     &mut self.workspace,
                     &mut self.dock_behaviour,
                     &mut surface,
+                    DockTextContext {
+                        tokens,
+                        font_scale: self.preferences.font_scale,
+                    },
                 ) {
                     surface.push_shell_command(command);
                 }
@@ -878,6 +882,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.last_visible_tile_keys.sort();
         self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
+        outputs.ui_geometry.text_audit = audit_text_layouts(&outputs.ui_geometry.text_layouts);
         self.last_ui_geometry = outputs.ui_geometry.clone();
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();

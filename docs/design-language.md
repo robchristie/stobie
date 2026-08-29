@@ -1,6 +1,6 @@
 # Polyorama design language
 
-Status: increment 2 foundation
+Status: increment 3 measured-text foundation
 
 ## Visual thesis
 
@@ -52,9 +52,8 @@ allocation for 125% or 150% font scale, but must not silently reduce hit size.
 Typography is role-based. `body` is the normal reading and data label role at
 13 points and weight 400. `label` is the short chrome or control role at 12.5
 points and weight 600. Both use the application UI font selected through egui;
-the generated `FontWeight` type records intent until the measured-text
-increment supplies complete recipes. Production text measurement remains
-egui's responsibility.
+the generated `FontWeight` type records semantic weight intent while egui owns
+the installed font family and all production measurement.
 
 Default alignment and overflow are semantic:
 
@@ -70,6 +69,41 @@ Every reusable component must eventually declare alignment, line count,
 minimum useful width, semantic full text and one of: scroll, wrap, truncate,
 collapse, move to overflow controls, or a deliberate minimum state. Character
 count is never a text-width proxy.
+
+The measured-text layer exposes the bounded roles `application_title`,
+`pane_title`, `section_heading`, `body`, `secondary`, `caption`,
+`tabular_value`, `monospace_technical`, `button_label`, `tab_label`, `status`
+and `error`. Each role resolves its font family, size, weight intent and colour
+from generated tokens. Egui galley layout is the production measurement
+authority; role names never become runtime stylesheet selectors.
+
+Implemented overflow policies are `ellipsis`, `wrap`, `clip`, `scroll` and
+`expand`. Ellipsis and bounded wrapping use egui's `Galley::elided` as the sole
+truncation signal. Clip and scroll preserve intrinsic layout and explicitly
+permit content bounds outside the local allocation because the owning clip or
+scroll surface constrains visible paint. Expand requires the useful allocation
+to contain the measured text. All policies retain full semantic text.
+
+Polyorama-owned text components may emit a bounded `TextLayoutObservation`
+with a typed stable component and parent ID, role, alignment, allocation,
+layout paint bounds, clip, declared overflow and line limit, actual line count
+and truncation state. Egui 0.36 has no reliable public baseline metric, so the
+baseline is reported as unavailable rather than inferred. The deterministic
+audit uses a one-point tolerance for raster/layout rounding and rejects invalid
+useful geometry, undeclared out-of-bounds text, unexpected lines, undeclared
+truncation, alignment deviation and overlapping sibling text. Observations are
+concentrated on Polyorama components; they are not a second UI tree and do not
+enumerate ordinary egui labels or virtualised collections.
+
+Dock tabs are the first migrated component. Their desired width and ellipsis
+layout are measured by egui, their label painter is strictly clipped, stable
+widget IDs and pane drag/activation behaviour are unchanged, widget semantics
+retain the complete title, and a tooltip appears only when the galley is
+elided. Responsive width classes cap desired tab width and the strip
+proportionally shares constrained space without sibling overlap or pane
+overrun. A 32-point minimum tab hit width and moving excess tabs into an
+overflow control remain shell-component work; they cannot both be guaranteed
+in a strip narrower than the complete tab set and are not claimed here.
 
 ## Icons
 
@@ -102,6 +136,10 @@ panes reduce vertical chrome before content. Wide or tall panes may reveal
 secondary context but must not materialise complete result or thumbnail
 collections. Exact breakpoints are typed component policy, not token aliases;
 later gallery stories and physical checks will calibrate them.
+
+`PaneWidthClass`, `PaneHeightClass` and `PaneSizeClass` now encode these exact
+breakpoints. Increment 3 applies the width class only to dock-tab text policy;
+toolbar, inspector, results and diagnostic migrations remain later work.
 
 ## Token source and supported subset
 
@@ -143,9 +181,10 @@ generated Rust—there is no network access or per-frame JSON parsing.
 
 Generated values are exposed as `DesignTokens` with typed colour, point,
 ratio, weight and duration fields. Runtime UI code selects `ThemeVariant` and
-`DensityVariant`; it never requests a token by string. Increment 2 applies the
-tokens only to the application bar recipe. Broader pane and control migration
-waits for measured text and reusable component increments.
+`DensityVariant`; it never requests a token by string. Increment 2 applied the
+first application-bar recipe and increment 3 applies typography, colour and
+spacing tokens to dock-tab text. Broader pane and control migration waits for
+reusable component increments.
 
 ## Preferences and licence
 
