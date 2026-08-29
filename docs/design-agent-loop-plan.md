@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increments 1–7 landed; increment 8 review repairs verified and awaiting exact-head re-review
+Status: active; increments 1–8 landed; increment 9 complete candidate awaiting exact-head gates
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,23 +20,13 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 7 landed as PR #15 at merge `fe20cd9`. It adds five typed
-`cargo xtask ui` operations,
-five selected zero-tolerance browser-WebGPU fixtures, canonical semantic/text
-comparison, complete failure bundles and an explicit read-only baseline policy.
-The checked-in CI workflow runs the canonical verifier and uploads ignored
-failure evidence. Focused component, pane, interaction, token, accessibility
-and review guides point agents to production boundaries and deterministic
-evidence. Six frozen gallery tasks use a four-dimension 0–2 scoring rubric.
-
-Increment 8 implementation head `ec6483c` passes 157 tests, token drift,
-architecture, native and Wasm clippy/release builds, application/gallery
-browser WebGPU smokes, five deterministic UI fixtures and both native
-GL/llvmpipe physical smokes. Its first independent review found invalid display
-ranges, missing custom-control action identity, incomplete semantics for
-ellipsised viewport status text and non-physical appearance evidence. All four
-are repaired with refreshed selected native/browser evidence. Exact-head
-re-review and landing are the remaining increment gates.
+Increment 8 landed as PR #16 at merge `89d9ec4`. Its exact candidate head
+`489db151c8c96c94e8793662e3f0f9ca4450aaab` passed hosted
+`cargo xtask verify` and independent review after the complete application
+migration and headful physical-input repairs. Increment 9 records exact final
+release performance and idle observations and maps every mandatory criterion
+in `docs/design-agent-loop-report.md`; it adds no UI capability. Exact-head
+review, hosted verification and landing remain.
 
 ## Baseline evidence
 
@@ -90,8 +80,8 @@ now publishes that ignored evidence only when CI fails.
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
-| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Review repairs verified; exact-head re-review pending | [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
-| 9 | Final performance/idle/native/browser hardening and report | 8 | Pending | Final report and canonical gate |
+| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Landed | PR #16 and [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
+| 9 | Final performance/idle/native/browser hardening and report | 8 | Complete candidate; gates pending | [Final report](design-agent-loop-report.md) and canonical gate |
 
 The graph may be refined only at phase boundaries when evidence reveals a
 better coherent dependency boundary. Every increment must leave the workspace
@@ -115,6 +105,5 @@ show that the change is intentional.
 
 ## Next action
 
-Complete exact-head independent review, repair any blocking finding on the same
-branch, land increment 8, then begin increment 9 final performance, idle,
-native/browser reconciliation and the criterion-by-criterion final report.
+Run the exact-head canonical gate and independent review, repair any blocking
+finding on this branch, then land the final report increment.

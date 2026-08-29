@@ -224,3 +224,32 @@ da046b6d200d62148f22a79ee64754719fab97aec6dd1b064738628ae6dd91ec  increment-8-ga
 4fbf7d473014e084af255c522978ab7bddcd0ebc81d792335acb981ca8bba629  increment-8-browser-semantic.json
 e2d146c7a603541026b54f83829f85ffe9da6127a2cf0e51ae432fb97999a08c  increment-8-native-semantic.json
 ```
+
+## Increment 9: final release qualification
+
+Release-observation source revision
+`7a5e63f47fe078b68816b50098c5dd338dae7d0e` passed the complete local
+`cargo xtask verify` gate: 157 tests, token drift and architecture checks,
+strict native/Wasm lint and release builds, both browser smokes, five exact UI
+fixtures, and both native GL/llvmpipe physical smokes.
+
+- `increment-9-browser-performance.json` retains bounded release-Wasm
+  application-update CPU observations for initial loading, four-view panning,
+  rapid zoom, million-row results, thumbnails, polygon editing, dock
+  interactions, theme switching, font scaling and workspace restoration;
+- the same file records warmed event-driven idle at frame `440 → 440`; and
+- `increment-9-gallery-browser-evidence.json` retains browser/backend identity,
+  18-story release readiness, seven selected story transitions and gallery
+  idle at frame `26 → 26`.
+
+GPU timestamp timing was unavailable and remains explicitly `null`; these CPU
+and wall observations are not labelled as whole-frame or GPU timing. The
+criterion-by-criterion reconciliation is in
+[`../design-agent-loop-report.md`](../design-agent-loop-report.md).
+
+SHA-256 values:
+
+```text
+04d7d8bb7cc4f74d8944e6d2706c45965bb1eadf1fb98c471a515b1cc10a085e  increment-9-browser-performance.json
+96d3ca46ad40e4e7913dc4cbd0c48e8dcea5025c2d0b79d964bbbc919a17af67  increment-9-gallery-browser-evidence.json
+```

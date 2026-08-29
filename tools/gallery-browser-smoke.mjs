@@ -74,6 +74,8 @@ if (process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1') {
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack ?? error}`));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+const launchStartedMs = Date.now();
+const releaseObservations = { story_transitions: [] };
 
 const assertRenderedScreenshot = async (screenshot, label) => {
   const statistics = await page.evaluate(async (base64) => {
@@ -101,6 +103,7 @@ const assertRenderedScreenshot = async (screenshot, label) => {
 const snapshot = () => page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
 const selectStory = async (story) => {
   const before = await snapshot();
+  const startedMs = Date.now();
   await page.evaluate((value) => window.__POLYORAMA_GALLERY_HANDLE.select_story(value), story);
   await page.waitForFunction(
     ({ frame, storyId }) => {
@@ -110,13 +113,20 @@ const selectStory = async (story) => {
     { frame: before.frame, storyId: story },
     { timeout: 10_000 },
   );
-  return snapshot();
+  const current = await snapshot();
+  releaseObservations.story_transitions.push({
+    story,
+    wall_ms: Date.now() - startedMs,
+    frame_delta: current.frame - before.frame,
+  });
+  return current;
 };
 
 try {
   await page.goto('http://127.0.0.1:4174', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.body.classList.contains('ready')
     && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
+  releaseObservations.initial_ready_wall_ms = Date.now() - launchStartedMs;
   const manifest = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.manifest());
   if (manifest.length !== 18 || new Set(manifest.map((entry) => entry.id)).size !== 18) {
     throw new Error(`invalid gallery manifest: ${JSON.stringify(manifest)}`);
@@ -209,6 +219,7 @@ try {
     backend: 'browser WebGPU via eframe/wgpu',
     viewport: '1440x900 CSS pixels',
     stories: manifest.length,
+    release_observations: releaseObservations,
     idle_frame_before: idleBefore,
     idle_frame_after: idleAfter,
     text_audit_findings: current.text_audit.length,

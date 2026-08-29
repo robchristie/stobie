@@ -526,15 +526,19 @@ try {
   const percentile = (values, p) => values.length ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * p))] : null;
   const observations = {};
   async function observe(name, action) {
-    const before = await page.evaluate(() => ({ frame: window.__POLYORAMA_DIAGNOSTICS.frame.frame_number, samples: window.__POLYORAMA_DIAGNOSTICS.frame.cpu_frame_history_ms.length }));
+    const beforeFrame = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number);
     await action();
-    await page.waitForFunction((frame) => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number > frame, before.frame, { timeout: 10_000 });
+    await page.waitForFunction((frame) => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number > frame, beforeFrame, { timeout: 10_000 });
     await page.waitForTimeout(250);
     const semantic = await semanticSnapshot();
     if (semantic.ui_snapshot.semantic_audit.length !== 0) {
       throw new Error(`${name} produced semantic snapshot findings: ${JSON.stringify(semantic.ui_snapshot.semantic_audit)}`);
     }
-    const samples = await page.evaluate((start) => window.__POLYORAMA_DIAGNOSTICS.frame.cpu_frame_history_ms.slice(start), before.samples);
+    const samples = await page.evaluate((startFrame) => {
+      const frame = window.__POLYORAMA_DIAGNOSTICS.frame;
+      const count = Math.min(frame.cpu_frame_history_ms.length, frame.frame_number - startFrame);
+      return frame.cpu_frame_history_ms.slice(-count);
+    }, beforeFrame);
     observations[name] = { samples, median_ms: percentile(samples, 0.5), p95_ms: percentile(samples, 0.95) };
   }
   observations.initial_loading = {
@@ -831,7 +835,10 @@ try {
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-rearranged-dock.png') });
   await semanticAction({ kind: 'restore_default_workspace' });
-  const lightPreferences = await choosePreference('appearance', 'light');
+  let lightPreferences;
+  await observe('theme_switching', async () => {
+    lightPreferences = await choosePreference('appearance', 'light');
+  });
   if (lightPreferences.preferences.appearance !== 'light'
       || lightPreferences.preferences.contrast !== 'standard') {
     throw new Error(`standard light preferences did not apply: ${JSON.stringify(lightPreferences.preferences)}`);
@@ -839,7 +846,9 @@ try {
   await page.screenshot({ path: join(evidenceRoot, 'browser-light.png') });
   await choosePreference('contrast', 'high');
   await choosePreference('density', 'compact');
-  await chooseFontScale(1.5);
+  await observe('font_scaling', async () => {
+    await chooseFontScale(1.5);
+  });
   const changedPreferences = await choosePreference('motion', 'reduced');
   if (JSON.stringify(changedPreferences.preferences) !== JSON.stringify({
     schema_version: 1,
