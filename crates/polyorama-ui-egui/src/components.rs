@@ -1,8 +1,11 @@
 use egui::{Color32, Frame, Margin, Painter, Rect, Response, Sense, Stroke};
 
+#[cfg(test)]
+use crate::{AccessKitMismatch, ActionId, UiSnapshot, audit_accesskit};
 use crate::{
-    DesignTokens, HorizontalTextAlignment, TextComponentId, TextOverflow, TextRole, TextSpec,
-    VerticalTextAlignment, measure_text, paint_measured_text,
+    ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
+    SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec, UiNode, UiRole,
+    VerticalTextAlignment, action_spec, measure_text, paint_measured_text,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -47,15 +50,12 @@ pub fn paint_splitter(
     }
 }
 
-pub struct ActionButtonSpec<'a> {
-    pub instance: u64,
-    /// Complete action name used by widget and accessibility semantics.
-    pub label: &'a str,
-    /// Optional shorter visible label for a constrained toolbar.
-    pub compact_label: Option<&'a str>,
-    pub enabled: bool,
+pub struct ActionButtonSpec {
+    pub target: ActionTarget,
+    pub availability: Availability,
     pub selected: bool,
     pub emphasis: ActionEmphasis,
+    pub compact: bool,
 }
 
 /// Token-derived action control shared by production screens and gallery
@@ -63,12 +63,19 @@ pub struct ActionButtonSpec<'a> {
 /// for widget and accessibility semantics.
 pub fn action_button(
     ui: &mut egui::Ui,
-    spec: ActionButtonSpec<'_>,
+    spec: ActionButtonSpec,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
-    let visible_label = spec.compact_label.unwrap_or(spec.label);
+    debug_assert!(spec.availability.visible());
+    let action = action_spec(spec.target.action);
+    let visible_label = if spec.compact {
+        action.compact_label.unwrap_or(action.label)
+    } else {
+        action.label
+    };
+    let enabled = spec.availability.enabled();
     let text_spec = TextSpec {
         horizontal_alignment: HorizontalTextAlignment::Centre,
         ..TextSpec::single_line(TextRole::ButtonLabel, TextOverflow::Ellipsis)
@@ -99,8 +106,8 @@ pub fn action_button(
     let (_, hit_rect) = ui.allocate_space(egui::vec2(width, hit_height));
     let response = ui.interact(
         hit_rect,
-        egui::Id::new(("polyorama.action-button", spec.instance)),
-        if spec.enabled {
+        egui::Id::new(("polyorama.action-button", spec.target)),
+        if enabled {
             Sense::click()
         } else {
             Sense::hover()
@@ -112,28 +119,33 @@ pub fn action_button(
     response.widget_info(|| {
         egui::WidgetInfo::selected(
             egui::WidgetType::Button,
-            spec.enabled,
+            enabled,
             spec.selected,
-            spec.label,
+            action.label,
         )
     });
     ui.ctx().accesskit_node_builder(response.id, |node| {
         use egui::accesskit::{Action, Role};
         node.set_role(Role::Button);
-        node.set_label(spec.label);
-        node.set_author_id(format!("polyorama.action-button.{}", spec.instance));
-        if !spec.enabled {
+        node.set_label(action.label);
+        node.set_author_id(spec.target.semantic_id());
+        let description = spec.availability.disabled_reason().map_or_else(
+            || action.description.to_owned(),
+            |reason| format!("{}; unavailable: {reason}", action.description),
+        );
+        node.set_description(description);
+        if !enabled {
             node.set_disabled();
         }
         node.set_selected(spec.selected);
-        if spec.enabled {
+        if enabled {
             node.add_action(Action::Click);
         }
     });
     let visual_height =
         (tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5)).min(hit_rect.height());
     let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(width, visual_height));
-    let fill = if !spec.enabled {
+    let fill = if !enabled {
         Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
     } else if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
         tokens.colours.accent_primary.into()
@@ -170,7 +182,7 @@ pub fn action_button(
     ) {
         if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
             measured.colour = tokens.colours.accent_on_accent.into();
-        } else if !spec.enabled {
+        } else if !enabled {
             measured.colour = tokens.colours.text_muted.into();
         }
         let truncated = measured.truncated();
@@ -178,14 +190,49 @@ pub fn action_button(
             &ui.painter_at(label_rect),
             &measured,
             label_rect,
-            TextComponentId::new(crate::TextComponentKind::ActionButton, spec.instance),
+            TextComponentId::new(
+                crate::TextComponentKind::ActionButton,
+                u64::from(spec.target.action as u8) << 32
+                    | u64::from(spec.target.pane.map_or(0, |pane| pane.0)),
+            ),
             None,
         ));
-        if truncated || spec.compact_label.is_some() {
-            response.clone().on_hover_text(spec.label);
+        if truncated || spec.compact || !enabled {
+            let mut tooltip = format!("{}\n{}", action.label, action.description);
+            if let Some(reason) = spec.availability.disabled_reason() {
+                tooltip.push_str(&format!("\nUnavailable: {reason}"));
+            }
+            response.clone().on_hover_text(tooltip);
         }
     }
     response
+}
+
+pub fn action_semantic_node(
+    response: &Response,
+    target: ActionTarget,
+    availability: &Availability,
+    selected: bool,
+    parent: SemanticUiId,
+) -> UiNode {
+    let action = action_spec(target.action);
+    UiNode {
+        id: SemanticUiId::new(target.semantic_id()),
+        parent: Some(parent),
+        role: UiRole::Button,
+        name: action.label.to_owned(),
+        description: Some(action.description.to_owned()),
+        rect: response.rect.into(),
+        enabled: availability.enabled(),
+        focused: response.has_focus(),
+        selected,
+        checked: None,
+        expanded: None,
+        pane: target.pane,
+        domain_reference: target.pane.map(DomainReference::Pane),
+        actions: vec![target.action],
+        disabled_reason: availability.disabled_reason().map(ToOwned::to_owned),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -988,12 +1035,13 @@ mod tests {
                 let button = action_button(
                     ui,
                     ActionButtonSpec {
-                        instance: 11,
-                        label: "Unavailable action",
-                        compact_label: Some("Unavailable"),
-                        enabled: false,
+                        target: ActionTarget::application(ActionId::Undo),
+                        availability: Availability::Disabled {
+                            reason: "History is empty".into(),
+                        },
                         selected: false,
                         emphasis: ActionEmphasis::Normal,
+                        compact: true,
                     },
                     &tokens,
                     1.0,
@@ -1001,7 +1049,10 @@ mod tests {
                 );
                 assert_eq!(
                     button.id,
-                    egui::Id::new(("polyorama.action-button", 11_u64))
+                    egui::Id::new((
+                        "polyorama.action-button",
+                        ActionTarget::application(ActionId::Undo),
+                    ))
                 );
                 let result = result_row(
                     ui,
@@ -1050,9 +1101,14 @@ mod tests {
                 .find(|node| node.author_id() == Some(author_id))
                 .unwrap_or_else(|| panic!("missing node {author_id}"))
         };
-        let button = node("polyorama.action-button.11");
+        let button = node("action.undo");
         assert_eq!(button.role(), egui::accesskit::Role::Button);
-        assert_eq!(button.label(), Some("Unavailable action"));
+        assert_eq!(button.label(), Some("Undo"));
+        assert!(
+            button
+                .description()
+                .is_some_and(|description| description.contains("History is empty"))
+        );
         assert!(button.is_disabled());
         assert!(!button.supports_action(egui::accesskit::Action::Click));
         assert!(
@@ -1072,5 +1128,127 @@ mod tests {
         assert_eq!(thumbnail.is_selected(), Some(true));
         assert!(thumbnail.supports_action(egui::accesskit::Action::Click));
         assert!(observations.len() >= 6);
+    }
+
+    #[test]
+    fn action_snapshot_and_accesskit_semantics_cannot_disagree_silently() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let root_rect = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(360.0, 120.0));
+        let availability = Availability::Disabled {
+            reason: "History is empty".into(),
+        };
+        let target = ActionTarget::application(ActionId::Undo);
+        let mut semantic = None;
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root_rect),
+                ..Default::default()
+            },
+            |ui| {
+                let response = action_button(
+                    ui,
+                    ActionButtonSpec {
+                        target,
+                        availability: availability.clone(),
+                        selected: false,
+                        emphasis: ActionEmphasis::Normal,
+                        compact: false,
+                    },
+                    &tokens,
+                    1.0,
+                    &mut Vec::new(),
+                );
+                semantic = Some(action_semantic_node(
+                    &response,
+                    target,
+                    &availability,
+                    false,
+                    SemanticUiId::root(),
+                ));
+            },
+        );
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        let root = SemanticUiId::root();
+        let mut snapshot = UiSnapshot {
+            root: root.clone(),
+            nodes: vec![
+                UiNode::container(root, None, UiRole::Application, root_rect.into()),
+                semantic.expect("semantic action node"),
+            ],
+            ..Default::default()
+        };
+        assert!(audit_accesskit(&snapshot, &update).is_empty());
+        snapshot.nodes[1].name = "Wrong name".into();
+        assert!(matches!(
+            audit_accesskit(&snapshot, &update).as_slice(),
+            [AccessKitMismatch::Name { .. }]
+        ));
+        snapshot.nodes[1].name = "Undo".into();
+        snapshot.nodes[1].description = Some("Wrong description".into());
+        assert!(matches!(
+            audit_accesskit(&snapshot, &update).as_slice(),
+            [AccessKitMismatch::Description { .. }]
+        ));
+    }
+
+    #[test]
+    fn released_egui_kittest_queries_and_activates_registry_actions() {
+        use std::{cell::Cell, rc::Rc};
+
+        use egui_kittest::{
+            Harness,
+            kittest::{NodeT, Queryable},
+        };
+
+        let activated = Rc::new(Cell::new(false));
+        let observed = Rc::clone(&activated);
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(420.0, 120.0))
+            .build_ui(move |ui| {
+                let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+                let fit = action_button(
+                    ui,
+                    ActionButtonSpec {
+                        target: ActionTarget::pane(ActionId::FitView, polyorama_core::PaneId(1)),
+                        availability: Availability::Enabled,
+                        selected: false,
+                        emphasis: ActionEmphasis::Normal,
+                        compact: false,
+                    },
+                    &tokens,
+                    1.0,
+                    &mut Vec::new(),
+                );
+                observed.set(observed.get() || fit.clicked());
+                action_button(
+                    ui,
+                    ActionButtonSpec {
+                        target: ActionTarget::application(ActionId::Undo),
+                        availability: Availability::Disabled {
+                            reason: "History is empty".into(),
+                        },
+                        selected: false,
+                        emphasis: ActionEmphasis::Normal,
+                        compact: false,
+                    },
+                    &tokens,
+                    1.0,
+                    &mut Vec::new(),
+                );
+            });
+        let fit = harness.get_by_role_and_label(egui::accesskit::Role::Button, "Fit view");
+        assert!(!fit.accesskit_node().is_disabled());
+        fit.click_accesskit();
+        harness.run();
+        assert!(activated.get());
+        let undo = harness.get_by_role_and_label(egui::accesskit::Role::Button, "Undo");
+        assert!(undo.accesskit_node().is_disabled());
     }
 }

@@ -1,18 +1,22 @@
 //! Immediate-mode presentation and semantic pane interfaces.
 
+mod actions;
 mod virtual_grid;
 
 mod components;
 mod generated_tokens;
 mod preferences;
 mod responsive;
+mod semantics;
 mod style;
 mod text;
 
+pub use actions::*;
 pub use components::*;
 pub use generated_tokens::*;
 pub use preferences::*;
 pub use responsive::*;
+pub use semantics::*;
 pub use style::*;
 pub use text::*;
 pub use virtual_grid::*;
@@ -81,9 +85,16 @@ enum DockAction {
 pub trait PanePresenter {
     fn title(&self, pane: PaneId) -> &'static str;
     fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect);
-    fn record_tab_rect(&mut self, _pane: PaneId, _rect: Rect) {}
+    fn record_tab_rect(&mut self, _pane: PaneId, _rect: Rect, _selected: bool, _focused: bool) {}
     fn record_text_layout(&mut self, _observation: TextLayoutObservation) {}
-    fn record_splitter_rect(&mut self, _node: DockNodeId, _rect: Rect) {}
+    fn record_splitter_rect(
+        &mut self,
+        _node: DockNodeId,
+        _rect: Rect,
+        _horizontal: bool,
+        _focused: bool,
+    ) {
+    }
 }
 
 pub fn dock_workspace(
@@ -173,6 +184,7 @@ fn render_node(
                 } else {
                     "Horizontal splitter"
                 });
+                node.set_description("Resize adjacent dock panes");
                 node.set_author_id(format!("polyorama.dock.splitter.{splitter_author_id}"));
                 node.set_orientation(if horizontal {
                     Orientation::Vertical
@@ -272,7 +284,13 @@ fn render_node(
                 .map_or(*fraction, |preview| preview.after);
             let (first_rect, split_rect, second_rect) =
                 split_rects(rect, horizontal, shown_fraction);
-            presenter.record_splitter_rect(node, split_rect);
+            let current_hit_rect = minimum_hit_rect(split_rect, minimum_hit, rect);
+            presenter.record_splitter_rect(
+                node,
+                current_hit_rect,
+                horizontal,
+                response.has_focus(),
+            );
             if response.drag_stopped()
                 && let Some(preview) = behaviour
                     .split_preview
@@ -426,7 +444,12 @@ fn render_node(
                 let item_id = egui::Id::new(("polyorama.dock.tab", pane.0));
                 let hit_rect = minimum_hit_rect(item_rect, minimum_hit, tab_rect);
                 let response = dock_tab_interaction(&mut tab_ui, item_id, hit_rect);
-                presenter.record_tab_rect(pane, item_rect);
+                presenter.record_tab_rect(
+                    pane,
+                    hit_rect,
+                    shown_active == index,
+                    response.has_focus(),
+                );
                 if response.clicked() {
                     shown_active = index;
                     behaviour.pending = Some(DockAction::Activate(pane));
@@ -911,8 +934,10 @@ mod tests {
 
     struct GeometryPresenter {
         tabs: Vec<(PaneId, Rect)>,
+        tab_states: Vec<(PaneId, Rect, bool, bool)>,
         bodies: Vec<(PaneId, Rect)>,
         splitters: Vec<(DockNodeId, Rect)>,
+        splitter_states: Vec<(DockNodeId, Rect, bool, bool)>,
         text_layouts: Vec<TextLayoutObservation>,
         greedy_pane: Option<PaneId>,
         title: &'static str,
@@ -922,8 +947,10 @@ mod tests {
         fn default() -> Self {
             Self {
                 tabs: Vec::new(),
+                tab_states: Vec::new(),
                 bodies: Vec::new(),
                 splitters: Vec::new(),
+                splitter_states: Vec::new(),
                 text_layouts: Vec::new(),
                 greedy_pane: None,
                 title: "Pane",
@@ -947,16 +974,24 @@ mod tests {
             }
         }
 
-        fn record_tab_rect(&mut self, pane: PaneId, rect: Rect) {
+        fn record_tab_rect(&mut self, pane: PaneId, rect: Rect, selected: bool, focused: bool) {
             self.tabs.push((pane, rect));
+            self.tab_states.push((pane, rect, selected, focused));
         }
 
         fn record_text_layout(&mut self, observation: TextLayoutObservation) {
             self.text_layouts.push(observation);
         }
 
-        fn record_splitter_rect(&mut self, node: DockNodeId, rect: Rect) {
+        fn record_splitter_rect(
+            &mut self,
+            node: DockNodeId,
+            rect: Rect,
+            horizontal: bool,
+            focused: bool,
+        ) {
             self.splitters.push((node, rect));
+            self.splitter_states.push((node, rect, horizontal, focused));
         }
     }
 
@@ -1279,7 +1314,7 @@ mod tests {
         let tab_bounds = tab.bounds().expect("tab semantic bounds");
         assert!(tab_bounds.width() >= 32.0);
         assert!(tab_bounds.height() >= 32.0);
-        assert!(presenter.tabs[0].1.height() < tab_bounds.height() as f32);
+        assert!((presenter.tabs[0].1.height() - tab_bounds.height() as f32).abs() < 0.001);
         let splitter = update
             .nodes
             .iter()
@@ -1294,6 +1329,68 @@ mod tests {
         let splitter_bounds = splitter.bounds().expect("splitter semantic bounds");
         assert!(splitter_bounds.width() >= 32.0 || splitter_bounds.height() >= 32.0);
         assert!(splitter.orientation().is_some());
+
+        let mut nodes = vec![UiNode::container(
+            SemanticUiId::root(),
+            None,
+            UiRole::Application,
+            root.into(),
+        )];
+        nodes.extend(
+            presenter
+                .tab_states
+                .iter()
+                .map(|(pane, rect, selected, focused)| UiNode {
+                    id: SemanticUiId::tab(*pane),
+                    parent: Some(SemanticUiId::root()),
+                    role: UiRole::Tab,
+                    name: "Pane".into(),
+                    description: None,
+                    rect: (*rect).into(),
+                    enabled: true,
+                    focused: *focused,
+                    selected: *selected,
+                    checked: None,
+                    expanded: None,
+                    pane: Some(*pane),
+                    domain_reference: Some(DomainReference::Pane(*pane)),
+                    actions: Vec::new(),
+                    disabled_reason: None,
+                }),
+        );
+        nodes.extend(
+            presenter
+                .splitter_states
+                .iter()
+                .map(|(node, rect, horizontal, focused)| UiNode {
+                    id: SemanticUiId::splitter(*node),
+                    parent: Some(SemanticUiId::root()),
+                    role: UiRole::Splitter,
+                    name: if *horizontal {
+                        "Vertical splitter".into()
+                    } else {
+                        "Horizontal splitter".into()
+                    },
+                    description: Some("Resize adjacent dock panes".into()),
+                    rect: (*rect).into(),
+                    enabled: true,
+                    focused: *focused,
+                    selected: false,
+                    checked: None,
+                    expanded: None,
+                    pane: None,
+                    domain_reference: Some(DomainReference::DockNode(*node)),
+                    actions: Vec::new(),
+                    disabled_reason: None,
+                }),
+        );
+        let snapshot = UiSnapshot {
+            root: SemanticUiId::root(),
+            nodes,
+            ..Default::default()
+        };
+        let findings = audit_accesskit(&snapshot, &update);
+        assert!(findings.is_empty(), "{findings:#?}");
     }
 
     #[test]

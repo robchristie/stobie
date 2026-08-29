@@ -1,9 +1,9 @@
 use eframe::egui;
 use polyorama_core::{
-    DemandPriority, ImageIntent, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
+    DemandPriority, ImageIntent, PaneId, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
     VirtualisationMetrics,
 };
-use polyorama_ui_egui::VirtualGridPresenter;
+use polyorama_ui_egui::{DomainReference, SemanticUiId, UiNode, UiRole, VirtualGridPresenter};
 
 use crate::thumbnail_cache::ThumbnailCache;
 
@@ -55,12 +55,62 @@ pub fn show(
                     grid_ui.id().with(("thumbnail", index)),
                     egui::Sense::click(),
                 );
+                let selected = selected_result == Some(ResultId(index as u64));
+                let semantic_name = format!("Thumbnail result #{index}");
+                let resident = texture.is_some();
+                response.widget_info(|| {
+                    egui::WidgetInfo::selected(
+                        egui::WidgetType::SelectableLabel,
+                        true,
+                        selected,
+                        &semantic_name,
+                    )
+                });
+                grid_ui.ctx().accesskit_node_builder(response.id, |node| {
+                    use egui::accesskit::{Action, Role};
+                    node.set_role(Role::ListBoxOption);
+                    node.set_label(semantic_name.clone());
+                    node.set_description(if resident {
+                        "Decoded thumbnail is resident"
+                    } else {
+                        "Thumbnail is loading"
+                    });
+                    node.set_author_id(format!("thumbnail.{index}"));
+                    node.set_selected(selected);
+                    node.add_action(Action::Click);
+                });
                 if response.clicked() {
                     outputs.intents.push(ImageIntent::SelectResult {
                         result: ResultId(index as u64),
                     });
                 }
-                let selected = selected_result == Some(ResultId(index as u64));
+                let inside_root = outputs
+                    .ui_geometry
+                    .root
+                    .is_some_and(|root| root.contains(response.rect.into(), 1.0));
+                if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
+                    outputs.ui_geometry.record_node(UiNode {
+                        id: SemanticUiId::new(format!("thumbnail.{index}")),
+                        parent: Some(SemanticUiId::pane(PaneId(6))),
+                        role: UiRole::ThumbnailCell,
+                        name: semantic_name,
+                        description: Some(if resident {
+                            "Decoded thumbnail is resident".into()
+                        } else {
+                            "Thumbnail is loading".into()
+                        }),
+                        rect: response.rect.into(),
+                        enabled: true,
+                        focused: response.has_focus(),
+                        selected,
+                        checked: None,
+                        expanded: None,
+                        pane: Some(PaneId(6)),
+                        domain_reference: Some(DomainReference::Thumbnail(key)),
+                        actions: Vec::new(),
+                        disabled_reason: None,
+                    });
+                }
                 grid_ui
                     .painter()
                     .rect_filled(rect, 3.0, egui::Color32::from_rgb(34, 39, 42));
@@ -113,6 +163,15 @@ pub fn show(
     virtualisation.thumbnail_content_height = output.content_height;
     virtualisation.thumbnail_viewport_height = output.viewport_height;
     outputs.ui_geometry.thumbnail_scroll = Some(output.viewport_rect.into());
+    let mut scroll = UiNode::container(
+        SemanticUiId::new("pane.6.thumbnails.scroll"),
+        Some(SemanticUiId::pane(PaneId(6))),
+        UiRole::ScrollArea,
+        output.viewport_rect.into(),
+    );
+    scroll.name = "Thumbnails".into();
+    scroll.pane = Some(PaneId(6));
+    outputs.ui_geometry.record_node(scroll);
     if output.wheel_delta_y != 0.0 {
         virtualisation.thumbnail_wheel_input_frames += 1;
         virtualisation.thumbnail_wheel_delta_y += output.wheel_delta_y;

@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increment 4 landed; increment 5 implementation candidate
+Status: active; increment 5 landed; increment 6 implementation candidate
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,17 +20,7 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 4 landed as PR #12 at merge `f551711`: token-aware visual versus
-minimum-hit geometry, bounded visible tabs plus overflow, focus rings, stable
-domain-derived widget IDs, same-frame selected semantics, roving tab keys and
-exact-step keyboard/AccessKit splitter adjustment. Its final repair cancels
-egui's pending spatial navigation in the same pass as an owned arrow, so first
-and consecutive inputs need no settling frame. Native physical resize,
-undo/redo and out-and-back no-op evidence passes. This remains compatible egui
-AccessKit tree generation only; OS/browser screen-reader delivery is not
-claimed.
-
-Increment 5 now has a runnable native/browser gallery candidate. A closed,
+Increment 5 landed as PR #13 at merge `c1039b5`. A closed,
 serialisable Rust catalogue owns 18 stable stories, including the required
 button, dock, toolbar, property, status, virtual-grid and six composed
 reference scenes. The app supports light/dark, standard/high contrast,
@@ -43,6 +33,28 @@ headlessly with an empty measured-text audit. Browser WebGPU and native
 GL/llvmpipe launch smokes retain manifests, Rust snapshots and selected
 captures; the warmed browser frame counter remains stopped while idle.
 
+Increment 6 implementation revision `87dcccd` makes action identity and
+semantic inspection real. A closed `ActionId` registry now owns complete names,
+descriptions, scope, shortcuts and stable serialisation for application,
+viewport, annotation and result actions. Scope-aware targets feed the same
+button, shortcut, AccessKit author ID, semantic node and physical smoke target;
+the application continues to apply mutations through its existing validated
+command and intent paths. Availability exposes enabled, disabled-with-reason or
+hidden state from current authoritative state.
+
+`UiSnapshot` is a bounded, serialisable current-frame observation with stable
+IDs, roles, complete names, descriptions, geometry, state, pane/domain
+references, actions, measured text and audit findings. Tabs, splitters,
+viewports, visible result rows, visible thumbnail cells and representative
+actions are included without materialising logical collections or creating a
+second application tree. AccessKit parity tests cover names, descriptions,
+disabled reasons, selection, actions and bounds; released `egui_kittest 0.36.1`
+queries and activates registry actions against the existing egui 0.36.1 stack.
+Native and browser physical smokes now locate representative controls by stable
+action ID and current Rust geometry. Real dock rearrangement exposed and fixed
+clipped off-surface nodes; all retained native/browser snapshots have empty
+semantic audits.
+
 The UI layer owns typed measured-text
 roles, five explicit overflow policies, horizontal and vertical alignment,
 bounded line counts, responsive pane classes, serialisable observations and a
@@ -52,13 +64,13 @@ character-count width estimate. Application `TestSnapshot`/`UiGeometry`
 exports eight bounded tab observations and the audit without enumerating
 ordinary labels or virtualised collections.
 
-The last landed canonical gate passes 117 tests, token drift, architecture,
+The last landed canonical gate passes 125 tests, token drift, architecture,
 native and Wasm clippy, release native/Wasm builds, browser WebGPU and native
-GL/llvmpipe physical smokes. Increment 5 focused checks add three catalogue /
-matrix tests, two idempotent-style tests and production-component semantic
-coverage. Exact-head canonical verification remains the candidate landing
-gate. Complete shell/content migration remains increment 8; action identity
-and the reusable semantic snapshot remain increment 6.
+GL/llvmpipe physical smokes. Increment 6 candidate head `d05ac95` passes the
+complete canonical gate: 140 Rust tests, token drift, architecture, native and
+Wasm clippy/release builds, browser WebGPU smokes and native GL/llvmpipe
+physical smokes. Tooling/CI/guides remain increment 7 and complete
+shell/content migration remains increment 8.
 
 ## Baseline evidence
 
@@ -109,8 +121,8 @@ of selected evidence remains increment 7.
 | 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
 | 3 | Measured text roles, overflow, observations and layout audit | 2 | Landed | PR #11, text fixtures, exported tab observations and empty audit |
 | 4 | Reusable accessible shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
-| 5 | Native/browser gallery, stories and reference scenes | 3–4 | Candidate; focused native/browser evidence passes | 18-story manifest, matrix tests and selected gallery captures |
-| 6 | Action registry and reusable semantic snapshot | 4–5 | Pending | Semantic/keyboard tests |
+| 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
+| 6 | Action registry and reusable semantic snapshot | 4–5 | Candidate; focused native/browser evidence passes | Registry, parity/kittest coverage and bounded semantic snapshots |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Pending | CI runs and failure bundle probe |
 | 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Pending | Required capture matrix |
 | 9 | Final performance/idle/native/browser hardening and report | 8 | Pending | Final report and canonical gate |
@@ -137,8 +149,8 @@ show that the change is intentional.
 
 ## Next action
 
-Run the complete exact-head gate for increment 5, inspect the regenerated
-application and gallery evidence, independently review and repair the same
-head, then land it. Begin the action registry and reusable semantic snapshot
-only after this gallery contract is stable. Application-wide migration remains
-deferred.
+Independently review increment 6 against its exact head, repair and reverify any
+blocking finding, then land it. Begin `xtask ui`, snapshot artefacts, CI
+publication, agent guides and the evaluation seed only after the semantic
+inspection contract is stable. Application-wide migration remains deferred to
+increment 8.

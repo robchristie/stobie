@@ -1,5 +1,6 @@
 //! Analytical Workspace Lab application composition.
 
+mod actions;
 mod app;
 mod panes;
 mod thumbnail_cache;

@@ -100,9 +100,14 @@ try {
   const targetPoint = async (target, fractionX = 0.5, fractionY = 0.5, deltaX = 0, deltaY = 0) => {
     const snapshot = await semanticSnapshot();
     const geometry = snapshot.ui_geometry;
-    const root = geometry.root;
+    const semantic = snapshot.ui_snapshot;
+    const semanticRoot = semantic.nodes.find((node) => node.id === semantic.root)?.rect;
+    const root = semanticRoot ?? geometry.root;
     let rect;
-    if (target.kind === 'control') {
+    if (target.kind === 'action') {
+      rect = semantic.nodes.find((node) => node.actions.includes(target.action)
+        && (target.pane == null || node.pane === target.pane))?.rect;
+    } else if (target.kind === 'control') {
       rect = geometry.controls.find((item) => item.name === target.name
         && (target.pane == null || item.pane === target.pane))?.rect;
     } else if (target.kind === 'splitter') {
@@ -139,6 +144,15 @@ try {
     return point;
   };
   const clickTarget = async (target, options = {}) => {
+    if (target.kind === 'action') {
+      await page.waitForFunction(
+        ({ action, pane }) => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+          .some((node) => node.enabled && node.actions.includes(action)
+            && (pane == null || node.pane === pane)),
+        target,
+        { timeout: 10_000 },
+      );
+    }
     const point = await targetPoint(target);
     await page.mouse.click(point.x, point.y, options);
   };
@@ -154,15 +168,28 @@ try {
   };
   const initialSemantic = await semanticSnapshot();
   if (!initialSemantic.ui_geometry.root
+      || !initialSemantic.ui_snapshot.nodes.length
+      || initialSemantic.ui_snapshot.semantic_audit.length !== 0
+      || initialSemantic.ui_snapshot.nodes.length >= 1_000
+      || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('undo'))
+      || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('fit_view') && node.pane === 1)
       || initialSemantic.ui_geometry.tabs.length !== 8
       || initialSemantic.ui_geometry.image_viewports.length < 4
-      || initialSemantic.ui_geometry.text_layouts.length !== 8
+      || initialSemantic.ui_geometry.text_layouts.filter((item) => item.role === 'tab_label').length !== 8
       || initialSemantic.ui_geometry.text_audit.length !== 0
-      || initialSemantic.ui_geometry.text_layouts.some((item) => item.baseline != null
-        || item.role !== 'tab_label'
+      || initialSemantic.ui_geometry.text_layouts
+        .filter((item) => item.role === 'tab_label')
+        .some((item) => item.baseline != null
         || item.overflow !== 'ellipsis'
         || item.line_count !== 1)) {
-    throw new Error(`Rust semantic UI geometry is incomplete: ${JSON.stringify(initialSemantic.ui_geometry)}`);
+    throw new Error(`Rust semantic UI snapshot is incomplete: ${JSON.stringify({
+      geometry: initialSemantic.ui_geometry,
+      nodeCount: initialSemantic.ui_snapshot.nodes.length,
+      semanticAudit: initialSemantic.ui_snapshot.semantic_audit,
+      actionNodes: initialSemantic.ui_snapshot.nodes
+        .filter((node) => node.actions.length > 0)
+        .map((node) => ({ id: node.id, pane: node.pane, actions: node.actions })),
+    })}`);
   }
   if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
   if (initialSemantic.runtime.worker_queue_depth > initialSemantic.runtime.external_queue_capacity
@@ -213,6 +240,13 @@ try {
     throw new Error('semantic dock undo did not exactly restore the canonical workspace');
   }
   const semanticEvidence = {
+    ui_snapshot: {
+      frame: initialSemantic.ui_snapshot.frame,
+      root: initialSemantic.ui_snapshot.root,
+      node_count: initialSemantic.ui_snapshot.nodes.length,
+      actions: initialSemantic.ui_snapshot.nodes.flatMap((node) => node.actions),
+      semantic_audit: initialSemantic.ui_snapshot.semantic_audit,
+    },
     ui_geometry: {
       root: initialSemantic.ui_geometry.root,
       tab_panes: initialSemantic.ui_geometry.tabs.map((item) => item.pane),
@@ -303,6 +337,10 @@ try {
     await action();
     await page.waitForFunction((frame) => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number > frame, before.frame, { timeout: 10_000 });
     await page.waitForTimeout(250);
+    const semantic = await semanticSnapshot();
+    if (semantic.ui_snapshot.semantic_audit.length !== 0) {
+      throw new Error(`${name} produced semantic snapshot findings: ${JSON.stringify(semantic.ui_snapshot.semantic_audit)}`);
+    }
     const samples = await page.evaluate((start) => window.__POLYORAMA_DIAGNOSTICS.frame.cpu_frame_history_ms.slice(start), before.samples);
     observations[name] = { samples, median_ms: percentile(samples, 0.5), p95_ms: percentile(samples, 0.95) };
   }
@@ -394,11 +432,11 @@ try {
   if (zoomHistoryAfter.undo_depth !== zoomHistoryBefore.undo_depth + 1) {
     throw new Error(`wheel zoom burst did not coalesce into one history record (${zoomHistoryBefore.undo_depth} -> ${zoomHistoryAfter.undo_depth})`);
   }
-  await clickTarget({ kind: 'control', pane: 1, name: 'link_a' });
+  await clickTarget({ kind: 'action', pane: 1, action: 'link_views' });
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === null);
-  await clickTarget({ kind: 'control', pane: 1, name: 'link_a' });
+  await clickTarget({ kind: 'action', pane: 1, action: 'link_views' });
   await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === 1);
-  await clickTarget({ kind: 'control', pane: 1, name: 'fit' });
+  await clickTarget({ kind: 'action', pane: 1, action: 'fit_view' });
   await page.waitForFunction(() => {
     const cameras = window.__POLYORAMA_DIAGNOSTICS.cameras;
     const primary = cameras.find((item) => item.pane === 1)?.camera;
@@ -468,7 +506,7 @@ try {
     semantic_scroll_rect: thumbnailAfterScroll.ui_geometry.thumbnail_scroll,
   };
   await observe('polygon_editing', async () => {
-    await clickTarget({ kind: 'control', pane: 1, name: 'polygon' });
+    await clickTarget({ kind: 'action', pane: 1, action: 'polygon_tool' });
     const first = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.2, 0.2);
     const second = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.65, 0.25);
     const third = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.4, 0.65);
@@ -481,7 +519,7 @@ try {
     const camera = beforeEdit.cameras.find((candidate) => candidate.pane === 1)?.camera;
     if (!annotation || !camera) throw new Error('physical polygon was not available for vertex editing');
     const originalVertex = annotation.vertices[0];
-    await clickTarget({ kind: 'control', pane: 1, name: 'edit_vertex' });
+    await clickTarget({ kind: 'action', pane: 1, action: 'edit_vertices_tool' });
     const editStart = await targetPoint({ kind: 'image_viewports', pane: 1 }, 0.2, 0.2);
     await page.mouse.move(editStart.x, editStart.y); await page.mouse.down();
     await page.mouse.move(editStart.x + 35, editStart.y + 25, { steps: 5 }); await page.mouse.up();
@@ -499,12 +537,12 @@ try {
         || afterEdit.undo_depth !== beforeEdit.undo_depth + 1) {
       throw new Error(`physical vertex edit did not commit its release position: ${JSON.stringify({ originalVertex, editedVertex, expectedVertex, undoBefore: beforeEdit.undo_depth, undoAfter: afterEdit.undo_depth })}`);
     }
-    await clickTarget({ kind: 'control', name: 'undo' });
+    await clickTarget({ kind: 'action', action: 'undo' });
     const afterUndo = await semanticSnapshot();
     const undoneVertex = afterUndo.annotations.find(
       (candidate) => candidate.id === annotation.id,
     )?.vertices[0];
-    await clickTarget({ kind: 'control', name: 'redo' });
+    await clickTarget({ kind: 'action', action: 'redo' });
     const afterRedo = await semanticSnapshot();
     const redoneVertex = afterRedo.annotations.find(
       (candidate) => candidate.id === annotation.id,
@@ -556,12 +594,12 @@ try {
       || splitterAfter.undo_depth !== splitterBefore.undo_depth + 1) {
     throw new Error(`physical splitter resize did not commit its final displacement: ${JSON.stringify({ splitterRectBefore, splitterRectAfter, splitterCentreBefore, splitterCentreAfter, splitterTrace, hashBefore: splitterBefore.workspace_hash, hashAfter: splitterAfter.workspace_hash, undoBefore: splitterBefore.undo_depth, undoAfter: splitterAfter.undo_depth })}`);
   }
-  await clickTarget({ kind: 'control', name: 'undo' });
+  await clickTarget({ kind: 'action', action: 'undo' });
   await page.waitForFunction(
     (before) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === before,
     splitterBefore.workspace_hash,
   );
-  await clickTarget({ kind: 'control', name: 'redo' });
+  await clickTarget({ kind: 'action', action: 'redo' });
   await page.waitForFunction(
     (after) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === after,
     splitterAfter.workspace_hash,
@@ -598,7 +636,7 @@ try {
     await page.mouse.move(target.x, target.y, { steps: 12 }); await page.waitForTimeout(150); await page.mouse.up();
   });
   await page.screenshot({ path: join(evidenceRoot, 'browser-rearranged-dock.png') });
-  await clickTarget({ kind: 'control', name: 'save_layout' });
+  await clickTarget({ kind: 'action', action: 'save_layout' });
   await page.waitForTimeout(250);
   const persistedKeys = await page.evaluate(() => Object.keys(localStorage));
   if (persistedKeys.length === 0) throw new Error('Save layout did not create browser persistence');

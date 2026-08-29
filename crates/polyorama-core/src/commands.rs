@@ -154,6 +154,10 @@ impl CommandHistory {
     pub fn undo_len(&self) -> usize {
         self.undo.len()
     }
+
+    pub fn redo_len(&self) -> usize {
+        self.redo.len()
+    }
 }
 
 pub fn validate_intent(

@@ -112,3 +112,43 @@ b974a5602eeaad62f00cf167128680d76ede60f4e06447d5c60b8d58131288b5  gallery-manife
 The screenshots support visual review. Catalogue invariants, all-story text
 layout, component semantics, launch behaviour and idle repaint are established
 by executable tests and the native/browser smoke assertions.
+
+## Increment 6: action registry and semantic snapshot
+
+The implementation source revision is
+`87dcccd4c1d8e7b94625a0fd2b34f01d164fa954`. The retained JSON was produced
+from its native release and Wasm outputs after the runtime harness repair;
+these evidence files and metadata are recorded in the following commit.
+
+- `increment-6-browser-semantic.json` records 66 bounded application nodes,
+  stable action identities, exact linked camera/render-plan agreement,
+  annotation commit/undo, canonical dock resize/undo and an empty semantic
+  audit under browser WebGPU;
+- `increment-6-native-semantic.json` records the same 66-node initial surface,
+  registry-driven physical action targeting, linked pan and exact undo,
+  progressive thumbnail scrolling, vertex editing and an empty semantic audit
+  under native GL/llvmpipe; and
+- `increment-6-gallery-semantic.json` records the focused `Fit view` action by
+  stable ID, pane, complete name, current geometry and empty semantic audit in
+  the deterministic keyboard-focus story.
+
+The browser physical harness also asserts an empty semantic audit after every
+profiled interaction, including pane drag/drop where a narrow edge placement
+previously exposed clipped controls outside the root surface. The native and
+browser harnesses locate Undo, Redo, Save layout, Fit view, Link views and tool
+selection by `ActionId` in the current Rust snapshot, not by label or fixed
+coordinates.
+
+Candidate head `d05ac950bdc6f830d96aaee22373936e26d27a65` passed
+`cargo xtask verify`: 140 Rust tests, token drift and architecture checks,
+native and Wasm clippy/release builds, browser WebGPU application/gallery
+smokes and native GL/llvmpipe application/gallery physical smokes. Both gallery
+and warmed application idle-frame assertions passed.
+
+SHA-256 values:
+
+```text
+621047afc8f473e8404ef37a8c0bbe1a314f13504182ff3dcdd54e517c78a7db  increment-6-browser-semantic.json
+87a4ccef405877eb32572c7f125479aa9512a6aa576f90f5614360513421eca8  increment-6-native-semantic.json
+1e0618a718d1defadbbe9ab4e8e09877549545443064aeafe349e942c386841b  increment-6-gallery-semantic.json
+```

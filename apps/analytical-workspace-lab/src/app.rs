@@ -9,9 +9,10 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    DockBehaviour, DockTextContext, UiPreferences, application_bar_frame, application_bar_height,
-    apply_design_system, audit_text_layouts, dock_workspace, stage_renderer_maintenance,
-    submit_render_plan,
+    ActionButtonSpec, ActionEmphasis, ActionId, ActionTarget, DockBehaviour, DockTextContext,
+    SemanticUiId, UiNode, UiPreferences, UiRole, UiSnapshot, action_button, application_bar_frame,
+    application_bar_height, apply_design_system, audit_text_layouts, consume_action_shortcut,
+    dock_workspace, stage_renderer_maintenance, submit_render_plan,
 };
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
@@ -19,6 +20,7 @@ use web_time::Instant;
 
 use crate::{
     APPLICATION_NAME,
+    actions::{ActionContext, availability},
     panes::{
         AnnotationUiState, FrameOutput, PaneFeatureState, PaneIntent, PaneReadModel, PaneSurface,
         UiBehaviour, should_cancel_camera_drag,
@@ -89,6 +91,7 @@ pub(crate) struct TestSnapshot {
     repaint_requests: u64,
     physical_wheel_events: u64,
     ui_geometry: UiGeometry,
+    ui_snapshot: UiSnapshot,
 }
 
 impl From<DisplaySettings> for DisplaySettingsDto {
@@ -192,6 +195,7 @@ pub struct AnalyticalWorkspaceApp {
     last_render_cameras: Vec<CameraState>,
     last_visible_tile_keys: Vec<TileKey>,
     last_ui_geometry: UiGeometry,
+    last_ui_snapshot: UiSnapshot,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
 }
@@ -300,6 +304,7 @@ impl AnalyticalWorkspaceApp {
             last_render_cameras: Vec::new(),
             last_visible_tile_keys: Vec::new(),
             last_ui_geometry: UiGeometry::default(),
+            last_ui_snapshot: UiSnapshot::default(),
             #[cfg(target_arch = "wasm32")]
             browser_worker,
         }
@@ -476,6 +481,7 @@ impl AnalyticalWorkspaceApp {
             repaint_requests: self.diagnostics.frame.repaint_requests,
             physical_wheel_events: self.diagnostics.frame.physical_wheel_events,
             ui_geometry: self.last_ui_geometry.clone(),
+            ui_snapshot: self.last_ui_snapshot.clone(),
         }
     }
 
@@ -736,6 +742,13 @@ impl eframe::App for AnalyticalWorkspaceApp {
         let tokens = self.preferences.tokens(system_dark);
         let mut save_now = false;
         let mut ui_geometry = UiGeometry::new(root_ui.max_rect(), ctx.pixels_per_point());
+        let application_bar_id = SemanticUiId::new("application.bar");
+        let action_context = ActionContext {
+            undo_depth: self.history.undo_len(),
+            redo_depth: self.history.redo_len(),
+            active_pane: self.workspace.active_pane,
+            ..Default::default()
+        };
         let menu = egui::Panel::top("application-menu")
             .frame(application_bar_frame(&tokens))
             .exact_size(application_bar_height(&tokens, self.preferences.font_scale))
@@ -745,9 +758,30 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         egui::RichText::new(APPLICATION_NAME).color(tokens.colours.text_primary),
                     );
                     ui.separator();
-                    let undo = ui.button("Undo");
-                    ui_geometry.control(None, "undo", undo.rect);
-                    if undo.clicked()
+                    let undo_availability = availability(ActionId::Undo, action_context);
+                    let undo_target = ActionTarget::application(ActionId::Undo);
+                    let undo = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: undo_target,
+                            availability: undo_availability.clone(),
+                            selected: false,
+                            emphasis: ActionEmphasis::Quiet,
+                            compact: false,
+                        },
+                        &tokens,
+                        self.preferences.font_scale,
+                        &mut ui_geometry.text_layouts,
+                    );
+                    ui_geometry.action(
+                        application_bar_id.clone(),
+                        undo_target,
+                        &undo_availability,
+                        false,
+                        &undo,
+                    );
+                    if undo_availability.enabled()
+                        && (undo.clicked() || consume_action_shortcut(ui, ActionId::Undo, true))
                         && self.history.undo(
                             &mut self.document,
                             &mut self.session,
@@ -756,9 +790,30 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    let redo = ui.button("Redo");
-                    ui_geometry.control(None, "redo", redo.rect);
-                    if redo.clicked()
+                    let redo_availability = availability(ActionId::Redo, action_context);
+                    let redo_target = ActionTarget::application(ActionId::Redo);
+                    let redo = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: redo_target,
+                            availability: redo_availability.clone(),
+                            selected: false,
+                            emphasis: ActionEmphasis::Quiet,
+                            compact: false,
+                        },
+                        &tokens,
+                        self.preferences.font_scale,
+                        &mut ui_geometry.text_layouts,
+                    );
+                    ui_geometry.action(
+                        application_bar_id.clone(),
+                        redo_target,
+                        &redo_availability,
+                        false,
+                        &redo,
+                    );
+                    if redo_availability.enabled()
+                        && (redo.clicked() || consume_action_shortcut(ui, ActionId::Redo, true))
                         && self.history.redo(
                             &mut self.document,
                             &mut self.session,
@@ -767,15 +822,58 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    let save = ui.button("Save layout");
-                    ui_geometry.control(None, "save_layout", save.rect);
-                    if save.clicked() {
+                    let save_availability = availability(ActionId::SaveLayout, action_context);
+                    let save_target = ActionTarget::application(ActionId::SaveLayout);
+                    let save = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: save_target,
+                            availability: save_availability.clone(),
+                            selected: false,
+                            emphasis: ActionEmphasis::Quiet,
+                            compact: false,
+                        },
+                        &tokens,
+                        self.preferences.font_scale,
+                        &mut ui_geometry.text_layouts,
+                    );
+                    ui_geometry.action(
+                        application_bar_id.clone(),
+                        save_target,
+                        &save_availability,
+                        false,
+                        &save,
+                    );
+                    if save_availability.enabled()
+                        && (save.clicked()
+                            || consume_action_shortcut(ui, ActionId::SaveLayout, true))
+                    {
                         save_now = true;
                         self.status = "Workspace saved".into();
                     }
-                    let reset = ui.button("Reset workspace");
-                    ui_geometry.control(None, "reset_workspace", reset.rect);
-                    if reset.clicked() {
+                    let reset_availability = availability(ActionId::ResetWorkspace, action_context);
+                    let reset_target = ActionTarget::application(ActionId::ResetWorkspace);
+                    let reset = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: reset_target,
+                            availability: reset_availability.clone(),
+                            selected: false,
+                            emphasis: ActionEmphasis::Quiet,
+                            compact: false,
+                        },
+                        &tokens,
+                        self.preferences.font_scale,
+                        &mut ui_geometry.text_layouts,
+                    );
+                    ui_geometry.action(
+                        application_bar_id.clone(),
+                        reset_target,
+                        &reset_availability,
+                        false,
+                        &reset,
+                    );
+                    if reset_availability.enabled() && reset.clicked() {
                         self.workspace = Workspace::analytical_default();
                         self.session = Session::default();
                         self.status = "Default workspace restored".into();
@@ -796,6 +894,14 @@ impl eframe::App for AnalyticalWorkspaceApp {
                 });
             });
         ui_geometry.menu = Some(menu.response.rect.into());
+        let mut application_bar = UiNode::container(
+            application_bar_id,
+            Some(SemanticUiId::root()),
+            UiRole::ApplicationBar,
+            menu.response.rect.into(),
+        );
+        application_bar.name = "Application actions".into();
+        ui_geometry.record_node(application_bar);
         let ui_started = Instant::now();
         let mut outputs = FrameOutput::with_ui_geometry(ui_geometry);
         let frame_number = self.diagnostics.frame.frame_number;
@@ -822,6 +928,8 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         generation: self.runtime.generation(),
                         frame_number,
                         active_pane,
+                        tokens,
+                        font_scale: self.preferences.font_scale,
                     },
                     PaneFeatureState {
                         annotation_ui: AnnotationUiState::new(&mut self.session.gesture),
@@ -883,6 +991,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
         outputs.ui_geometry.text_audit = audit_text_layouts(&outputs.ui_geometry.text_layouts);
+        self.last_ui_snapshot = outputs.ui_geometry.snapshot(frame_number);
         self.last_ui_geometry = outputs.ui_geometry.clone();
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();

@@ -5,12 +5,13 @@ use polyorama_core::{
     CommandHistory, DockNode, DockNodeId, Document, PaneId, Session, SplitAxis, Workspace,
 };
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, AppearancePreference, ContrastPreference, DensityPreference,
-    DesignTokens, DockBehaviour, DockTextContext, PanePresenter, SplitterVisualState, StatusTone,
-    TextAuditFinding, TextLayoutObservation, ThumbnailCellSpec, ThumbnailState, UiPreferences,
-    action_button, application_bar_frame, application_bar_height, apply_design_system,
-    audit_text_layouts, dock_workspace, paint_splitter, property_row, result_row, status_badge,
-    thumbnail_cell,
+    ActionButtonSpec, ActionEmphasis, ActionId, ActionTarget, AppearancePreference, Availability,
+    ContrastPreference, DensityPreference, DesignTokens, DockBehaviour, DockTextContext,
+    DomainReference, PanePresenter, SemanticUiId, SplitterVisualState, StatusTone,
+    TextAuditFinding, TextLayoutObservation, ThumbnailCellSpec, ThumbnailState, UiNode,
+    UiPreferences, UiRole, UiSnapshot, action_button, action_semantic_node, application_bar_frame,
+    application_bar_height, apply_design_system, audit_text_layouts, dock_workspace,
+    paint_splitter, property_row, result_row, status_badge, thumbnail_cell,
 };
 use serde::{Deserialize, Serialize};
 
@@ -108,6 +109,7 @@ pub struct GallerySnapshot {
     pub story_rect: GalleryRect,
     pub text: Vec<TextLayoutObservation>,
     pub text_audit: Vec<TextAuditFinding>,
+    pub ui_snapshot: UiSnapshot,
 }
 
 pub struct GalleryApp {
@@ -144,6 +146,7 @@ impl GalleryApp {
                 story_rect: GalleryRect::default(),
                 text: Vec::new(),
                 text_audit: Vec::new(),
+                ui_snapshot: UiSnapshot::default(),
             },
             focus_story: None,
         }
@@ -183,11 +186,18 @@ impl eframe::App for GalleryApp {
         let context = root_ui.ctx().clone();
         self.update_style();
         self.frame += 1;
+        let root_rect = root_ui.max_rect();
         let tokens = self
             .configuration
             .preferences()
             .tokens(context.theme() == egui::Theme::Dark);
         let mut observations = Vec::new();
+        let mut semantic_nodes = vec![UiNode::container(
+            SemanticUiId::root(),
+            None,
+            UiRole::Application,
+            root_rect.into(),
+        )];
         gallery_bar(root_ui, self, &tokens);
         story_navigation(root_ui, self);
         let story_rect = egui::CentralPanel::default()
@@ -228,12 +238,32 @@ impl eframe::App for GalleryApp {
                     &tokens,
                     self.configuration.font_scale,
                     &mut observations,
+                    &mut semantic_nodes,
                     &mut self.focus_story,
                 );
                 rect
             })
             .inner;
         let text_audit = audit_text_layouts(&observations);
+        let story_id = SemanticUiId::new("gallery.story");
+        let mut story_node = UiNode::container(
+            story_id,
+            Some(SemanticUiId::root()),
+            UiRole::Pane,
+            story_rect.into(),
+        );
+        story_node.name = self.selected.as_str().to_owned();
+        semantic_nodes.push(story_node);
+        let mut ui_snapshot = UiSnapshot {
+            frame: self.frame,
+            pixels_per_point: context.pixels_per_point(),
+            root: SemanticUiId::root(),
+            nodes: semantic_nodes,
+            text: observations.clone(),
+            text_audit: text_audit.clone(),
+            semantic_audit: Vec::new(),
+        };
+        ui_snapshot.semantic_audit = ui_snapshot.audit();
         self.snapshot = GallerySnapshot {
             frame: self.frame,
             story: self.selected,
@@ -242,6 +272,7 @@ impl eframe::App for GalleryApp {
             story_rect: story_rect.into(),
             text: observations,
             text_audit,
+            ui_snapshot,
         };
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -377,6 +408,43 @@ fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
         });
 }
 
+#[allow(clippy::too_many_arguments)]
+fn gallery_action_button(
+    ui: &mut egui::Ui,
+    target: ActionTarget,
+    availability: Availability,
+    selected: bool,
+    emphasis: ActionEmphasis,
+    compact: bool,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+    semantic_nodes: &mut Vec<UiNode>,
+) -> egui::Response {
+    let response = action_button(
+        ui,
+        ActionButtonSpec {
+            target,
+            availability: availability.clone(),
+            selected,
+            emphasis,
+            compact,
+        },
+        tokens,
+        font_scale,
+        observations,
+    );
+    semantic_nodes.push(action_semantic_node(
+        &response,
+        target,
+        &availability,
+        selected,
+        SemanticUiId::new("gallery.story"),
+    ));
+    response
+}
+
+#[allow(clippy::too_many_arguments)]
 fn render_story(
     ui: &mut egui::Ui,
     story: StoryId,
@@ -384,6 +452,7 @@ fn render_story(
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
+    semantic_nodes: &mut Vec<UiNode>,
     focus_story: &mut Option<StoryId>,
 ) {
     let definition = story_definition(story);
@@ -393,107 +462,102 @@ fn render_story(
     match story {
         StoryId::ButtonDefault => {
             ui.horizontal(|ui| {
-                action_button(
+                gallery_action_button(
                     ui,
-                    ActionButtonSpec {
-                        instance: 1,
-                        label: "Save layout",
-                        compact_label: None,
-                        enabled: true,
-                        selected: false,
-                        emphasis: ActionEmphasis::Normal,
-                    },
+                    ActionTarget::application(ActionId::SaveLayout),
+                    Availability::Enabled,
+                    false,
+                    ActionEmphasis::Normal,
+                    false,
                     tokens,
                     font_scale,
                     observations,
+                    semantic_nodes,
                 );
-                action_button(
+                gallery_action_button(
                     ui,
-                    ActionButtonSpec {
-                        instance: 2,
-                        label: "Run analysis",
-                        compact_label: None,
-                        enabled: true,
-                        selected: false,
-                        emphasis: ActionEmphasis::Primary,
-                    },
+                    ActionTarget::application(ActionId::ResetWorkspace),
+                    Availability::Enabled,
+                    false,
+                    ActionEmphasis::Primary,
+                    false,
                     tokens,
                     font_scale,
                     observations,
+                    semantic_nodes,
                 );
-                action_button(
+                gallery_action_button(
                     ui,
-                    ActionButtonSpec {
-                        instance: 3,
-                        label: "Linked",
-                        compact_label: None,
-                        enabled: true,
-                        selected: true,
-                        emphasis: ActionEmphasis::Quiet,
-                    },
+                    ActionTarget::pane(ActionId::LinkViews, PaneId(1)),
+                    Availability::Enabled,
+                    true,
+                    ActionEmphasis::Quiet,
+                    false,
                     tokens,
                     font_scale,
                     observations,
+                    semantic_nodes,
                 );
             });
         }
         StoryId::ButtonDisabled => {
-            action_button(
+            gallery_action_button(
                 ui,
-                ActionButtonSpec {
-                    instance: 4,
-                    label: "Undo unavailable — history is empty",
-                    compact_label: None,
-                    enabled: false,
-                    selected: false,
-                    emphasis: ActionEmphasis::Normal,
+                ActionTarget::application(ActionId::Undo),
+                Availability::Disabled {
+                    reason: "History is empty".into(),
                 },
+                false,
+                ActionEmphasis::Normal,
+                false,
                 tokens,
                 font_scale,
                 observations,
+                semantic_nodes,
             );
         }
         StoryId::ButtonKeyboardFocus => {
             if *focus_story != Some(story) {
                 ui.memory_mut(|memory| {
-                    memory.request_focus(egui::Id::new(("polyorama.action-button", 5_u64)));
+                    memory.request_focus(egui::Id::new((
+                        "polyorama.action-button",
+                        ActionTarget::pane(ActionId::FitView, PaneId(1)),
+                    )));
                 });
                 *focus_story = Some(story);
             }
-            let response = action_button(
+            let response = gallery_action_button(
                 ui,
-                ActionButtonSpec {
-                    instance: 5,
-                    label: "Fit active view",
-                    compact_label: None,
-                    enabled: true,
-                    selected: false,
-                    emphasis: ActionEmphasis::Normal,
-                },
+                ActionTarget::pane(ActionId::FitView, PaneId(1)),
+                Availability::Enabled,
+                false,
+                ActionEmphasis::Normal,
+                false,
                 tokens,
                 font_scale,
                 observations,
+                semantic_nodes,
             );
             debug_assert!(response.has_focus());
         }
         StoryId::TabsManyLongLabels | StoryId::ReferenceApplicationShell => {
-            dock.show(ui, tokens, font_scale, observations);
+            dock.show(ui, tokens, font_scale, observations, semantic_nodes);
         }
         StoryId::TabsNarrow => {
             ui.allocate_ui_with_layout(
                 egui::vec2(296.0_f32.min(ui.available_width()), ui.available_height()),
                 egui::Layout::top_down(egui::Align::Min),
-                |ui| dock.show(ui, tokens, font_scale, observations),
+                |ui| dock.show(ui, tokens, font_scale, observations, semantic_nodes),
             );
         }
         StoryId::SplitterHoverActive => {
             splitter_story(ui, tokens, font_scale, observations);
         }
         StoryId::ToolbarNarrow | StoryId::ReferenceImageToolbarNarrow => {
-            toolbar_story(ui, true, tokens, font_scale, observations)
+            toolbar_story(ui, true, tokens, font_scale, observations, semantic_nodes)
         }
         StoryId::ReferenceImageToolbarWide => {
-            toolbar_story(ui, false, tokens, font_scale, observations)
+            toolbar_story(ui, false, tokens, font_scale, observations, semantic_nodes)
         }
         StoryId::PropertyRowLongValue => {
             property_row(
@@ -533,39 +597,28 @@ fn toolbar_story(
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
+    semantic_nodes: &mut Vec<UiNode>,
 ) {
     ui.set_max_width((if narrow { 296.0_f32 } else { 720.0_f32 }).min(ui.available_width()));
     ui.horizontal_wrapped(|ui| {
-        for (instance, label, selected) in [
-            (40, "Navigate", true),
-            (41, "Polygon", false),
-            (42, "Edit vertices", false),
-            (43, "Fit view", false),
-            (44, "Link A", true),
+        for (action, selected) in [
+            (ActionId::NavigateTool, true),
+            (ActionId::PolygonTool, false),
+            (ActionId::EditVerticesTool, false),
+            (ActionId::FitView, false),
+            (ActionId::LinkViews, true),
         ] {
-            let compact_label = if narrow && instance >= 42 {
-                match instance {
-                    42 => Some("Edit"),
-                    43 => Some("Fit"),
-                    44 => Some("Link"),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-            action_button(
+            gallery_action_button(
                 ui,
-                ActionButtonSpec {
-                    instance,
-                    label,
-                    compact_label,
-                    enabled: true,
-                    selected,
-                    emphasis: ActionEmphasis::Quiet,
-                },
+                ActionTarget::pane(action, PaneId(1)),
+                Availability::Enabled,
+                selected,
+                ActionEmphasis::Quiet,
+                narrow,
                 tokens,
                 font_scale,
                 observations,
+                semantic_nodes,
             );
         }
     });
@@ -872,8 +925,12 @@ impl DockSceneState {
         tokens: &DesignTokens,
         font_scale: f32,
         observations: &mut Vec<TextLayoutObservation>,
+        semantic_nodes: &mut Vec<UiNode>,
     ) {
-        let mut presenter = GalleryDockPresenter { observations };
+        let mut presenter = GalleryDockPresenter {
+            observations,
+            semantic_nodes,
+        };
         if let Some(command) = dock_workspace(
             ui,
             &mut self.workspace,
@@ -896,6 +953,7 @@ impl DockSceneState {
 
 struct GalleryDockPresenter<'a> {
     observations: &'a mut Vec<TextLayoutObservation>,
+    semantic_nodes: &'a mut Vec<UiNode>,
 }
 
 impl PanePresenter for GalleryDockPresenter<'_> {
@@ -927,10 +985,70 @@ impl PanePresenter for GalleryDockPresenter<'_> {
             ))
             .wrap(),
         );
+        let mut node = UiNode::container(
+            SemanticUiId::pane(pane),
+            Some(SemanticUiId::new("gallery.story")),
+            UiRole::Pane,
+            pane_rect.into(),
+        );
+        node.name = self.title(pane).to_owned();
+        node.pane = Some(pane);
+        node.domain_reference = Some(DomainReference::Pane(pane));
+        self.semantic_nodes.push(node);
     }
 
     fn record_text_layout(&mut self, observation: TextLayoutObservation) {
         self.observations.push(observation);
+    }
+
+    fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect, selected: bool, focused: bool) {
+        self.semantic_nodes.push(UiNode {
+            id: SemanticUiId::tab(pane),
+            parent: Some(SemanticUiId::new("gallery.story")),
+            role: UiRole::Tab,
+            name: self.title(pane).to_owned(),
+            description: None,
+            rect: rect.into(),
+            enabled: true,
+            focused,
+            selected,
+            checked: None,
+            expanded: None,
+            pane: Some(pane),
+            domain_reference: Some(DomainReference::Pane(pane)),
+            actions: Vec::new(),
+            disabled_reason: None,
+        });
+    }
+
+    fn record_splitter_rect(
+        &mut self,
+        node: DockNodeId,
+        rect: egui::Rect,
+        horizontal: bool,
+        focused: bool,
+    ) {
+        self.semantic_nodes.push(UiNode {
+            id: SemanticUiId::splitter(node),
+            parent: Some(SemanticUiId::new("gallery.story")),
+            role: UiRole::Splitter,
+            name: if horizontal {
+                "Vertical splitter".into()
+            } else {
+                "Horizontal splitter".into()
+            },
+            description: Some("Resize adjacent dock panes".into()),
+            rect: rect.into(),
+            enabled: true,
+            focused,
+            selected: false,
+            checked: None,
+            expanded: None,
+            pane: None,
+            domain_reference: Some(DomainReference::DockNode(node)),
+            actions: Vec::new(),
+            disabled_reason: None,
+        });
     }
 }
 
@@ -1021,6 +1139,7 @@ mod tests {
         let tokens = configuration.preferences().tokens(true);
         let mut dock = DockSceneState::new(StoryId::TabsNarrow);
         let mut observations = Vec::new();
+        let mut semantic_nodes = Vec::new();
         let mut focus_story = None;
         let mut output = context.run_ui(
             egui::RawInput {
@@ -1038,6 +1157,7 @@ mod tests {
                     &tokens,
                     1.0,
                     &mut observations,
+                    &mut semantic_nodes,
                     &mut focus_story,
                 );
             },
@@ -1087,6 +1207,7 @@ mod tests {
             for story in StoryId::ALL {
                 let mut dock = DockSceneState::new(story);
                 let mut observations = Vec::new();
+                let mut semantic_nodes = Vec::new();
                 let mut focus_story = None;
                 let size = egui::vec2(
                     configuration.width.points(),
@@ -1105,6 +1226,7 @@ mod tests {
                             &tokens,
                             configuration.font_scale,
                             &mut observations,
+                            &mut semantic_nodes,
                             &mut focus_story,
                         );
                     },

@@ -1,12 +1,18 @@
 use eframe::egui;
 use polyorama_core::{AnnotationId, ImageIntent, PaneId, ResultId, result_at};
+use polyorama_ui_egui::{DesignTokens, SemanticUiId};
 
-use super::FrameOutput;
+use crate::actions::{ActionContext, availability};
+
+use super::*;
 
 pub fn show(
     ui: &mut egui::Ui,
     selected_result: Option<ResultId>,
     selected_annotation: Option<AnnotationId>,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    active_pane: PaneId,
     outputs: &mut FrameOutput,
 ) {
     ui.heading("Selection");
@@ -31,7 +37,25 @@ pub fn show(
                 ui.label(["Target", "Edge", "Cluster", "Review"][result.category as usize]);
                 ui.end_row();
             });
-        if ui.button("Recenter Primary View").clicked() {
+        let context = ActionContext {
+            active_pane,
+            target_pane: Some(PaneId(7)),
+            selected_result,
+            ..Default::default()
+        };
+        if present_action(
+            ui,
+            outputs,
+            tokens,
+            font_scale,
+            &SemanticUiId::pane(PaneId(7)),
+            ActionTarget::pane(ActionId::RecenterPrimary, PaneId(7)),
+            availability(ActionId::RecenterPrimary, context),
+            false,
+            false,
+            active_pane == PaneId(7),
+            "recenter_primary",
+        ) {
             outputs.intents.push(ImageIntent::RecenterOnResult {
                 result: selected,
                 pane: PaneId(1),

@@ -8,7 +8,10 @@ use polyorama_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
 use polyorama_ui_egui::{
-    ImagePlanTarget, PanePresenter, TextLayoutObservation, allocate_viewport, stage_render_callback,
+    ActionButtonSpec, ActionEmphasis, ActionId, ActionScope, ActionTarget, Availability,
+    DesignTokens, DomainReference, ImagePlanTarget, PanePresenter, SemanticUiId,
+    TextLayoutObservation, UiNode, UiRole, action_button, action_spec, allocate_viewport,
+    consume_action_shortcut, stage_render_callback,
 };
 use web_time::Instant;
 
@@ -43,6 +46,54 @@ pub struct FrameOutput {
     pub interaction_active: bool,
     pub repaint_after: Option<Duration>,
     pub ui_geometry: UiGeometry,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn present_action(
+    ui: &mut egui::Ui,
+    outputs: &mut FrameOutput,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    parent: &SemanticUiId,
+    target: ActionTarget,
+    availability: Availability,
+    selected: bool,
+    compact: bool,
+    active_pane: bool,
+    legacy_name: &'static str,
+) -> bool {
+    if !availability.visible()
+        || (action_spec(target.action).scope == ActionScope::ActivePane && !active_pane)
+    {
+        return false;
+    }
+    let response = action_button(
+        ui,
+        ActionButtonSpec {
+            target,
+            availability: availability.clone(),
+            selected,
+            emphasis: ActionEmphasis::Quiet,
+            compact,
+        },
+        tokens,
+        font_scale,
+        &mut outputs.ui_geometry.text_layouts,
+    );
+    let inside_root = outputs
+        .ui_geometry
+        .root
+        .is_some_and(|root| root.contains(response.rect.into(), 1.0));
+    if inside_root && response.rect.intersects(ui.clip_rect()) {
+        outputs
+            .ui_geometry
+            .control(target.pane, legacy_name, response.rect);
+        outputs
+            .ui_geometry
+            .action(parent.clone(), target, &availability, selected, &response);
+    }
+    availability.enabled()
+        && (response.clicked() || consume_action_shortcut(ui, target.action, active_pane))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -254,6 +305,8 @@ pub struct PaneReadModel<'a> {
     pub generation: u64,
     pub frame_number: u64,
     pub active_pane: PaneId,
+    pub tokens: DesignTokens,
+    pub font_scale: f32,
 }
 
 pub struct PaneFeatureState<'a> {
@@ -279,6 +332,8 @@ pub struct PaneSurface<'a> {
     generation: u64,
     frame_number: u64,
     active_pane: PaneId,
+    tokens: DesignTokens,
+    font_scale: f32,
     outputs: &'a mut FrameOutput,
 }
 
@@ -299,6 +354,8 @@ impl<'a> PaneSurface<'a> {
             generation: read.generation,
             frame_number: read.frame_number,
             active_pane: read.active_pane,
+            tokens: read.tokens,
+            font_scale: read.font_scale,
             outputs: feature.outputs,
         }
     }
@@ -332,6 +389,16 @@ impl PanePresenter for PaneSurface<'_> {
             pane,
             rect: pane_rect.into(),
         });
+        let mut pane_node = UiNode::container(
+            SemanticUiId::pane(pane),
+            Some(SemanticUiId::root()),
+            UiRole::Pane,
+            pane_rect.into(),
+        );
+        pane_node.name = self.title(pane).to_owned();
+        pane_node.pane = Some(pane);
+        pane_node.domain_reference = Some(DomainReference::Pane(pane));
+        self.outputs.ui_geometry.record_node(pane_node);
         ui.push_id(("window", 1_u32, "pane", pane.0), |ui| match pane.0 {
             1..=4 => self.image_pane(ui, pane, pane_rect),
             5 => self.results_pane(ui),
@@ -344,10 +411,27 @@ impl PanePresenter for PaneSurface<'_> {
         });
     }
 
-    fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect) {
+    fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect, selected: bool, focused: bool) {
         self.outputs.ui_geometry.tabs.push(PaneUiRect {
             pane,
             rect: rect.into(),
+        });
+        self.outputs.ui_geometry.record_node(UiNode {
+            id: SemanticUiId::tab(pane),
+            parent: Some(SemanticUiId::root()),
+            role: UiRole::Tab,
+            name: self.title(pane).to_owned(),
+            description: None,
+            rect: rect.into(),
+            enabled: true,
+            focused,
+            selected,
+            checked: None,
+            expanded: None,
+            pane: Some(pane),
+            domain_reference: Some(DomainReference::Pane(pane)),
+            actions: Vec::new(),
+            disabled_reason: None,
         });
     }
 
@@ -355,17 +439,52 @@ impl PanePresenter for PaneSurface<'_> {
         self.outputs.ui_geometry.text_layouts.push(observation);
     }
 
-    fn record_splitter_rect(&mut self, node: DockNodeId, rect: egui::Rect) {
+    fn record_splitter_rect(
+        &mut self,
+        node: DockNodeId,
+        rect: egui::Rect,
+        horizontal: bool,
+        focused: bool,
+    ) {
         self.outputs.ui_geometry.splitters.push(SplitterUiRect {
             node,
             rect: rect.into(),
+        });
+        self.outputs.ui_geometry.record_node(UiNode {
+            id: SemanticUiId::splitter(node),
+            parent: Some(SemanticUiId::root()),
+            role: UiRole::Splitter,
+            name: if horizontal {
+                "Vertical splitter".into()
+            } else {
+                "Horizontal splitter".into()
+            },
+            description: Some("Resize adjacent dock panes".into()),
+            rect: rect.into(),
+            enabled: true,
+            focused,
+            selected: false,
+            checked: None,
+            expanded: None,
+            pane: None,
+            domain_reference: Some(DomainReference::DockNode(node)),
+            actions: Vec::new(),
+            disabled_reason: None,
         });
     }
 }
 
 impl PaneSurface<'_> {
     fn results_pane(&mut self, ui: &mut egui::Ui) {
-        results::show(ui, self.selected_result, self.virtualisation, self.outputs);
+        results::show(
+            ui,
+            self.selected_result,
+            self.virtualisation,
+            &self.tokens,
+            self.font_scale,
+            self.active_pane,
+            self.outputs,
+        );
     }
 
     fn thumbnails_pane(&mut self, ui: &mut egui::Ui) {
@@ -384,6 +503,9 @@ impl PaneSurface<'_> {
             ui,
             self.selected_result,
             self.selected_annotation,
+            &self.tokens,
+            self.font_scale,
+            self.active_pane,
             self.outputs,
         );
     }
@@ -737,5 +859,151 @@ mod tests {
                 .iter()
                 .all(|demand| demand.key.source == SourceId(1) && demand.generation == 9)
         );
+    }
+
+    #[test]
+    fn materialised_workspace_semantics_are_bounded_and_match_accesskit() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1_000.0, 900.0));
+        let results_rect = egui::Rect::from_min_max(root.min, egui::pos2(1_000.0, 440.0));
+        let thumbnails_rect = egui::Rect::from_min_max(egui::pos2(0.0, 450.0), root.max);
+        let mut output = FrameOutput {
+            ui_geometry: UiGeometry::new(root, 1.0),
+            ..Default::default()
+        };
+        for (pane, rect, name) in [
+            (PaneId(5), results_rect, "Results"),
+            (PaneId(6), thumbnails_rect, "Thumbnails"),
+        ] {
+            let mut node = UiNode::container(
+                SemanticUiId::pane(pane),
+                Some(SemanticUiId::root()),
+                UiRole::Pane,
+                rect.into(),
+            );
+            node.name = name.into();
+            node.pane = Some(pane);
+            output.ui_geometry.record_node(node);
+        }
+        let mut virtualisation = VirtualisationMetrics::default();
+        let mut thumbnail_cache = ThumbnailCache::default();
+        let tokens = polyorama_ui_egui::DesignTokens::resolve(
+            polyorama_ui_egui::ThemeVariant::Dark,
+            polyorama_ui_egui::DensityVariant::Comfortable,
+        );
+        let mut full_output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                ..Default::default()
+            },
+            |ui| {
+                ui.scope_builder(egui::UiBuilder::new().max_rect(results_rect), |ui| {
+                    ui.set_clip_rect(results_rect);
+                    results::show(
+                        ui,
+                        Some(ResultId(0)),
+                        &mut virtualisation,
+                        &tokens,
+                        1.0,
+                        PaneId(5),
+                        &mut output,
+                    );
+                });
+                ui.scope_builder(egui::UiBuilder::new().max_rect(thumbnails_rect), |ui| {
+                    ui.set_clip_rect(thumbnails_rect);
+                    thumbnails::show(
+                        ui,
+                        Some(ResultId(0)),
+                        1,
+                        &mut thumbnail_cache,
+                        &mut virtualisation,
+                        &mut output,
+                    );
+                });
+            },
+        );
+        let accesskit = full_output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        full_output.textures_delta.clear();
+        let snapshot = output.ui_geometry.snapshot(1);
+
+        assert!(
+            snapshot.semantic_audit.is_empty(),
+            "{:#?}",
+            snapshot.semantic_audit
+        );
+        let result_nodes = snapshot.by_role(UiRole::ResultRow).count();
+        let thumbnail_nodes = snapshot.by_role(UiRole::ThumbnailCell).count();
+        assert!(result_nodes > 0 && result_nodes <= virtualisation.materialised_rows);
+        assert!(thumbnail_nodes > 0 && thumbnail_nodes <= virtualisation.materialised_thumbnails);
+        assert!(snapshot.nodes.len() < 256);
+        assert!(
+            polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit).is_empty(),
+            "{:#?}",
+            polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit)
+        );
+    }
+
+    #[test]
+    fn active_pane_actions_have_one_semantic_and_physical_owner() {
+        let context = egui::Context::default();
+        let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(500.0, 160.0));
+        let tokens = polyorama_ui_egui::DesignTokens::resolve(
+            polyorama_ui_egui::ThemeVariant::Dark,
+            polyorama_ui_egui::DensityVariant::Comfortable,
+        );
+        let mut output = FrameOutput {
+            ui_geometry: UiGeometry::new(root, 1.0),
+            ..Default::default()
+        };
+        let mut frame = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                ..Default::default()
+            },
+            |ui| {
+                let parent = SemanticUiId::root();
+                assert!(!present_action(
+                    ui,
+                    &mut output,
+                    &tokens,
+                    1.0,
+                    &parent,
+                    ActionTarget::pane(ActionId::DeleteAnnotation, PaneId(2)),
+                    Availability::Enabled,
+                    false,
+                    false,
+                    false,
+                    "delete_annotation",
+                ));
+                assert!(!present_action(
+                    ui,
+                    &mut output,
+                    &tokens,
+                    1.0,
+                    &parent,
+                    ActionTarget::pane(ActionId::DeleteAnnotation, PaneId(1)),
+                    Availability::Enabled,
+                    false,
+                    false,
+                    true,
+                    "delete_annotation",
+                ));
+            },
+        );
+        frame.textures_delta.clear();
+
+        let owners: Vec<_> = output
+            .ui_geometry
+            .semantic_nodes
+            .iter()
+            .filter(|node| node.actions.contains(&ActionId::DeleteAnnotation))
+            .map(|node| node.pane)
+            .collect();
+        assert_eq!(owners, vec![Some(PaneId(1))]);
     }
 }

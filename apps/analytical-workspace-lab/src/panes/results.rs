@@ -2,23 +2,44 @@ use eframe::egui;
 use polyorama_core::{
     ImageIntent, PaneId, RESULT_COUNT, ResultId, VirtualisationMetrics, result_at, virtual_rows,
 };
+use polyorama_ui_egui::{DomainReference, SemanticUiId, UiNode, UiRole};
 
-use super::FrameOutput;
+use crate::actions::{ActionContext, availability};
+
+use super::*;
 
 pub fn show(
     ui: &mut egui::Ui,
     selected_result: Option<ResultId>,
     virtualisation: &mut VirtualisationMetrics,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    active_pane: PaneId,
     outputs: &mut FrameOutput,
 ) {
-    ui.horizontal(|ui| {
+    let toolbar_id = SemanticUiId::new("pane.5.toolbar");
+    let toolbar = ui.horizontal(|ui| {
         ui.label(format!("{} logical detections", RESULT_COUNT));
         if let Some(selected) = selected_result {
-            let recenter = ui.button("Recenter Primary");
-            outputs
-                .ui_geometry
-                .control(Some(PaneId(5)), "recenter_primary", recenter.rect);
-            if recenter.clicked() {
+            let context = ActionContext {
+                active_pane,
+                target_pane: Some(PaneId(5)),
+                selected_result,
+                ..Default::default()
+            };
+            if present_action(
+                ui,
+                outputs,
+                tokens,
+                font_scale,
+                &toolbar_id,
+                ActionTarget::pane(ActionId::RecenterPrimary, PaneId(5)),
+                availability(ActionId::RecenterPrimary, context),
+                false,
+                false,
+                active_pane == PaneId(5),
+                "recenter_primary",
+            ) {
                 outputs.intents.push(ImageIntent::RecenterOnResult {
                     result: selected,
                     pane: PaneId(1),
@@ -26,6 +47,15 @@ pub fn show(
             }
         }
     });
+    let mut toolbar_node = UiNode::container(
+        toolbar_id,
+        Some(SemanticUiId::pane(PaneId(5))),
+        UiRole::Toolbar,
+        toolbar.response.rect.into(),
+    );
+    toolbar_node.name = "Result actions".into();
+    toolbar_node.pane = Some(PaneId(5));
+    outputs.ui_geometry.record_node(toolbar_node);
     const ROW_HEIGHT: f32 = 23.0;
     const OVERSCAN_ROWS: usize = 8;
     let output = egui::ScrollArea::vertical()
@@ -54,13 +84,55 @@ pub fn show(
                     ui.horizontal(|ui| {
                         let selection =
                             ui.selectable_label(selected, format!("#{:07}", result.id.0));
-                        outputs
+                        let semantic_name = format!("Result #{:07}", result.id.0);
+                        ui.ctx().accesskit_node_builder(selection.id, |node| {
+                            use egui::accesskit::{Action, Role};
+                            node.set_role(Role::ListBoxOption);
+                            node.set_label(semantic_name.clone());
+                            node.set_description(format!(
+                                "Position {:.1}, {:.1}; confidence {:.1}%",
+                                result.position.x,
+                                result.position.y,
+                                result.confidence * 100.0
+                            ));
+                            node.set_author_id(format!("result.{}", result.id.0));
+                            node.set_selected(selected);
+                            node.add_action(Action::Click);
+                        });
+                        let inside_root = outputs
                             .ui_geometry
-                            .result_rows
-                            .push(crate::ui_geometry::ResultUiRect {
-                                result: result.id,
+                            .root
+                            .is_some_and(|root| root.contains(selection.rect.into(), 1.0));
+                        if selection.rect.intersects(ui.clip_rect()) && inside_root {
+                            outputs.ui_geometry.result_rows.push(
+                                crate::ui_geometry::ResultUiRect {
+                                    result: result.id,
+                                    rect: selection.rect.into(),
+                                },
+                            );
+                            outputs.ui_geometry.record_node(UiNode {
+                                id: SemanticUiId::new(format!("result.{}", result.id.0)),
+                                parent: Some(SemanticUiId::pane(PaneId(5))),
+                                role: UiRole::ResultRow,
+                                name: semantic_name,
+                                description: Some(format!(
+                                    "Position {:.1}, {:.1}; confidence {:.1}%",
+                                    result.position.x,
+                                    result.position.y,
+                                    result.confidence * 100.0
+                                )),
                                 rect: selection.rect.into(),
+                                enabled: true,
+                                focused: selection.has_focus(),
+                                selected,
+                                checked: None,
+                                expanded: None,
+                                pane: Some(PaneId(5)),
+                                domain_reference: Some(DomainReference::Result(result.id)),
+                                actions: Vec::new(),
+                                disabled_reason: None,
                             });
+                        }
                         if selection.clicked() {
                             outputs
                                 .intents
@@ -77,4 +149,13 @@ pub fn show(
             }
         });
     outputs.ui_geometry.results_scroll = Some(output.inner_rect.into());
+    let mut scroll = UiNode::container(
+        SemanticUiId::new("pane.5.results.scroll"),
+        Some(SemanticUiId::pane(PaneId(5))),
+        UiRole::ScrollArea,
+        output.inner_rect.into(),
+    );
+    scroll.name = "Results".into();
+    scroll.pane = Some(PaneId(5));
+    outputs.ui_geometry.record_node(scroll);
 }

@@ -1,5 +1,6 @@
 use super::annotations::screen_to_image;
 use super::*;
+use crate::actions::{ActionContext, availability};
 
 impl PaneSurface<'_> {
     pub(super) fn image_pane(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
@@ -19,57 +20,149 @@ impl PaneSurface<'_> {
             .copied()
             .unwrap_or(ActiveTool::Navigate);
         let mut active_tool = before_tool;
+        let toolbar_id = SemanticUiId::new(format!("pane.{}.toolbar", pane.0));
+        let polygon_vertices = match self.annotation_ui.get() {
+            Some(GesturePreview::Polygon { vertices, .. }) => vertices.len(),
+            _ => 0,
+        };
+        let action_context = ActionContext {
+            active_pane: self.active_pane,
+            target_pane: Some(pane),
+            selected_annotation: self.selected_annotation,
+            selected_result: self.selected_result,
+            polygon_vertices,
+            ..Default::default()
+        };
+        let compact_toolbar = ui.available_width() < 720.0;
         let toolbar = ui.horizontal(|ui| {
             if pane.0 <= 2 {
-                for (tool, label, control) in [
-                    (ActiveTool::Navigate, "Navigate", "navigate"),
-                    (ActiveTool::Polygon, "Polygon", "polygon"),
-                    (ActiveTool::EditVertex, "Edit", "edit_vertex"),
+                for (tool, action, control) in [
+                    (ActiveTool::Navigate, ActionId::NavigateTool, "navigate"),
+                    (ActiveTool::Polygon, ActionId::PolygonTool, "polygon"),
+                    (
+                        ActiveTool::EditVertex,
+                        ActionId::EditVerticesTool,
+                        "edit_vertex",
+                    ),
                 ] {
-                    let response = ui.selectable_label(active_tool == tool, label);
-                    self.outputs
-                        .ui_geometry
-                        .control(Some(pane), control, response.rect);
-                    if response.clicked() {
+                    if present_action(
+                        ui,
+                        self.outputs,
+                        &self.tokens,
+                        self.font_scale,
+                        &toolbar_id,
+                        ActionTarget::pane(action, pane),
+                        availability(action, action_context),
+                        active_tool == tool,
+                        compact_toolbar,
+                        self.active_pane == pane,
+                        control,
+                    ) {
                         active_tool = tool;
                     }
                 }
             }
-            let fit_button = ui.small_button("Fit");
-            self.outputs
-                .ui_geometry
-                .control(Some(pane), "fit", fit_button.rect);
-            fit = fit_button.clicked();
-            let mut linked = self.cameras[camera_index].link.is_some();
-            let link = ui.checkbox(&mut linked, "Link A");
-            self.outputs
-                .ui_geometry
-                .control(Some(pane), "link_a", link.rect);
-            if link.changed() {
+            fit = present_action(
+                ui,
+                self.outputs,
+                &self.tokens,
+                self.font_scale,
+                &toolbar_id,
+                ActionTarget::pane(ActionId::FitView, pane),
+                availability(ActionId::FitView, action_context),
+                false,
+                true,
+                self.active_pane == pane,
+                "fit",
+            );
+            let linked = self.cameras[camera_index].link.is_some();
+            if present_action(
+                ui,
+                self.outputs,
+                &self.tokens,
+                self.font_scale,
+                &toolbar_id,
+                ActionTarget::pane(ActionId::LinkViews, pane),
+                availability(ActionId::LinkViews, action_context),
+                linked,
+                true,
+                self.active_pane == pane,
+                "link_a",
+            ) {
                 self.outputs.intents.push(ImageIntent::SetCameraLink {
                     pane,
-                    link: linked.then_some(LinkGroupId(1)),
+                    link: (!linked).then_some(LinkGroupId(1)),
                 });
             }
-            egui::ComboBox::from_id_salt((pane.0, "map")).selected_text(match display.map { DisplayMap::Viridis => "Viridis", DisplayMap::Greyscale => "Greyscale", DisplayMap::Threshold => "Threshold" }).show_ui(ui, |ui| {
-                ui.selectable_value(&mut display.map, DisplayMap::Viridis, "Viridis");
-                ui.selectable_value(&mut display.map, DisplayMap::Greyscale, "Greyscale");
-                ui.selectable_value(&mut display.map, DisplayMap::Threshold, "Threshold");
-            });
-            ui.add(egui::Slider::new(&mut display.window_low, 0.0..=0.8).show_value(false).text("low"));
-            ui.add(egui::Slider::new(&mut display.window_high, 0.2..=1.0).show_value(false).text("high"));
-            if matches!(self.annotation_ui.get(), Some(GesturePreview::Polygon { vertices, .. }) if vertices.len() >= 3) {
-                commit_polygon = ui.small_button("Commit polygon").clicked();
+            egui::ComboBox::from_id_salt((pane.0, "map"))
+                .selected_text(match display.map {
+                    DisplayMap::Viridis => "Viridis",
+                    DisplayMap::Greyscale => "Greyscale",
+                    DisplayMap::Threshold => "Threshold",
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut display.map, DisplayMap::Viridis, "Viridis");
+                    ui.selectable_value(&mut display.map, DisplayMap::Greyscale, "Greyscale");
+                    ui.selectable_value(&mut display.map, DisplayMap::Threshold, "Threshold");
+                });
+            ui.add(
+                egui::Slider::new(&mut display.window_low, 0.0..=0.8)
+                    .show_value(false)
+                    .text("low"),
+            );
+            ui.add(
+                egui::Slider::new(&mut display.window_high, 0.2..=1.0)
+                    .show_value(false)
+                    .text("high"),
+            );
+            if self.annotation_ui.get().is_some() {
+                commit_polygon = present_action(
+                    ui,
+                    self.outputs,
+                    &self.tokens,
+                    self.font_scale,
+                    &toolbar_id,
+                    ActionTarget::pane(ActionId::CommitPolygon, pane),
+                    availability(ActionId::CommitPolygon, action_context),
+                    false,
+                    true,
+                    self.active_pane == pane,
+                    "commit_polygon",
+                );
             }
-            if self.selected_annotation.is_some() { delete_annotation = ui.small_button("Delete").clicked(); }
+            if self.selected_annotation.is_some() {
+                delete_annotation = present_action(
+                    ui,
+                    self.outputs,
+                    &self.tokens,
+                    self.font_scale,
+                    &toolbar_id,
+                    ActionTarget::pane(ActionId::DeleteAnnotation, pane),
+                    availability(ActionId::DeleteAnnotation, action_context),
+                    false,
+                    true,
+                    self.active_pane == pane,
+                    "delete_annotation",
+                );
+            }
         });
+        let toolbar_rect = toolbar.response.rect.intersect(pane_rect);
         self.outputs
             .ui_geometry
             .image_toolbars
             .push(crate::ui_geometry::PaneUiRect {
                 pane,
-                rect: toolbar.response.rect.into(),
+                rect: toolbar_rect.into(),
             });
+        let mut toolbar_node = UiNode::container(
+            toolbar_id,
+            Some(SemanticUiId::pane(pane)),
+            UiRole::Toolbar,
+            toolbar_rect.into(),
+        );
+        toolbar_node.name = "Image actions".into();
+        toolbar_node.pane = Some(pane);
+        self.outputs.ui_geometry.record_node(toolbar_node);
         if active_tool != before_tool {
             self.active_tools.insert(pane, active_tool);
             self.outputs.pane_intents.push(PaneIntent::SetActiveTool {
@@ -98,18 +191,7 @@ impl PaneSurface<'_> {
                     .push(ImageIntent::CommitPolygon { layer, vertices });
             }
         }
-        if self.active_pane == pane && ui.input(|input| input.key_pressed(egui::Key::Enter)) {
-            if let Some(GesturePreview::Polygon { layer, vertices }) = self.annotation_ui.take() {
-                if vertices.len() >= 3 {
-                    self.outputs
-                        .intents
-                        .push(ImageIntent::CommitPolygon { layer, vertices });
-                }
-            }
-        }
-        if delete_annotation
-            || (self.active_pane == pane && ui.input(|input| input.key_pressed(egui::Key::Delete)))
-        {
+        if delete_annotation {
             if let Some(annotation) = self.selected_annotation {
                 self.outputs
                     .intents
@@ -132,6 +214,23 @@ impl PaneSurface<'_> {
                 pane,
                 rect: rect.into(),
             });
+        self.outputs.ui_geometry.record_node(UiNode {
+            id: SemanticUiId::new(format!("pane.{}.viewport", pane.0)),
+            parent: Some(SemanticUiId::pane(pane)),
+            role: UiRole::Viewport,
+            name: format!("{} viewport", self.title(pane)),
+            description: Some("Scientific scalar image viewport".into()),
+            rect: rect.into(),
+            enabled: true,
+            focused: response.has_focus(),
+            selected: self.active_pane == pane,
+            checked: None,
+            expanded: None,
+            pane: Some(pane),
+            domain_reference: Some(DomainReference::Pane(pane)),
+            actions: Vec::new(),
+            disabled_reason: None,
+        });
         ui.painter()
             .rect_filled(rect, 0.0, egui::Color32::from_rgb(8, 12, 15));
         paint_placeholder(ui, rect, pane);

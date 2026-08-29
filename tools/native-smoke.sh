@@ -101,7 +101,11 @@ target_point() {
     --argjson window_width "$WINDOW_WIDTH" \
     --argjson window_height "$WINDOW_HEIGHT" '
       .ui_geometry as $geometry
-      | (if $kind == "control" then
+      | .ui_snapshot as $semantic
+      | (if $kind == "action" then
+           $semantic.nodes[]
+           | select((.actions | index($name)) != null and ($pane == 0 or .pane == $pane))
+         elif $kind == "control" then
            $geometry.controls[] | select(.name == $name and ($pane == 0 or .pane == $pane))
          elif $kind == "splitter" then
            $geometry.splitters[] | select(.node == $pane)
@@ -114,7 +118,7 @@ target_point() {
          else
            $geometry[$kind][] | select(.pane == $pane)
          end) as $target
-      | $geometry.root as $root
+      | (($semantic.nodes[] | select(.id == $semantic.root) | .rect) // $geometry.root) as $root
       | $target.rect as $rect
       | select($root != null and $rect != null)
       | select($rect.max_x > $rect.min_x and $rect.max_y > $rect.min_y)
@@ -142,12 +146,17 @@ launch_app
 capture native-default.png
 snapshot
 UI_GEOMETRY_INITIAL="$(jq -c '.ui_geometry' "$SNAPSHOT")"
+UI_SNAPSHOT_INITIAL="$(jq -c '.ui_snapshot' "$SNAPSHOT")"
 jq -e '
-  (.ui_geometry.text_layouts | length) == 8
+  ([.ui_geometry.text_layouts[] | select(.role == "tab_label")] | length) == 8
   and (.ui_geometry.text_audit | length) == 0
-  and all(.ui_geometry.text_layouts[];
+  and (.ui_snapshot.nodes | length) > 0
+  and (.ui_snapshot.nodes | length) < 1000
+  and (.ui_snapshot.semantic_audit | length) == 0
+  and any(.ui_snapshot.nodes[]; .actions | index("undo"))
+  and any(.ui_snapshot.nodes[]; .pane == 1 and (.actions | index("fit_view")))
+  and all(.ui_geometry.text_layouts[] | select(.role == "tab_label");
     .baseline == null
-    and .role == "tab_label"
     and .overflow == "ellipsis"
     and .line_count == 1)
 ' "$SNAPSHOT" >/dev/null
@@ -181,7 +190,7 @@ jq -e --argjson before "$PAN_BEFORE" --argjson undo "$UNDO_BEFORE" '
     and ($primary.centre.y == ($before.centre.y - 50 * $before.pixels_per_screen_point))
     and (.undo_depth == ($undo + 1))
 ' "$SNAPSHOT" >/dev/null
-move_target control 0 undo
+move_target action 0 undo
 xdo click 1
 sleep 0.5
 snapshot
@@ -192,14 +201,14 @@ jq -e --argjson primary "$PAN_BEFORE" --argjson linked "$LINKED_BEFORE" --argjso
   and ((.cameras[] | select(.pane == 2).camera) == $linked)
   and (.undo_depth == $undo)
 ' "$SNAPSHOT" >/dev/null
-move_target control 0 redo
+move_target action 0 redo
 xdo click 1
-move_target control 1 fit
+move_target action 1 fit_view
 xdo click 1
 sleep 1
 
 # Construct, commit, edit, undo and redo a world-coordinate polygon.
-move_target control 1 polygon
+move_target action 1 polygon_tool
 xdo click 1
 sleep 1
 move_target image_viewports 1 "" 0.2 0.2
@@ -217,7 +226,7 @@ POLYGON_ID="$(jq -r '.selected_annotation' "$SNAPSHOT")"
 POLYGON_ORIGINAL="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
 POLYGON_CAMERA_SCALE="$(jq -r '.cameras[] | select(.pane == 1) | .camera.pixels_per_screen_point' "$SNAPSHOT")"
 POLYGON_UNDO_BEFORE="$(jq -r '.undo_depth' "$SNAPSHOT")"
-move_target control 1 edit_vertex
+move_target action 1 edit_vertices_tool
 xdo click 1
 move_target image_viewports 1 "" 0.2 0.2
 xdo mousedown 1
@@ -242,24 +251,24 @@ jq -ne \
       and (($actual.y - $expected.y) > -0.01)
       and (($actual.y - $expected.y) < 0.01)
   ' >/dev/null
-move_target control 0 undo
+move_target action 0 undo
 xdo click 1
 sleep 0.5
 snapshot
 POLYGON_UNDONE="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
 test "$POLYGON_UNDONE" = "$POLYGON_ORIGINAL"
-move_target control 0 redo
+move_target action 0 redo
 xdo click 1
 sleep 0.5
 snapshot
 POLYGON_REDONE="$(jq -c --argjson id "$POLYGON_ID" '.annotations[] | select(.id == $id) | .vertices[0]' "$SNAPSHOT")"
 test "$POLYGON_REDONE" = "$POLYGON_EDITED"
 xdo key Delete
-move_target control 0 undo
+move_target action 0 undo
 xdo click 1
-move_target control 0 redo
+move_target action 0 redo
 xdo click 1
-move_target control 0 undo
+move_target action 0 undo
 xdo click 1
 
 # Result selection/recentring and progressive thumbnail virtualisation.
@@ -325,8 +334,16 @@ jq -n \
   --argjson polygon_edited "$POLYGON_EDITED" \
   --argjson polygon_undo_before "$POLYGON_UNDO_BEFORE" \
   --argjson polygon_undo_after "$POLYGON_UNDO_AFTER" \
-  --argjson ui_geometry_initial "$UI_GEOMETRY_INITIAL" '
+  --argjson ui_geometry_initial "$UI_GEOMETRY_INITIAL" \
+  --argjson ui_snapshot_initial "$UI_SNAPSHOT_INITIAL" '
   {
+    ui_snapshot: {
+      frame: $ui_snapshot_initial.frame,
+      root: $ui_snapshot_initial.root,
+      node_count: ($ui_snapshot_initial.nodes | length),
+      actions: [$ui_snapshot_initial.nodes[].actions[]],
+      semantic_audit: $ui_snapshot_initial.semantic_audit
+    },
     ui_geometry: $ui_geometry_initial,
     physical_pan: {
       pointer_delta: {x: 90, y: 50},
@@ -397,12 +414,12 @@ jq -ne \
       and (($x_after - ($x_before - 47)) > -1)
       and (($x_after - ($x_before - 47)) < 1)
   ' >/dev/null
-move_target control 0 undo
+move_target action 0 undo
 xdo click 1
 sleep 0.5
 snapshot
 test "$(jq -r '.workspace_hash' "$SNAPSHOT")" = "$SPLITTER_HASH_BEFORE"
-move_target control 0 redo
+move_target action 0 redo
 xdo click 1
 sleep 0.5
 snapshot
@@ -456,7 +473,7 @@ sleep 1
 xdo mouseup 1
 sleep 2
 capture native-rearranged-dock.png
-move_target control 0 save_layout
+move_target action 0 save_layout
 xdo click 1
 sleep 1
 

@@ -91,7 +91,11 @@ try {
 
   let current = await snapshot();
   if (current.story !== 'reference/application-shell' || current.story_count !== 18
-      || current.text.length === 0 || current.text_audit.length !== 0) {
+      || current.text.length === 0 || current.text_audit.length !== 0
+      || current.ui_snapshot.nodes.length === 0 || current.ui_snapshot.nodes.length >= 1_000
+      || current.ui_snapshot.semantic_audit.length !== 0
+      || !current.ui_snapshot.nodes.some((node) => node.role === 'tab')
+      || !current.ui_snapshot.nodes.some((node) => node.role === 'splitter')) {
     throw new Error(`invalid initial gallery snapshot: ${JSON.stringify(current)}`);
   }
   await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-overview.png') });
@@ -127,7 +131,10 @@ try {
   current = await selectStory('button/keyboard-focus');
   await page.waitForTimeout(100);
   current = await snapshot();
-  if (current.text.length !== 1 || current.text_audit.length !== 0) {
+  if (current.text.length !== 1 || current.text_audit.length !== 0
+      || current.ui_snapshot.semantic_audit.length !== 0
+      || !current.ui_snapshot.nodes.some((node) => node.actions.includes('fit_view')
+        && node.pane === 1 && node.focused)) {
     throw new Error(`keyboard-focus story failed: ${JSON.stringify(current)}`);
   }
 
@@ -149,6 +156,8 @@ try {
     idle_frame_before: idleBefore,
     idle_frame_after: idleAfter,
     text_audit_findings: current.text_audit.length,
+    semantic_node_count: current.ui_snapshot.nodes.length,
+    semantic_audit_findings: current.ui_snapshot.semantic_audit.length,
   }, null, 2)}\n`);
   console.log(JSON.stringify({ status: 'passed', stories: manifest.length, idleFrame: idleAfter, textAudit: current.text_audit }, null, 2));
 } catch (error) {
