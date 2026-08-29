@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increments 1–8 landed; increment 9 complete candidate awaiting exact-head gates
+Status: complete; increments 1–9 landed
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,13 +20,11 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 8 landed as PR #16 at merge `89d9ec4`. Its exact candidate head
-`489db151c8c96c94e8793662e3f0f9ca4450aaab` passed hosted
-`cargo xtask verify` and independent review after the complete application
-migration and headful physical-input repairs. Increment 9 records exact final
-release performance and idle observations and maps every mandatory criterion
-in `docs/design-agent-loop-report.md`; it adds no UI capability. Exact-head
-review, hosted verification and landing remain.
+Increment 9 landed as PR #17 at merge `8ee58de`. Its exact candidate head
+`d139fbb2e52b73be647a5fee21485f7eec9854da` passed local and hosted
+`cargo xtask verify` plus independent review. The final release performance,
+idle, native/browser evidence and all 41 mandatory criteria are reconciled in
+`docs/design-agent-loop-report.md`. The nine-increment campaign is complete.
 
 ## Baseline evidence
 
@@ -81,7 +79,7 @@ now publishes that ignored evidence only when CI fails.
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
 | 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Landed | PR #16 and [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
-| 9 | Final performance/idle/native/browser hardening and report | 8 | Complete candidate; gates pending | [Final report](design-agent-loop-report.md) and canonical gate |
+| 9 | Final performance/idle/native/browser hardening and report | 8 | Landed | PR #17 and [final report](design-agent-loop-report.md) |
 
 The graph may be refined only at phase boundaries when evidence reveals a
 better coherent dependency boundary. Every increment must leave the workspace
@@ -105,5 +103,5 @@ show that the change is intentional.
 
 ## Next action
 
-Run the exact-head canonical gate and independent review, repair any blocking
-finding on this branch, then land the final report increment.
+Begin the next major increment from observed application usage rather than
+expanding the framework foundation without a concrete consumer need.

@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop report
 
-Status: complete candidate; awaiting exact-head review and hosted verification
+Status: complete; landed as PR #17
 
 ## Outcome
 
@@ -24,6 +24,10 @@ second workspace model was introduced.
   `89d9ec40ed2abc07f92955bf859493c3af63790e` (PR #16);
 - final release-observation source revision:
   `7a5e63f47fe078b68816b50098c5dd338dae7d0e`;
+- independently reviewed candidate revision:
+  `d139fbb2e52b73be647a5fee21485f7eec9854da`;
+- final report merge:
+  `8ee58de87db9d704ea76b347014fbfa4603d17f2` (PR #17);
 - canonical command: `cargo xtask verify`;
 - local qualification date: 30 August 2026, Australia/Adelaide;
 - Rust: `rustc 1.97.1 (8bab26f4f 2026-07-14)` and
@@ -36,7 +40,8 @@ second workspace model was introduced.
 - native backend: GL through Mesa llvmpipe at 1440×900; and
 - licence: repository and every workspace package use Apache-2.0.
 
-The exact observation revision passed the canonical local command. The command
+The exact candidate revision passed the canonical command locally and in
+hosted CI, and received an independent exact-head PASS. The command
 performed format and strict native/Wasm lint checks, 157 Rust tests, token
 drift and architecture checks, optimised native and Wasm builds, application
 and gallery browser smokes, five deterministic UI fixtures, and application
@@ -222,7 +227,7 @@ snapshots contain 76 bounded nodes and empty semantic audits.
   separately inspected with Lantern during increments 2, 3 and 8.
 
 These are instrumentation limitations, not unverified mandatory behaviours.
-There are no blocked mandatory criteria and no input is required to resume.
+There are no blocked mandatory criteria.
 
 ## Conclusion
 
