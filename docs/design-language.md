@@ -1,6 +1,6 @@
 # Polyorama design language
 
-Status: increment 3 measured-text foundation
+Status: increment 4 dock-shell component candidate
 
 ## Visual thesis
 
@@ -97,13 +97,38 @@ enumerate ordinary egui labels or virtualised collections.
 
 Dock tabs are the first migrated component. Their desired width and ellipsis
 layout are measured by egui, their label painter is strictly clipped, stable
-widget IDs and pane drag/activation behaviour are unchanged, widget semantics
+widget IDs derive from `PaneId`, and pane drag/activation behaviour retains the
+canonical workspace path. Widget semantics
 retain the complete title, and a tooltip appears only when the galley is
-elided. Responsive width classes cap desired tab width and the strip
-proportionally shares constrained space without sibling overlap or pane
-overrun. A 32-point minimum tab hit width and moving excess tabs into an
-overflow control remain shell-component work; they cannot both be guaranteed
-in a strip narrower than the complete tab set and are not claimed here.
+elided. A dock tab paints compact geometry but interacts through a token
+minimum-hit rectangle; it exposes an AccessKit `Tab` role, full title,
+selected state and author ID, with a token-coloured focus ring. Focused tabs
+lock horizontal arrows against egui's spatial focus navigation and support
+Left, Right, Home and End roving activation plus Enter and Space. Input is
+interpreted before tab paint and AccessKit emission so the selected tab,
+focused target and shown pane agree in the activation frame, including when a
+previously hidden overflow tab becomes active.
+
+Responsive width classes cap desired tab width. Measured titles first truncate
+within whole targets down to the minimum hit width. When all tabs still cannot
+fit at that minimum, only whole targets around the active tab are exposed and
+an explicit, token-coloured overflow trigger reaches every pane. A strip too
+narrow for any minimum-width tab is a deliberate overflow-only minimum state;
+the trigger remains the sole non-overlapping target. Dock splitters retain a
+five-point visual divider with a centred token minimum hit rectangle, semantic
+`Splitter` role and current fraction, and token focus ring. Focused arrow keys
+and AccessKit increment/decrement actions use the same exact 0.05 fraction
+step, lock their adjustment axis against spatial focus navigation, and retain
+the single completed `ResizeSplit` command path. Splitters use
+stable `DockNodeId`-derived widget IDs and egui's click-and-drag arbitration so
+nearby pane surfaces cannot steal the boundary gesture. Delayed drag
+recognition reconstructs the press origin from total drag delta, keeping the
+preview and final command faithful to the complete pointer movement.
+
+These are compatible egui AccessKit tree updates, not a claim of delivered OS
+or browser screen-reader support: the application has not enabled eframe's
+native adapter and its current web integration discards those updates. The
+future semantic snapshot and action registry remain separate work.
 
 ## Icons
 

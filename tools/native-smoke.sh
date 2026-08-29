@@ -374,7 +374,11 @@ SPLITTER_UNDO_BEFORE="$(jq -r '.undo_depth' "$SNAPSHOT")"
 SPLITTER_X_BEFORE="$(jq -r '.ui_geometry.splitters[] | select(.node == 1) | ((.rect.min_x + .rect.max_x) * 0.5)' "$SNAPSHOT")"
 move_target splitter 1 "" 0.5 0.25
 xdo mousedown 1
-move_target splitter 1 "" 0.5 0.25 -47 0
+sleep 0.05
+for delta_x in -12 -24 -36 -47; do
+  move_target splitter 1 "" 0.5 0.25 "$delta_x" 0
+  sleep 0.03
+done
 xdo mouseup 1
 sleep 0.5
 snapshot
@@ -408,8 +412,11 @@ SPLITTER_NO_OP_HASH="$(jq -r '.workspace_hash' "$SNAPSHOT")"
 SPLITTER_NO_OP_UNDO="$(jq -r '.undo_depth' "$SNAPSHOT")"
 move_target splitter 1 "" 0.5 0.25
 xdo mousedown 1
+sleep 0.05
 move_target splitter 1 "" 0.5 0.25 -30 0
+sleep 0.03
 move_target splitter 1 "" 0.5 0.25
+sleep 0.03
 xdo mouseup 1
 sleep 0.5
 snapshot

@@ -23,8 +23,9 @@ use polyorama_core::{
 use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
 use std::sync::{Arc, RwLock};
 
-const TAB_HEIGHT: f32 = 28.0;
+const TAB_VISUAL_HEIGHT: f32 = 24.0;
 const SPLITTER: f32 = 5.0;
+const SPLITTER_KEY_STEP: f32 = 0.05;
 
 #[derive(Clone, Copy)]
 pub struct DockTextContext {
@@ -153,20 +154,46 @@ fn render_node(
                 .split_preview
                 .filter(|preview| preview.node == node)
                 .map_or(*fraction, |preview| preview.after);
-            let (_, hit_rect, _) = split_rects(rect, horizontal, initial_fraction);
+            let (_, visual_hit_rect, _) = split_rects(rect, horizontal, initial_fraction);
+            let minimum_hit = text_context.tokens.geometry.minimum_hit_size.0;
+            let hit_rect = minimum_hit_rect(visual_hit_rect, minimum_hit, rect);
             let response = ui.interact(
                 hit_rect,
-                ui.id().with(("split", node.0)),
-                egui::Sense::drag(),
+                egui::Id::new(("polyorama.dock.splitter", node.0)),
+                egui::Sense::click_and_drag(),
             );
+            response.widget_info(|| egui::WidgetInfo::new(egui::WidgetType::ResizeHandle));
+            let splitter_author_id = node.0;
+            ui.ctx().accesskit_node_builder(response.id, |node| {
+                use egui::accesskit::{Action, Orientation, Role};
+                node.set_role(Role::Splitter);
+                node.set_label(if horizontal {
+                    "Vertical splitter"
+                } else {
+                    "Horizontal splitter"
+                });
+                node.set_author_id(format!("polyorama.dock.splitter.{splitter_author_id}"));
+                node.set_orientation(if horizontal {
+                    Orientation::Vertical
+                } else {
+                    Orientation::Horizontal
+                });
+                node.set_numeric_value(f64::from(initial_fraction));
+                node.set_min_numeric_value(0.1);
+                node.set_max_numeric_value(0.9);
+                node.set_numeric_value_step(f64::from(SPLITTER_KEY_STEP));
+                node.add_action(Action::Increment);
+                node.add_action(Action::Decrement);
+            });
             if response.drag_started() {
+                let pointer = response
+                    .interact_pointer_pos()
+                    .unwrap_or_else(|| hit_rect.center());
                 behaviour.split_preview = Some(SplitPreview {
                     node,
                     before: *fraction,
                     after: *fraction,
-                    pointer_origin: response
-                        .interact_pointer_pos()
-                        .unwrap_or_else(|| hit_rect.center()),
+                    pointer_origin: pointer - response.total_drag_delta().unwrap_or_default(),
                 });
             }
             if response.dragged() || response.drag_stopped() {
@@ -186,6 +213,57 @@ fn render_node(
                     preview.after =
                         ((preview.before * length + axis_delta) / length).clamp(0.1, 0.9);
                 }
+            }
+            let (accesskit_decrement, accesskit_increment) = ui.input(|input| {
+                use egui::accesskit::Action;
+                (
+                    input.num_accesskit_action_requests(response.id, Action::Decrement),
+                    input.num_accesskit_action_requests(response.id, Action::Increment),
+                )
+            });
+            let (keyboard_decrement, keyboard_increment) = if response.has_focus() {
+                ui.memory_mut(|memory| {
+                    memory.set_focus_lock_filter(
+                        response.id,
+                        egui::EventFilter {
+                            horizontal_arrows: horizontal,
+                            vertical_arrows: !horizontal,
+                            ..Default::default()
+                        },
+                    );
+                });
+                ui.input_mut(|input| {
+                    let keys = if horizontal {
+                        (egui::Key::ArrowLeft, egui::Key::ArrowRight)
+                    } else {
+                        (egui::Key::ArrowUp, egui::Key::ArrowDown)
+                    };
+                    (
+                        usize::from(input.consume_key(egui::Modifiers::NONE, keys.0)),
+                        usize::from(input.consume_key(egui::Modifiers::NONE, keys.1)),
+                    )
+                })
+            } else {
+                (0, 0)
+            };
+            if keyboard_decrement + keyboard_increment > 0 {
+                // A splitter can gain focus after egui has already interpreted this
+                // pass's arrow key as spatial focus navigation. Cancel that pending
+                // move when the splitter consumes the key so end-of-pass processing
+                // cannot move focus away again.
+                ui.memory_mut(|memory| memory.move_focus(egui::FocusDirection::None));
+            }
+            let after = adjusted_split_fraction(
+                *fraction,
+                (keyboard_increment + accesskit_increment) as i32
+                    - (keyboard_decrement + accesskit_decrement) as i32,
+            );
+            if after != *fraction {
+                behaviour.pending = Some(DockAction::Resize {
+                    node,
+                    before: *fraction,
+                    after,
+                });
             }
             let shown_fraction = behaviour
                 .split_preview
@@ -216,6 +294,14 @@ fn render_node(
                     ui.visuals().widgets.noninteractive.bg_fill
                 },
             );
+            if response.has_focus() {
+                ui.painter().rect_stroke(
+                    split_rect,
+                    0.0,
+                    egui::Stroke::new(1.0, text_context.tokens.colours.focus_ring),
+                    egui::StrokeKind::Inside,
+                );
+            }
             render_node(ui, first, first_rect, behaviour, presenter, text_context);
             render_node(ui, second, second_rect, behaviour, presenter, text_context);
         }
@@ -226,12 +312,34 @@ fn render_node(
                 return;
             }
             *active = (*active).min(tabs.len() - 1);
+            let tab_visual_height = TAB_VISUAL_HEIGHT * text_context.font_scale;
+            let tab_height = text_context
+                .tokens
+                .geometry
+                .minimum_hit_size
+                .0
+                .max(tab_visual_height);
             let tab_rect = Rect::from_min_max(
                 rect.min,
-                Pos2::new(rect.right(), (rect.top() + TAB_HEIGHT).min(rect.bottom())),
+                Pos2::new(rect.right(), (rect.top() + tab_height).min(rect.bottom())),
             );
             let body = Rect::from_min_max(Pos2::new(rect.left(), tab_rect.bottom()), rect.max);
             ui.painter().rect_filled(rect, 0.0, ui.visuals().panel_fill);
+            let tab_list_id = egui::Id::new(("polyorama.dock.tab-list", id.0));
+            let mut tab_ui = ui.new_child(
+                egui::UiBuilder::new()
+                    .id(tab_list_id)
+                    .max_rect(tab_rect)
+                    .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            );
+            tab_ui.set_min_size(tab_rect.size());
+            tab_ui.ctx().accesskit_node_builder(tab_list_id, |node| {
+                use egui::accesskit::{Orientation, Role};
+                node.set_role(Role::TabList);
+                node.set_label("Workspace panes");
+                node.set_author_id(format!("polyorama.dock.tab-list.{}", id.0));
+                node.set_orientation(Orientation::Horizontal);
+            });
             let strip_padding = text_context.tokens.spacing.unit.0;
             let gap = (text_context.tokens.spacing.unit.0 - 1.0).max(0.0);
             let tab_padding = text_context.tokens.geometry.control_padding_x.0;
@@ -249,7 +357,7 @@ fn render_node(
                 .iter()
                 .map(|pane| {
                     measure_text(
-                        ui.painter(),
+                        tab_ui.painter(),
                         presenter.title(*pane),
                         intrinsic_spec,
                         &text_context.tokens,
@@ -260,91 +368,151 @@ fn render_node(
                     .unwrap_or(maximum_tab_width)
                 })
                 .collect::<Vec<_>>();
-            let gaps_width = gap * tabs.len().saturating_sub(1) as f32;
-            let available_width = (tab_rect.width() - strip_padding * 2.0 - gaps_width).max(1.0);
-            let desired_total = desired_widths.iter().sum::<f32>().max(1.0);
-            let fit_scale = (available_width / desired_total).min(1.0);
+            let mut shown_active = *active;
+            let mut requested_focus = None;
+            if let Some(focused_index) = tabs.iter().position(|pane| {
+                tab_ui.memory(|memory| {
+                    memory.has_focus(egui::Id::new(("polyorama.dock.tab", pane.0)))
+                })
+            }) {
+                let focused_id = egui::Id::new(("polyorama.dock.tab", tabs[focused_index].0));
+                tab_ui.memory_mut(|memory| {
+                    memory.set_focus_lock_filter(
+                        focused_id,
+                        egui::EventFilter {
+                            horizontal_arrows: true,
+                            ..Default::default()
+                        },
+                    );
+                });
+                let keyboard_target = tab_ui.input_mut(|input| {
+                    if input.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft) {
+                        Some((focused_index + tabs.len() - 1) % tabs.len())
+                    } else if input.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight) {
+                        Some((focused_index + 1) % tabs.len())
+                    } else if input.consume_key(egui::Modifiers::NONE, egui::Key::Home) {
+                        Some(0)
+                    } else if input.consume_key(egui::Modifiers::NONE, egui::Key::End) {
+                        Some(tabs.len() - 1)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(target) = keyboard_target {
+                    // The focused tab owns these keys. In particular, this clears a
+                    // spatial focus move that egui may already have queued when the
+                    // tab first gained focus in the preceding pass.
+                    tab_ui.memory_mut(|memory| memory.move_focus(egui::FocusDirection::None));
+                    shown_active = target;
+                    let pane = tabs[target];
+                    requested_focus = Some(pane);
+                    behaviour.pending = Some(DockAction::Activate(pane));
+                }
+            }
+            let minimum_hit = text_context.tokens.geometry.minimum_hit_size.0;
+            let allocation = allocate_tab_strip(
+                &desired_widths,
+                shown_active,
+                (tab_rect.width() - strip_padding * 2.0).max(0.0),
+                minimum_hit,
+                gap,
+            );
             let mut x = tab_rect.left() + strip_padding;
             let parent_id = TextComponentId::new(TextComponentKind::DockTabStrip, id.0);
-            for (index, (pane, desired_width)) in
-                tabs.iter().copied().zip(desired_widths).enumerate()
-            {
-                let width = if index + 1 == tabs.len() && fit_scale < 1.0 {
-                    (tab_rect.right() - strip_padding - x).max(0.5)
-                } else {
-                    (desired_width * fit_scale).max(0.5)
-                };
+            let mut presentations = Vec::with_capacity(allocation.visible.len());
+            for (&index, &width) in allocation.visible.iter().zip(&allocation.widths) {
+                let pane = tabs[index];
                 let item_rect = Rect::from_min_size(
-                    Pos2::new(x, tab_rect.top() + 3.0),
-                    egui::vec2(width, TAB_HEIGHT - 4.0),
+                    Pos2::new(x, tab_rect.center().y - tab_visual_height * 0.5),
+                    egui::vec2(width, tab_visual_height),
                 );
-                let response = ui.interact(
-                    item_rect,
-                    ui.id().with(("tab", pane.0)),
-                    egui::Sense::click_and_drag(),
-                );
+                let item_id = egui::Id::new(("polyorama.dock.tab", pane.0));
+                let hit_rect = minimum_hit_rect(item_rect, minimum_hit, tab_rect);
+                let response = dock_tab_interaction(&mut tab_ui, item_id, hit_rect);
                 presenter.record_tab_rect(pane, item_rect);
                 if response.clicked() {
+                    shown_active = index;
                     behaviour.pending = Some(DockAction::Activate(pane));
-                    *active = index;
                 }
                 if response.drag_started() {
                     behaviour.dragging = Some(pane);
                 }
-                response.widget_info(|| {
-                    egui::WidgetInfo::selected(
-                        egui::WidgetType::SelectableLabel,
-                        ui.is_enabled(),
-                        index == *active,
-                        presenter.title(pane),
-                    )
-                });
-                let fill = if index == *active {
-                    ui.visuals().extreme_bg_color
-                } else if response.hovered() {
-                    ui.visuals().widgets.hovered.bg_fill
-                } else {
-                    ui.visuals().widgets.inactive.bg_fill
-                };
-                ui.painter().rect_filled(item_rect, 4.0, fill);
-                let horizontal_padding = tab_padding.min((item_rect.width() - 0.5).max(0.0) * 0.25);
-                let label_rect = item_rect.shrink2(egui::vec2(horizontal_padding, 0.0));
-                let spec = TextSpec {
-                    horizontal_alignment: HorizontalTextAlignment::Centre,
-                    ..TextSpec::single_line(TextRole::TabLabel, TextOverflow::Ellipsis)
-                };
-                if let Ok(measured) = measure_text(
-                    ui.painter(),
-                    presenter.title(pane),
-                    spec,
-                    &text_context.tokens,
-                    text_context.font_scale,
-                    label_rect.width().max(0.5),
-                ) {
-                    let observation = paint_measured_text(
-                        &ui.painter_at(label_rect),
-                        &measured,
-                        label_rect,
-                        TextComponentId::new(TextComponentKind::DockTab, u64::from(pane.0)),
-                        Some(parent_id),
-                    );
-                    let truncated = observation.truncated;
-                    presenter.record_text_layout(observation);
-                    if truncated {
-                        response.on_hover_text(presenter.title(pane));
-                    }
-                }
+                presentations.push((index, pane, item_rect, response));
                 x += width + gap;
+            }
+            let mut overflow_response = None;
+            if allocation.overflow {
+                let overflow_rect = Rect::from_min_size(
+                    Pos2::new(
+                        (tab_rect.right() - strip_padding - minimum_hit).max(tab_rect.left()),
+                        tab_rect.center().y - minimum_hit * 0.5,
+                    ),
+                    egui::vec2(
+                        minimum_hit.min(tab_rect.width()),
+                        minimum_hit.min(tab_rect.height()),
+                    ),
+                );
+                let overflow_id = egui::Id::new(("polyorama.dock.tab-overflow", id.0));
+                let response = dock_overflow_trigger(
+                    &mut tab_ui,
+                    overflow_id,
+                    id.0,
+                    overflow_rect,
+                    &text_context.tokens,
+                );
+                egui::Popup::menu(&response).show(|ui| {
+                    for (index, pane) in tabs.iter().copied().enumerate() {
+                        if ui
+                            .selectable_label(index == shown_active, presenter.title(pane))
+                            .clicked()
+                        {
+                            behaviour.pending = Some(DockAction::Activate(pane));
+                            ui.close();
+                        }
+                    }
+                });
+                overflow_response = Some(response);
+            }
+            if let Some(pane) = requested_focus {
+                if let Some((_, _, _, response)) = presentations
+                    .iter()
+                    .find(|(_, candidate, _, _)| *candidate == pane)
+                {
+                    response.request_focus();
+                } else if let Some(response) = &overflow_response {
+                    response.request_focus();
+                }
+            }
+            for (index, pane, item_rect, response) in presentations {
+                let observation = paint_dock_tab(
+                    &mut tab_ui,
+                    &response,
+                    presenter.title(pane),
+                    DockTabSpec {
+                        selected: index == shown_active,
+                        visual_rect: item_rect,
+                        font_scale: text_context.font_scale,
+                        component_id: TextComponentId::new(
+                            TextComponentKind::DockTab,
+                            u64::from(pane.0),
+                        ),
+                        parent_id,
+                    },
+                    &text_context.tokens,
+                );
+                if let Some(observation) = observation {
+                    presenter.record_text_layout(observation);
+                }
             }
             ui.painter().hline(
                 tab_rect.x_range(),
                 tab_rect.bottom(),
                 ui.visuals().widgets.noninteractive.bg_stroke,
             );
-            if let Some(target) = tabs.get(*active).copied() {
+            if let Some(target) = tabs.get(shown_active).copied() {
                 let body_response = ui.interact(
                     body,
-                    ui.id().with(("dock-body", target.0)),
+                    egui::Id::new(("polyorama.dock.body", target.0)),
                     egui::Sense::click(),
                 );
                 if body_response.clicked() {
@@ -442,6 +610,13 @@ fn split_rects(rect: Rect, horizontal: bool, fraction: f32) -> (Rect, Rect, Rect
             Rect::from_min_max(Pos2::new(rect.left(), cut + SPLITTER), rect.max),
         )
     }
+}
+
+fn adjusted_split_fraction(before: f32, steps: i32) -> f32 {
+    if steps == 0 {
+        return before;
+    }
+    (before + steps as f32 * SPLITTER_KEY_STEP).clamp(0.1, 0.9)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -841,6 +1016,75 @@ mod tests {
         (command, presenter)
     }
 
+    fn dock_frame_with_parent_id(
+        context: &egui::Context,
+        workspace: &mut Workspace,
+        behaviour: &mut DockBehaviour,
+        events: Vec<egui::Event>,
+        parent_id: &'static str,
+    ) -> (Option<Command>, GeometryPresenter) {
+        let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
+        let input = egui::RawInput {
+            screen_rect: Some(root),
+            focused: true,
+            events,
+            ..Default::default()
+        };
+        let mut command = None;
+        let mut presenter = GeometryPresenter::default();
+        let mut output = context.run_ui(input, |ui| {
+            command = ui
+                .scope_builder(
+                    egui::UiBuilder::new()
+                        .id(egui::Id::new(parent_id))
+                        .max_rect(root),
+                    |ui| {
+                        dock_workspace(
+                            ui,
+                            workspace,
+                            behaviour,
+                            &mut presenter,
+                            dock_text_context(),
+                        )
+                    },
+                )
+                .inner;
+        });
+        output.textures_delta.clear();
+        (command, presenter)
+    }
+
+    fn dock_accesskit_frame(
+        context: &egui::Context,
+        workspace: &mut Workspace,
+        behaviour: &mut DockBehaviour,
+        events: Vec<egui::Event>,
+    ) -> (Option<Command>, GeometryPresenter, egui::FullOutput) {
+        let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
+        let input = egui::RawInput {
+            screen_rect: Some(root),
+            focused: true,
+            events,
+            ..Default::default()
+        };
+        let mut command = None;
+        let mut presenter = GeometryPresenter::default();
+        let output = context.run_ui(input, |ui| {
+            command = ui
+                .scope_builder(egui::UiBuilder::new().max_rect(root), |ui| {
+                    dock_workspace(
+                        ui,
+                        workspace,
+                        behaviour,
+                        &mut presenter,
+                        dock_text_context(),
+                    )
+                })
+                .inner;
+        });
+        (command, presenter, output)
+    }
+
     fn pointer_button(position: Pos2, pressed: bool) -> egui::Event {
         egui::Event::PointerButton {
             pos: position,
@@ -848,6 +1092,33 @@ mod tests {
             pressed,
             modifiers: egui::Modifiers::NONE,
         }
+    }
+
+    fn key(key: egui::Key) -> egui::Event {
+        egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }
+    }
+
+    fn selected_tab_author_ids(output: &mut egui::FullOutput) -> Vec<String> {
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        update
+            .nodes
+            .iter()
+            .filter(|(_, node)| {
+                node.role() == egui::accesskit::Role::Tab && node.is_selected() == Some(true)
+            })
+            .map(|(_, node)| node.author_id().expect("tab author ID").to_owned())
+            .collect()
     }
 
     #[test]
@@ -955,6 +1226,466 @@ mod tests {
     }
 
     #[test]
+    fn dock_emits_accesskit_tab_and_splitter_metadata() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let mut presenter = GeometryPresenter::default();
+        let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                ..Default::default()
+            },
+            |context| {
+                egui::CentralPanel::default().show(context, |ui| {
+                    let _ = dock_workspace(
+                        ui,
+                        &mut workspace,
+                        &mut behaviour,
+                        &mut presenter,
+                        dock_text_context(),
+                    );
+                });
+            },
+        );
+        let update = output
+            .platform_output
+            .accesskit_update
+            .expect("AccessKit is enabled");
+        output.textures_delta.clear();
+        let (tab_id, tab) = update
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Tab && node.is_selected() == Some(true)
+            })
+            .expect("selected tab node");
+        let tab_list = update
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| {
+                node.role() == egui::accesskit::Role::TabList && node.children().contains(tab_id)
+            })
+            .expect("tab-list node");
+        assert_eq!(tab_list.label(), Some("Workspace panes"));
+        assert!(tab_list.author_id().is_some());
+        assert_eq!(tab.label(), Some("Pane"));
+        assert!(tab.supports_action(egui::accesskit::Action::Click));
+        assert!(tab.author_id().is_some());
+        assert_eq!(tab.is_selected(), Some(true));
+        let tab_bounds = tab.bounds().expect("tab semantic bounds");
+        assert!(tab_bounds.width() >= 32.0);
+        assert!(tab_bounds.height() >= 32.0);
+        assert!(presenter.tabs[0].1.height() < tab_bounds.height() as f32);
+        let splitter = update
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| node.role() == egui::accesskit::Role::Splitter)
+            .expect("splitter node");
+        assert!(splitter.numeric_value().is_some());
+        assert_eq!(splitter.min_numeric_value(), Some(0.1));
+        assert_eq!(splitter.max_numeric_value(), Some(0.9));
+        assert!(splitter.supports_action(egui::accesskit::Action::Increment));
+        assert!(splitter.supports_action(egui::accesskit::Action::Decrement));
+        let splitter_bounds = splitter.bounds().expect("splitter semantic bounds");
+        assert!(splitter_bounds.width() >= 32.0 || splitter_bounds.height() >= 32.0);
+        assert!(splitter.orientation().is_some());
+    }
+
+    #[test]
+    fn dock_tab_accesskit_identity_survives_a_canonical_pane_move() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let (_, _, mut before_output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let before_update = before_output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("initial AccessKit update");
+        before_output.textures_delta.clear();
+        let tab_id = |update: &egui::accesskit::TreeUpdate| {
+            update
+                .nodes
+                .iter()
+                .find_map(|(id, node)| {
+                    (node.author_id() == Some("polyorama.dock.tab.1")).then_some(*id)
+                })
+                .expect("primary-view tab node")
+        };
+        let before_id = tab_id(&before_update);
+
+        assert!(workspace.move_pane(PaneId(1), PaneId(5), DockDrop::Tab));
+        let (_, _, mut after_output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let after_update = after_output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("moved AccessKit update");
+        after_output.textures_delta.clear();
+        assert_eq!(before_id, tab_id(&after_update));
+    }
+
+    #[test]
+    fn focused_tab_enter_and_space_activate_through_response_clicked() {
+        for activation_key in [egui::Key::Enter, egui::Key::Space] {
+            let context = egui::Context::default();
+            let mut workspace = Workspace::analytical_default();
+            workspace.root = DockNode::Tabs {
+                id: DockNodeId(41),
+                tabs: vec![PaneId(1), PaneId(2)],
+                active: 0,
+            };
+            workspace.active_pane = PaneId(1);
+            let mut behaviour = DockBehaviour::default();
+            let (_, initial) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+            let second_tab = initial
+                .tabs
+                .iter()
+                .find_map(|(pane, rect)| (*pane == PaneId(2)).then_some(rect.center()))
+                .expect("second tab is visible");
+            let _ = dock_frame(
+                &context,
+                &mut workspace,
+                &mut behaviour,
+                vec![
+                    egui::Event::PointerMoved(second_tab),
+                    pointer_button(second_tab, true),
+                ],
+            );
+            let _ = dock_frame(
+                &context,
+                &mut workspace,
+                &mut behaviour,
+                vec![pointer_button(second_tab, false)],
+            );
+            assert_eq!(workspace.active_pane, PaneId(2));
+
+            workspace.activate(PaneId(1));
+            let (command, _) = dock_frame(
+                &context,
+                &mut workspace,
+                &mut behaviour,
+                vec![key(activation_key)],
+            );
+            assert!(command.is_none());
+            assert_eq!(workspace.active_pane, PaneId(2), "key={activation_key:?}");
+        }
+    }
+
+    #[test]
+    fn accesskit_splitter_adjustments_emit_the_existing_resize_command() {
+        for (action, expected_after) in [
+            (egui::accesskit::Action::Increment, 0.77),
+            (egui::accesskit::Action::Decrement, 0.67),
+        ] {
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let mut workspace = Workspace::analytical_default();
+            let mut behaviour = DockBehaviour::default();
+            let (_, _, mut output) =
+                dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+            let update = output
+                .platform_output
+                .accesskit_update
+                .take()
+                .expect("AccessKit update");
+            output.textures_delta.clear();
+            let target_node = update
+                .nodes
+                .iter()
+                .find_map(|(id, node)| {
+                    (node.role() == egui::accesskit::Role::Splitter
+                        && node.author_id() == Some("polyorama.dock.splitter.1"))
+                    .then_some(*id)
+                })
+                .expect("root splitter node");
+            let request = egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+                action,
+                target_tree: egui::accesskit::TreeId::ROOT,
+                target_node,
+                data: None,
+            });
+            let (command, _, mut output) =
+                dock_accesskit_frame(&context, &mut workspace, &mut behaviour, vec![request]);
+            output.textures_delta.clear();
+            let Command::ResizeSplit {
+                node,
+                before,
+                after,
+            } = command.expect("one splitter command")
+            else {
+                panic!("unexpected command");
+            };
+            assert_eq!(node, DockNodeId(1));
+            assert_eq!(before, 0.72);
+            assert!((after - expected_after).abs() < 1.0e-6, "action={action:?}");
+        }
+    }
+
+    #[test]
+    fn focused_splitter_arrow_emits_one_resize_command() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let (_, _, mut output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        let target_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, node)| {
+                (node.author_id() == Some("polyorama.dock.splitter.1")).then_some(*id)
+            })
+            .expect("root splitter node");
+        let focus = egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+            action: egui::accesskit::Action::Focus,
+            target_tree: egui::accesskit::TreeId::ROOT,
+            target_node,
+            data: None,
+        });
+        let (focus_command, _, mut output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, vec![focus]);
+        output.textures_delta.clear();
+        assert!(focus_command.is_none());
+        let splitter_id = egui::Id::new(("polyorama.dock.splitter", 1_u64));
+        assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
+        let (command, _, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::ArrowRight)],
+        );
+        output.textures_delta.clear();
+        let command = command.expect("focused arrow adjustment");
+        let Command::ResizeSplit {
+            node,
+            before,
+            after,
+        } = &command
+        else {
+            panic!("unexpected command");
+        };
+        assert_eq!(*node, DockNodeId(1));
+        assert_eq!(*before, 0.72);
+        assert!((*after - 0.77).abs() < 1.0e-6);
+        assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
+
+        let mut history = CommandHistory::default();
+        let mut document = Document::default();
+        let mut session = Session::default();
+        history.execute(command, &mut document, &mut session, &mut workspace);
+        let (second, _, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::ArrowRight)],
+        );
+        output.textures_delta.clear();
+        let Command::ResizeSplit { before, after, .. } = second.expect("second arrow adjustment")
+        else {
+            panic!("unexpected command");
+        };
+        assert!((before - 0.77).abs() < 1.0e-6);
+        assert!((after - 0.82).abs() < 1.0e-6);
+        assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
+    }
+
+    #[test]
+    fn focused_tab_keys_activate_and_move_focus_across_frames() {
+        let context = egui::Context::default();
+        let mut workspace = Workspace::analytical_default();
+        workspace.root = DockNode::Tabs {
+            id: DockNodeId(41),
+            tabs: vec![PaneId(1), PaneId(2), PaneId(3)],
+            active: 0,
+        };
+        let mut behaviour = DockBehaviour::default();
+        let (_, initial) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        let tab = initial.tabs[0].1.center();
+        let _ = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![egui::Event::PointerMoved(tab), pointer_button(tab, true)],
+        );
+        let _ = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![pointer_button(tab, false)],
+        );
+        for expected in [PaneId(2), PaneId(3), PaneId(1)] {
+            let (command, _) = dock_frame(
+                &context,
+                &mut workspace,
+                &mut behaviour,
+                vec![key(egui::Key::ArrowRight)],
+            );
+            assert!(command.is_none());
+            assert_eq!(workspace.active_pane, expected);
+            assert_eq!(
+                context.memory(|memory| memory.focused()),
+                Some(egui::Id::new(("polyorama.dock.tab", expected.0)))
+            );
+        }
+    }
+
+    #[test]
+    fn tab_activation_frames_keep_selection_body_and_focus_coherent() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        workspace.root = DockNode::Tabs {
+            id: DockNodeId(41),
+            tabs: vec![PaneId(1), PaneId(2)],
+            active: 0,
+        };
+        workspace.active_pane = PaneId(1);
+        let mut behaviour = DockBehaviour::default();
+        let (_, initial, mut output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        assert_eq!(
+            selected_tab_author_ids(&mut output),
+            vec!["polyorama.dock.tab.1"]
+        );
+        let second_tab = initial
+            .tabs
+            .iter()
+            .find_map(|(pane, rect)| (*pane == PaneId(2)).then_some(rect.center()))
+            .expect("second tab geometry");
+        let (_, _, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(second_tab),
+                pointer_button(second_tab, true),
+            ],
+        );
+        output.textures_delta.clear();
+        let (_, released, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![pointer_button(second_tab, false)],
+        );
+        assert_eq!(workspace.active_pane, PaneId(2));
+        assert_eq!(released.bodies.len(), 1);
+        assert_eq!(released.bodies[0].0, PaneId(2));
+        assert_eq!(
+            selected_tab_author_ids(&mut output),
+            vec!["polyorama.dock.tab.2"]
+        );
+
+        let (_, arrow, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::ArrowLeft)],
+        );
+        assert_eq!(workspace.active_pane, PaneId(1));
+        assert_eq!(arrow.bodies.len(), 1);
+        assert_eq!(arrow.bodies[0].0, PaneId(1));
+        assert_eq!(
+            selected_tab_author_ids(&mut output),
+            vec!["polyorama.dock.tab.1"]
+        );
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(egui::Id::new(("polyorama.dock.tab", 1_u64)))
+        );
+    }
+
+    #[test]
+    fn roving_focus_reaches_hidden_overflow_tabs_and_wraps() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        workspace.root = DockNode::Tabs {
+            id: DockNodeId(41),
+            tabs: (1_u32..=30).map(PaneId).collect(),
+            active: 0,
+        };
+        workspace.active_pane = PaneId(1);
+        let mut behaviour = DockBehaviour::default();
+        let (_, initial, mut output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
+        assert!(initial.tabs.len() < 30);
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        let first_tab = update
+            .nodes
+            .iter()
+            .find_map(|(id, node)| {
+                (node.author_id() == Some("polyorama.dock.tab.1")).then_some(*id)
+            })
+            .expect("first tab node");
+        let focus = egui::Event::AccessKitActionRequest(egui::accesskit::ActionRequest {
+            action: egui::accesskit::Action::Focus,
+            target_tree: egui::accesskit::TreeId::ROOT,
+            target_node: first_tab,
+            data: None,
+        });
+        let (_, _, mut output) =
+            dock_accesskit_frame(&context, &mut workspace, &mut behaviour, vec![focus]);
+        output.textures_delta.clear();
+
+        let (_, ended, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::End)],
+        );
+        assert_eq!(workspace.active_pane, PaneId(30));
+        assert!(ended.tabs.iter().any(|(pane, _)| *pane == PaneId(30)));
+        assert!(ended.bodies.iter().any(|(pane, _)| *pane == PaneId(30)));
+        assert_eq!(
+            selected_tab_author_ids(&mut output),
+            vec!["polyorama.dock.tab.30"]
+        );
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(egui::Id::new(("polyorama.dock.tab", 30_u32)))
+        );
+
+        let (_, wrapped, mut output) = dock_accesskit_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::ArrowRight)],
+        );
+        assert_eq!(workspace.active_pane, PaneId(1));
+        assert!(wrapped.tabs.iter().any(|(pane, _)| *pane == PaneId(1)));
+        assert!(wrapped.bodies.iter().any(|(pane, _)| *pane == PaneId(1)));
+        assert_eq!(
+            selected_tab_author_ids(&mut output),
+            vec!["polyorama.dock.tab.1"]
+        );
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(egui::Id::new(("polyorama.dock.tab", 1_u32)))
+        );
+    }
+
+    #[test]
     fn dock_tabs_are_measured_bounded_and_auditable_across_responsive_cases() {
         let labels = [
             "Results",
@@ -1002,8 +1733,8 @@ mod tests {
                         });
                         output.textures_delta.clear();
 
-                        assert_eq!(presenter.tabs.len(), 3);
-                        assert_eq!(presenter.text_layouts.len(), 3);
+                        assert!((1..=3).contains(&presenter.tabs.len()));
+                        assert_eq!(presenter.text_layouts.len(), presenter.tabs.len());
                         assert!(
                             presenter
                                 .tabs
@@ -1094,6 +1825,56 @@ mod tests {
         assert_eq!(history.undo_len(), 1);
         assert!(history.undo(&mut document, &mut session, &mut workspace));
         assert_eq!(workspace.root.split_fraction(node), Some(before_fraction));
+    }
+
+    #[test]
+    fn splitter_identity_survives_a_changing_parent_ui_id() {
+        let context = egui::Context::default();
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let node = DockNodeId(1);
+        let (_, initial) = dock_frame_with_parent_id(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            Vec::new(),
+            "parent-a",
+        );
+        let origin = initial.splitter(node).center();
+
+        let _ = dock_frame_with_parent_id(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(origin),
+                pointer_button(origin, true),
+            ],
+            "parent-b",
+        );
+        let (_, moved) = dock_frame_with_parent_id(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![egui::Event::PointerMoved(origin - egui::vec2(40.0, 0.0))],
+            "parent-a",
+        );
+        assert!((moved.splitter(node).center().x - (origin.x - 40.0)).abs() < 0.001);
+
+        let (command, _) = dock_frame_with_parent_id(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![pointer_button(origin - egui::vec2(40.0, 0.0), false)],
+            "parent-b",
+        );
+        assert!(matches!(
+            command,
+            Some(Command::ResizeSplit {
+                node: DockNodeId(1),
+                ..
+            })
+        ));
     }
 
     #[test]

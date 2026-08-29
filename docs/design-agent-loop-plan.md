@@ -1,6 +1,6 @@
 # Polyorama design system and agent UI loop plan
 
-Status: active; increment 3 verified candidate
+Status: active; increment 3 landed; increment 4 canonically verified candidate
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -20,7 +20,23 @@ changes remain human-review boundaries.
 
 ## Current phase
 
-Increment 3 is a verified candidate. The UI layer now owns typed measured-text
+Increment 3 is landed. Increment 4 now has an implementation
+candidate for the reusable dock shell: token-aware visual versus minimum-hit
+geometry, bounded visible tabs plus overflow, focus rings, roving tab keys,
+and exact-step keyboard/AccessKit splitter adjustment. It preserves the
+canonical dock command path and current geometry callbacks. Dock tabs,
+tab-lists, pane bodies and splitters now derive stable widget IDs from their
+domain IDs. Focus locks prevent egui's spatial navigation from stealing tab
+or splitter arrows; activation-frame tests keep selected semantics, focus and
+the shown pane coherent, including hidden overflow targets. Splitters use
+click-and-drag arbitration, exact 0.05 keyboard/AccessKit steps, retain the true
+press origin after delayed recognition, and pass native physical resize,
+undo/redo and out-and-back no-op checks. This is compatible
+egui AccessKit tree generation only; the eframe native adapter remains off and
+the current web integration discards updates, so OS/browser screen-reader
+delivery is not claimed.
+
+The UI layer owns typed measured-text
 roles, five explicit overflow policies, horizontal and vertical alignment,
 bounded line counts, responsive pane classes, serialisable observations and a
 deterministic one-point-tolerance audit. Dock tabs use egui galley measurement,
@@ -29,14 +45,14 @@ character-count width estimate. Application `TestSnapshot`/`UiGeometry`
 exports eight bounded tab observations and the audit without enumerating
 ordinary labels or virtualised collections.
 
-Canonical `cargo xtask verify` passes 106 tests, token drift, architecture,
+Canonical `cargo xtask verify` passes 117 tests, token drift, architecture,
 native and Wasm clippy, release native/Wasm builds, browser WebGPU and native
 GL/llvmpipe physical smokes. Retained browser/native observations report an
 empty text audit; a hardware-WebGPU Lantern run at 1279×756 is console-,
 network- and layout-clean. The new explicit evidence directory also prevents
 the canonical gate from overwriting tracked baseline artefacts. Complete
-shell/content text migration, pathological-strip minimum tab hit size and a
-tab overflow control remain increments 4 and 8.
+shell/content text migration remains increment 8; increment 4's dock-shell
+candidate now owns pathological tab allocation and overflow.
 
 ## Baseline evidence
 
@@ -52,10 +68,10 @@ tab overflow control remain increments 4 and 8.
   wasm-bindgen 0.2.127, egui/eframe 0.36.1, wgpu 30.0.1;
 - existing captures: [vertical-slice-evidence](vertical-slice-evidence).
 
-Baseline verification currently overwrites several tracked evidence files with
-run-dependent timings. Those changes were discarded after recording the pass.
-The tooling increment must redirect generated run artefacts to an explicit,
-ignored output directory before adding CI evidence publication.
+Baseline verification overwrote several tracked evidence files with
+run-dependent timings. Increment 3 corrected the canonical verifier to route
+both physical smokes into an explicit ignored output directory; CI publication
+of selected evidence remains increment 7.
 
 ## Audit findings
 
@@ -65,8 +81,9 @@ ignored output directory before adding CI evidence publication.
   thumbnail data; typography and component geometry use scattered literals.
 - Dock tab width used `title.len() * 7.2 + 22`; increment 3 replaces this
   violation with egui galley measurement and an architecture source check.
-- Custom tabs, splitters, thumbnail cells and annotation controls expose
-  physical geometry but no explicit AccessKit metadata.
+- At baseline, custom tabs, splitters, thumbnail cells and annotation controls
+  exposed physical geometry but no explicit AccessKit metadata. Increment 4's
+  candidate covers the dock tabs and splitters only.
 - Standard buttons provide egui semantics, while keyboard routing is local and
   there is no action registry.
 - `TestSnapshot` plus bounded `UiGeometry` is the correct cross-platform seed
@@ -83,9 +100,9 @@ ignored output directory before adding CI evidence publication.
 | Increment | Outcome | Depends on | Status | Durable evidence |
 | --- | --- | --- | --- | --- |
 | 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
-| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Candidate; canonically verified | Token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
-| 3 | Measured text roles, overflow, observations and layout audit | 2 | Candidate; canonically verified | Text fixtures, exported tab observations and empty audit |
-| 4 | Reusable accessible shell components and keyboard focus | 2–3 | Pending | Component tests and captures |
+| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
+| 3 | Measured text roles, overflow, observations and layout audit | 2 | Landed | PR #11, text fixtures, exported tab observations and empty audit |
+| 4 | Reusable accessible shell components and keyboard focus | 2–3 | Candidate; canonical verification passes | 31 focused UI tests, AccessKit tree checks and native physical smoke |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Pending | Gallery captures and manifests |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Pending | Semantic/keyboard tests |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Pending | CI runs and failure bundle probe |
@@ -114,8 +131,7 @@ show that the change is intentional.
 
 ## Next action
 
-Commit the canonically verified increment 3 candidate, independently review
-its exact head, repair any blocking finding and land it. Increment 4 can then
-build reusable accessible shell components, including a minimum-hit/overflow
-solution for pathological tab strips. Application-wide text and component
-migration remains deferred.
+Complete increment 4 native/Wasm and physical evidence, independently review
+the exact head, repair any blocking finding and land it. Then begin the
+native/browser gallery and typed story catalogue. Application-wide text and
+component migration remains deferred.

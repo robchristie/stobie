@@ -1,6 +1,233 @@
-use egui::{Frame, Margin, Stroke};
+use egui::{Frame, Margin, Rect, Response, Sense, Stroke};
 
-use crate::DesignTokens;
+use crate::{
+    DesignTokens, HorizontalTextAlignment, TextComponentId, TextOverflow, TextRole, TextSpec,
+    measure_text, paint_measured_text,
+};
+
+/// The shell keeps visual and hit geometry distinct. This is deliberately a
+/// small component boundary rather than a general widget framework.
+pub fn minimum_hit_rect(visual: Rect, minimum: f32, bounds: Rect) -> Rect {
+    let size = egui::vec2(visual.width().max(minimum), visual.height().max(minimum));
+    Rect::from_center_size(visual.center(), size).intersect(bounds)
+}
+
+/// Present one measured dock tab. The caller owns strip allocation and maps
+/// the returned response to the canonical dock command.
+pub struct DockTabSpec {
+    pub selected: bool,
+    pub visual_rect: Rect,
+    pub font_scale: f32,
+    pub component_id: TextComponentId,
+    pub parent_id: TextComponentId,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TabStripAllocation {
+    pub visible: Vec<usize>,
+    pub widths: Vec<f32>,
+    pub overflow: bool,
+}
+
+/// Allocate whole, ordered tab targets. `available_width` excludes strip
+/// padding; widths include neither gaps nor the overflow trigger.
+pub fn allocate_tab_strip(
+    desired_widths: &[f32],
+    active: usize,
+    available_width: f32,
+    minimum_hit: f32,
+    gap: f32,
+) -> TabStripAllocation {
+    let minimum = minimum_hit.max(1.0);
+    let gap = gap.max(0.0);
+    let count = desired_widths.len();
+    if count == 0 || !available_width.is_finite() {
+        return TabStripAllocation {
+            visible: Vec::new(),
+            widths: Vec::new(),
+            overflow: count != 0,
+        };
+    }
+    let minimum_total = count as f32 * minimum + count.saturating_sub(1) as f32 * gap;
+    let overflow = minimum_total > available_width;
+    let tab_capacity = if overflow {
+        (available_width - minimum - gap).max(0.0)
+    } else {
+        available_width
+    };
+    let maximum_visible = ((tab_capacity + gap) / (minimum + gap)).floor().max(0.0) as usize;
+    if maximum_visible == 0 {
+        return TabStripAllocation {
+            visible: Vec::new(),
+            widths: Vec::new(),
+            overflow,
+        };
+    }
+    let active = active.min(count - 1);
+    let mut visible = vec![active];
+    let mut right = active + 1;
+    let mut left = active;
+    while visible.len() < maximum_visible && (right < count || left > 0) {
+        if right < count {
+            visible.push(right);
+            right += 1;
+        }
+        if visible.len() < maximum_visible && left > 0 {
+            left -= 1;
+            visible.insert(0, left);
+        }
+    }
+    let visible_count = visible.len();
+    let gaps = gap * visible_count.saturating_sub(1) as f32;
+    let spare = (tab_capacity - gaps - visible_count as f32 * minimum).max(0.0);
+    let extras: Vec<_> = visible
+        .iter()
+        .map(|&index| (desired_widths[index].max(minimum) - minimum).max(0.0))
+        .collect();
+    let extra_total: f32 = extras.iter().sum();
+    let growth = spare.min(extra_total);
+    let widths = extras
+        .into_iter()
+        .map(|extra| {
+            minimum
+                + if extra_total > 0.0 {
+                    growth * extra / extra_total
+                } else {
+                    0.0
+                }
+        })
+        .collect();
+    TabStripAllocation {
+        visible,
+        widths,
+        overflow,
+    }
+}
+
+pub fn dock_tab_interaction(ui: &mut egui::Ui, id: egui::Id, hit_rect: Rect) -> Response {
+    let response = ui.interact(hit_rect, id, Sense::click_and_drag());
+    if response.clicked() {
+        response.request_focus();
+    }
+    response
+}
+
+pub fn paint_dock_tab(
+    ui: &mut egui::Ui,
+    response: &Response,
+    title: &str,
+    spec: DockTabSpec,
+    tokens: &DesignTokens,
+) -> Option<crate::TextLayoutObservation> {
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(
+            egui::WidgetType::SelectableLabel,
+            ui.is_enabled(),
+            spec.selected,
+            title,
+        )
+    });
+    ui.ctx().accesskit_node_builder(response.id, |node| {
+        use egui::accesskit::{Action, Role};
+        node.set_role(Role::Tab);
+        node.set_label(title);
+        node.set_author_id(format!("polyorama.dock.tab.{}", spec.component_id.instance));
+        node.set_selected(spec.selected);
+        node.add_action(Action::Click);
+    });
+    let fill = if spec.selected {
+        ui.visuals().extreme_bg_color
+    } else if response.hovered() {
+        ui.visuals().widgets.hovered.bg_fill
+    } else {
+        ui.visuals().widgets.inactive.bg_fill
+    };
+    ui.painter().rect_filled(spec.visual_rect, 4.0, fill);
+    if response.has_focus() {
+        ui.painter().rect_stroke(
+            spec.visual_rect,
+            4.0,
+            Stroke::new(1.0, tokens.colours.focus_ring),
+            egui::StrokeKind::Inside,
+        );
+    }
+    let padding = tokens
+        .geometry
+        .control_padding_x
+        .0
+        .min((spec.visual_rect.width() - 0.5).max(0.0) * 0.25);
+    let label_rect = spec.visual_rect.shrink2(egui::vec2(padding, 0.0));
+    let text_spec = TextSpec {
+        horizontal_alignment: HorizontalTextAlignment::Centre,
+        ..TextSpec::single_line(TextRole::TabLabel, TextOverflow::Ellipsis)
+    };
+    let observation = measure_text(
+        ui.painter(),
+        title,
+        text_spec,
+        tokens,
+        spec.font_scale,
+        label_rect.width().max(0.5),
+    )
+    .ok()
+    .map(|measured| {
+        paint_measured_text(
+            &ui.painter_at(label_rect),
+            &measured,
+            label_rect,
+            spec.component_id,
+            Some(spec.parent_id),
+        )
+    });
+    if observation
+        .as_ref()
+        .is_some_and(|observation| observation.truncated)
+    {
+        response.clone().on_hover_text(title);
+    }
+    observation
+}
+
+/// Present the explicit overflow trigger using a project-painted primitive,
+/// avoiding an untyped icon glyph dependency before the icon increment.
+pub fn dock_overflow_trigger(
+    ui: &mut egui::Ui,
+    id: egui::Id,
+    instance: u64,
+    hit_rect: Rect,
+    tokens: &DesignTokens,
+) -> Response {
+    let response = ui.interact(hit_rect, id, Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), "More tabs")
+    });
+    ui.ctx().accesskit_node_builder(id, |node| {
+        use egui::accesskit::{Action, Role};
+        node.set_role(Role::Button);
+        node.set_label("More tabs");
+        node.set_author_id(format!("polyorama.dock.tabs.overflow.{instance}"));
+        node.add_action(Action::Click);
+    });
+    ui.painter()
+        .rect_filled(hit_rect, 3.0, ui.visuals().widgets.inactive.bg_fill);
+    let centre = hit_rect.center();
+    for offset in [-5.0, 0.0, 5.0] {
+        ui.painter().circle_filled(
+            centre + egui::vec2(offset, 0.0),
+            1.35,
+            tokens.colours.text_primary,
+        );
+    }
+    if response.has_focus() {
+        ui.painter().rect_stroke(
+            hit_rect,
+            3.0,
+            Stroke::new(1.0, tokens.colours.focus_ring),
+            egui::StrokeKind::Inside,
+        );
+    }
+    response
+}
 
 /// The isolated application-bar recipe is the first production token
 /// consumer. Further component migration belongs to later campaign increments.
@@ -45,5 +272,68 @@ mod tests {
         assert_eq!(bounded_margin(7.4), 7);
         assert_eq!(bounded_margin(200.0), i8::MAX);
         assert_eq!(bounded_margin(f32::NAN), 0);
+    }
+
+    #[test]
+    fn tab_allocation_preserves_minimum_targets_and_active_visibility() {
+        let allocation = allocate_tab_strip(&[40.0, 180.0, 40.0, 40.0], 1, 130.0, 32.0, 3.0);
+        assert!(allocation.overflow);
+        assert!(allocation.visible.contains(&1));
+        assert!(allocation.widths.iter().all(|width| *width >= 32.0));
+        assert!(
+            allocation
+                .visible
+                .iter()
+                .zip(&allocation.widths)
+                .all(|(&index, &width)| width <= [40.0, 180.0, 40.0, 40.0][index])
+        );
+        assert_eq!(allocation.visible.len(), allocation.widths.len());
+        let all_fit = allocate_tab_strip(&[1.0, 2.0, 3.0], 1, 102.0, 32.0, 3.0);
+        assert!(!all_fit.overflow);
+        assert_eq!(all_fit.visible, vec![0, 1, 2]);
+        assert_eq!(all_fit.widths, vec![32.0, 32.0, 32.0]);
+        let minimum = allocate_tab_strip(&[200.0, 200.0], 1, 32.0, 32.0, 3.0);
+        assert!(minimum.overflow);
+        assert!(minimum.visible.is_empty());
+    }
+
+    #[test]
+    fn overflow_trigger_exposes_full_button_semantics_and_minimum_bounds() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let root = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(80.0, 40.0));
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                ..Default::default()
+            },
+            |ui| {
+                let _ = dock_overflow_trigger(
+                    ui,
+                    egui::Id::new("overflow-test"),
+                    7,
+                    Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(32.0, 32.0)),
+                    &DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable),
+                );
+            },
+        );
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        let overflow = update
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| node.author_id() == Some("polyorama.dock.tabs.overflow.7"))
+            .expect("overflow semantic node");
+        assert_eq!(overflow.role(), egui::accesskit::Role::Button);
+        assert_eq!(overflow.label(), Some("More tabs"));
+        assert!(overflow.supports_action(egui::accesskit::Action::Click));
+        let bounds = overflow.bounds().expect("overflow bounds");
+        assert_eq!(bounds.width(), 32.0);
+        assert_eq!(bounds.height(), 32.0);
     }
 }
