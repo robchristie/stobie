@@ -112,7 +112,7 @@ overflow controls, or a deliberate minimum-state presentation.
       focusability, visible focus and a usable hit target.
 - [ ] Buttons, tabs and splitters are keyboard operable; splitter adjustment
       and representative shortcuts are tested.
-- [ ] One `ActionId` drives control presentation, shortcut routing,
+- [ ] One application-owned `ActionKey` drives control presentation, shortcut routing,
       accessibility metadata, semantic tests and physical targeting.
 - [ ] Availability is context-sensitive and disabled reasons are observable.
 - [ ] A reusable `UiSnapshot` exposes stable semantic IDs, current bounded

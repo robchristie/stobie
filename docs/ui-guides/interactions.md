@@ -1,13 +1,18 @@
 # Interactions
 
-Every user-visible capability has a closed `ActionId` registry entry. Its
-`ActionSpec` supplies the stable ID, label, description, optional compact
-label, shortcut and scope. Controls, shortcut routing, semantic metadata,
-tests and physical targeting must share that action identity; do not create a
-parallel string action name.
+Every user-visible capability has an entry in an application-owned enum that
+implements the framework `ActionKey` trait. Its generic `ActionSpec<A>`
+supplies the label, description, optional compact label, shortcut and scope;
+the key supplies the stable external ID. Controls, shortcut routing, semantic
+metadata, tests and physical targeting must share that typed identity; do not
+create a parallel string action name or add application capabilities to
+`polyorama-ui-egui`.
 
-Bind a control to an `ActionTarget`: application actions have no pane target,
-while pane and active-pane actions have a stable `PaneId`. Respect
+Bind a control to an `ActionTarget<A>`: application actions have no pane
+target, while pane and active-pane actions have a stable `PaneId`. Shared UI
+components remain generic over `A`; semantic snapshots retain only a
+`SemanticActionId` derived from `ActionKey::stable_id` so diagnostic consumers
+do not need the originating application enum. Respect
 `Availability`: enabled, disabled with an observable reason, or hidden are
 different states. Disabled controls retain clear semantic explanation and do
 not silently consume an unavailable action.

@@ -1,9 +1,9 @@
 use egui::{Response, RichText, Slider, SliderClamping, TextStyle};
 
 use crate::{
-    ActionId, AppearancePreference, ContrastPreference, DensityPreference, DesignTokens,
-    MAX_FONT_SCALE, MIN_FONT_SCALE, MotionPreference, SemanticUiId, UiNode, UiPreferences, UiRect,
-    UiRole,
+    ActionKey, AppearancePreference, ContrastPreference, DensityPreference, DesignTokens,
+    MAX_FONT_SCALE, MIN_FONT_SCALE, MotionPreference, SemanticActionId, SemanticUiId, UiNode,
+    UiPreferences, UiRect, UiRole,
 };
 
 /// The result of presenting [`preferences_control`] for one frame.
@@ -28,10 +28,11 @@ pub struct PreferencesControlOutput {
 /// Semantic IDs derive from `parent`, the preference field and the value. The
 /// returned nodes use exact current-frame response bounds and remain direct
 /// children of `parent`, ready to append to the caller-owned [`crate::UiSnapshot`].
-pub fn preferences_control(
+pub fn preferences_control<A: ActionKey>(
     ui: &mut egui::Ui,
     preferences: &mut UiPreferences,
     parent: &SemanticUiId,
+    action: A,
 ) -> PreferencesControlOutput {
     let initial = *preferences;
     *preferences = preferences.validated();
@@ -46,6 +47,11 @@ pub fn preferences_control(
             ui.spacing_mut().item_spacing =
                 egui::vec2(tokens.spacing.inline.0, tokens.spacing.block.0);
             ui.spacing_mut().interact_size.y = preference_hit_height(&tokens, font_scale);
+            let mut semantics = PreferenceSemantics {
+                parent,
+                action,
+                nodes: &mut nodes,
+            };
 
             ui.vertical(|ui| {
                 preference_radio_group(
@@ -58,8 +64,7 @@ pub fn preferences_control(
                         (AppearancePreference::Dark, "Dark", "dark"),
                         (AppearancePreference::System, "System", "system"),
                     ],
-                    parent,
-                    &mut nodes,
+                    &mut semantics,
                 );
                 ui.add_space(tokens.spacing.section.0);
                 preference_radio_group(
@@ -71,8 +76,7 @@ pub fn preferences_control(
                         (ContrastPreference::Standard, "Standard", "standard"),
                         (ContrastPreference::High, "High", "high"),
                     ],
-                    parent,
-                    &mut nodes,
+                    &mut semantics,
                 );
                 ui.add_space(tokens.spacing.section.0);
                 preference_radio_group(
@@ -84,11 +88,10 @@ pub fn preferences_control(
                         (DensityPreference::Compact, "Compact", "compact"),
                         (DensityPreference::Comfortable, "Comfortable", "comfortable"),
                     ],
-                    parent,
-                    &mut nodes,
+                    &mut semantics,
                 );
                 ui.add_space(tokens.spacing.section.0);
-                preference_slider(ui, &mut preferences.font_scale, parent, &tokens, &mut nodes);
+                preference_slider(ui, &mut preferences.font_scale, &tokens, &mut semantics);
                 ui.add_space(tokens.spacing.section.0);
                 preference_radio_group(
                     ui,
@@ -99,8 +102,7 @@ pub fn preferences_control(
                         (MotionPreference::Full, "Full", "full"),
                         (MotionPreference::Reduced, "Reduced", "reduced"),
                     ],
-                    parent,
-                    &mut nodes,
+                    &mut semantics,
                 );
             })
             .response
@@ -127,19 +129,24 @@ fn preference_label(ui: &mut egui::Ui, text: &'static str) {
     ui.label(RichText::new(text).text_style(TextStyle::Button));
 }
 
-fn preference_radio_group<T: Copy + PartialEq>(
+struct PreferenceSemantics<'a, A: ActionKey> {
+    parent: &'a SemanticUiId,
+    action: A,
+    nodes: &'a mut Vec<UiNode>,
+}
+
+fn preference_radio_group<T: Copy + PartialEq, A: ActionKey>(
     ui: &mut egui::Ui,
     field_label: &'static str,
     field_id: &'static str,
     current: &mut T,
     options: &[(T, &'static str, &'static str)],
-    parent: &SemanticUiId,
-    nodes: &mut Vec<UiNode>,
+    semantics: &mut PreferenceSemantics<'_, A>,
 ) {
     preference_label(ui, field_label);
     ui.horizontal_wrapped(|ui| {
         for &(value, label, value_id) in options {
-            let semantic_id = preference_semantic_id(parent, field_id, value_id);
+            let semantic_id = preference_semantic_id(semantics.parent, field_id, value_id);
             let response = ui
                 .push_id((field_id, value_id), |ui| {
                     ui.radio_value(current, value, label)
@@ -147,30 +154,30 @@ fn preference_radio_group<T: Copy + PartialEq>(
                 .inner;
             let selected = *current == value;
             complete_radio_semantics(&response, &semantic_id, field_label, label, selected);
-            nodes.push(preference_radio_node(
+            semantics.nodes.push(preference_radio_node(
                 &response,
                 semantic_id,
-                parent,
+                semantics.parent,
                 field_label,
                 label,
                 selected,
+                semantics.action,
             ));
         }
     });
 }
 
-fn preference_slider(
+fn preference_slider<A: ActionKey>(
     ui: &mut egui::Ui,
     font_scale: &mut f32,
-    parent: &SemanticUiId,
     tokens: &DesignTokens,
-    nodes: &mut Vec<UiNode>,
+    semantics: &mut PreferenceSemantics<'_, A>,
 ) {
     preference_label(ui, "Font scale");
     ui.spacing_mut().slider_width = (ui.available_width()
         - tokens.geometry.minimum_hit_size.0 * 2.0)
         .max(tokens.geometry.minimum_hit_size.0);
-    let semantic_id = preference_semantic_id(parent, "font_scale", "value");
+    let semantic_id = preference_semantic_id(semantics.parent, "font_scale", "value");
     let response = ui
         .push_id(("font_scale", "value"), |ui| {
             ui.add_sized(
@@ -202,9 +209,9 @@ fn preference_slider(
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
     });
-    nodes.push(UiNode {
+    semantics.nodes.push(UiNode {
         id: semantic_id,
-        parent: Some(parent.clone()),
+        parent: Some(semantics.parent.clone()),
         role: UiRole::Slider,
         name: "Font scale".to_owned(),
         description: Some("Scale interface text from 100% to 150%".to_owned()),
@@ -216,7 +223,7 @@ fn preference_slider(
         expanded: None,
         pane: None,
         domain_reference: None,
-        actions: vec![ActionId::AppearanceSettings],
+        actions: vec![SemanticActionId::from_action(semantics.action)],
         disabled_reason: None,
     });
 }
@@ -247,13 +254,14 @@ fn complete_radio_semantics(
     });
 }
 
-fn preference_radio_node(
+fn preference_radio_node<A: ActionKey>(
     response: &Response,
     id: SemanticUiId,
     parent: &SemanticUiId,
     field: &str,
     label: &str,
     selected: bool,
+    action: A,
 ) -> UiNode {
     UiNode {
         id,
@@ -269,7 +277,7 @@ fn preference_radio_node(
         expanded: None,
         pane: None,
         domain_reference: None,
-        actions: vec![ActionId::AppearanceSettings],
+        actions: vec![SemanticActionId::from_action(action)],
         disabled_reason: None,
     }
 }
@@ -282,7 +290,10 @@ mod tests {
     use egui_kittest::{Harness, kittest::Queryable};
 
     use super::*;
-    use crate::{AccessKitMismatch, DensityVariant, ThemeVariant, UiSnapshot, audit_accesskit};
+    use crate::{
+        AccessKitMismatch, DensityVariant, ThemeVariant, UiSnapshot,
+        actions::test_support::TestAction, audit_accesskit,
+    };
 
     #[test]
     fn narrow_control_returns_stable_bounded_nodes_and_matching_accesskit_semantics() {
@@ -298,7 +309,12 @@ mod tests {
                 ..Default::default()
             },
             |ui| {
-                control = Some(preferences_control(ui, &mut preferences, &parent));
+                control = Some(preferences_control(
+                    ui,
+                    &mut preferences,
+                    &parent,
+                    TestAction::AppearanceSettings,
+                ));
             },
         );
         let update = frame
@@ -328,7 +344,12 @@ mod tests {
                 node.id.0,
                 node.rect
             );
-            assert_eq!(node.actions, vec![ActionId::AppearanceSettings]);
+            assert_eq!(
+                node.actions,
+                vec![SemanticActionId::from_action(
+                    TestAction::AppearanceSettings
+                )]
+            );
         }
 
         let snapshot = UiSnapshot {
@@ -390,7 +411,12 @@ mod tests {
         };
         let mut output = None;
         let mut frame = context.run_ui(Default::default(), |ui| {
-            output = Some(preferences_control(ui, &mut preferences, &root));
+            output = Some(preferences_control(
+                ui,
+                &mut preferences,
+                &root,
+                TestAction::AppearanceSettings,
+            ));
         });
         frame.textures_delta.clear();
 
@@ -406,7 +432,12 @@ mod tests {
             .with_size(egui::vec2(260.0, 560.0))
             .build_ui(move |ui| {
                 let mut preferences = observed.borrow_mut();
-                preferences_control(ui, &mut preferences, &SemanticUiId::root());
+                preferences_control(
+                    ui,
+                    &mut preferences,
+                    &SemanticUiId::root(),
+                    TestAction::AppearanceSettings,
+                );
             });
 
         let light = harness.get_by_role_and_label(egui::accesskit::Role::RadioButton, "Light");

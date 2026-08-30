@@ -136,8 +136,8 @@ The browser physical harness also asserts an empty semantic audit after every
 profiled interaction, including pane drag/drop where a narrow edge placement
 previously exposed clipped controls outside the root surface. The native and
 browser harnesses locate Undo, Redo, Save layout, Fit view, Link views and tool
-selection by `ActionId` in the current Rust snapshot, not by label or fixed
-coordinates.
+selection by the application-owned `ActionKey` identity in the current Rust
+snapshot, not by label or fixed coordinates.
 
 Candidate head `d05ac950bdc6f830d96aaee22373936e26d27a65` passed
 `cargo xtask verify`: 140 Rust tests, token drift and architecture checks,

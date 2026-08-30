@@ -232,7 +232,8 @@ cell recipes available to application code. Reference data is fixed and
 bounded: no clocks, randomness, workers, complete result rows or complete
 thumbnail collections participate. Action buttons, result rows and thumbnail
 cells expose full role/name/state/click semantics, stable author IDs, visible
-focus and measured labels; the future `ActionId` contract remains increment 6.
+focus and measured labels; the application-owned `ActionKey` contract remains
+increment 6.
 
 Every typed story renders headlessly through the production recipes at four
 representative configurations. Its `TextLayoutObservation` values must pass

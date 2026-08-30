@@ -172,7 +172,7 @@ performance-motivated product change was made in this increment.
 | Stable typed stories cover required matrices and composed scenes | Directly verified | 18-entry typed manifest, finite matrix tests and selected captures |
 | Every custom control exposes role, name, state, actions, focus and usable target | Directly verified | AccessKit/component tests, semantic audit and current geometry bounds |
 | Buttons, tabs and splitters are keyboard-operable | Directly verified | egui kittest, focus-navigation and splitter-adjustment tests |
-| One `ActionId` drives controls, shortcuts, accessibility, tests and targeting | Directly verified | Registry completeness/parity tests and both physical smokes |
+| One application-owned `ActionKey` drives controls, shortcuts, accessibility, tests and targeting | Directly verified | Registry completeness/parity tests and both physical smokes |
 | Availability and disabled reasons are observable | Directly verified | Context availability tests and semantic snapshots |
 | Reusable `UiSnapshot` exposes bounded IDs, geometry, actions, text and references | Directly verified | Snapshot schema tests and retained native/browser JSON |
 | AccessKit and augmented semantics cannot disagree silently | Directly verified | Parity tests and empty semantic audits |

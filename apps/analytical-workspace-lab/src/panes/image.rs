@@ -37,11 +37,11 @@ impl PaneSurface<'_> {
         let toolbar = ui.horizontal_wrapped(|ui| {
             if pane.0 <= 2 {
                 for (tool, action, control) in [
-                    (ActiveTool::Navigate, ActionId::NavigateTool, "navigate"),
-                    (ActiveTool::Polygon, ActionId::PolygonTool, "polygon"),
+                    (ActiveTool::Navigate, LabAction::NavigateTool, "navigate"),
+                    (ActiveTool::Polygon, LabAction::PolygonTool, "polygon"),
                     (
                         ActiveTool::EditVertex,
-                        ActionId::EditVerticesTool,
+                        LabAction::EditVerticesTool,
                         "edit_vertex",
                     ),
                 ] {
@@ -68,8 +68,8 @@ impl PaneSurface<'_> {
                 &self.tokens,
                 self.font_scale,
                 &toolbar_id,
-                ActionTarget::pane(ActionId::FitView, pane),
-                availability(ActionId::FitView, action_context),
+                ActionTarget::pane(LabAction::FitView, pane),
+                availability(LabAction::FitView, action_context),
                 false,
                 true,
                 self.active_pane == pane,
@@ -82,8 +82,8 @@ impl PaneSurface<'_> {
                 &self.tokens,
                 self.font_scale,
                 &toolbar_id,
-                ActionTarget::pane(ActionId::LinkViews, pane),
-                availability(ActionId::LinkViews, action_context),
+                ActionTarget::pane(LabAction::LinkViews, pane),
+                availability(LabAction::LinkViews, action_context),
                 linked,
                 true,
                 self.active_pane == pane,
@@ -104,8 +104,8 @@ impl PaneSurface<'_> {
                     self.outputs,
                 );
             } else {
-                let target = ActionTarget::pane(ActionId::DisplaySettings, pane);
-                let control_availability = availability(ActionId::DisplaySettings, action_context);
+                let target = ActionTarget::pane(LabAction::DisplaySettings, pane);
+                let control_availability = availability(LabAction::DisplaySettings, action_context);
                 let response = action_button(
                     ui,
                     ActionButtonSpec {
@@ -157,8 +157,8 @@ impl PaneSurface<'_> {
                     &self.tokens,
                     self.font_scale,
                     &toolbar_id,
-                    ActionTarget::pane(ActionId::CommitPolygon, pane),
-                    availability(ActionId::CommitPolygon, action_context),
+                    ActionTarget::pane(LabAction::CommitPolygon, pane),
+                    availability(LabAction::CommitPolygon, action_context),
                     false,
                     true,
                     self.active_pane == pane,
@@ -172,8 +172,8 @@ impl PaneSurface<'_> {
                     &self.tokens,
                     self.font_scale,
                     &toolbar_id,
-                    ActionTarget::pane(ActionId::DeleteAnnotation, pane),
-                    availability(ActionId::DeleteAnnotation, action_context),
+                    ActionTarget::pane(LabAction::DeleteAnnotation, pane),
+                    availability(LabAction::DeleteAnnotation, action_context),
                     false,
                     true,
                     self.active_pane == pane,
@@ -402,7 +402,7 @@ fn present_display_controls(
             (DisplayMap::Greyscale, "Greyscale"),
             (DisplayMap::Threshold, "Threshold"),
         ],
-        ActionId::DisplaySettings,
+        LabAction::DisplaySettings,
         tokens,
     );
     record_display_control(ui, pane, map, outputs);
@@ -413,7 +413,7 @@ fn present_display_controls(
         "Low",
         &mut display.window_low,
         low_window_range(display.window_high),
-        ActionId::DisplaySettings,
+        LabAction::DisplaySettings,
         tokens,
     );
     record_display_control(ui, pane, low, outputs);
@@ -424,7 +424,7 @@ fn present_display_controls(
         "High",
         &mut display.window_high,
         high_window_range(display.window_low),
-        ActionId::DisplaySettings,
+        LabAction::DisplaySettings,
         tokens,
     );
     record_display_control(ui, pane, high, outputs);
