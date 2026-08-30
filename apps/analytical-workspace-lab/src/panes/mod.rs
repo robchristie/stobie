@@ -8,14 +8,15 @@ use polyorama_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionId, ActionScope, ActionTarget, Availability,
+    ActionButtonSpec, ActionEmphasis, ActionKey, ActionScope, ActionTarget, Availability,
     DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter, SemanticUiId,
-    TextLayoutObservation, UiNode, UiRole, action_button, action_spec, allocate_viewport,
-    choice_control, consume_action_shortcut, diagnostic_row, image_status_height,
-    paint_image_status, range_control, section_heading, stage_render_callback,
+    TextLayoutObservation, UiNode, UiRole, action_button, allocate_viewport, choice_control,
+    consume_action_shortcut, diagnostic_row, image_status_height, paint_image_status,
+    range_control, section_heading, stage_render_callback,
 };
 use web_time::Instant;
 
+use crate::actions::LabAction;
 use crate::thumbnail_cache::ThumbnailCache;
 use crate::ui_geometry::{PaneUiRect, SplitterUiRect, UiGeometry};
 
@@ -56,7 +57,7 @@ fn present_action(
     tokens: &DesignTokens,
     font_scale: f32,
     parent: &SemanticUiId,
-    target: ActionTarget,
+    target: ActionTarget<LabAction>,
     availability: Availability,
     selected: bool,
     compact: bool,
@@ -64,7 +65,7 @@ fn present_action(
     legacy_name: &'static str,
 ) -> bool {
     if !availability.visible()
-        || (action_spec(target.action).scope == ActionScope::ActivePane && !active_pane)
+        || (target.action.specification().scope == ActionScope::ActivePane && !active_pane)
     {
         return false;
     }
@@ -995,7 +996,7 @@ mod tests {
                     &tokens,
                     1.0,
                     &parent,
-                    ActionTarget::pane(ActionId::DeleteAnnotation, PaneId(2)),
+                    ActionTarget::pane(LabAction::DeleteAnnotation, PaneId(2)),
                     Availability::Enabled,
                     false,
                     false,
@@ -1008,7 +1009,7 @@ mod tests {
                     &tokens,
                     1.0,
                     &parent,
-                    ActionTarget::pane(ActionId::DeleteAnnotation, PaneId(1)),
+                    ActionTarget::pane(LabAction::DeleteAnnotation, PaneId(1)),
                     Availability::Enabled,
                     false,
                     false,
@@ -1023,7 +1024,11 @@ mod tests {
             .ui_geometry
             .semantic_nodes
             .iter()
-            .filter(|node| node.actions.contains(&ActionId::DeleteAnnotation))
+            .filter(|node| {
+                node.actions
+                    .iter()
+                    .any(|action| action.as_str() == LabAction::DeleteAnnotation.stable_id())
+            })
             .map(|node| node.pane)
             .collect();
         assert_eq!(owners, vec![Some(PaneId(1))]);

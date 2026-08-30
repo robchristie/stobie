@@ -9,8 +9,8 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionId, ActionTarget, DockBehaviour, DockTextContext,
-    SemanticUiId, UiNode, UiPreferences, UiRole, UiSnapshot, action_button, application_bar_frame,
+    ActionButtonSpec, ActionEmphasis, ActionTarget, DockBehaviour, DockTextContext, SemanticUiId,
+    UiNode, UiPreferences, UiRole, UiSnapshot, action_button, application_bar_frame,
     application_bar_height, apply_design_system, audit_text_layouts, consume_action_shortcut,
     dock_workspace, measured_inline_label, preferences_control, stage_renderer_maintenance,
     submit_render_plan,
@@ -21,7 +21,7 @@ use web_time::Instant;
 
 use crate::{
     APPLICATION_NAME,
-    actions::{ActionContext, availability},
+    actions::{ActionContext, LabAction, availability},
     panes::{
         AnnotationUiState, FrameOutput, PaneFeatureState, PaneIntent, PaneReadModel, PaneSurface,
         UiBehaviour, should_cancel_camera_drag,
@@ -800,8 +800,8 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         &mut ui_geometry.text_layouts,
                     );
                     ui.separator();
-                    let undo_availability = availability(ActionId::Undo, action_context);
-                    let undo_target = ActionTarget::application(ActionId::Undo);
+                    let undo_availability = availability(LabAction::Undo, action_context);
+                    let undo_target = ActionTarget::application(LabAction::Undo);
                     let undo = action_button(
                         ui,
                         ActionButtonSpec {
@@ -823,7 +823,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         &undo,
                     );
                     if undo_availability.enabled()
-                        && (undo.clicked() || consume_action_shortcut(ui, ActionId::Undo, true))
+                        && (undo.clicked() || consume_action_shortcut(ui, LabAction::Undo, true))
                         && self.history.undo(
                             &mut self.document,
                             &mut self.session,
@@ -832,8 +832,8 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    let redo_availability = availability(ActionId::Redo, action_context);
-                    let redo_target = ActionTarget::application(ActionId::Redo);
+                    let redo_availability = availability(LabAction::Redo, action_context);
+                    let redo_target = ActionTarget::application(LabAction::Redo);
                     let redo = action_button(
                         ui,
                         ActionButtonSpec {
@@ -855,7 +855,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         &redo,
                     );
                     if redo_availability.enabled()
-                        && (redo.clicked() || consume_action_shortcut(ui, ActionId::Redo, true))
+                        && (redo.clicked() || consume_action_shortcut(ui, LabAction::Redo, true))
                         && self.history.redo(
                             &mut self.document,
                             &mut self.session,
@@ -864,8 +864,8 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
-                    let save_availability = availability(ActionId::SaveLayout, action_context);
-                    let save_target = ActionTarget::application(ActionId::SaveLayout);
+                    let save_availability = availability(LabAction::SaveLayout, action_context);
+                    let save_target = ActionTarget::application(LabAction::SaveLayout);
                     let save = action_button(
                         ui,
                         ActionButtonSpec {
@@ -888,13 +888,14 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     );
                     if save_availability.enabled()
                         && (save.clicked()
-                            || consume_action_shortcut(ui, ActionId::SaveLayout, true))
+                            || consume_action_shortcut(ui, LabAction::SaveLayout, true))
                     {
                         save_now = true;
                         self.status = "Workspace saved".into();
                     }
-                    let reset_availability = availability(ActionId::ResetWorkspace, action_context);
-                    let reset_target = ActionTarget::application(ActionId::ResetWorkspace);
+                    let reset_availability =
+                        availability(LabAction::ResetWorkspace, action_context);
+                    let reset_target = ActionTarget::application(LabAction::ResetWorkspace);
                     let reset = action_button(
                         ui,
                         ActionButtonSpec {
@@ -922,8 +923,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
                     let appearance_availability =
-                        availability(ActionId::AppearanceSettings, action_context);
-                    let appearance_target = ActionTarget::application(ActionId::AppearanceSettings);
+                        availability(LabAction::AppearanceSettings, action_context);
+                    let appearance_target =
+                        ActionTarget::application(LabAction::AppearanceSettings);
                     let appearance = action_button(
                         ui,
                         ActionButtonSpec {
@@ -946,7 +948,12 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     );
                     if let Some(popup) = egui::Popup::menu(&appearance).show(|ui| {
                         ui.set_width(tokens.geometry.minimum_hit_size.0 * 7.0);
-                        preferences_control(ui, &mut self.preferences, &application_bar_id)
+                        preferences_control(
+                            ui,
+                            &mut self.preferences,
+                            &application_bar_id,
+                            LabAction::AppearanceSettings,
+                        )
                     }) {
                         preferences_changed |= popup.inner.changed;
                         for node in popup.inner.nodes {

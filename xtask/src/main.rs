@@ -308,8 +308,52 @@ fn architecture() -> Result<()> {
     if canonical_definitions != 1 {
         bail!("expected exactly one canonical Workspace definition, found {canonical_definitions}");
     }
+    let action_source = fs::read_to_string("crates/polyorama-ui-egui/src/actions.rs")?;
+    let framework_actions = action_source
+        .split_once("#[cfg(test)]")
+        .map_or(action_source.as_str(), |(production, _)| production);
+    for required in [
+        "pub trait ActionKey",
+        "pub struct ActionSpec<A: ActionKey>",
+        "pub struct ActionTarget<A: ActionKey>",
+    ] {
+        if !framework_actions.contains(required) {
+            bail!("egui action framework is missing generic boundary: {required}");
+        }
+    }
+    let mut egui_sources = Vec::new();
+    collect_rust_sources(Path::new("crates/polyorama-ui-egui/src"), &mut egui_sources)?;
+    for path in egui_sources {
+        let source = fs::read_to_string(&path)?;
+        if source.starts_with("#![cfg(test)]") {
+            continue;
+        }
+        if source.contains("ActionKey for ") {
+            bail!(
+                "egui action framework source {} implements ActionKey; move the application registry to its application crate",
+                path.display()
+            );
+        }
+        if source.contains("enum ActionId") {
+            bail!("egui action framework retains the legacy ActionId registry");
+        }
+    }
+    for (path, implementation) in [
+        (
+            "apps/analytical-workspace-lab/src/actions.rs",
+            "impl ActionKey for LabAction",
+        ),
+        (
+            "apps/polyorama-gallery/src/app.rs",
+            "impl ActionKey for GalleryAction",
+        ),
+    ] {
+        if !fs::read_to_string(path)?.contains(implementation) {
+            bail!("application-owned action registry is missing: {implementation}");
+        }
+    }
     println!(
-        "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }

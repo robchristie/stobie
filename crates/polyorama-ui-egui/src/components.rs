@@ -3,11 +3,11 @@ use std::ops::RangeInclusive;
 use egui::{Color32, Frame, Margin, Painter, Rect, Response, Sense, Stroke};
 
 #[cfg(test)]
-use crate::{AccessKitMismatch, ActionId, UiSnapshot, audit_accesskit};
+use crate::{AccessKitMismatch, UiSnapshot, audit_accesskit, test_actions::TestAction};
 use crate::{
-    ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
-    SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec, UiNode, UiRole,
-    VerticalTextAlignment, action_spec, measure_text, paint_measured_text,
+    ActionKey, ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
+    SemanticActionId, SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec, UiNode,
+    UiRole, VerticalTextAlignment, measure_text, paint_measured_text,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -52,8 +52,8 @@ pub fn paint_splitter(
     }
 }
 
-pub struct ActionButtonSpec {
-    pub target: ActionTarget,
+pub struct ActionButtonSpec<A: ActionKey> {
+    pub target: ActionTarget<A>,
     pub availability: Availability,
     pub selected: bool,
     pub emphasis: ActionEmphasis,
@@ -63,15 +63,15 @@ pub struct ActionButtonSpec {
 /// Token-derived action control shared by production screens and gallery
 /// stories. The label is measured, elided deliberately and retained in full
 /// for widget and accessibility semantics.
-pub fn action_button(
+pub fn action_button<A: ActionKey>(
     ui: &mut egui::Ui,
-    spec: ActionButtonSpec,
+    spec: ActionButtonSpec<A>,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
     debug_assert!(spec.availability.visible());
-    let action = action_spec(spec.target.action);
+    let action = spec.target.action.specification();
     let visible_label = if spec.compact {
         action.compact_label.unwrap_or(action.label)
     } else {
@@ -108,7 +108,11 @@ pub fn action_button(
     let (_, hit_rect) = ui.allocate_space(egui::vec2(width, hit_height));
     let response = ui.interact(
         hit_rect,
-        egui::Id::new(("polyorama.action-button", spec.target)),
+        egui::Id::new((
+            "polyorama.action-button",
+            spec.target.action.stable_id(),
+            spec.target.pane,
+        )),
         if enabled {
             Sense::click()
         } else {
@@ -194,8 +198,7 @@ pub fn action_button(
             label_rect,
             TextComponentId::new(
                 crate::TextComponentKind::ActionButton,
-                u64::from(spec.target.action as u8) << 32
-                    | u64::from(spec.target.pane.map_or(0, |pane| pane.0)),
+                crate::actions::stable_action_hash(spec.target.action, spec.target.pane),
             ),
             None,
         ));
@@ -210,14 +213,14 @@ pub fn action_button(
     response
 }
 
-pub fn action_semantic_node(
+pub fn action_semantic_node<A: ActionKey>(
     response: &Response,
-    target: ActionTarget,
+    target: ActionTarget<A>,
     availability: &Availability,
     selected: bool,
     parent: SemanticUiId,
 ) -> UiNode {
-    let action = action_spec(target.action);
+    let action = target.action.specification();
     UiNode {
         id: SemanticUiId::new(target.semantic_id()),
         parent: Some(parent),
@@ -232,7 +235,7 @@ pub fn action_semantic_node(
         expanded: None,
         pane: target.pane,
         domain_reference: target.pane.map(DomainReference::Pane),
-        actions: vec![target.action],
+        actions: vec![SemanticActionId::from_action(target.action)],
         disabled_reason: availability.disabled_reason().map(ToOwned::to_owned),
     }
 }
@@ -245,14 +248,14 @@ pub struct SemanticControlOutput {
 /// Present a bounded labelled choice using egui's native combo-box behaviour
 /// while fixing stable Polyorama and AccessKit identity at the recipe boundary.
 #[allow(clippy::too_many_arguments)]
-pub fn choice_control<T: Copy + Eq>(
+pub fn choice_control<T: Copy + Eq, A: ActionKey>(
     ui: &mut egui::Ui,
     semantic_id: SemanticUiId,
     parent: SemanticUiId,
     label: &str,
     value: &mut T,
     options: &[(T, &'static str)],
-    action: crate::ActionId,
+    action: A,
     tokens: &DesignTokens,
 ) -> SemanticControlOutput {
     let selected_before = options
@@ -296,7 +299,7 @@ pub fn choice_control<T: Copy + Eq>(
             expanded: None,
             pane: None,
             domain_reference: None,
-            actions: vec![action],
+            actions: vec![SemanticActionId::from_action(action)],
             disabled_reason: None,
         },
         response,
@@ -306,14 +309,14 @@ pub fn choice_control<T: Copy + Eq>(
 /// Present a stable, token-sized range control with matching AccessKit and
 /// augmented snapshot semantics.
 #[allow(clippy::too_many_arguments)]
-pub fn range_control(
+pub fn range_control<A: ActionKey>(
     ui: &mut egui::Ui,
     semantic_id: SemanticUiId,
     parent: SemanticUiId,
     label: &str,
     value: &mut f32,
     range: RangeInclusive<f32>,
-    action: crate::ActionId,
+    action: A,
     tokens: &DesignTokens,
 ) -> SemanticControlOutput {
     let minimum = *range.start();
@@ -358,7 +361,7 @@ pub fn range_control(
             expanded: None,
             pane: None,
             domain_reference: None,
-            actions: vec![action],
+            actions: vec![SemanticActionId::from_action(action)],
             disabled_reason: None,
         },
         response,
@@ -1273,7 +1276,7 @@ mod tests {
                 let button = action_button(
                     ui,
                     ActionButtonSpec {
-                        target: ActionTarget::application(ActionId::Undo),
+                        target: ActionTarget::application(TestAction::Undo),
                         availability: Availability::Disabled {
                             reason: "History is empty".into(),
                         },
@@ -1289,7 +1292,8 @@ mod tests {
                     button.id,
                     egui::Id::new((
                         "polyorama.action-button",
-                        ActionTarget::application(ActionId::Undo),
+                        TestAction::Undo.stable_id(),
+                        Option::<polyorama_core::PaneId>::None,
                     ))
                 );
                 let result = result_row(
@@ -1334,7 +1338,7 @@ mod tests {
                         "Display map",
                         &mut choice,
                         &[(0, "Viridis"), (1, "Greyscale")],
-                        ActionId::DisplaySettings,
+                        TestAction::DisplaySettings,
                         &tokens,
                     )
                     .node,
@@ -1348,7 +1352,7 @@ mod tests {
                         "Low",
                         &mut low,
                         0.0..=0.8,
-                        ActionId::DisplaySettings,
+                        TestAction::DisplaySettings,
                         &tokens,
                     )
                     .node,
@@ -1406,11 +1410,9 @@ mod tests {
         assert!(range.supports_action(egui::accesskit::Action::Decrement));
         assert_eq!(control_nodes[0].role, UiRole::ComboBox);
         assert_eq!(control_nodes[1].role, UiRole::Slider);
-        assert!(
-            control_nodes
-                .iter()
-                .all(|node| node.actions == vec![ActionId::DisplaySettings])
-        );
+        assert!(control_nodes.iter().all(|node| {
+            node.actions == vec![SemanticActionId::from_action(TestAction::DisplaySettings)]
+        }));
         assert!(observations.len() >= 6);
     }
 
@@ -1464,7 +1466,7 @@ mod tests {
         let availability = Availability::Disabled {
             reason: "History is empty".into(),
         };
-        let target = ActionTarget::application(ActionId::Undo);
+        let target = ActionTarget::application(TestAction::Undo);
         let mut semantic = None;
         let mut output = context.run_ui(
             egui::RawInput {
@@ -1541,7 +1543,7 @@ mod tests {
                 let fit = action_button(
                     ui,
                     ActionButtonSpec {
-                        target: ActionTarget::pane(ActionId::FitView, polyorama_core::PaneId(1)),
+                        target: ActionTarget::pane(TestAction::FitView, polyorama_core::PaneId(1)),
                         availability: Availability::Enabled,
                         selected: false,
                         emphasis: ActionEmphasis::Normal,
@@ -1555,7 +1557,7 @@ mod tests {
                 action_button(
                     ui,
                     ActionButtonSpec {
-                        target: ActionTarget::application(ActionId::Undo),
+                        target: ActionTarget::application(TestAction::Undo),
                         availability: Availability::Disabled {
                             reason: "History is empty".into(),
                         },

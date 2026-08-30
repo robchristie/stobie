@@ -11,6 +11,8 @@ mod preferences_control;
 mod responsive;
 mod semantics;
 mod style;
+#[cfg(test)]
+mod test_actions;
 mod text;
 
 pub use actions::*;

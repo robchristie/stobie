@@ -5,18 +5,125 @@ use polyorama_core::{
     CommandHistory, DockNode, DockNodeId, Document, PaneId, Session, SplitAxis, Workspace,
 };
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionId, ActionTarget, AppearancePreference, Availability,
-    ContrastPreference, DensityPreference, DesignTokens, DockBehaviour, DockTextContext,
-    DomainReference, PanePresenter, SemanticUiId, SplitterVisualState, StatusTone,
-    TextAuditFinding, TextLayoutObservation, ThumbnailCellSpec, ThumbnailState, UiNode,
-    UiPreferences, UiRole, UiSnapshot, action_button, action_semantic_node, application_bar_frame,
-    application_bar_height, apply_design_system, audit_text_layouts, choice_control,
-    dock_workspace, paint_splitter, property_row, range_control, result_row, status_badge,
-    thumbnail_cell,
+    ActionButtonSpec, ActionEmphasis, ActionKey, ActionScope, ActionShortcut, ActionSpec,
+    ActionTarget, AppearancePreference, Availability, ContrastPreference, DensityPreference,
+    DesignTokens, DockBehaviour, DockTextContext, DomainReference, PanePresenter, SemanticUiId,
+    ShortcutKey, SplitterVisualState, StatusTone, TextAuditFinding, TextLayoutObservation,
+    ThumbnailCellSpec, ThumbnailState, UiNode, UiPreferences, UiRole, UiSnapshot, action_button,
+    action_semantic_node, application_bar_frame, application_bar_height, apply_design_system,
+    audit_text_layouts, choice_control, dock_workspace, paint_splitter, property_row,
+    range_control, result_row, status_badge, thumbnail_cell,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::catalogue::{STORIES, StoryId, story_definition};
+
+/// Gallery-owned fixture actions used to demonstrate the generic controls.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GalleryAction {
+    Undo,
+    SaveLayout,
+    ResetWorkspace,
+    FitView,
+    LinkViews,
+    NavigateTool,
+    PolygonTool,
+    EditVerticesTool,
+    DisplaySettings,
+}
+
+impl ActionKey for GalleryAction {
+    fn stable_id(self) -> &'static str {
+        match self {
+            Self::Undo => "undo",
+            Self::SaveLayout => "save_layout",
+            Self::ResetWorkspace => "reset_workspace",
+            Self::FitView => "fit_view",
+            Self::LinkViews => "link_views",
+            Self::NavigateTool => "navigate_tool",
+            Self::PolygonTool => "polygon_tool",
+            Self::EditVerticesTool => "edit_vertices_tool",
+            Self::DisplaySettings => "display_settings",
+        }
+    }
+
+    fn specification(self) -> ActionSpec<Self> {
+        let (label, description, compact_label, shortcut, scope) = match self {
+            Self::Undo => (
+                "Undo",
+                "Undo the most recent change",
+                None,
+                Some(ActionShortcut::command(ShortcutKey::Z)),
+                ActionScope::Application,
+            ),
+            Self::SaveLayout => (
+                "Save layout",
+                "Persist the current workspace layout",
+                Some("Save"),
+                Some(ActionShortcut::command(ShortcutKey::S)),
+                ActionScope::Application,
+            ),
+            Self::ResetWorkspace => (
+                "Reset workspace",
+                "Restore the default workspace, cameras and tools",
+                Some("Reset"),
+                None,
+                ActionScope::Application,
+            ),
+            Self::FitView => (
+                "Fit view",
+                "Fit the complete image into the active viewport",
+                Some("Fit"),
+                Some(ActionShortcut::new(ShortcutKey::F)),
+                ActionScope::Pane,
+            ),
+            Self::LinkViews => (
+                "Link views",
+                "Link or unlink this camera with camera group A",
+                Some("Link A"),
+                Some(ActionShortcut::new(ShortcutKey::L)),
+                ActionScope::Pane,
+            ),
+            Self::NavigateTool => (
+                "Navigate",
+                "Pan and zoom the active viewport",
+                None,
+                Some(ActionShortcut::new(ShortcutKey::One)),
+                ActionScope::Pane,
+            ),
+            Self::PolygonTool => (
+                "Polygon",
+                "Create a polygon annotation",
+                None,
+                Some(ActionShortcut::new(ShortcutKey::Two)),
+                ActionScope::Pane,
+            ),
+            Self::EditVerticesTool => (
+                "Edit vertices",
+                "Move vertices of the selected polygon",
+                Some("Edit"),
+                Some(ActionShortcut::new(ShortcutKey::Three)),
+                ActionScope::Pane,
+            ),
+            Self::DisplaySettings => (
+                "Display",
+                "Adjust the image colour map and scalar window",
+                None,
+                None,
+                ActionScope::Pane,
+            ),
+        };
+        ActionSpec {
+            id: self,
+            label,
+            description,
+            compact_label,
+            shortcut,
+            scope,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -412,7 +519,7 @@ fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
 #[allow(clippy::too_many_arguments)]
 fn gallery_action_button(
     ui: &mut egui::Ui,
-    target: ActionTarget,
+    target: ActionTarget<GalleryAction>,
     availability: Availability,
     selected: bool,
     emphasis: ActionEmphasis,
@@ -465,7 +572,7 @@ fn render_story(
             ui.horizontal(|ui| {
                 gallery_action_button(
                     ui,
-                    ActionTarget::application(ActionId::SaveLayout),
+                    ActionTarget::application(GalleryAction::SaveLayout),
                     Availability::Enabled,
                     false,
                     ActionEmphasis::Normal,
@@ -477,7 +584,7 @@ fn render_story(
                 );
                 gallery_action_button(
                     ui,
-                    ActionTarget::application(ActionId::ResetWorkspace),
+                    ActionTarget::application(GalleryAction::ResetWorkspace),
                     Availability::Enabled,
                     false,
                     ActionEmphasis::Primary,
@@ -489,7 +596,7 @@ fn render_story(
                 );
                 gallery_action_button(
                     ui,
-                    ActionTarget::pane(ActionId::LinkViews, PaneId(1)),
+                    ActionTarget::pane(GalleryAction::LinkViews, PaneId(1)),
                     Availability::Enabled,
                     true,
                     ActionEmphasis::Quiet,
@@ -504,7 +611,7 @@ fn render_story(
         StoryId::ButtonDisabled => {
             gallery_action_button(
                 ui,
-                ActionTarget::application(ActionId::Undo),
+                ActionTarget::application(GalleryAction::Undo),
                 Availability::Disabled {
                     reason: "History is empty".into(),
                 },
@@ -522,14 +629,15 @@ fn render_story(
                 ui.memory_mut(|memory| {
                     memory.request_focus(egui::Id::new((
                         "polyorama.action-button",
-                        ActionTarget::pane(ActionId::FitView, PaneId(1)),
+                        GalleryAction::FitView.stable_id(),
+                        Some(PaneId(1)),
                     )));
                 });
                 *focus_story = Some(story);
             }
             let response = gallery_action_button(
                 ui,
-                ActionTarget::pane(ActionId::FitView, PaneId(1)),
+                ActionTarget::pane(GalleryAction::FitView, PaneId(1)),
                 Availability::Enabled,
                 false,
                 ActionEmphasis::Normal,
@@ -603,11 +711,11 @@ fn toolbar_story(
     ui.set_max_width((if narrow { 296.0_f32 } else { 720.0_f32 }).min(ui.available_width()));
     ui.horizontal_wrapped(|ui| {
         for (action, selected) in [
-            (ActionId::NavigateTool, true),
-            (ActionId::PolygonTool, false),
-            (ActionId::EditVerticesTool, false),
-            (ActionId::FitView, false),
-            (ActionId::LinkViews, true),
+            (GalleryAction::NavigateTool, true),
+            (GalleryAction::PolygonTool, false),
+            (GalleryAction::EditVerticesTool, false),
+            (GalleryAction::FitView, false),
+            (GalleryAction::LinkViews, true),
         ] {
             gallery_action_button(
                 ui,
@@ -631,7 +739,7 @@ fn toolbar_story(
             "Display map",
             &mut map,
             &[(0, "Viridis"), (1, "Greyscale"), (2, "Threshold")],
-            ActionId::DisplaySettings,
+            GalleryAction::DisplaySettings,
             tokens,
         );
         semantic_nodes.push(map.node);
@@ -643,7 +751,7 @@ fn toolbar_story(
             "Low",
             &mut low,
             0.0..=0.8,
-            ActionId::DisplaySettings,
+            GalleryAction::DisplaySettings,
             tokens,
         );
         semantic_nodes.push(low.node);
@@ -655,7 +763,7 @@ fn toolbar_story(
             "High",
             &mut high,
             0.2..=1.0,
-            ActionId::DisplaySettings,
+            GalleryAction::DisplaySettings,
             tokens,
         );
         semantic_nodes.push(high.node);

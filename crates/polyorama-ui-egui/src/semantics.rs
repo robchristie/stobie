@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use polyorama_core::{AnnotationId, DockNodeId, PaneId, ResultId, TileKey};
 use serde::{Deserialize, Serialize};
 
-use crate::{ActionId, TextAuditFinding, TextLayoutObservation};
+use crate::{ActionKey, TextAuditFinding, TextLayoutObservation};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UiRect {
@@ -50,6 +50,25 @@ pub struct SemanticUiId(pub String);
 impl Default for SemanticUiId {
     fn default() -> Self {
         Self::root()
+    }
+}
+
+/// Stable serialised action identity retained by semantic snapshots.
+///
+/// Live controls remain typed by the application's [`ActionKey`]. Snapshots
+/// intentionally retain only its stable identity so diagnostic consumers do
+/// not need the originating application's Rust enum.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SemanticActionId(pub String);
+
+impl SemanticActionId {
+    pub fn from_action<A: ActionKey>(action: A) -> Self {
+        Self(action.stable_id().to_owned())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -127,7 +146,7 @@ pub struct UiNode {
     pub expanded: Option<bool>,
     pub pane: Option<PaneId>,
     pub domain_reference: Option<DomainReference>,
-    pub actions: Vec<ActionId>,
+    pub actions: Vec<SemanticActionId>,
     pub disabled_reason: Option<String>,
 }
 
@@ -182,10 +201,11 @@ impl UiSnapshot {
         self.nodes.iter().filter(move |node| node.name == name)
     }
 
-    pub fn by_action(&self, action: ActionId) -> impl Iterator<Item = &UiNode> {
+    pub fn by_action<A: ActionKey>(&self, action: A) -> impl Iterator<Item = &UiNode> {
+        let action = action.stable_id();
         self.nodes
             .iter()
-            .filter(move |node| node.actions.contains(&action))
+            .filter(move |node| node.actions.iter().any(|candidate| candidate.0 == action))
     }
 
     pub fn in_pane(&self, pane: PaneId) -> impl Iterator<Item = &UiNode> {
@@ -440,6 +460,7 @@ pub fn audit_accesskit(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_actions::TestAction;
 
     fn sample() -> UiSnapshot {
         let root = SemanticUiId::root();
@@ -478,7 +499,7 @@ mod tests {
                     expanded: None,
                     pane: None,
                     domain_reference: None,
-                    actions: vec![ActionId::Undo],
+                    actions: vec![SemanticActionId::from_action(TestAction::Undo)],
                     disabled_reason: Some("History is empty".into()),
                 },
             ],
@@ -494,8 +515,12 @@ mod tests {
         assert!(snapshot.audit().is_empty());
         assert_eq!(snapshot.by_role(UiRole::Button).count(), 1);
         assert_eq!(snapshot.by_name("Undo").count(), 1);
-        assert_eq!(snapshot.by_action(ActionId::Undo).count(), 1);
+        assert_eq!(snapshot.by_action(TestAction::Undo).count(), 1);
         assert_eq!(snapshot.nodes.len(), 2);
+        assert_eq!(
+            serde_json::to_value(&snapshot).unwrap()["nodes"][1]["actions"],
+            serde_json::json!(["undo"])
+        );
     }
 
     #[test]

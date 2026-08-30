@@ -7,6 +7,8 @@ use polyorama_ui_egui::{
 };
 use serde::Serialize;
 
+use crate::actions::LabAction;
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct PaneUiRect {
     pub pane: PaneId,
@@ -89,7 +91,7 @@ impl UiGeometry {
     pub fn action(
         &mut self,
         parent: SemanticUiId,
-        target: ActionTarget,
+        target: ActionTarget<LabAction>,
         availability: &Availability,
         selected: bool,
         response: &egui::Response,
