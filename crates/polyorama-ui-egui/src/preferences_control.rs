@@ -291,8 +291,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        AccessKitMismatch, DensityVariant, ThemeVariant, UiSnapshot,
-        actions::test_support::TestAction, audit_accesskit,
+        AccessKitMismatch, DensityVariant, ThemeVariant, UiSnapshot, audit_accesskit,
+        test_actions::TestAction,
     };
 
     #[test]

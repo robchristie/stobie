@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use egui::{Color32, Frame, Margin, Painter, Rect, Response, Sense, Stroke};
 
 #[cfg(test)]
-use crate::{AccessKitMismatch, UiSnapshot, actions::test_support::TestAction, audit_accesskit};
+use crate::{AccessKitMismatch, UiSnapshot, audit_accesskit, test_actions::TestAction};
 use crate::{
     ActionKey, ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
     SemanticActionId, SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec, UiNode,

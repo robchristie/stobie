@@ -321,31 +321,35 @@ fn architecture() -> Result<()> {
             bail!("egui action framework is missing generic boundary: {required}");
         }
     }
-    for application_action in [
-        "enum ActionId",
-        "FitView",
-        "PolygonTool",
-        "DeleteAnnotation",
-        "RecenterPrimary",
-    ] {
-        if framework_actions.contains(application_action) {
+    let mut egui_sources = Vec::new();
+    collect_rust_sources(Path::new("crates/polyorama-ui-egui/src"), &mut egui_sources)?;
+    for path in egui_sources {
+        let source = fs::read_to_string(&path)?;
+        if source.starts_with("#![cfg(test)]") {
+            continue;
+        }
+        if source.contains("ActionKey for ") {
             bail!(
-                "egui action framework owns application capability {application_action}; move it to the application action registry"
+                "egui action framework source {} implements ActionKey; move the application registry to its application crate",
+                path.display()
             );
         }
+        if source.contains("enum ActionId") {
+            bail!("egui action framework retains the legacy ActionId registry");
+        }
     }
-    for (path, registry) in [
+    for (path, implementation) in [
         (
             "apps/analytical-workspace-lab/src/actions.rs",
-            "pub enum LabAction",
+            "impl ActionKey for LabAction",
         ),
         (
             "apps/polyorama-gallery/src/app.rs",
-            "pub enum GalleryAction",
+            "impl ActionKey for GalleryAction",
         ),
     ] {
-        if !fs::read_to_string(path)?.contains(registry) {
-            bail!("application-owned action registry is missing: {registry}");
+        if !fs::read_to_string(path)?.contains(implementation) {
+            bail!("application-owned action registry is missing: {implementation}");
         }
     }
     println!(

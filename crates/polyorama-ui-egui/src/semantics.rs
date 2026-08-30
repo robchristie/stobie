@@ -460,7 +460,7 @@ pub fn audit_accesskit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::actions::test_support::TestAction;
+    use crate::test_actions::TestAction;
 
     fn sample() -> UiSnapshot {
         let root = SemanticUiId::root();
