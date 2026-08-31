@@ -152,6 +152,7 @@ fn preference_radio_group<T: Copy + PartialEq, A: ActionKey>(
                     ui.radio_value(current, value, label)
                 })
                 .inner;
+            crate::record_native_text_control(&response, crate::NativeTextControlKind::RadioButton);
             let selected = *current == value;
             complete_radio_semantics(&response, &semantic_id, field_label, label, selected);
             semantics.nodes.push(preference_radio_node(
@@ -190,6 +191,7 @@ fn preference_slider<A: ActionKey>(
             )
         })
         .inner;
+    crate::record_native_text_control(&response, crate::NativeTextControlKind::Slider);
     ui.ctx().accesskit_node_builder(response.id, |node| {
         use egui::accesskit::{Action, Role};
         node.set_role(Role::Slider);
@@ -303,6 +305,7 @@ mod tests {
         let parent = SemanticUiId::root();
         let mut preferences = UiPreferences::default();
         let mut control = None;
+        let mut coverage = None;
         let mut frame = context.run_ui(
             egui::RawInput {
                 screen_rect: Some(root_rect),
@@ -315,6 +318,7 @@ mod tests {
                     &parent,
                     TestAction::AppearanceSettings,
                 ));
+                coverage = Some(crate::text_audit_coverage(ui.ctx(), &[]));
             },
         );
         let update = frame
@@ -325,6 +329,18 @@ mod tests {
         frame.textures_delta.clear();
         let control = control.expect("preference control output");
 
+        let coverage = coverage.expect("preference text coverage");
+        assert_eq!(coverage.measured_components, 0);
+        assert_eq!(coverage.native_text_controls, 10);
+        assert_eq!(coverage.observed_native_controls, 0);
+        assert_eq!(
+            coverage.excluded_categories,
+            vec![
+                crate::TextExclusion::OrdinaryEguiLabels,
+                crate::TextExclusion::NativeRadioButtonText,
+                crate::TextExclusion::NativeSliderText,
+            ]
+        );
         assert!(!control.changed);
         assert!(control.rect.is_positive());
         assert_eq!(control.nodes.len(), 10);
@@ -353,6 +369,7 @@ mod tests {
         }
 
         let snapshot = UiSnapshot {
+            text_audit_coverage: Some(coverage),
             root: parent.clone(),
             nodes: std::iter::once(UiNode::container(
                 parent,

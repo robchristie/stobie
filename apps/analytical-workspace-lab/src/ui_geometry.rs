@@ -2,8 +2,8 @@ use eframe::egui;
 use polyorama_core::{DockNodeId, PaneId, ResultId};
 pub use polyorama_ui_egui::UiRect;
 use polyorama_ui_egui::{
-    ActionTarget, Availability, SemanticUiId, TextAuditFinding, TextLayoutObservation, UiNode,
-    UiRole, UiSnapshot, action_semantic_node,
+    ActionTarget, Availability, SemanticUiId, TextAuditCoverage, TextAuditFinding,
+    TextLayoutObservation, UiNode, UiRole, UiSnapshot, action_semantic_node,
 };
 use serde::Serialize;
 
@@ -56,6 +56,7 @@ pub struct UiGeometry {
     /// Bounded observations for Polyorama-owned text components only.
     pub text_layouts: Vec<TextLayoutObservation>,
     pub text_audit: Vec<TextAuditFinding>,
+    pub text_audit_coverage: Option<TextAuditCoverage>,
     /// Bounded semantic observations for the current frame only.
     pub semantic_nodes: Vec<UiNode>,
 }
@@ -113,6 +114,7 @@ impl UiGeometry {
             nodes: self.semantic_nodes.clone(),
             text: self.text_layouts.clone(),
             text_audit: self.text_audit.clone(),
+            text_audit_coverage: self.text_audit_coverage.clone(),
             semantic_audit: Vec::new(),
         };
         snapshot.semantic_audit = snapshot.audit();
@@ -149,6 +151,7 @@ mod tests {
         let value = serde_json::to_value(geometry).unwrap();
         assert_eq!(value["text_layouts"], serde_json::json!([]));
         assert_eq!(value["text_audit"], serde_json::json!([]));
+        assert!(value["text_audit_coverage"].is_null());
     }
 
     #[test]

@@ -33,5 +33,15 @@
       "truncated": false
     }
   ],
-  "audit": []
+  "audit": [],
+  "coverage": {
+    "measured_components": 1,
+    "native_text_controls": 23,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_selectable_text"
+    ]
+  }
 }

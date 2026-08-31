@@ -17,6 +17,13 @@ Before adding or changing a reusable component, state and test:
 - visual and minimum hit geometry separately; and
 - bounded observations required for `UiSnapshot` and text auditing.
 
+When using a native text control, call `record_native_text_control` on its
+response with the matching `NativeTextControlKind`, including any options
+submitted inside an open popup. This records the denominator without pretending
+to measure egui's internal labels. Collect `text_audit_coverage` at the end of
+the same UI pass; never substitute AccessKit nodes for layout observations.
+Ordinary labels, headings and hover text remain an explicit excluded category.
+
 Use `TextSpec`, `TextRole` and `TextOverflow`; production widths come from
 egui galley measurement, never character counts. Keep numeric values end
 aligned. Retain full semantic text when paint is elided. The five supported

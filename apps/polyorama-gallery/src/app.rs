@@ -1,3 +1,4 @@
+use polyorama_ui_egui::{NativeTextControlKind, record_native_text_control};
 use std::{collections::BTreeSet, str::FromStr};
 
 use eframe::egui;
@@ -217,6 +218,7 @@ pub struct GallerySnapshot {
     pub story_rect: GalleryRect,
     pub text: Vec<TextLayoutObservation>,
     pub text_audit: Vec<TextAuditFinding>,
+    pub text_audit_coverage: Option<polyorama_ui_egui::TextAuditCoverage>,
     pub ui_snapshot: UiSnapshot,
 }
 
@@ -254,6 +256,7 @@ impl GalleryApp {
                 story_rect: GalleryRect::default(),
                 text: Vec::new(),
                 text_audit: Vec::new(),
+                text_audit_coverage: None,
                 ui_snapshot: UiSnapshot::default(),
             },
             focus_story: None,
@@ -353,6 +356,10 @@ impl eframe::App for GalleryApp {
             })
             .inner;
         let text_audit = audit_text_layouts(&observations);
+        let text_audit_coverage = Some(polyorama_ui_egui::text_audit_coverage(
+            &context,
+            &observations,
+        ));
         let story_id = SemanticUiId::new("gallery.story");
         let mut story_node = UiNode::container(
             story_id,
@@ -369,6 +376,7 @@ impl eframe::App for GalleryApp {
             nodes: semantic_nodes,
             text: observations.clone(),
             text_audit: text_audit.clone(),
+            text_audit_coverage: text_audit_coverage.clone(),
             semantic_audit: Vec::new(),
         };
         ui_snapshot.semantic_audit = ui_snapshot.audit();
@@ -380,6 +388,7 @@ impl eframe::App for GalleryApp {
             story_rect: story_rect.into(),
             text: observations,
             text_audit,
+            text_audit_coverage,
             ui_snapshot,
         };
 
@@ -406,81 +415,96 @@ fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignToke
             ui.horizontal_centered(|ui| {
                 ui.strong("Polyorama component gallery");
                 ui.separator();
-                egui::ComboBox::from_id_salt("gallery.appearance")
+                let combo = egui::ComboBox::from_id_salt("gallery.appearance")
                     .selected_text(format!("{:?}", app.configuration.appearance))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
+                        let option = ui.selectable_value(
                             &mut app.configuration.appearance,
                             AppearancePreference::Light,
                             "Light",
                         );
-                        ui.selectable_value(
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
                             &mut app.configuration.appearance,
                             AppearancePreference::Dark,
                             "Dark",
                         );
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
-                egui::ComboBox::from_id_salt("gallery.contrast")
+                record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
+                let combo = egui::ComboBox::from_id_salt("gallery.contrast")
                     .selected_text(format!("{:?}", app.configuration.contrast))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
+                        let option = ui.selectable_value(
                             &mut app.configuration.contrast,
                             ContrastPreference::Standard,
                             "Standard contrast",
                         );
-                        ui.selectable_value(
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
                             &mut app.configuration.contrast,
                             ContrastPreference::High,
                             "High contrast",
                         );
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
-                egui::ComboBox::from_id_salt("gallery.density")
+                record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
+                let combo = egui::ComboBox::from_id_salt("gallery.density")
                     .selected_text(format!("{:?}", app.configuration.density))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
+                        let option = ui.selectable_value(
                             &mut app.configuration.density,
                             DensityPreference::Compact,
                             "Compact",
                         );
-                        ui.selectable_value(
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
                             &mut app.configuration.density,
                             DensityPreference::Comfortable,
                             "Comfortable",
                         );
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
-                egui::ComboBox::from_id_salt("gallery.scale")
+                record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
+                let combo = egui::ComboBox::from_id_salt("gallery.scale")
                     .selected_text(format!(
                         "{}%",
                         (app.configuration.font_scale * 100.0) as u16
                     ))
                     .show_ui(ui, |ui| {
                         for scale in [1.0, 1.25, 1.5] {
-                            ui.selectable_value(
+                            let option = ui.selectable_value(
                                 &mut app.configuration.font_scale,
                                 scale,
                                 format!("{}%", (scale * 100.0) as u16),
                             );
+                            record_native_text_control(&option, NativeTextControlKind::Selectable);
                         }
                     });
-                egui::ComboBox::from_id_salt("gallery.width")
+                record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
+                let combo = egui::ComboBox::from_id_salt("gallery.width")
                     .selected_text(format!("{:?}", app.configuration.width))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
+                        let option = ui.selectable_value(
                             &mut app.configuration.width,
                             GalleryWidth::Narrow,
                             "Narrow",
                         );
-                        ui.selectable_value(
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
                             &mut app.configuration.width,
                             GalleryWidth::Regular,
                             "Regular",
                         );
-                        ui.selectable_value(
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
                             &mut app.configuration.width,
                             GalleryWidth::Wide,
                             "Wide",
                         );
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
+                record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
             });
         });
 }
@@ -505,10 +529,10 @@ fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
                                 .strong(),
                         );
                     }
-                    if ui
-                        .selectable_label(app.selected == definition.id, definition.id.as_str())
-                        .clicked()
-                    {
+                    let option =
+                        ui.selectable_label(app.selected == definition.id, definition.id.as_str());
+                    record_native_text_control(&option, NativeTextControlKind::Selectable);
+                    if option.clicked() {
                         app.select_story(definition.id);
                     }
                 }

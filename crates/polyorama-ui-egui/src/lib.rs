@@ -14,6 +14,7 @@ mod style;
 #[cfg(test)]
 mod test_actions;
 mod text;
+mod text_coverage;
 
 pub use actions::*;
 pub use components::*;
@@ -25,6 +26,7 @@ pub use responsive::*;
 pub use semantics::*;
 pub use style::*;
 pub use text::*;
+pub use text_coverage::*;
 pub use virtual_grid::*;
 
 use egui::{Pos2, Rect, Ui};
@@ -488,10 +490,10 @@ fn render_node(
                 );
                 egui::Popup::menu(&response).show(|ui| {
                     for (index, pane) in tabs.iter().copied().enumerate() {
-                        if ui
-                            .selectable_label(index == shown_active, presenter.title(pane))
-                            .clicked()
-                        {
+                        let option =
+                            ui.selectable_label(index == shown_active, presenter.title(pane));
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        if option.clicked() {
                             behaviour.pending = Some(DockAction::Activate(pane));
                             ui.close();
                         }

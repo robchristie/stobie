@@ -1117,6 +1117,10 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
         outputs.ui_geometry.text_audit = audit_text_layouts(&outputs.ui_geometry.text_layouts);
+        outputs.ui_geometry.text_audit_coverage = Some(polyorama_ui_egui::text_audit_coverage(
+            &ctx,
+            &outputs.ui_geometry.text_layouts,
+        ));
         self.last_ui_snapshot = outputs.ui_geometry.snapshot(frame_number);
         self.last_ui_geometry = outputs.ui_geometry.clone();
         self.apply_outputs(&ctx, outputs);

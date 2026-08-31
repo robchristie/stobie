@@ -27,6 +27,16 @@ Every command writes a versioned JSON `summary.json`; `list`, `render`,
 artefacts. `verify` compares pixels at zero tolerance and compares canonical
 metadata, semantic snapshots and text observations structurally.
 
+Each `text.json` includes `coverage` with measured component and native control
+counts plus excluded categories. The `audit-text` summary retains coverage per
+fixture and states the bounded meaning of a pass. Missing coverage or counts
+inconsistent with the observations fail verification. Empty findings mean
+“Every observed Polyorama text component passed”, not “Every visible string was
+structurally audited”. Counts cover the submitted layout pass, including clipped
+controls and gallery chrome; ordinary labels remain excluded. See the
+[design language](../design-language.md) for the denominator and native-widget
+boundary.
+
 The verifier is deliberately read-only with respect to `expected/`. It has no
 approval or update mode. A mismatch writes a fixture-specific bundle under
 `<output>/failures/` containing expected and actual metadata, semantic, text

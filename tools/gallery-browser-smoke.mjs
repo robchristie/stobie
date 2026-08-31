@@ -136,6 +136,9 @@ try {
   let current = await snapshot();
   if (current.story !== 'reference/application-shell' || current.story_count !== 18
       || current.text.length === 0 || current.text_audit.length !== 0
+      || current.text_audit_coverage?.native_text_controls !== manifest.length + 5
+      || current.text_audit_coverage.observed_native_controls !== 0
+      || JSON.stringify(current.text_audit_coverage) !== JSON.stringify(current.ui_snapshot.text_audit_coverage)
       || current.ui_snapshot.nodes.length === 0 || current.ui_snapshot.nodes.length >= 1_000
       || current.ui_snapshot.semantic_audit.length !== 0
       || !current.ui_snapshot.nodes.some((node) => node.role === 'tab')
@@ -223,6 +226,7 @@ try {
     idle_frame_before: idleBefore,
     idle_frame_after: idleAfter,
     text_audit_findings: current.text_audit.length,
+    text_audit_coverage: current.text_audit_coverage,
     semantic_node_count: current.ui_snapshot.nodes.length,
     semantic_audit_findings: current.ui_snapshot.semantic_audit.length,
   }, null, 2)}\n`);

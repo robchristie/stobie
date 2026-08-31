@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use polyorama_core::{AnnotationId, DockNodeId, PaneId, ResultId, TileKey};
 use serde::{Deserialize, Serialize};
 
-use crate::{ActionKey, TextAuditFinding, TextLayoutObservation};
+use crate::{ActionKey, TextAuditCoverage, TextAuditFinding, TextLayoutObservation};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UiRect {
@@ -185,6 +185,9 @@ pub struct UiSnapshot {
     pub nodes: Vec<UiNode>,
     pub text: Vec<TextLayoutObservation>,
     pub text_audit: Vec<TextAuditFinding>,
+    /// None means coverage was not collected (including older snapshots).
+    #[serde(default)]
+    pub text_audit_coverage: Option<TextAuditCoverage>,
     pub semantic_audit: Vec<SemanticAuditFinding>,
 }
 
@@ -505,8 +508,17 @@ mod tests {
             ],
             text: Vec::new(),
             text_audit: Vec::new(),
+            text_audit_coverage: None,
             semantic_audit: Vec::new(),
         }
+    }
+
+    #[test]
+    fn legacy_snapshot_does_not_claim_zero_coverage() {
+        let mut value = serde_json::to_value(sample()).unwrap();
+        value.as_object_mut().unwrap().remove("text_audit_coverage");
+        let snapshot: UiSnapshot = serde_json::from_value(value).unwrap();
+        assert!(snapshot.text_audit_coverage.is_none());
     }
 
     #[test]

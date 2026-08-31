@@ -340,6 +340,10 @@ try {
         || node.rect.max_y <= node.rect.min_y)) {
     throw new Error(`image display controls are incomplete: ${JSON.stringify(displayNodes)}`);
   }
+  if (displayMenu.ui_snapshot.text_audit_coverage?.native_text_controls !== 3
+      || displayMenu.ui_snapshot.text_audit_coverage.observed_native_controls !== 0) {
+    throw new Error('display text coverage must count the native combo box and two sliders');
+  }
   await page.screenshot({ path: join(evidenceRoot, 'browser-display-controls.png') });
   await page.keyboard.press('Escape');
   await clickTarget({ kind: 'action', action: 'appearance_settings' });
@@ -358,6 +362,16 @@ try {
       || preferenceNodes.some((node) => node.rect.max_x <= node.rect.min_x
         || node.rect.max_y <= node.rect.min_y)) {
     throw new Error(`appearance controls are incomplete: ${JSON.stringify(preferenceNodes)}`);
+  }
+  const preferenceCoverage = preferenceMenu.ui_snapshot.text_audit_coverage;
+  if (preferenceCoverage?.native_text_controls !== 10
+      || preferenceCoverage.observed_native_controls !== 0
+      || preferenceCoverage.measured_components <= 0
+      || !preferenceCoverage.excluded_categories.includes('ordinary_egui_labels')
+      || !preferenceCoverage.excluded_categories.includes('native_radio_button_text')
+      || !preferenceCoverage.excluded_categories.includes('native_slider_text')
+      || JSON.stringify(preferenceCoverage) !== JSON.stringify(preferenceMenu.ui_geometry.text_audit_coverage)) {
+    throw new Error(`appearance text coverage is incomplete: ${JSON.stringify(preferenceCoverage)}`);
   }
   await page.screenshot({ path: join(evidenceRoot, 'browser-appearance-controls.png') });
   await page.keyboard.press('Escape');
@@ -435,6 +449,7 @@ try {
       results_scroll: initialSemantic.ui_geometry.results_scroll,
       text_layouts: initialSemantic.ui_geometry.text_layouts,
       text_audit: initialSemantic.ui_geometry.text_audit,
+      text_audit_coverage: initialSemantic.ui_geometry.text_audit_coverage,
     },
     initial: {
       visible_tile_keys: initialSemantic.visible_tile_keys,
@@ -449,12 +464,14 @@ try {
     },
     appearance_controls: {
       action: 'appearance_settings',
+      text_audit_coverage: preferenceCoverage,
       node_count: preferenceNodes.length,
       ids: preferenceNodes.map((node) => node.id),
       actions: preferenceNodes.map((node) => node.actions),
     },
     display_controls: {
       action: 'display_settings',
+      text_audit_coverage: displayMenu.ui_snapshot.text_audit_coverage,
       nodes: displayNodes.map((node) => ({ id: node.id, role: node.role, actions: node.actions })),
     },
     viewport_status: {

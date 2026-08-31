@@ -401,6 +401,9 @@ pub enum TextAuditFinding {
     },
 }
 
+/// Audit only the supplied Polyorama-owned layout observations. Empty findings
+/// do not certify unobserved native controls or ordinary labels; retain
+/// [`crate::TextAuditCoverage`] with the findings to state the denominator.
 pub fn audit_text_layouts(observations: &[TextLayoutObservation]) -> Vec<TextAuditFinding> {
     let mut findings = Vec::new();
     for observation in observations {

@@ -174,7 +174,12 @@ function stableText(snapshot) {
     const rightKey = `${right.component_id.kind}:${right.component_id.instance}`;
     return leftKey.localeCompare(rightKey);
   });
-  return { schema_version: 1, observations, audit: snapshot.text_audit };
+  return {
+    schema_version: 1,
+    observations,
+    audit: snapshot.text_audit,
+    coverage: snapshot.text_audit_coverage,
+  };
 }
 
 async function pixelStatistics(page, screenshot) {

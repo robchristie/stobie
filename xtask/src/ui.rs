@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{Context, Result, anyhow, bail};
 use polyorama_gallery::{GalleryConfiguration, StoryId};
+use polyorama_ui_egui::TextAuditCoverage;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -146,6 +147,7 @@ pub fn verify(root: &Path, output_directory: &Path) -> Result<()> {
             }
             let semantic = read_json(&actual.join("semantic.json"))?;
             let text = read_json(&actual.join("text.json"))?;
+            read_text_coverage(&text)?;
             if has_findings(&semantic, "semantic_audit")? || has_findings(&text, "audit")? {
                 failed = true;
             }
@@ -461,11 +463,13 @@ fn audit_text(root: &Path, manifest: &FixtureManifest, arguments: &UiArguments) 
     };
     let mut failed = Vec::new();
     let mut errors = Vec::new();
+    let mut coverage = Vec::new();
     for fixture in &fixtures {
         let output = arguments.output_directory.join(&fixture.id);
         let result = (|| -> Result<bool> {
             capture(root, fixture, &output, None)?;
             let text = read_json(&output.join("text.json"))?;
+            coverage.push(json!({ "fixture": fixture.id, "coverage": read_text_coverage(&text)? }));
             let semantic = read_json(&output.join("semantic.json"))?;
             Ok(has_findings(&text, "audit")? || has_findings(&semantic, "semantic_audit")?)
         })();
@@ -490,7 +494,9 @@ fn audit_text(root: &Path, manifest: &FixtureManifest, arguments: &UiArguments) 
         json!({
             "fixture_count": fixtures.len(),
             "failed_fixtures": failed,
-            "capture_errors": errors
+            "capture_errors": errors,
+            "pass_meaning": "Every observed Polyorama text component passed.",
+            "coverage": coverage
         }),
     )?;
     if status == "failed" {
@@ -706,6 +712,24 @@ fn has_complete_evidence(directory: &Path) -> bool {
         .all(|name| directory.join(name).is_file())
 }
 
+fn read_text_coverage(text: &Value) -> Result<TextAuditCoverage> {
+    let coverage: TextAuditCoverage = serde_json::from_value(text["coverage"].clone())
+        .context("text evidence is missing valid coverage metadata")?;
+    let observations = text["observations"]
+        .as_array()
+        .ok_or_else(|| anyhow!("text evidence is missing observations"))?;
+    let components: BTreeSet<String> = observations
+        .iter()
+        .map(|observation| observation["component_id"].to_string())
+        .collect();
+    if coverage.measured_components != components.len()
+        || coverage.observed_native_controls > coverage.native_text_controls
+    {
+        bail!("text coverage counts disagree with their denominator");
+    }
+    Ok(coverage)
+}
+
 fn has_findings(value: &Value, field: &str) -> Result<bool> {
     value
         .get(field)
@@ -904,6 +928,19 @@ mod tests {
         ])
         .unwrap_err();
         assert!(error.to_string().contains("unknown ui argument"));
+    }
+
+    #[test]
+    fn empty_audit_requires_consistent_coverage_metadata() {
+        let mut text = json!({ "audit": [], "observations": [] });
+        assert!(read_text_coverage(&text).is_err());
+        text["coverage"] = serde_json::to_value(TextAuditCoverage::default()).unwrap();
+        assert_eq!(read_text_coverage(&text).unwrap().measured_components, 0);
+        text["coverage"]["measured_components"] = json!(1);
+        assert!(read_text_coverage(&text).is_err());
+        text["coverage"]["measured_components"] = json!(0);
+        text["coverage"]["observed_native_controls"] = json!(1);
+        assert!(read_text_coverage(&text).is_err());
     }
 
     #[test]

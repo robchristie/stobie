@@ -267,10 +267,15 @@ pub fn choice_control<T: Copy + Eq, A: ActionKey>(
         .width(tokens.geometry.minimum_hit_size.0 * 3.0)
         .show_ui(ui, |ui| {
             for (candidate, name) in options {
-                ui.selectable_value(value, *candidate, *name);
+                let option = ui.selectable_value(value, *candidate, *name);
+                crate::record_native_text_control(
+                    &option,
+                    crate::NativeTextControlKind::Selectable,
+                );
             }
         })
         .response;
+    crate::record_native_text_control(&response, crate::NativeTextControlKind::ComboBox);
     let selected = options
         .iter()
         .find_map(|(candidate, name)| (*candidate == *value).then_some(*name))
@@ -335,6 +340,7 @@ pub fn range_control<A: ActionKey>(
             )
         })
         .inner;
+    crate::record_native_text_control(&response, crate::NativeTextControlKind::Slider);
     ui.ctx().accesskit_node_builder(response.id, |node| {
         use egui::accesskit::{Action, Role};
         node.set_role(Role::Slider);

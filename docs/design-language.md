@@ -100,6 +100,29 @@ truncation, alignment deviation and overlapping sibling text. Observations are
 concentrated on Polyorama components; they are not a second UI tree and do not
 enumerate ordinary egui labels or virtualised collections.
 
+An empty text audit means **every observed Polyorama text component passed**,
+not that every visible string in the frame was structurally audited.
+`TextAuditCoverage` accompanies current snapshots and retained text evidence:
+`measured_components` counts distinct observed component IDs;
+`native_text_controls` counts explicitly recorded native control responses in
+that viewport's current layout pass; `observed_native_controls` counts those
+whose internal text has structural observations (currently zero).
+`excluded_categories` always names ordinary egui labels, including headings and
+hover text, and names each unobserved native text category used in that pass.
+Missing or null coverage means unavailable, not zero controls.
+
+Native combo boxes, radios, sliders and selectable options are recorded at their
+recipe or application call sites. The denominator includes submitted clipped
+controls, gallery chrome and open popup options, but not closed popup options
+or virtual items that were never instantiated. A native control is counted once
+by response ID, not once per internal string. These counts describe bounded
+instrumentation, not a census of all visible text. For example, the preferences
+control contributes nine radios and one slider, with zero structurally observed
+native controls. Its ordinary field labels remain excluded. Native egui layout,
+exact gallery snapshots, AccessKit and keyboard tests provide complementary
+protection; semantic or keyboard coverage must not be counted as text-layout
+coverage. Native widgets need not be replaced to increase an observation score.
+
 Dock tabs are the first migrated component. Their desired width and ellipsis
 layout are measured by egui, their label painter is strictly clipped, stable
 widget IDs derive from `PaneId`, and pane drag/activation behaviour retains the
