@@ -34,6 +34,15 @@ impl PaneSurface<'_> {
             ..Default::default()
         };
         let compact_toolbar = ui.available_width() < 720.0;
+        let popup_state_id = ui.make_persistent_id("display-popup-open");
+        let frame_nr = ui.ctx().cumulative_frame_nr();
+        let mut display_open = compact_toolbar
+            && ui.data(|data| {
+                data.get_temp::<(u64, bool)>(popup_state_id)
+                    .is_some_and(|(last_frame, open)| {
+                        open && frame_nr.saturating_sub(last_frame) <= 1
+                    })
+            });
         let toolbar = ui.horizontal_wrapped(|ui| {
             if pane.0 <= 2 {
                 for (tool, action, control) in [
@@ -136,19 +145,27 @@ impl PaneSurface<'_> {
                         &response,
                     );
                 }
-                let _ = egui::Popup::menu(&response).show(|ui| {
-                    ui.set_width(self.tokens.geometry.minimum_hit_size.0 * 7.0);
-                    ui.vertical(|ui| {
-                        present_display_controls(
-                            ui,
-                            pane,
-                            &toolbar_id,
-                            &mut display,
-                            &self.tokens,
-                            self.outputs,
-                        );
+                if response.clicked() {
+                    display_open = !display_open;
+                }
+                // egui's popup memory holds one popup per viewport. Keep the
+                // panel's state separately so its combo box can own that slot.
+                let _ = egui::Popup::menu(&response)
+                    .open_bool(&mut display_open)
+                    .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+                    .show(|ui| {
+                        ui.set_width(self.tokens.geometry.minimum_hit_size.0 * 7.0);
+                        ui.vertical(|ui| {
+                            present_display_controls(
+                                ui,
+                                pane,
+                                &toolbar_id,
+                                &mut display,
+                                &self.tokens,
+                                self.outputs,
+                            );
+                        });
                     });
-                });
             }
             if self.annotation_ui.get().is_some() {
                 commit_polygon = present_action(
@@ -181,6 +198,8 @@ impl PaneSurface<'_> {
                 );
             }
         });
+        // A hidden pane must not restore a popup whose anchor disappeared.
+        ui.data_mut(|data| data.insert_temp(popup_state_id, (frame_nr, display_open)));
         let toolbar_rect = toolbar.response.rect.intersect(pane_rect);
         self.outputs
             .ui_geometry
@@ -305,6 +324,9 @@ impl PaneSurface<'_> {
         self.handle_annotations(pane, camera, rect, &response);
         self.outputs.overlays.push(ImageOverlayRequest {
             pane,
+            // Finalise camera previews late, but paint on the viewport's layer
+            // so annotations remain below menus and other floating UI.
+            layer_id: ui.layer_id(),
             rect,
             annotations: self.document.annotations.clone(),
             gesture: self.annotation_ui.cloned(),
@@ -362,6 +384,7 @@ impl PaneSurface<'_> {
         .intersect(ui.max_rect());
         self.outputs.statuses.push(ImageStatusRequest {
             pane,
+            layer_id: ui.layer_id(),
             rect: status_rect,
             viewport: rect,
             pointer_local: allocation.pointer_local,
@@ -491,6 +514,224 @@ fn paint_placeholder(ui: &egui::Ui, rect: egui::Rect, pane: PaneId, tokens: &Des
 #[cfg(test)]
 mod tests {
     use super::*;
+    use egui_kittest::{Harness, kittest::Queryable};
+
+    #[derive(Default)]
+    struct ImagePaneFixture {
+        hidden: bool,
+        document: Document,
+        session: Session,
+        display: BTreeMap<PaneId, DisplaySettings>,
+        behaviour: UiBehaviour,
+        output: FrameOutput,
+    }
+
+    fn image_pane_harness(width: f32) -> Harness<'static, ImagePaneFixture> {
+        Harness::builder()
+            .with_size(egui::vec2(width, 400.0))
+            .build_ui_state(
+                |ui, state: &mut ImagePaneFixture| {
+                    let root = ui.max_rect();
+                    let tokens = DesignTokens::resolve(
+                        polyorama_ui_egui::ThemeVariant::Dark,
+                        polyorama_ui_egui::DensityVariant::Comfortable,
+                    );
+                    state.output = FrameOutput::with_ui_geometry(UiGeometry::new(root, 1.0));
+                    if state.hidden {
+                        return;
+                    }
+                    let mut virtualisation = VirtualisationMetrics::default();
+                    let mut thumbnails = ThumbnailCache::default();
+                    let diagnostics = DiagnosticsSnapshot::default();
+                    let mut surface = PaneSurface::new(
+                        PaneReadModel {
+                            document: &state.document,
+                            cameras: &state.session.cameras,
+                            active_tools: state.session.active_tools.clone(),
+                            selected_result: None,
+                            selected_annotation: state.session.selected_annotation,
+                            display: state.display.clone(),
+                            diagnostics: &diagnostics,
+                            generation: 1,
+                            frame_number: 1,
+                            active_pane: PaneId(1),
+                            tokens,
+                            font_scale: 1.0,
+                        },
+                        PaneFeatureState {
+                            annotation_ui: AnnotationUiState::new(&mut state.session.gesture),
+                            ui_behaviour: &mut state.behaviour,
+                            virtualisation: &mut virtualisation,
+                            thumbnail_cache: &mut thumbnails,
+                            outputs: &mut state.output,
+                        },
+                    );
+                    surface.pane_ui(ui, PaneId(1), root);
+                    for intent in &state.output.pane_intents {
+                        if let PaneIntent::SetDisplay { pane, settings } = intent {
+                            state.display.insert(*pane, *settings);
+                        }
+                    }
+                    state.output.finalise_camera_previews(
+                        ui.ctx(),
+                        &state.behaviour,
+                        &state.session.cameras,
+                        1,
+                    );
+                },
+                ImagePaneFixture::default(),
+            )
+    }
+
+    #[test]
+    fn compact_display_popup_allows_nested_map_selection_and_dismissal() {
+        let mut harness = image_pane_harness(640.0);
+        harness.get_by_label("Display").click();
+        harness.run();
+        harness.get_by_label("Low").click();
+        harness.run();
+        assert!(harness.query_by_label("Display map").is_some());
+        harness.get_by_label("Display map").click();
+        harness.run();
+        assert!(harness.query_by_label("Low").is_some());
+        harness.get_by_label("Greyscale").click();
+        harness.run();
+        assert_eq!(
+            harness.state().display[&PaneId(1)].map,
+            DisplayMap::Greyscale
+        );
+
+        // Reopen if selection dismissed the panel, then verify Escape and the
+        // trigger can still close it after its child has used popup memory.
+        if harness.query_by_label("Display map").is_none() {
+            harness.get_by_label("Display").click();
+            harness.run();
+        }
+        harness.key_press(egui::Key::Escape);
+        harness.run();
+        assert!(harness.query_by_label("Display map").is_none());
+        harness.get_by_label("Display").click();
+        harness.run();
+        harness.get_by_label("Display").click();
+        harness.run();
+        assert!(harness.query_by_label("Display map").is_none());
+    }
+
+    #[test]
+    fn display_popup_does_not_reopen_after_its_pane_is_hidden() {
+        let mut harness = image_pane_harness(640.0);
+        harness.get_by_label("Display").click();
+        harness.run();
+        assert!(harness.query_by_label("Display map").is_some());
+        harness.state_mut().hidden = true;
+        harness.run_steps(2);
+        harness.state_mut().hidden = false;
+        harness.run();
+        assert!(harness.query_by_label("Display map").is_none());
+    }
+
+    #[test]
+    fn expanded_display_map_remains_selectable() {
+        let mut harness = image_pane_harness(1000.0);
+        harness.get_by_label("Display map").click();
+        harness.run();
+        harness.get_by_label("Threshold").click();
+        harness.run();
+        assert_eq!(
+            harness.state().display[&PaneId(1)].map,
+            DisplayMap::Threshold
+        );
+        assert!(harness.query_by_label("Low").is_some());
+    }
+
+    #[test]
+    fn display_popup_paints_above_committed_and_preview_annotations() {
+        let mut harness = image_pane_harness(640.0);
+        harness.get_by_label("Display").click();
+        harness.run();
+        let map = harness
+            .state()
+            .output
+            .ui_geometry
+            .semantic_nodes
+            .iter()
+            .find(|node| node.id.0 == "pane.1.display_map")
+            .unwrap()
+            .rect;
+        let overlap = egui::pos2((map.min_x + map.max_x) * 0.5, map.max_y + 10.0);
+        let overlay = &harness.state().output.overlays[0];
+        let camera = harness.state().session.cameras[0].camera;
+        let vertices: Vec<_> = [
+            overlap,
+            overlap + egui::vec2(60.0, 40.0),
+            overlap + egui::vec2(-40.0, 60.0),
+        ]
+        .into_iter()
+        .map(|point| {
+            ImageToWorld::default().image_to_world(screen_to_image(point, overlay.rect, camera))
+        })
+        .collect();
+        assert!(overlay.rect.contains(overlap));
+        harness.state_mut().document.annotations.push(Polygon {
+            id: AnnotationId(1),
+            layer: LayerId(1),
+            vertices: vertices.clone(),
+        });
+        harness.state_mut().session.gesture = Some(GesturePreview::Polygon {
+            layer: LayerId(1),
+            vertices,
+        });
+        harness.run();
+
+        fn flatten<'a>(shape: &'a egui::Shape, shapes: &mut Vec<&'a egui::Shape>) {
+            if let egui::Shape::Vec(children) = shape {
+                for child in children {
+                    flatten(child, shapes);
+                }
+            } else {
+                shapes.push(shape);
+            }
+        }
+        let mut shapes = Vec::new();
+        for shape in &harness.output().shapes {
+            flatten(&shape.shape, &mut shapes);
+        }
+        let popup = shapes
+            .iter()
+            .position(|shape| {
+                matches!(shape,
+                egui::Shape::Rect(rect) if rect.rect.contains(overlap) && rect.fill.is_opaque()
+                    && rect.rect.width() < 400.0 && rect.rect.width() > map.max_x - map.min_x
+                    )
+            })
+            .expect("opaque popup background over the annotation");
+        let image = shapes
+            .iter()
+            .position(|shape| matches!(shape, egui::Shape::Callback(_)))
+            .expect("image render callback");
+        let lines: Vec<_> = shapes
+            .iter()
+            .enumerate()
+            .filter_map(|(index, shape)| match shape {
+                egui::Shape::Path(path)
+                    if path
+                        .points
+                        .iter()
+                        .any(|point| point.distance(overlap) < 0.1) =>
+                {
+                    Some(index)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(lines.len(), 2, "committed polygon and gesture preview");
+        for line in lines {
+            assert!(
+                image < line && line < popup,
+                "image < annotation < popup paint order"
+            );
+        }
+    }
 
     #[test]
     fn display_window_controls_always_retain_a_strict_ordering() {

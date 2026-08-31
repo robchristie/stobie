@@ -144,6 +144,7 @@ impl<'a> AnnotationUiState<'a> {
 #[derive(Clone)]
 struct ImageOverlayRequest {
     pane: PaneId,
+    layer_id: egui::LayerId,
     rect: egui::Rect,
     annotations: Vec<Polygon>,
     gesture: Option<GesturePreview>,
@@ -154,6 +155,7 @@ struct ImageOverlayRequest {
 
 struct ImageStatusRequest {
     pane: PaneId,
+    layer_id: egui::LayerId,
     rect: egui::Rect,
     viewport: egui::Rect,
     pointer_local: Option<ViewportPoint>,
@@ -193,10 +195,7 @@ impl FrameOutput {
         for overlay in &self.overlays {
             let camera = behaviour.camera(overlay.pane, committed);
             let painter = context
-                .layer_painter(egui::LayerId::new(
-                    egui::Order::Foreground,
-                    egui::Id::new(("image-overlays", overlay.pane.0)),
-                ))
+                .layer_painter(overlay.layer_id)
                 .with_clip_rect(overlay.rect);
             paint_image_overlay(
                 &painter,
@@ -223,10 +222,7 @@ impl FrameOutput {
                 .unwrap_or(status.fallback_pointer);
             let world = ImageToWorld::default().image_to_world(pointer);
             let painter = context
-                .layer_painter(egui::LayerId::new(
-                    egui::Order::Foreground,
-                    egui::Id::new(("image-status", status.pane.0)),
-                ))
+                .layer_painter(status.layer_id)
                 .with_clip_rect(status.rect);
             let tile_count = self
                 .render_plan
@@ -661,6 +657,7 @@ mod tests {
         let mut output = FrameOutput::default();
         output.overlays.push(ImageOverlayRequest {
             pane: PaneId(1),
+            layer_id: egui::LayerId::background(),
             rect: egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(640.0, 480.0)),
             annotations: vec![Polygon {
                 id: annotation,
