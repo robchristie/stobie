@@ -155,8 +155,11 @@ preview and final command faithful to the complete pointer movement.
 
 These are compatible egui AccessKit tree updates, not a claim of delivered OS
 or browser screen-reader support: the application has not enabled eframe's
-native adapter and its current web integration discards those updates. The
-future semantic snapshot and action registry remain separate work.
+native adapter and its current web integration discards those updates. Describe
+the current state as **AccessKit-semantic and keyboard-tested**. A later
+usage-led increment should enable the relevant adapters and test representative
+workflows with actual assistive technology on Windows, macOS, Linux and in the
+browser before claiming end-user screen-reader support.
 
 ## Icons
 

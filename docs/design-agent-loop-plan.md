@@ -74,7 +74,7 @@ now publishes that ignored evidence only when CI fails.
 | 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
 | 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
 | 3 | Measured text roles, overflow, observations and layout audit | 2 | Landed | PR #11, text fixtures, exported tab observations and empty audit |
-| 4 | Reusable accessible shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
+| 4 | Reusable AccessKit-semantic shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
@@ -104,4 +104,7 @@ show that the change is intentional.
 ## Next action
 
 Begin the next major increment from observed application usage rather than
-expanding the framework foundation without a concrete consumer need.
+expanding the framework foundation without a concrete consumer need. A future
+usage-led accessibility increment should enable the relevant native and browser
+adapters, then test representative workflows with actual assistive technology
+on each supported platform before claiming end-user screen-reader support.

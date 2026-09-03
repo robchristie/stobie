@@ -16,6 +16,16 @@ session, command, dock, runtime, render-plan and repaint boundaries remain in
 force. No runtime stylesheet, UI DSL, DOM renderer, hosted design dependency or
 second workspace model was introduced.
 
+The delivered accessibility state is **AccessKit-semantic and
+keyboard-tested**, not proved end-user screen-reader support. Roles, names,
+states, bounds, click/adjust actions, parity audits, keyboard paths and
+`egui_kittest` semantic queries are verified at the framework level. The
+application has not enabled eframe's native AccessKit adapter, its web
+integration currently discards AccessKit updates, and representative workflows
+have not been exercised with assistive technology on Windows, macOS, Linux or
+in the browser. Enabling the relevant adapters and performing that usage-led
+qualification remains a later increment.
+
 ## Qualification identity
 
 - baseline revision:
@@ -172,7 +182,7 @@ performance-motivated product change was made in this increment.
 | Stable typed stories cover required matrices and composed scenes | Directly verified | 18-entry typed manifest, finite matrix tests and selected captures |
 | Every custom control exposes role, name, state, actions, focus and usable target | Directly verified | AccessKit/component tests, semantic audit and current geometry bounds |
 | Buttons, tabs and splitters are keyboard-operable | Directly verified | egui kittest, focus-navigation and splitter-adjustment tests |
-| One application-owned `ActionKey` drives controls, shortcuts, accessibility, tests and targeting | Directly verified | Registry completeness/parity tests and both physical smokes |
+| One application-owned `ActionKey` drives controls, shortcuts, accessibility semantics, tests and targeting | Directly verified | Registry completeness/parity tests and both physical smokes |
 | Availability and disabled reasons are observable | Directly verified | Context availability tests and semantic snapshots |
 | Reusable `UiSnapshot` exposes bounded IDs, geometry, actions, text and references | Directly verified | Snapshot schema tests and retained native/browser JSON |
 | AccessKit and augmented semantics cannot disagree silently | Directly verified | Parity tests and empty semantic audits |

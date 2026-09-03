@@ -190,6 +190,14 @@ does not update them automatically.
 
 ## Current limits
 
+Polyorama is **AccessKit-semantic and keyboard-tested**. Its tests cover roles,
+names, states, bounds, click/adjust actions, semantic parity and keyboard
+operation, but this is not yet evidence of working screen-reader support on
+Windows, macOS, Linux or in the browser. The native AccessKit adapter is not
+enabled, and the current web integration discards AccessKit updates. A later
+usage-led increment should enable the relevant adapters and test representative
+workflows with actual assistive technology.
+
 The synthetic source and decoder demonstrate the architecture; they are not
 production image codecs or remote data integrations. Production geospatial
 reprojection, arbitrary texture import and a general-purpose render graph are

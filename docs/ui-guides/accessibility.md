@@ -7,6 +7,13 @@ disabled reason, pane/domain reference, text selectability and measured-text
 observations. The snapshot is an observation of the current frame, not a
 second application tree.
 
+Describe the current delivery state as **AccessKit-semantic and
+keyboard-tested**, not simply accessible. These framework-level checks do not
+establish working screen-reader support on Windows, macOS, Linux or in the
+browser. End-user support requires the relevant native and web adapters to be
+enabled and representative workflows to be exercised with actual assistive
+technology.
+
 Custom interactive controls must expose a usable role and name, current state,
 supported action, focusability, visible focus and a token minimum hit target.
 Derive IDs from stable pane/domain identity. For example, dock tabs and
