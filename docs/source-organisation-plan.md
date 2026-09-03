@@ -1,6 +1,6 @@
 # UI source-organisation plan
 
-Status: active; component split under qualification
+Status: terminal candidate; completes when PR #26 lands
 
 Baseline revision: `4ee27756698cbce19926ad2f02709107dda1036a`
 
@@ -49,12 +49,12 @@ evidence.
 
 | Increment | Outcome | Depends on | Status | Durable evidence |
 | --- | --- | --- | --- | --- |
-| 1 | Split reusable component recipes into eight leaf modules | — | Candidate | Focused checks and `cargo xtask verify` pass; pull request pending |
-| 2 | Split gallery story rendering into five family modules | 1 | Pending | Pull request and canonical verification pending |
+| 1 | Split reusable component recipes into eight leaf modules | — | Landed | PR #25; merge `941f1be6103721a3a2accad0ee56c0bed5762642`; exact-tree review, PR CI and post-merge CI passed |
+| 2 | Split gallery story rendering into five family modules | 1 | Terminal candidate | PR #26; focused checks and `cargo xtask verify` pass; exact-head review and hosted CI pending |
 
 ## Current phase
 
-Review and land increment 1. The parent retains only shared private glue plus
-the existing dock/splitter and application-bar recipes; each requested leaf
-imports only its actual dependencies. Focused checks and the canonical gate
-pass. Exact-head review and hosted CI remain before the gallery split starts.
+PR #26 contains the final implementation increment. The gallery shell and
+action registry remain in `app.rs`; the closed `StoryId` set routes through five
+private story-family modules without catalogue or baseline changes. Exact-head
+review, hosted CI, landing and cleanup are the only remaining objective work.

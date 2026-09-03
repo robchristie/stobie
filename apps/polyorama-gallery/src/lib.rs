@@ -1,5 +1,6 @@
 mod app;
 mod catalogue;
+mod stories;
 
 pub use app::{GalleryApp, GalleryConfiguration, GallerySnapshot, GalleryWidth};
 pub use catalogue::{STORIES, StoryDefinition, StoryId};
