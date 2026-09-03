@@ -56,8 +56,8 @@ Run these commands from the repository root.
 
 ### Prerequisites
 
-- Rust and Cargo. The workspace declares Rust **1.95** as its minimum;
-  [CI](.github/workflows/verify.yml) currently uses **1.97.1**.
+- Rust and Cargo. The workspace declares Rust **1.97.1** as its minimum,
+  matching [CI](.github/workflows/verify.yml).
 - For native applications, a graphical session and a working graphics backend
   supported by wgpu. Linux builds enable X11 and Wayland support.
 - For browser builds, the `wasm32-unknown-unknown` target,
