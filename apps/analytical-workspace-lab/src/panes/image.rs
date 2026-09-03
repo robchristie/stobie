@@ -283,6 +283,7 @@ impl PaneSurface<'_> {
             pane: Some(pane),
             domain_reference: Some(DomainReference::Pane(pane)),
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         });
         ui.painter()
@@ -399,6 +400,7 @@ impl PaneSurface<'_> {
             status_rect.into(),
         );
         status_node.name = "Image coordinates and tile level".into();
+        status_node.text_selectable = true;
         status_node.pane = Some(pane);
         status_node.domain_reference = Some(DomainReference::Pane(pane));
         self.outputs.ui_geometry.record_node(status_node);
@@ -573,7 +575,7 @@ mod tests {
                         }
                     }
                     state.output.finalise_camera_previews(
-                        ui.ctx(),
+                        ui,
                         &state.behaviour,
                         &state.session.cameras,
                         1,

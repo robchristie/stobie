@@ -174,11 +174,12 @@ impl FrameOutput {
 
     pub fn finalise_camera_previews(
         &mut self,
-        context: &egui::Context,
+        root_ui: &mut egui::Ui,
         behaviour: &UiBehaviour,
         committed: &[CameraState],
         generation: u64,
     ) {
+        let context = root_ui.ctx().clone();
         self.demands
             .retain(|demand| demand.key.source != SourceId(1));
         for request in &mut self.render_plan.images {
@@ -221,9 +222,6 @@ impl FrameOutput {
                 })
                 .unwrap_or(status.fallback_pointer);
             let world = ImageToWorld::default().image_to_world(pointer);
-            let painter = context
-                .layer_painter(status.layer_id)
-                .with_clip_rect(status.rect);
             let tile_count = self
                 .render_plan
                 .images
@@ -248,8 +246,15 @@ impl FrameOutput {
             {
                 node.description = Some(format!("{coordinates}; {detail}"));
             }
+            let mut status_ui = root_ui.new_child(
+                egui::UiBuilder::new()
+                    .id_salt(("polyorama.image-status", status.pane))
+                    .layer_id(status.layer_id)
+                    .max_rect(status.rect),
+            );
+            status_ui.set_clip_rect(status.rect);
             self.ui_geometry.text_layouts.extend(paint_image_status(
-                &painter,
+                &mut status_ui,
                 ImageStatusSpec {
                     instance: u64::from(status.pane.0),
                     rect: status.rect,
@@ -410,6 +415,7 @@ impl PanePresenter for PaneSurface<'_> {
                     polyorama_ui_egui::TextRole::Error,
                     polyorama_ui_egui::TextOverflow::Wrap,
                     2,
+                    polyorama_ui_egui::TextInteraction::Selectable,
                     &self.tokens,
                     self.font_scale,
                     &mut self.outputs.ui_geometry.text_layouts,
@@ -438,6 +444,7 @@ impl PanePresenter for PaneSurface<'_> {
             pane: Some(pane),
             domain_reference: Some(DomainReference::Pane(pane)),
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         });
     }
@@ -476,6 +483,7 @@ impl PanePresenter for PaneSurface<'_> {
             pane: None,
             domain_reference: Some(DomainReference::DockNode(node)),
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         });
     }
@@ -860,7 +868,11 @@ mod tests {
                 desired_tiles: Vec::new(),
             });
         }
-        output.finalise_camera_previews(&egui::Context::default(), &behaviour, &committed, 9);
+        let context = egui::Context::default();
+        let mut frame = context.run_ui(Default::default(), |ui| {
+            output.finalise_camera_previews(ui, &behaviour, &committed, 9);
+        });
+        frame.textures_delta.clear();
 
         assert!(
             output

@@ -28,6 +28,7 @@
         "max_y": 293
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 1,
       "truncated": false

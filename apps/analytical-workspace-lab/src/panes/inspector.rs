@@ -155,6 +155,7 @@ fn record_section(
         bounded.into(),
     );
     node.name = name.to_owned();
+    node.text_selectable = true;
     node.pane = Some(PaneId(7));
     node.domain_reference = domain_reference;
     outputs.ui_geometry.record_node(node);

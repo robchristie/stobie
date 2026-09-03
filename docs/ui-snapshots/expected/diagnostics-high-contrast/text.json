@@ -32,6 +32,7 @@
         "max_y": 179.3249969482422
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -67,6 +68,7 @@
         "max_y": 234.96875
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 1,
       "truncated": false
@@ -102,6 +104,7 @@
         "max_y": 264.29376220703125
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -137,6 +140,7 @@
         "max_y": 319.9375
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 1,
       "truncated": false
@@ -172,6 +176,7 @@
         "max_y": 349.26251220703125
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": false
@@ -207,6 +212,7 @@
         "max_y": 404.90625
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 2,
       "truncated": true
@@ -242,6 +248,7 @@
         "max_y": 434.23126220703125
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": false
@@ -277,6 +284,7 @@
         "max_y": 489.875
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 2,
       "truncated": false
@@ -308,6 +316,7 @@
         "max_y": 573.875
       },
       "overflow": "wrap",
+      "interaction": "selectable",
       "declared_max_lines": 3,
       "line_count": 3,
       "truncated": false

@@ -32,7 +32,8 @@
       "enabled": true,
       "focused": false,
       "selected": false,
-      "actions": []
+      "actions": [],
+      "text_selectable": true
     }
   ],
   "semantic_audit": []

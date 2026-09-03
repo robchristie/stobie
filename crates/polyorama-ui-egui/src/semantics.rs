@@ -147,7 +147,13 @@ pub struct UiNode {
     pub pane: Option<PaneId>,
     pub domain_reference: Option<DomainReference>,
     pub actions: Vec<SemanticActionId>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub text_selectable: bool,
     pub disabled_reason: Option<String>,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl UiNode {
@@ -172,6 +178,7 @@ impl UiNode {
             pane: None,
             domain_reference: None,
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         }
     }
@@ -202,6 +209,10 @@ impl UiSnapshot {
 
     pub fn by_name<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a UiNode> {
         self.nodes.iter().filter(move |node| node.name == name)
+    }
+
+    pub fn selectable_text(&self) -> impl Iterator<Item = &UiNode> {
+        self.nodes.iter().filter(|node| node.text_selectable)
     }
 
     pub fn by_action<A: ActionKey>(&self, action: A) -> impl Iterator<Item = &UiNode> {
@@ -503,6 +514,7 @@ mod tests {
                     pane: None,
                     domain_reference: None,
                     actions: vec![SemanticActionId::from_action(TestAction::Undo)],
+                    text_selectable: false,
                     disabled_reason: Some("History is empty".into()),
                 },
             ],
@@ -523,15 +535,21 @@ mod tests {
 
     #[test]
     fn snapshot_queries_are_stable_and_bounded() {
-        let snapshot = sample();
+        let mut snapshot = sample();
+        snapshot.nodes[1].text_selectable = true;
         assert!(snapshot.audit().is_empty());
         assert_eq!(snapshot.by_role(UiRole::Button).count(), 1);
         assert_eq!(snapshot.by_name("Undo").count(), 1);
         assert_eq!(snapshot.by_action(TestAction::Undo).count(), 1);
+        assert_eq!(snapshot.selectable_text().count(), 1);
         assert_eq!(snapshot.nodes.len(), 2);
         assert_eq!(
             serde_json::to_value(&snapshot).unwrap()["nodes"][1]["actions"],
             serde_json::json!(["undo"])
+        );
+        assert_eq!(
+            serde_json::to_value(&snapshot).unwrap()["nodes"][1]["text_selectable"],
+            serde_json::json!(true)
         );
     }
 

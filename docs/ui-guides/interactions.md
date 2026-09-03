@@ -31,3 +31,9 @@ involved, and commit only the completed gesture. Repaint only for a recorded
 reason: interaction, state transition or scheduled work—not an unconditional
 frame loop. Reduced motion removes custom animation timing rather than hiding
 state changes.
+
+Text selection is an explicit interaction, not a consequence of a text role.
+Selectable measured text uses egui's label-selection state so drag, multi-label
+selection and copy remain platform-consistent. A component with an owning click
+or drag gesture keeps its text inert; expose the same technical value in the
+Inspector when selection would compete with that gesture.

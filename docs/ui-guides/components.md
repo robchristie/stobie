@@ -10,7 +10,8 @@ the application model.
 
 Before adding or changing a reusable component, state and test:
 
-- its text role, horizontal alignment, line limit and overflow policy;
+- its text role, horizontal alignment, line limit, overflow policy and
+  `TextInteraction` (`Inert` or `Selectable`);
 - minimum useful width, narrow behaviour and whether it moves work into an
   explicit overflow control;
 - complete semantic name/description, role, state, actions and visible focus;
@@ -29,6 +30,15 @@ egui galley measurement, never character counts. Keep numeric values end
 aligned. Retain full semantic text when paint is elided. The five supported
 policies are `ellipsis`, `wrap`, `clip`, `scroll` and `expand`; choose one
 explicitly rather than relying on incidental clipping.
+
+Technical and user-content text is selectable unless its owning pointer
+interaction conflicts with selection. Inspector values, diagnostic values,
+status and error messages, and longer pane-local information use
+`TextInteraction::Selectable`; buttons, tabs, toolbars, splitters, result rows
+and thumbnail labels remain `Inert`. Selectable measured text must use
+`present_measured_text`, which preserves Polyorama allocation and clipping
+while delegating selection and copy behaviour to egui. Do not reproduce
+cursor hit testing or clipboard handling in a component.
 
 For dense chrome, preserve a token minimum hit target even when compact visual
 geometry is smaller. Do not add decorative cards: spacing, aligned text and

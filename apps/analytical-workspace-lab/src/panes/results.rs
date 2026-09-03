@@ -29,6 +29,7 @@ pub fn show(
             TextRole::Secondary,
             TextOverflow::Ellipsis,
             1,
+            polyorama_ui_egui::TextInteraction::Selectable,
             tokens,
             font_scale,
             &mut outputs.ui_geometry.text_layouts,
@@ -146,6 +147,7 @@ pub fn show(
                             // Selection is the ListBoxOption's click behaviour, not a
                             // globally registered application action.
                             actions: Vec::new(),
+                            text_selectable: false,
                             disabled_reason: None,
                         });
                     }

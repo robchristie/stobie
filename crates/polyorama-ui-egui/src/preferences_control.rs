@@ -226,6 +226,7 @@ fn preference_slider<A: ActionKey>(
         pane: None,
         domain_reference: None,
         actions: vec![SemanticActionId::from_action(semantics.action)],
+        text_selectable: false,
         disabled_reason: None,
     });
 }
@@ -280,6 +281,7 @@ fn preference_radio_node<A: ActionKey>(
         pane: None,
         domain_reference: None,
         actions: vec![SemanticActionId::from_action(action)],
+        text_selectable: false,
         disabled_reason: None,
     }
 }

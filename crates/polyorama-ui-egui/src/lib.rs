@@ -1363,6 +1363,7 @@ mod tests {
                     pane: Some(*pane),
                     domain_reference: Some(DomainReference::Pane(*pane)),
                     actions: Vec::new(),
+                    text_selectable: false,
                     disabled_reason: None,
                 }),
         );
@@ -1389,6 +1390,7 @@ mod tests {
                     pane: None,
                     domain_reference: Some(DomainReference::DockNode(*node)),
                     actions: Vec::new(),
+                    text_selectable: false,
                     disabled_reason: None,
                 }),
         );

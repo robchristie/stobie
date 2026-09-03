@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use egui::{
-    Align, Color32, FontFamily, FontId, Galley, Painter, Pos2, Rect, TextFormat,
+    Align, Color32, FontFamily, FontId, Galley, Id, Painter, Pos2, Rect, Sense, TextFormat, Ui,
+    UiBuilder,
     text::{LayoutJob, TextWrapping},
+    text_selection::LabelSelectionState,
 };
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +45,14 @@ pub enum TextOverflow {
     Expand,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextInteraction {
+    #[default]
+    Inert,
+    Selectable,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HorizontalTextAlignment {
@@ -63,6 +73,7 @@ pub enum VerticalTextAlignment {
 pub struct TextSpec {
     pub role: TextRole,
     pub overflow: TextOverflow,
+    pub interaction: TextInteraction,
     pub horizontal_alignment: HorizontalTextAlignment,
     pub vertical_alignment: VerticalTextAlignment,
     pub max_lines: u8,
@@ -73,6 +84,7 @@ impl TextSpec {
         Self {
             role,
             overflow,
+            interaction: TextInteraction::Inert,
             horizontal_alignment: HorizontalTextAlignment::Start,
             vertical_alignment: VerticalTextAlignment::Centre,
             max_lines: 1,
@@ -192,7 +204,7 @@ impl From<Rect> for TextRect {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TextComponentKind {
     DockTabStrip,
@@ -211,7 +223,7 @@ pub enum TextComponentKind {
     TextSample,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct TextComponentId {
     pub kind: TextComponentKind,
     pub instance: u64,
@@ -236,6 +248,8 @@ pub struct TextLayoutObservation {
     /// Egui 0.36 does not expose a reliable public baseline metric.
     pub baseline: Option<f32>,
     pub overflow: TextOverflow,
+    #[serde(default)]
+    pub interaction: TextInteraction,
     pub declared_max_lines: u8,
     pub line_count: u8,
     pub truncated: bool,
@@ -326,6 +340,150 @@ pub fn paint_measured_text(
     component_id: TextComponentId,
     parent_id: Option<TextComponentId>,
 ) -> TextLayoutObservation {
+    debug_assert_eq!(
+        measured.spec.interaction,
+        TextInteraction::Inert,
+        "selectable measured text must be presented through present_measured_text"
+    );
+    let (galley_position, observation) =
+        position_measured_text(painter, measured, allocated_rect, component_id, parent_id);
+    painter.with_clip_rect(allocated_rect).galley(
+        galley_position,
+        measured.galley.clone(),
+        measured.colour,
+    );
+    observation
+}
+
+/// Present inert measured content as one accessible label while preserving
+/// Polyorama's allocation, alignment and clipping. Use this only when the text
+/// itself owns its semantics; interactive chrome should retain its aggregate
+/// widget semantics and call [`paint_measured_text`] instead.
+pub fn present_accessible_measured_text(
+    ui: &mut Ui,
+    measured: &MeasuredText,
+    allocated_rect: Rect,
+    component_id: TextComponentId,
+    parent_id: Option<TextComponentId>,
+) -> (egui::Response, TextLayoutObservation) {
+    debug_assert_eq!(
+        measured.spec.interaction,
+        TextInteraction::Inert,
+        "selectable measured text must be presented through present_measured_text"
+    );
+    let (galley_position, observation) = position_measured_text(
+        ui.painter(),
+        measured,
+        allocated_rect,
+        component_id,
+        parent_id,
+    );
+    let mut label_ui = ui.new_child(
+        UiBuilder::new()
+            .id_salt((
+                "polyorama.accessible-measured-text",
+                component_id,
+                parent_id,
+            ))
+            .max_rect(allocated_rect),
+    );
+    label_ui.set_clip_rect(ui.clip_rect().intersect(allocated_rect));
+    let response = label_ui.interact(
+        allocated_rect,
+        Id::new((
+            "polyorama.accessible-measured-text",
+            component_id,
+            parent_id,
+        )),
+        Sense::hover(),
+    );
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(
+            egui::WidgetType::Label,
+            label_ui.is_enabled(),
+            measured.galley.text(),
+        )
+    });
+    label_ui
+        .painter()
+        .galley(galley_position, measured.galley.clone(), measured.colour);
+    (response, observation)
+}
+
+/// Present measured text while preserving Polyorama's allocation and clipping.
+/// Selectable text delegates cursor, drag, multi-label and copy behaviour to
+/// egui's native label-selection state.
+pub fn present_measured_text(
+    ui: &mut Ui,
+    measured: &MeasuredText,
+    allocated_rect: Rect,
+    component_id: TextComponentId,
+    parent_id: Option<TextComponentId>,
+) -> (Option<egui::Response>, TextLayoutObservation) {
+    if measured.spec.interaction == TextInteraction::Inert {
+        return (
+            None,
+            paint_measured_text(
+                ui.painter(),
+                measured,
+                allocated_rect,
+                component_id,
+                parent_id,
+            ),
+        );
+    }
+
+    let (galley_position, observation) = position_measured_text(
+        ui.painter(),
+        measured,
+        allocated_rect,
+        component_id,
+        parent_id,
+    );
+    let mut selection_ui = ui.new_child(
+        UiBuilder::new()
+            .id_salt(("polyorama.measured-text", component_id, parent_id))
+            .max_rect(allocated_rect),
+    );
+    selection_ui.set_clip_rect(ui.clip_rect().intersect(allocated_rect));
+    let mut sense = if selection_ui.input(|input| input.has_touch_screen()) {
+        Sense::click()
+    } else {
+        Sense::click_and_drag()
+    };
+    sense -= Sense::FOCUSABLE;
+    let response = selection_ui.interact(
+        allocated_rect,
+        Id::new(("polyorama.measured-text", component_id, parent_id)),
+        sense,
+    );
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(
+            egui::WidgetType::Label,
+            selection_ui.is_enabled(),
+            measured.galley.text(),
+        )
+    });
+    if selection_ui.is_rect_visible(response.rect) {
+        LabelSelectionState::label_text_selection(
+            &selection_ui,
+            &response,
+            galley_position,
+            measured.galley.clone(),
+            measured.colour,
+            egui::Stroke::NONE,
+        );
+    }
+    (Some(response), observation)
+}
+
+fn position_measured_text(
+    painter: &Painter,
+    measured: &MeasuredText,
+    allocated_rect: Rect,
+    component_id: TextComponentId,
+    parent_id: Option<TextComponentId>,
+) -> (Pos2, TextLayoutObservation) {
     let size = measured.galley.size();
     let anchor_x = match measured.spec.horizontal_alignment {
         HorizontalTextAlignment::Start => allocated_rect.left(),
@@ -344,12 +502,6 @@ pub fn paint_measured_text(
     };
     let positioned = Rect::from_min_size(Pos2::new(left, top), size);
     let galley_position = positioned.min;
-    painter.with_clip_rect(allocated_rect).galley(
-        galley_position,
-        measured.galley.clone(),
-        measured.colour,
-    );
-
     let painted = if measured.galley.job.text.is_empty() {
         Rect::from_min_size(positioned.min, egui::Vec2::ZERO)
     } else {
@@ -357,7 +509,7 @@ pub fn paint_measured_text(
         // test font atlas has no tessellated mesh bounds.
         positioned
     };
-    TextLayoutObservation {
+    let observation = TextLayoutObservation {
         component_id,
         parent_id,
         role: measured.spec.role,
@@ -368,10 +520,12 @@ pub fn paint_measured_text(
         clip_rect: painter.clip_rect().intersect(allocated_rect).into(),
         baseline: None,
         overflow: measured.spec.overflow,
+        interaction: measured.spec.interaction,
         declared_max_lines: measured.spec.max_lines,
         line_count: measured.galley.rows.len().min(usize::from(u8::MAX)) as u8,
         truncated: measured.galley.elided,
-    }
+    };
+    (galley_position, observation)
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -669,6 +823,7 @@ mod tests {
             },
             baseline: None,
             overflow: TextOverflow::Expand,
+            interaction: TextInteraction::Inert,
             declared_max_lines: 1,
             line_count: 2,
             truncated: true,
@@ -696,5 +851,69 @@ mod tests {
                 .iter()
                 .any(|finding| matches!(finding, TextAuditFinding::OverlappingSiblingText { .. }))
         );
+    }
+
+    #[test]
+    fn selectable_measured_text_delegates_drag_selection_and_copy_to_egui() {
+        use std::{cell::Cell, rc::Rc};
+
+        use egui_kittest::{
+            Harness,
+            kittest::{NodeT, Queryable},
+        };
+
+        const VALUE: &str = "generation=4 epoch=18 sequence=42";
+        let allocated = Rc::new(Cell::new(Rect::NOTHING));
+        let observed_rect = Rc::clone(&allocated);
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(420.0, 120.0))
+            .build_ui(move |ui| {
+                let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+                let measured = measure_text(
+                    ui.painter(),
+                    VALUE,
+                    TextSpec {
+                        interaction: TextInteraction::Selectable,
+                        ..TextSpec::single_line(
+                            TextRole::MonospaceTechnical,
+                            TextOverflow::Ellipsis,
+                        )
+                    },
+                    &tokens,
+                    1.0,
+                    360.0,
+                )
+                .unwrap();
+                let (rect, _) = ui.allocate_exact_size(egui::vec2(360.0, 32.0), Sense::hover());
+                observed_rect.set(rect);
+                let (_, observation) = present_measured_text(
+                    ui,
+                    &measured,
+                    rect,
+                    TextComponentId::new(TextComponentKind::TextSample, 1),
+                    None,
+                );
+                assert_eq!(observation.interaction, TextInteraction::Selectable);
+                assert!(audit_text_layouts(&[observation]).is_empty());
+            });
+
+        harness.run();
+        let rect = allocated.get();
+        let start = egui::pos2(rect.left() + 1.0, rect.center().y);
+        let end = egui::pos2(rect.right() - 1.0, rect.center().y);
+        harness.hover_at(start);
+        harness.drag_at(start);
+        harness.hover_at(end);
+        harness.drop_at(end);
+        harness.step();
+
+        let label = harness.get_by_role_and_label(egui::accesskit::Role::Label, VALUE);
+        assert!(label.accesskit_node().text_selection().is_some());
+
+        harness.event(egui::Event::Copy);
+        harness.step();
+        assert!(harness.output().platform_output.commands.iter().any(
+            |command| matches!(command, egui::OutputCommand::CopyText(text) if text == VALUE)
+        ));
     }
 }

@@ -44,6 +44,7 @@ pub fn show(
         TextRole::Secondary,
         TextOverflow::Ellipsis,
         1,
+        polyorama_ui_egui::TextInteraction::Selectable,
         tokens,
         font_scale,
         &mut outputs.ui_geometry.text_layouts,
@@ -129,6 +130,7 @@ pub fn show(
                         pane: Some(PaneId(6)),
                         domain_reference: Some(DomainReference::Thumbnail(key)),
                         actions: Vec::new(),
+                        text_selectable: false,
                         disabled_reason: None,
                     });
                 }

@@ -9,11 +9,11 @@ use polyorama_ui_egui::{
     ActionButtonSpec, ActionEmphasis, ActionKey, ActionScope, ActionShortcut, ActionSpec,
     ActionTarget, AppearancePreference, Availability, ContrastPreference, DensityPreference,
     DesignTokens, DockBehaviour, DockTextContext, DomainReference, PanePresenter, SemanticUiId,
-    ShortcutKey, SplitterVisualState, StatusTone, TextAuditFinding, TextLayoutObservation,
-    ThumbnailCellSpec, ThumbnailState, UiNode, UiPreferences, UiRole, UiSnapshot, action_button,
-    action_semantic_node, application_bar_frame, application_bar_height, apply_design_system,
-    audit_text_layouts, choice_control, dock_workspace, paint_splitter, property_row,
-    range_control, result_row, status_badge, thumbnail_cell,
+    ShortcutKey, SplitterVisualState, StatusTone, TextAuditFinding, TextInteraction,
+    TextLayoutObservation, ThumbnailCellSpec, ThumbnailState, UiNode, UiPreferences, UiRole,
+    UiSnapshot, action_button, action_semantic_node, application_bar_frame, application_bar_height,
+    apply_design_system, audit_text_layouts, choice_control, dock_workspace, paint_splitter,
+    property_row, range_control, result_row, status_badge, thumbnail_cell,
 };
 use serde::{Deserialize, Serialize};
 
@@ -368,6 +368,9 @@ impl eframe::App for GalleryApp {
             story_rect.into(),
         );
         story_node.name = self.selected.as_str().to_owned();
+        story_node.text_selectable = observations
+            .iter()
+            .any(|text| text.interaction == TextInteraction::Selectable);
         semantic_nodes.push(story_node);
         let mut ui_snapshot = UiSnapshot {
             frame: self.frame,
@@ -1188,6 +1191,7 @@ impl PanePresenter for GalleryDockPresenter<'_> {
             pane: Some(pane),
             domain_reference: Some(DomainReference::Pane(pane)),
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         });
     }
@@ -1218,6 +1222,7 @@ impl PanePresenter for GalleryDockPresenter<'_> {
             pane: None,
             domain_reference: Some(DomainReference::DockNode(node)),
             actions: Vec::new(),
+            text_selectable: false,
             disabled_reason: None,
         });
     }

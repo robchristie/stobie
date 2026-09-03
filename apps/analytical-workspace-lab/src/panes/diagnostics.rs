@@ -381,6 +381,7 @@ impl PaneSurface<'_> {
             scroll.inner_rect.into(),
         );
         scroll_node.name = "Diagnostic metrics".into();
+        scroll_node.text_selectable = true;
         scroll_node.pane = Some(pane);
         self.outputs.ui_geometry.record_node(scroll_node);
     }

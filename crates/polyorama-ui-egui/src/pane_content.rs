@@ -2,8 +2,9 @@ use egui::{Rect, Response, Sense};
 
 use crate::{
     DesignTokens, HorizontalTextAlignment, PaneWidthClass, TextComponentId, TextComponentKind,
-    TextLayoutObservation, TextOverflow, TextRole, TextSpec, VerticalTextAlignment, measure_text,
-    paint_measured_text,
+    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextSpec,
+    VerticalTextAlignment, measure_text, paint_measured_text, present_accessible_measured_text,
+    present_measured_text,
 };
 
 /// A measured full-width content label for pane-local status and explanatory
@@ -17,6 +18,7 @@ pub fn measured_content_label(
     role: TextRole,
     overflow: TextOverflow,
     max_lines: u8,
+    interaction: TextInteraction,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
@@ -25,13 +27,13 @@ pub fn measured_content_label(
     let line_height = tokens.typography.body_size.0 * font_scale * tokens.typography.line_height.0;
     let height = line_height * f32::from(max_lines.max(1));
     let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), Sense::hover());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
     if let Ok(measured) = measure_text(
         ui.painter(),
         text,
         TextSpec {
             role,
             overflow,
+            interaction,
             horizontal_alignment: HorizontalTextAlignment::Start,
             vertical_alignment: VerticalTextAlignment::Centre,
             max_lines,
@@ -41,15 +43,20 @@ pub fn measured_content_label(
         rect.width().max(0.5),
     ) {
         let truncated = measured.truncated();
-        observations.push(paint_measured_text(
-            &ui.painter_at(rect),
-            &measured,
-            rect,
-            TextComponentId::new(TextComponentKind::ContentLabel, instance),
-            None,
-        ));
+        let component = TextComponentId::new(TextComponentKind::ContentLabel, instance);
+        let (text_response, observation) = if interaction == TextInteraction::Selectable {
+            let (response, observation) =
+                present_measured_text(ui, &measured, rect, component, None);
+            (
+                response.expect("selectable measured text returns a response"),
+                observation,
+            )
+        } else {
+            present_accessible_measured_text(ui, &measured, rect, component, None)
+        };
+        observations.push(observation);
         if truncated {
-            response.clone().on_hover_text(text);
+            text_response.on_hover_text(text);
         }
     }
     response
@@ -65,6 +72,7 @@ pub fn measured_inline_label(
     text: &str,
     role: TextRole,
     maximum_width: f32,
+    interaction: TextInteraction,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
@@ -75,8 +83,10 @@ pub fn measured_inline_label(
         line_height.max(tokens.geometry.minimum_hit_size.0),
     );
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
-    let spec = TextSpec::single_line(role, TextOverflow::Ellipsis);
+    let spec = TextSpec {
+        interaction,
+        ..TextSpec::single_line(role, TextOverflow::Ellipsis)
+    };
     if let Ok(measured) = measure_text(
         ui.painter(),
         text,
@@ -86,15 +96,20 @@ pub fn measured_inline_label(
         rect.width().max(0.5),
     ) {
         let truncated = measured.truncated();
-        observations.push(paint_measured_text(
-            &ui.painter_at(rect),
-            &measured,
-            rect,
-            TextComponentId::new(TextComponentKind::ApplicationBarLabel, instance),
-            None,
-        ));
+        let component = TextComponentId::new(TextComponentKind::ApplicationBarLabel, instance);
+        let (text_response, observation) = if interaction == TextInteraction::Selectable {
+            let (response, observation) =
+                present_measured_text(ui, &measured, rect, component, None);
+            (
+                response.expect("selectable measured text returns a response"),
+                observation,
+            )
+        } else {
+            present_accessible_measured_text(ui, &measured, rect, component, None)
+        };
+        observations.push(observation);
         if truncated {
-            response.clone().on_hover_text(text);
+            text_response.on_hover_text(text);
         }
     }
     response
@@ -162,12 +177,9 @@ pub fn diagnostic_row(
         line_height * 1.5
     };
     let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), Sense::hover());
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Label, true, format!("{label}: {value}"))
-    });
     let parent = TextComponentId::new(TextComponentKind::DiagnosticRow, instance);
     let (label_rect, value_rect) = diagnostic_rects(rect, narrow, tokens, line_height);
-    let label_truncated = paint(
+    let (label_truncated, label_response) = paint(
         ui,
         label,
         label_rect,
@@ -177,13 +189,15 @@ pub fn diagnostic_row(
         tokens,
         font_scale,
         observations,
+        true,
     );
-    let value_truncated = paint(
+    let (value_truncated, value_response) = paint(
         ui,
         value,
         value_rect,
         TextSpec {
             role: TextRole::MonospaceTechnical,
+            interaction: TextInteraction::Selectable,
             overflow: if narrow {
                 TextOverflow::Wrap
             } else {
@@ -202,9 +216,16 @@ pub fn diagnostic_row(
         tokens,
         font_scale,
         observations,
+        false,
     );
+    if let (Some(label_response), Some(value_response)) = (&label_response, &value_response) {
+        value_response.clone().labelled_by(label_response.id);
+    }
     if label_truncated || value_truncated {
-        response.clone().on_hover_text(format!("{label}: {value}"));
+        let tooltip = format!("{label}: {value}");
+        for text_response in label_response.into_iter().chain(value_response) {
+            text_response.on_hover_text(tooltip.clone());
+        }
     }
     response
 }
@@ -236,7 +257,7 @@ fn diagnostic_rects(
 
 #[allow(clippy::too_many_arguments)]
 fn paint(
-    ui: &egui::Ui,
+    ui: &mut egui::Ui,
     text: &str,
     rect: Rect,
     spec: TextSpec,
@@ -245,7 +266,8 @@ fn paint(
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
-) -> bool {
+    accessible: bool,
+) -> (bool, Option<Response>) {
     let Ok(measured) = measure_text(
         ui.painter(),
         text,
@@ -254,23 +276,156 @@ fn paint(
         font_scale,
         rect.width().max(0.5),
     ) else {
-        return false;
+        return (false, None);
     };
     let truncated = measured.truncated();
-    observations.push(paint_measured_text(
-        &ui.painter_at(rect),
-        &measured,
-        rect,
-        component,
-        Some(parent),
-    ));
-    truncated
+    let (response, observation) = if accessible {
+        let (response, observation) =
+            present_accessible_measured_text(ui, &measured, rect, component, Some(parent));
+        (Some(response), observation)
+    } else {
+        present_measured_text(ui, &measured, rect, component, Some(parent))
+    };
+    observations.push(observation);
+    (truncated, response)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{DensityVariant, ThemeVariant, audit_text_layouts};
+
+    #[test]
+    fn content_and_diagnostic_text_have_one_accessible_owner_per_string() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let mut observations = Vec::new();
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(520.0, 240.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                measured_content_label(
+                    ui,
+                    1,
+                    "Selectable content",
+                    TextRole::Body,
+                    TextOverflow::Wrap,
+                    2,
+                    TextInteraction::Selectable,
+                    &tokens,
+                    1.0,
+                    &mut observations,
+                );
+                measured_inline_label(
+                    ui,
+                    2,
+                    "Selectable inline",
+                    TextRole::Status,
+                    240.0,
+                    TextInteraction::Selectable,
+                    &tokens,
+                    1.0,
+                    &mut observations,
+                );
+                measured_content_label(
+                    ui,
+                    3,
+                    "Accessible inert content",
+                    TextRole::Body,
+                    TextOverflow::Ellipsis,
+                    1,
+                    TextInteraction::Inert,
+                    &tokens,
+                    1.0,
+                    &mut observations,
+                );
+                diagnostic_row(ui, 4, "Generation", "42", &tokens, 1.0, &mut observations);
+            },
+        );
+        let update = output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("AccessKit update");
+        output.textures_delta.clear();
+        let label_count = |label: &str| {
+            update
+                .nodes
+                .iter()
+                .map(|(_, node)| node)
+                .filter(|node| {
+                    node.role() == egui::accesskit::Role::Label && node.value() == Some(label)
+                })
+                .count()
+        };
+        for label in [
+            "Selectable content",
+            "Selectable inline",
+            "Accessible inert content",
+            "Generation",
+            "42",
+        ] {
+            assert_eq!(label_count(label), 1, "unexpected owner count for {label}");
+        }
+        assert_eq!(label_count("Generation: 42"), 0);
+        let (diagnostic_label_id, _) = update
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Label && node.value() == Some("Generation")
+            })
+            .expect("diagnostic label node");
+        let (_, diagnostic_value) = update
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Label && node.value() == Some("42")
+            })
+            .expect("diagnostic value node");
+        assert_eq!(diagnostic_value.labelled_by(), &[*diagnostic_label_id]);
+    }
+
+    #[test]
+    fn elided_selectable_diagnostic_value_opens_its_complete_pair_tooltip() {
+        use std::{cell::Cell, rc::Rc};
+
+        use egui_kittest::{Harness, kittest::Queryable};
+
+        const LABEL: &str = "Checksum";
+        const VALUE: &str =
+            "sha256:76e12b7e4d6fcffb8dbb31e67bc06d0f6be9af7f849dabf6e5c4207ce4f5682a";
+        const TOOLTIP: &str =
+            "Checksum: sha256:76e12b7e4d6fcffb8dbb31e67bc06d0f6be9af7f849dabf6e5c4207ce4f5682a";
+        let value_rect = Rc::new(Cell::new(Rect::NOTHING));
+        let observed_rect = Rc::clone(&value_rect);
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(520.0, 100.0))
+            .build_ui(move |ui| {
+                let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+                let mut observations = Vec::new();
+                diagnostic_row(ui, 1, LABEL, VALUE, &tokens, 1.0, &mut observations);
+                let value = observations
+                    .iter()
+                    .find(|text| text.role == TextRole::MonospaceTechnical)
+                    .expect("diagnostic value observation");
+                assert!(value.truncated);
+                observed_rect.set(Rect::from_min_max(
+                    egui::pos2(value.allocated_rect.min_x, value.allocated_rect.min_y),
+                    egui::pos2(value.allocated_rect.max_x, value.allocated_rect.max_y),
+                ));
+            });
+
+        assert!(harness.query_by_label(TOOLTIP).is_none());
+        harness.hover_at(value_rect.get().center());
+        harness.run();
+        assert!(harness.query_by_label(TOOLTIP).is_some());
+    }
 
     #[test]
     fn technical_rows_are_measured_and_end_aligned_until_the_pane_is_narrow() {
@@ -309,6 +464,10 @@ mod tests {
                 .expect("technical value");
             assert_eq!(value.horizontal_alignment, expected_alignment);
             assert_eq!(value.declared_max_lines, expected_lines);
+            assert_eq!(value.interaction, TextInteraction::Selectable);
+            assert!(observations.iter().any(|item| {
+                item.role == TextRole::Secondary && item.interaction == TextInteraction::Inert
+            }));
             assert!(audit_text_layouts(&observations).is_empty());
         }
     }

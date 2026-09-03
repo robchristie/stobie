@@ -72,6 +72,9 @@ if (process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1') {
   browser = await chromium.connectOverCDP(cdpEndpoint);
 }
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
+  origin: 'http://127.0.0.1:4174',
+});
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack ?? error}`));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
 const launchStartedMs = Date.now();
@@ -161,14 +164,20 @@ try {
 
   current = await selectStory('property-row/long-value');
   if (current.text.length < 2 || current.text_audit.length !== 0
-      || current.ui_snapshot.semantic_audit.length !== 0) {
+      || current.ui_snapshot.semantic_audit.length !== 0
+      || current.text.filter((entry) => entry.interaction === 'selectable').length !== 1
+      || !current.ui_snapshot.nodes.some((node) => node.id === 'gallery.story'
+        && node.text_selectable === true)) {
     throw new Error(`long-text property story failed: ${JSON.stringify(current)}`);
   }
   await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-long-text.png') });
 
   current = await selectStory('status/error-long-message');
   if (current.text.length !== 1 || current.text_audit.length !== 0
-      || current.ui_snapshot.semantic_audit.length !== 0) {
+      || current.ui_snapshot.semantic_audit.length !== 0
+      || current.text[0].interaction !== 'selectable'
+      || !current.ui_snapshot.nodes.some((node) => node.id === 'gallery.story'
+        && node.text_selectable === true)) {
     throw new Error(`error-status story failed: ${JSON.stringify(current)}`);
   }
   await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-error.png') });
@@ -183,6 +192,49 @@ try {
   await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.set_configuration({
     appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1.0, width: 'wide',
   }));
+  current = await selectStory('reference/inspector');
+  const confidenceValue = current.text.find((entry) => entry.component_id.kind === 'property_row'
+    && entry.component_id.instance === 105);
+  if (!confidenceValue || confidenceValue.interaction !== 'selectable'
+      || !current.ui_snapshot.nodes.some((node) => node.id === 'gallery.story'
+        && node.text_selectable === true)) {
+    throw new Error(`inspector selection semantics failed: ${JSON.stringify(current)}`);
+  }
+  const selectionY = (confidenceValue.allocated_rect.min_y + confidenceValue.allocated_rect.max_y) / 2;
+  await page.mouse.move(confidenceValue.allocated_rect.min_x + 1, selectionY);
+  await page.mouse.down();
+  await page.mouse.move(confidenceValue.allocated_rect.max_x - 1, selectionY, { steps: 12 });
+  await page.mouse.up();
+  await page.keyboard.press('Control+C');
+  const copiedInspectorValue = await page.evaluate(() => navigator.clipboard.readText());
+  if (copiedInspectorValue !== '99.875 %') {
+    throw new Error(`inspector drag-copy mismatch: ${JSON.stringify(copiedInspectorValue)}`);
+  }
+  releaseObservations.inspector_drag_copy = copiedInspectorValue;
+
+  await page.keyboard.press('Escape');
+  current = await selectStory('reference/results');
+  if (current.text.some((entry) => entry.interaction !== 'inert')
+      || current.ui_snapshot.nodes.some((node) => node.id === 'gallery.story'
+        && node.text_selectable === true)) {
+    throw new Error(`result rows unexpectedly exposed text selection: ${JSON.stringify(current)}`);
+  }
+  const resultText = current.text.find((entry) => entry.component_id.kind === 'result_row');
+  if (!resultText) throw new Error(`result row text observation missing: ${JSON.stringify(current)}`);
+  const clipboardSentinel = 'polyorama-result-row-selection-remains-inert';
+  await page.evaluate((value) => navigator.clipboard.writeText(value), clipboardSentinel);
+  const resultSelectionY = (resultText.allocated_rect.min_y + resultText.allocated_rect.max_y) / 2;
+  await page.mouse.move(resultText.allocated_rect.min_x + 1, resultSelectionY);
+  await page.mouse.down();
+  await page.mouse.move(resultText.allocated_rect.max_x - 1, resultSelectionY, { steps: 12 });
+  await page.mouse.up();
+  await page.keyboard.press('Control+C');
+  const copiedResultValue = await page.evaluate(() => navigator.clipboard.readText());
+  if (copiedResultValue !== clipboardSentinel) {
+    throw new Error(`result row drag unexpectedly copied text: ${JSON.stringify(copiedResultValue)}`);
+  }
+  releaseObservations.result_row_drag_copy = copiedResultValue;
+
   current = await selectStory('tabs/narrow');
   const narrowTextMin = Math.min(...current.text.map((entry) => entry.allocated_rect.min_x));
   const narrowTextMax = Math.max(...current.text.map((entry) => entry.allocated_rect.max_x));

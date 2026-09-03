@@ -32,6 +32,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -67,6 +68,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -102,6 +104,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -137,6 +140,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -172,6 +176,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true
@@ -207,6 +212,7 @@
         "max_y": 145
       },
       "overflow": "ellipsis",
+      "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
       "truncated": true

@@ -795,6 +795,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         APPLICATION_NAME,
                         polyorama_ui_egui::TextRole::ApplicationTitle,
                         tokens.geometry.minimum_hit_size.0 * if compact_bar { 4.0 } else { 6.0 },
+                        polyorama_ui_egui::TextInteraction::Inert,
                         &tokens,
                         self.preferences.font_scale,
                         &mut ui_geometry.text_layouts,
@@ -971,6 +972,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             &self.status,
                             polyorama_ui_egui::TextRole::Status,
                             status_width,
+                            polyorama_ui_egui::TextInteraction::Selectable,
                             &tokens,
                             self.preferences.font_scale,
                             &mut ui_geometry.text_layouts,
@@ -982,6 +984,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             status.rect.into(),
                         );
                         node.name = self.status.clone();
+                        node.text_selectable = true;
                         ui_geometry.record_node(node);
                     }
                     if ui.available_width() > tokens.geometry.minimum_hit_size.0 * 5.0 {
@@ -997,6 +1000,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             &worker_status,
                             polyorama_ui_egui::TextRole::Secondary,
                             worker_width,
+                            polyorama_ui_egui::TextInteraction::Selectable,
                             &tokens,
                             self.preferences.font_scale,
                             &mut ui_geometry.text_layouts,
@@ -1008,6 +1012,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             response.rect.into(),
                         );
                         node.name = worker_status;
+                        node.text_selectable = true;
                         ui_geometry.record_node(node);
                     }
                 });
@@ -1082,7 +1087,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.ui_behaviour
             .finish_camera_gestures(Instant::now(), &mut outputs);
         outputs.finalise_camera_previews(
-            &ctx,
+            root_ui,
             &self.ui_behaviour,
             &self.session.cameras,
             self.runtime.generation(),
