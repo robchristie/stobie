@@ -302,6 +302,7 @@ mod tests {
     #[test]
     fn narrow_control_returns_stable_bounded_nodes_and_matching_accesskit_semantics() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let root_rect = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(220.0, 560.0));
         let parent = SemanticUiId::root();
@@ -419,6 +420,7 @@ mod tests {
     #[test]
     fn invalid_preferences_are_repaired_independently_before_presentation() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let root = SemanticUiId::root();
         let mut preferences = UiPreferences {
             appearance: AppearancePreference::Unknown,

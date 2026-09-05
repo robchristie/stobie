@@ -131,13 +131,13 @@ try {
     && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
   releaseObservations.initial_ready_wall_ms = Date.now() - launchStartedMs;
   const manifest = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.manifest());
-  if (manifest.length !== 18 || new Set(manifest.map((entry) => entry.id)).size !== 18) {
+  if (manifest.length !== 20 || new Set(manifest.map((entry) => entry.id)).size !== 20) {
     throw new Error(`invalid gallery manifest: ${JSON.stringify(manifest)}`);
   }
   await writeFile(join(evidenceRoot, 'gallery-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   let current = await snapshot();
-  if (current.story !== 'reference/application-shell' || current.story_count !== 18
+  if (current.story !== 'reference/application-shell' || current.story_count !== 20
       || current.text.length === 0 || current.text_audit.length !== 0
       || current.text_audit_coverage?.native_text_controls !== manifest.length + 5
       || current.text_audit_coverage.observed_native_controls !== 0

@@ -11,9 +11,9 @@
       "description": "Fit the complete image into the active viewport",
       "rect": {
         "min_x": 534,
-        "min_y": 117,
-        "max_x": 594.65625,
-        "max_y": 149
+        "min_y": 121,
+        "max_x": 593.8125,
+        "max_y": 153
       },
       "enabled": true,
       "focused": true,

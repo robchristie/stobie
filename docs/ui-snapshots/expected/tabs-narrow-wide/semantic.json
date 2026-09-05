@@ -41,7 +41,7 @@
       "name": "Results: one million deterministic rows",
       "rect": {
         "min_x": 374,
-        "min_y": 149,
+        "min_y": 153,
         "max_x": 670,
         "max_y": 342
       },
@@ -62,9 +62,9 @@
       "name": "Primary image — Antarctic reconstruction sector 04",
       "rect": {
         "min_x": 378,
-        "min_y": 117,
-        "max_x": 426.973388671875,
-        "max_y": 149
+        "min_y": 121,
+        "max_x": 427.10101318359375,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,
@@ -82,10 +82,10 @@
       "role": "tab",
       "name": "Secondary linked scalar image with expanded label",
       "rect": {
-        "min_x": 429.97332763671875,
-        "min_y": 117,
-        "max_x": 478.94671630859375,
-        "max_y": 149
+        "min_x": 430.10101318359375,
+        "min_y": 121,
+        "max_x": 479.2020263671875,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,
@@ -103,10 +103,10 @@
       "role": "tab",
       "name": "Overview",
       "rect": {
-        "min_x": 481.94671630859375,
-        "min_y": 117,
-        "max_x": 520.56103515625,
-        "max_y": 149
+        "min_x": 482.2020263671875,
+        "min_y": 121,
+        "max_x": 520.5079956054688,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,
@@ -124,10 +124,10 @@
       "role": "tab",
       "name": "Results: one million deterministic rows",
       "rect": {
-        "min_x": 523.56103515625,
-        "min_y": 117,
-        "max_x": 572.534423828125,
-        "max_y": 149
+        "min_x": 523.5079345703125,
+        "min_y": 121,
+        "max_x": 572.6090087890625,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,
@@ -145,10 +145,10 @@
       "role": "tab",
       "name": "Inspector",
       "rect": {
-        "min_x": 575.5343627929688,
-        "min_y": 117,
-        "max_x": 614.0266723632812,
-        "max_y": 149
+        "min_x": 575.6090087890625,
+        "min_y": 121,
+        "max_x": 613.8990478515625,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,
@@ -166,10 +166,10 @@
       "role": "tab",
       "name": "Diagnostics and worker request provenance",
       "rect": {
-        "min_x": 617.026611328125,
-        "min_y": 117,
+        "min_x": 616.89892578125,
+        "min_y": 121,
         "max_x": 666,
-        "max_y": 149
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,

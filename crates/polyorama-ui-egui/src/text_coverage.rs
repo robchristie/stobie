@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use egui::{Context, Id, Response};
 use serde::{Deserialize, Serialize};
 
-use crate::TextLayoutObservation;
+use crate::{TextComponentId, TextLayoutObservation};
 
 /// Categories outside the structural text audit, not audit failures.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -22,6 +22,10 @@ pub enum TextExclusion {
 pub struct TextAuditCoverage {
     /// Distinct component IDs represented by measured text observations.
     pub measured_components: usize,
+    /// Distinct submitted components, including failed visible fallbacks.
+    pub attempted_components: usize,
+    pub successful_components: usize,
+    pub failed_components: usize,
     /// Explicitly recorded native control responses, including submitted clipped
     /// controls and open popup options. Closed popups and virtual items that were
     /// not instantiated do not contribute. A control is not a count of its labels.
@@ -38,6 +42,9 @@ impl Default for TextAuditCoverage {
     fn default() -> Self {
         Self {
             measured_components: 0,
+            attempted_components: 0,
+            successful_components: 0,
+            failed_components: 0,
             native_text_controls: 0,
             observed_native_controls: 0,
             excluded_categories: vec![TextExclusion::OrdinaryEguiLabels],
@@ -69,6 +76,7 @@ struct NativeTextInventory {
     pass: u64,
     controls: HashSet<Id>,
     exclusions: BTreeSet<TextExclusion>,
+    components: BTreeMap<TextComponentId, bool>,
 }
 
 fn inventory_id(context: &Context) -> Id {
@@ -95,6 +103,30 @@ pub fn record_native_text_control(response: &Response, kind: NativeTextControlKi
     });
 }
 
+/// Retain outcomes independently of consumer observation filtering.
+pub(crate) fn record_measured_component(
+    context: &Context,
+    component: TextComponentId,
+    failed: bool,
+) {
+    let pass = context.cumulative_pass_nr();
+    let id = inventory_id(context);
+    context.data_mut(|data| {
+        let inventory = data.get_temp_mut_or_default::<NativeTextInventory>(id);
+        if inventory.pass != pass {
+            *inventory = NativeTextInventory {
+                pass,
+                ..Default::default()
+            };
+        }
+        inventory
+            .components
+            .entry(component)
+            .and_modify(|previous| *previous |= failed)
+            .or_insert(failed);
+    });
+}
+
 /// Read coverage after rendering, inside the same UI pass as the observations.
 /// An empty audit means every observed Polyorama text component passed; it does
 /// not establish that every visible string was structurally audited.
@@ -112,10 +144,29 @@ pub fn text_audit_coverage(
             .len(),
         ..Default::default()
     };
+    let failed = observations
+        .iter()
+        .filter(|observation| observation.layout_error.is_some())
+        .map(|observation| observation.component_id)
+        .collect::<BTreeSet<_>>();
+    coverage.attempted_components = coverage.measured_components;
+    coverage.failed_components = failed.len();
+    coverage.successful_components = coverage.attempted_components - coverage.failed_components;
     context.data(|data| {
         if let Some(inventory) = data.get_temp::<NativeTextInventory>(id)
             && inventory.pass == pass
         {
+            let mut outcomes = inventory.components;
+            for observation in observations {
+                outcomes
+                    .entry(observation.component_id)
+                    .and_modify(|failed| *failed |= observation.layout_error.is_some())
+                    .or_insert(observation.layout_error.is_some());
+            }
+            coverage.attempted_components = outcomes.len();
+            coverage.failed_components = outcomes.values().filter(|failed| **failed).count();
+            coverage.successful_components =
+                coverage.attempted_components - coverage.failed_components;
             coverage.native_text_controls = inventory.controls.len();
             coverage.excluded_categories.extend(inventory.exclusions);
         }

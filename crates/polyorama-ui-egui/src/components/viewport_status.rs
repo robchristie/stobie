@@ -2,7 +2,7 @@ use egui::{Rect, Stroke};
 
 use crate::{
     DesignTokens, HorizontalTextAlignment, TextComponentId, TextInteraction, TextOverflow,
-    TextRole, TextSpec, measure_text, present_measured_text,
+    TextRole, TextSpec, present_measured_text,
 };
 
 pub fn image_status_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
@@ -71,14 +71,15 @@ pub fn paint_image_status(
             interaction: TextInteraction::Selectable,
             ..TextSpec::single_line(role, TextOverflow::Ellipsis)
         };
-        if let Ok(measured) = measure_text(
-            &painter,
-            text,
-            text_spec,
-            tokens,
-            font_scale,
-            rect.width().max(0.5),
-        ) {
+        {
+            let measured = crate::measure_component_text(
+                &painter,
+                text,
+                text_spec,
+                tokens,
+                font_scale,
+                rect.width().max(0.5),
+            );
             let (_, observation) = present_measured_text(
                 ui,
                 &measured,
@@ -103,6 +104,7 @@ mod tests {
     #[test]
     fn image_status_uses_measured_clipped_text_at_all_supported_scales() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let tokens =
             DesignTokens::resolve(ThemeVariant::LightHighContrast, DensityVariant::Compact);
         for font_scale in [1.0, 1.25, 1.5] {

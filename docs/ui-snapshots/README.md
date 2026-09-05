@@ -29,8 +29,10 @@ metadata, semantic snapshots and text observations structurally.
 
 Each `text.json` includes `coverage` with measured component and native control
 counts plus excluded categories. The `audit-text` summary retains coverage per
-fixture and states the bounded meaning of a pass. Missing coverage or counts
-inconsistent with the observations fail verification. Empty findings mean
+fixture and states the bounded meaning of a pass. Missing coverage, failed component attempts or counts
+inconsistent with the observations fail verification. Attempts are recorded
+independently of the visible observation subset, so filtering cannot erase a
+failed request. Empty findings mean
 “Every observed Polyorama text component passed”, not “Every visible string was
 structurally audited”. Counts cover the submitted layout pass, including clipped
 controls and gallery chrome; ordinary labels remain excluded. See the

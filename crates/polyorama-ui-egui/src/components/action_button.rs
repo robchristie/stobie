@@ -160,14 +160,15 @@ pub fn action_button<A: ActionKey>(
         );
     }
     let label_rect = visual.shrink2(egui::vec2(tokens.geometry.control_padding_x.0, 0.0));
-    if let Ok(mut measured) = measure_text(
-        ui.painter(),
-        visible_label,
-        text_spec,
-        tokens,
-        font_scale,
-        label_rect.width().max(0.5),
-    ) {
+    {
+        let mut measured = crate::measure_component_text(
+            ui.painter(),
+            visible_label,
+            text_spec,
+            tokens,
+            font_scale,
+            label_rect.width().max(0.5),
+        );
         if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
             measured.colour = tokens.colours.accent_on_accent.into();
         } else if !enabled {
@@ -234,6 +235,7 @@ mod tests {
     #[test]
     fn action_snapshot_and_accesskit_semantics_cannot_disagree_silently() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
         let root_rect = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(360.0, 120.0));

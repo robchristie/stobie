@@ -22,8 +22,7 @@ use egui::{Color32, Frame, Margin, Painter, Rect, Response, Sense, Stroke};
 
 use crate::{
     DesignTokens, HorizontalTextAlignment, TextComponentId, TextOverflow, TextRole, TextSpec,
-    UiNode, measure_text, paint_measured_text, present_accessible_measured_text,
-    present_measured_text,
+    UiNode, paint_measured_text, present_accessible_measured_text, present_measured_text,
 };
 
 pub const SPLITTER_VISUAL_WIDTH: f32 = 5.0;
@@ -82,14 +81,15 @@ pub(super) fn paint_text_observation(
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Option<Response> {
-    if let Ok(measured) = measure_text(
-        ui.painter(),
-        text.text,
-        text.spec,
-        tokens,
-        font_scale,
-        text.rect.width().max(0.5),
-    ) {
+    {
+        let measured = crate::measure_component_text(
+            ui.painter(),
+            text.text,
+            text.spec,
+            tokens,
+            font_scale,
+            text.rect.width().max(0.5),
+        );
         let (response, observation) = if text.accessible {
             let (response, observation) = present_accessible_measured_text(
                 ui,
@@ -104,8 +104,6 @@ pub(super) fn paint_text_observation(
         };
         observations.push(observation);
         response
-    } else {
-        None
     }
 }
 
@@ -261,24 +259,21 @@ pub fn paint_dock_tab(
         horizontal_alignment: HorizontalTextAlignment::Centre,
         ..TextSpec::single_line(TextRole::TabLabel, TextOverflow::Ellipsis)
     };
-    let observation = measure_text(
+    let measured = crate::measure_component_text(
         ui.painter(),
         title,
         text_spec,
         tokens,
         spec.font_scale,
         label_rect.width().max(0.5),
-    )
-    .ok()
-    .map(|measured| {
-        paint_measured_text(
-            &ui.painter_at(label_rect),
-            &measured,
-            label_rect,
-            spec.component_id,
-            Some(spec.parent_id),
-        )
-    });
+    );
+    let observation = Some(paint_measured_text(
+        &ui.painter_at(label_rect),
+        &measured,
+        label_rect,
+        spec.component_id,
+        Some(spec.parent_id),
+    ));
     if observation
         .as_ref()
         .is_some_and(|observation| observation.truncated)
@@ -403,6 +398,7 @@ mod tests {
     #[test]
     fn overflow_trigger_exposes_full_button_semantics_and_minimum_bounds() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let root = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(80.0, 40.0));
         let mut output = context.run_ui(
@@ -443,6 +439,7 @@ mod tests {
     #[test]
     fn gallery_components_expose_stable_roles_names_states_actions_and_hit_bounds() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Compact);
         let mut observations = Vec::new();

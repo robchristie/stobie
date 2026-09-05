@@ -609,6 +609,17 @@ pub struct GeometryTokens {{
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TypographyTokens {{
+    pub application_title_size: Points,
+    pub pane_title_size: Points,
+    pub section_heading_size: Points,
+    pub secondary_size: Points,
+    pub caption_size: Points,
+    pub reading_application_title_size: Points,
+    pub reading_pane_title_size: Points,
+    pub reading_section_heading_size: Points,
+    pub reading_body_size: Points,
+    pub heading_line_height: Ratio,
+
     pub body_size: Points,
     pub body_weight: FontWeight,
     pub label_size: Points,
@@ -657,6 +668,17 @@ impl DesignTokens {{
 {density_constants}
 
 const TYPOGRAPHY: TypographyTokens = TypographyTokens {{
+    application_title_size: Points({application_title_size}),
+    pane_title_size: Points({pane_title_size}),
+    section_heading_size: Points({section_heading_size}),
+    secondary_size: Points({secondary_size}),
+    caption_size: Points({caption_size}),
+    reading_application_title_size: Points({reading_application_title_size}),
+    reading_pane_title_size: Points({reading_pane_title_size}),
+    reading_section_heading_size: Points({reading_section_heading_size}),
+    reading_body_size: Points({reading_body_size}),
+    heading_line_height: Ratio({heading_line_height}),
+
     body_size: Points({body_size}),
     body_weight: FontWeight({body_weight}),
     label_size: Points({label_size}),
@@ -668,6 +690,26 @@ const MOTION: MotionTokens = MotionTokens {{
     quick: Milliseconds({motion_quick}),
 }};
 "#,
+        application_title_size =
+            number_literal(required_number(&common, "typography.applicationTitleSize")?),
+        pane_title_size = number_literal(required_number(&common, "typography.paneTitleSize")?),
+        section_heading_size =
+            number_literal(required_number(&common, "typography.sectionHeadingSize")?),
+        secondary_size = number_literal(required_number(&common, "typography.secondarySize")?),
+        caption_size = number_literal(required_number(&common, "typography.captionSize")?),
+        reading_application_title_size = number_literal(required_number(
+            &common,
+            "typography.readingApplicationTitleSize"
+        )?),
+        reading_pane_title_size =
+            number_literal(required_number(&common, "typography.readingPaneTitleSize")?),
+        reading_section_heading_size = number_literal(required_number(
+            &common,
+            "typography.readingSectionHeadingSize"
+        )?),
+        reading_body_size = number_literal(required_number(&common, "typography.readingBodySize")?),
+        heading_line_height =
+            number_literal(required_number(&common, "typography.headingLineHeight")?),
         body_size = number_literal(required_number(&common, "typography.bodySize")?),
         body_weight = required_u16(&common, "typography.bodyWeight")?,
         label_size = number_literal(required_number(&common, "typography.labelSize")?),

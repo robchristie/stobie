@@ -3,6 +3,7 @@ mod data;
 mod dock;
 mod reference;
 mod toolbars;
+mod typography;
 
 use eframe::egui;
 use polyorama_ui_egui::{DesignTokens, TextLayoutObservation, UiNode};
@@ -27,6 +28,17 @@ pub(super) fn render_story(
     ui.label(definition.description);
     ui.separator();
     match story {
+        StoryId::TypographyDense | StoryId::TypographyReading => typography::story(
+            ui,
+            if story == StoryId::TypographyReading {
+                polyorama_ui_egui::TypographyProfile::Reading
+            } else {
+                polyorama_ui_egui::TypographyProfile::Dense
+            },
+            tokens,
+            font_scale,
+            observations,
+        ),
         StoryId::ButtonDefault => {
             let mut focused = false;
             buttons::button_story(

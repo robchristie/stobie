@@ -65,6 +65,16 @@
     "minimumHitSize": { "$type": "dimension", "$value": 32 }
   },
   "typography": {
+    "applicationTitleSize": { "$type": "fontSize", "$value": 18 },
+    "paneTitleSize": { "$type": "fontSize", "$value": 16 },
+    "sectionHeadingSize": { "$type": "fontSize", "$value": 14 },
+    "secondarySize": { "$type": "fontSize", "$value": 12.5 },
+    "captionSize": { "$type": "fontSize", "$value": 12 },
+    "readingApplicationTitleSize": { "$type": "fontSize", "$value": 21 },
+    "readingPaneTitleSize": { "$type": "fontSize", "$value": 18 },
+    "readingSectionHeadingSize": { "$type": "fontSize", "$value": 15 },
+    "readingBodySize": { "$type": "fontSize", "$value": 14 },
+    "headingLineHeight": { "$type": "number", "$value": 1.25 },
     "bodySize": { "$type": "fontSize", "$value": 13 },
     "bodyWeight": { "$type": "fontWeight", "$value": 400 },
     "labelSize": { "$type": "fontSize", "$value": 12.5 },

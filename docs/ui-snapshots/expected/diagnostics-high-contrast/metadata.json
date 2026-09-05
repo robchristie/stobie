@@ -14,7 +14,7 @@
     "width": "narrow"
   },
   "data_fixture": "gallery-seed-v1",
-  "fonts": "egui-default-fonts-0.36.1",
+  "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
   "renderer": "browser-webgpu-eframe-wgpu-swiftshader",
   "pixel_comparison": {
     "colour_space": "srgb8",

@@ -54,11 +54,32 @@ allocation for 125% or 150% font scale, but must not silently reduce hit size.
 
 ## Semantic typography and overflow
 
-Typography is role-based. `body` is the normal reading and data label role at
-13 points and weight 400. `label` is the short chrome or control role at 12.5
-points and weight 600. Both use the application UI font selected through egui;
-the generated `FontWeight` type records semantic weight intent while egui owns
-the installed font family and all production measurement.
+Typography is role-based, with real regular and semibold Source Sans 3 faces
+registered as named egui families. The dense default uses 18-point application
+titles, 16-point pane titles, 14-point section headings, 13-point reading text,
+12.5-point control labels and secondary text, and 12-point captions. Titles,
+headings and control labels use the bundled 600-weight face; reading and metadata
+use the 400-weight face. Secondary and caption text use the muted colour token.
+Heading line height is 1.25 times font size; other roles use 1.35. All dimensions
+scale together at 100–150%.
+
+`TypographyProfile::Reading` resolves the same roles to a 21-point application
+title, 18-point pane title, 15-point section heading and 14-point body. It keeps
+secondary metadata at 12.5 points. These profiles are independent of density:
+density changes geometry and rhythm, while the profile changes the type scale.
+Consumers resolve `DesignTokens::with_typography_profile` and apply matching
+native styles with `apply_design_system_with_typography`. Native egui heading,
+body, button, small and monospace styles use the same role font IDs. For exact
+semantic line height and emphasis in native controls, use
+`TextRole::style(...).rich_text(...)`; egui's plain string API does not expose
+role-specific line-height or muted-colour defaults.
+
+`measured_content_label` measures first and allocates the actual bounded galley
+height. Its `max_lines` is an overflow limit. `measured_fixed_slot_label`
+explicitly reserves that many role line heights for fixed table or virtualised
+row recipes. Both align text at the top; deliberate grouping spacing belongs to
+the parent recipe. Font identities and licence authority are retained in the
+[bundled-font record](../crates/polyorama-ui-egui/assets/fonts/README.md).
 
 Default alignment and overflow are semantic:
 
@@ -78,7 +99,7 @@ count is never a text-width proxy.
 The measured-text layer exposes the bounded roles `application_title`,
 `pane_title`, `section_heading`, `body`, `secondary`, `caption`,
 `tabular_value`, `monospace_technical`, `button_label`, `tab_label`, `status`
-and `error`. Each role resolves its font family, size, weight intent and colour
+and `error`. Each role resolves its font family, size, actual weight, line height and colour
 from generated tokens. Egui galley layout is the production measurement
 authority; role names never become runtime stylesheet selectors.
 
@@ -100,16 +121,25 @@ truncation, alignment deviation and overlapping sibling text. Observations are
 concentrated on Polyorama components; they are not a second UI tree and do not
 enumerate ordinary egui labels or virtualised collections.
 
+A component request that fails validation paints an explicit diagnostic fallback
+and records `layout_error` on its observation. `audit_text_layouts` reports
+`LayoutFailed`; qualification rejects a non-zero failed count even if a consumer
+filters the observation out of its visible subset. Low-level `measure_text`
+continues returning a typed error; production components use
+`measure_component_text` so errors cannot silently become empty rectangles.
+
 An empty text audit means **every observed Polyorama text component passed**,
 not that every visible string in the frame was structurally audited.
-`TextAuditCoverage` accompanies current snapshots and retained text evidence:
-`measured_components` counts distinct observed component IDs;
-`native_text_controls` counts explicitly recorded native control responses in
-that viewport's current layout pass; `observed_native_controls` counts those
-whose internal text has structural observations (currently zero).
-`excluded_categories` always names ordinary egui labels, including headings and
-hover text, and names each unobserved native text category used in that pass.
-Missing or null coverage means unavailable, not zero controls.
+`TextAuditCoverage` records distinct `attempted_components`,
+`successful_components` and `failed_components` independently in the current
+viewport's layout pass. `measured_components` counts IDs in the supplied
+observation subset; attempted equals successful plus failed and must be at
+least measured. `native_text_controls` counts explicitly recorded native
+responses, and `observed_native_controls` counts those whose internal text has
+structural observations (currently zero). `excluded_categories` always names
+ordinary egui labels and each unobserved native text category used in that pass.
+Missing or null coverage is unavailable. Required semantic content must also be
+asserted explicitly; zero findings alone cannot prove a component was submitted.
 
 Native combo boxes, radios, sliders and selectable options are recorded at their
 recipe or application call sites. The denominator includes submitted clipped
@@ -247,7 +277,7 @@ reusable component increments.
 ## Gallery and reference recipes
 
 `polyorama-gallery` is a native and browser application, not a second widget
-implementation. Its typed Rust catalogue has 18 stable story IDs and fixed
+implementation. Its typed Rust catalogue has 20 stable story IDs and fixed
 metadata for description, component group, recommended viewport, applicable
 appearance/density variants and interaction scenarios. It supports the four
 light/dark and standard/high-contrast combinations, both densities, 100%, 125%
@@ -281,5 +311,5 @@ predictably, and font scale is clamped to 100–150%. System appearance resolves
 against egui's current system theme.
 
 The token source, generator, generated Rust and component recipe are Polyorama
-project code under the repository's Apache-2.0 licence. They contain no
-third-party design assets.
+project code under the repository's Apache-2.0 licence. Bundled Source Sans 3 fonts are separately licensed under SIL OFL 1.1; see the
+[bundled-font record](../crates/polyorama-ui-egui/assets/fonts/README.md).

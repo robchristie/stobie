@@ -3,13 +3,12 @@ use egui::{Rect, Response, Sense};
 use crate::{
     DesignTokens, HorizontalTextAlignment, PaneWidthClass, TextComponentId, TextComponentKind,
     TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextSpec,
-    VerticalTextAlignment, measure_text, paint_measured_text, present_accessible_measured_text,
+    VerticalTextAlignment, paint_measured_text, present_accessible_measured_text,
     present_measured_text,
 };
 
-/// A measured full-width content label for pane-local status and explanatory
-/// text. It wraps only when requested and keeps the complete text in widget
-/// semantics and a truncation tooltip.
+/// Measure first, then allocate the actual bounded content height. `max_lines`
+/// is an overflow limit, not a request to reserve empty lines.
 #[allow(clippy::too_many_arguments)]
 pub fn measured_content_label(
     ui: &mut egui::Ui,
@@ -23,11 +22,67 @@ pub fn measured_content_label(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> Response {
+    measured_label(
+        ui,
+        instance,
+        text,
+        role,
+        overflow,
+        max_lines,
+        interaction,
+        tokens,
+        font_scale,
+        observations,
+        false,
+    )
+}
+
+/// Reserve a deliberate line slot for fixed-height tables or virtualised rows.
+/// Invalid requests use a one-line visible fallback and remain audit failures.
+#[allow(clippy::too_many_arguments)]
+pub fn measured_fixed_slot_label(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    role: TextRole,
+    overflow: TextOverflow,
+    max_lines: u8,
+    interaction: TextInteraction,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) -> Response {
+    measured_label(
+        ui,
+        instance,
+        text,
+        role,
+        overflow,
+        max_lines,
+        interaction,
+        tokens,
+        font_scale,
+        observations,
+        true,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn measured_label(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    role: TextRole,
+    overflow: TextOverflow,
+    max_lines: u8,
+    interaction: TextInteraction,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+    fixed_slot: bool,
+) -> Response {
     let width = ui.available_width().max(1.0);
-    let line_height = tokens.typography.body_size.0 * font_scale * tokens.typography.line_height.0;
-    let height = line_height * f32::from(max_lines.max(1));
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(width, height), Sense::hover());
-    if let Ok(measured) = measure_text(
+    let measured = crate::measure_component_text(
         ui.painter(),
         text,
         TextSpec {
@@ -35,29 +90,33 @@ pub fn measured_content_label(
             overflow,
             interaction,
             horizontal_alignment: HorizontalTextAlignment::Start,
-            vertical_alignment: VerticalTextAlignment::Centre,
+            vertical_alignment: VerticalTextAlignment::Top,
             max_lines,
         },
         tokens,
         font_scale,
-        rect.width().max(0.5),
-    ) {
-        let truncated = measured.truncated();
-        let component = TextComponentId::new(TextComponentKind::ContentLabel, instance);
-        let (text_response, observation) = if interaction == TextInteraction::Selectable {
-            let (response, observation) =
-                present_measured_text(ui, &measured, rect, component, None);
-            (
-                response.expect("selectable measured text returns a response"),
-                observation,
-            )
-        } else {
-            present_accessible_measured_text(ui, &measured, rect, component, None)
-        };
-        observations.push(observation);
-        if truncated {
-            text_response.on_hover_text(text);
-        }
+        width,
+    );
+    let height = if fixed_slot && measured.layout_error.is_none() {
+        role.style(tokens, font_scale).line_height * f32::from(max_lines)
+    } else {
+        measured.size().y
+    };
+    let (rect, response) =
+        ui.allocate_exact_size(egui::vec2(width, height.max(1.0)), Sense::hover());
+    let component = TextComponentId::new(TextComponentKind::ContentLabel, instance);
+    let (text_response, observation) = if interaction == TextInteraction::Selectable {
+        let (response, observation) = present_measured_text(ui, &measured, rect, component, None);
+        (
+            response.expect("selectable measured text returns a response"),
+            observation,
+        )
+    } else {
+        present_accessible_measured_text(ui, &measured, rect, component, None)
+    };
+    observations.push(observation);
+    if measured.truncated() {
+        text_response.on_hover_text(measured.galley.text());
     }
     response
 }
@@ -77,7 +136,7 @@ pub fn measured_inline_label(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> egui::Response {
-    let line_height = role.style(tokens, font_scale).font_id.size * tokens.typography.line_height.0;
+    let line_height = role.style(tokens, font_scale).line_height;
     let size = egui::vec2(
         maximum_width.max(tokens.geometry.minimum_hit_size.0),
         line_height.max(tokens.geometry.minimum_hit_size.0),
@@ -87,14 +146,15 @@ pub fn measured_inline_label(
         interaction,
         ..TextSpec::single_line(role, TextOverflow::Ellipsis)
     };
-    if let Ok(measured) = measure_text(
-        ui.painter(),
-        text,
-        spec,
-        tokens,
-        font_scale,
-        rect.width().max(0.5),
-    ) {
+    {
+        let measured = crate::measure_component_text(
+            ui.painter(),
+            text,
+            spec,
+            tokens,
+            font_scale,
+            rect.width().max(0.5),
+        );
         let truncated = measured.truncated();
         let component = TextComponentId::new(TextComponentKind::ApplicationBarLabel, instance);
         let (text_response, observation) = if interaction == TextInteraction::Selectable {
@@ -127,20 +187,23 @@ pub fn section_heading(
     observations: &mut Vec<TextLayoutObservation>,
 ) -> Response {
     let width = ui.available_width().max(1.0);
-    let line_height = tokens.typography.label_size.0 * font_scale * tokens.typography.line_height.0;
+    let line_height = TextRole::SectionHeading
+        .style(tokens, font_scale)
+        .line_height;
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(width, line_height + tokens.spacing.block.0),
         Sense::hover(),
     );
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
-    if let Ok(measured) = measure_text(
-        ui.painter(),
-        text,
-        TextSpec::single_line(TextRole::SectionHeading, TextOverflow::Ellipsis),
-        tokens,
-        font_scale,
-        rect.width().max(0.5),
-    ) {
+    {
+        let measured = crate::measure_component_text(
+            ui.painter(),
+            text,
+            TextSpec::single_line(TextRole::SectionHeading, TextOverflow::Ellipsis),
+            tokens,
+            font_scale,
+            rect.width().max(0.5),
+        );
         let truncated = measured.truncated();
         observations.push(paint_measured_text(
             &ui.painter_at(rect),
@@ -268,16 +331,14 @@ fn paint(
     observations: &mut Vec<TextLayoutObservation>,
     accessible: bool,
 ) -> (bool, Option<Response>) {
-    let Ok(measured) = measure_text(
+    let measured = crate::measure_component_text(
         ui.painter(),
         text,
         spec,
         tokens,
         font_scale,
         rect.width().max(0.5),
-    ) else {
-        return (false, None);
-    };
+    );
     let truncated = measured.truncated();
     let (response, observation) = if accessible {
         let (response, observation) =
@@ -296,8 +357,125 @@ mod tests {
     use crate::{DensityVariant, ThemeVariant, audit_text_layouts};
 
     #[test]
+    fn content_height_slots_and_failed_requests_remain_observable() {
+        for scale in [1.0, 1.25, 1.5] {
+            let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
+            context.enable_accesskit();
+            let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+            let mut observations = Vec::new();
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(600.0, 400.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| {
+                    let content = measured_content_label(
+                        ui,
+                        91,
+                        "Actual content",
+                        TextRole::Body,
+                        TextOverflow::Wrap,
+                        2,
+                        TextInteraction::Selectable,
+                        &tokens,
+                        scale,
+                        &mut observations,
+                    );
+                    let fixed = measured_fixed_slot_label(
+                        ui,
+                        92,
+                        "Deliberate slot",
+                        TextRole::Body,
+                        TextOverflow::Wrap,
+                        2,
+                        TextInteraction::Selectable,
+                        &tokens,
+                        scale,
+                        &mut observations,
+                    );
+                    assert!(
+                        (content.rect.height() - TextRole::Body.style(&tokens, scale).line_height)
+                            .abs()
+                            <= 1.0
+                    );
+                    assert!((fixed.rect.height() - content.rect.height() * 2.0).abs() <= 1.0);
+                    measured_content_label(
+                        ui,
+                        93,
+                        "Raw durable evidence",
+                        TextRole::Body,
+                        TextOverflow::Wrap,
+                        24,
+                        TextInteraction::Selectable,
+                        &tokens,
+                        scale,
+                        &mut observations,
+                    );
+                    assert_eq!(observations.len(), 3);
+                    assert_eq!(
+                        observations[2].layout_error,
+                        Some(crate::TextLayoutError::InvalidMaxLines(24))
+                    );
+                    assert!(
+                        audit_text_layouts(&observations)
+                            .iter()
+                            .any(|finding| matches!(
+                                finding,
+                                crate::TextAuditFinding::LayoutFailed { .. }
+                            ))
+                    );
+                    let coverage = crate::text_audit_coverage(ui.ctx(), &observations);
+                    assert_eq!(
+                        (
+                            coverage.attempted_components,
+                            coverage.successful_components,
+                            coverage.failed_components
+                        ),
+                        (3, 2, 1)
+                    );
+                    let filtered = crate::text_audit_coverage(ui.ctx(), &observations[..2]);
+                    assert_eq!(filtered.measured_components, 2);
+                    assert_eq!(
+                        filtered.failed_components, 1,
+                        "consumer filtering must not erase failure"
+                    );
+                },
+            );
+            let update = output.platform_output.accesskit_update.take().unwrap();
+            let values: Vec<_> = update
+                .nodes
+                .iter()
+                .filter_map(|(_, node)| node.value())
+                .collect();
+            assert!(values.contains(&"Actual content"));
+            assert!(values.contains(&"Deliberate slot"));
+            assert!(
+                values
+                    .iter()
+                    .any(|value| value.contains("InvalidMaxLines(24)")
+                        && value.contains("Raw durable evidence")),
+                "fallback must really exist in widget semantics: {values:?}"
+            );
+            assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text().contains("InvalidMaxLines(24)"))), "production fallback must actually paint");
+            output.textures_delta.clear();
+            let mut next = context.run_ui(Default::default(), |ui| {
+                assert_eq!(
+                    crate::text_audit_coverage(ui.ctx(), &[]).attempted_components,
+                    0
+                );
+            });
+            next.textures_delta.clear();
+        }
+    }
+
+    #[test]
     fn content_and_diagnostic_text_have_one_accessible_owner_per_string() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
         let mut observations = Vec::new();
@@ -434,6 +612,7 @@ mod tests {
             (260.0, HorizontalTextAlignment::Start, 2),
         ] {
             let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
             let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
             let mut observations = Vec::new();
             let mut frame = context.run_ui(

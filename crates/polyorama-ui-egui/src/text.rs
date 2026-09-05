@@ -103,6 +103,8 @@ impl TextSpec {
 pub struct TextRoleStyle {
     pub font_id: FontId,
     pub weight: FontWeight,
+    /// Logical line height, including the current font scale.
+    pub line_height: f32,
     pub colour: Color32,
 }
 
@@ -113,47 +115,65 @@ impl TextRole {
         } else {
             1.0
         };
-        let (size, weight, colour) = match self {
+        let typography = tokens.typography;
+        let size = match self {
+            Self::ApplicationTitle => typography.application_title_size.0,
+            Self::PaneTitle => typography.pane_title_size.0,
+            Self::SectionHeading => typography.section_heading_size.0,
+            Self::ButtonLabel | Self::TabLabel => typography.label_size.0,
+            Self::Secondary | Self::Status => typography.secondary_size.0,
+            Self::Caption => typography.caption_size.0,
+            _ => typography.body_size.0,
+        };
+        let semibold = matches!(
+            self,
             Self::ApplicationTitle
-            | Self::PaneTitle
-            | Self::SectionHeading
-            | Self::ButtonLabel
-            | Self::TabLabel => (
-                tokens.typography.label_size.0,
-                tokens.typography.label_weight,
-                tokens.colours.text_primary,
-            ),
-            Self::Caption => (
-                tokens.typography.label_size.0,
-                tokens.typography.body_weight,
-                tokens.colours.text_muted,
-            ),
-            Self::Secondary | Self::Status => (
-                tokens.typography.body_size.0,
-                tokens.typography.body_weight,
-                tokens.colours.text_muted,
-            ),
-            Self::Error => (
-                tokens.typography.body_size.0,
-                tokens.typography.body_weight,
-                tokens.colours.status_error,
-            ),
-            Self::Body | Self::TabularValue | Self::MonospaceTechnical => (
-                tokens.typography.body_size.0,
-                tokens.typography.body_weight,
-                tokens.colours.text_primary,
-            ),
+                | Self::PaneTitle
+                | Self::SectionHeading
+                | Self::ButtonLabel
+                | Self::TabLabel
+        );
+        let weight = if semibold {
+            typography.label_weight
+        } else {
+            typography.body_weight
+        };
+        let colour = match self {
+            Self::Secondary | Self::Caption | Self::Status => tokens.colours.text_muted,
+            Self::Error => tokens.colours.status_error,
+            _ => tokens.colours.text_primary,
         };
         let family = if self == Self::MonospaceTechnical {
             FontFamily::Monospace
+        } else if semibold {
+            FontFamily::Name(crate::SEMIBOLD_FONT_FAMILY.into())
         } else {
-            FontFamily::Proportional
+            FontFamily::Name(crate::REGULAR_FONT_FAMILY.into())
+        };
+        let line_height = if matches!(
+            self,
+            Self::ApplicationTitle | Self::PaneTitle | Self::SectionHeading
+        ) {
+            typography.heading_line_height.0
+        } else {
+            typography.line_height.0
         };
         TextRoleStyle {
             font_id: FontId::new(size * scale, family),
             weight,
+            line_height: size * scale * line_height,
             colour: colour.into(),
         }
+    }
+}
+
+impl TextRoleStyle {
+    /// Apply the identical font, line height and emphasis to a native egui widget.
+    pub fn rich_text(&self, text: impl Into<String>) -> egui::RichText {
+        egui::RichText::new(text)
+            .font(self.font_id.clone())
+            .line_height(Some(self.line_height))
+            .color(self.colour)
     }
 }
 
@@ -253,13 +273,18 @@ pub struct TextLayoutObservation {
     pub declared_max_lines: u8,
     pub line_count: u8,
     pub truncated: bool,
+    /// Failed requests retain their diagnostic even when the fallback is clipped.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout_error: Option<TextLayoutError>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TextLayoutError {
     InvalidMaxLines(u8),
     InvalidWidth,
     InvalidFontScale,
+    FontsNotInstalled,
 }
 
 #[derive(Clone)]
@@ -267,6 +292,7 @@ pub struct MeasuredText {
     pub galley: Arc<Galley>,
     pub spec: TextSpec,
     pub colour: Color32,
+    pub layout_error: Option<TextLayoutError>,
 }
 
 impl MeasuredText {
@@ -295,7 +321,14 @@ pub fn measure_text(
         return Err(TextLayoutError::InvalidWidth);
     }
     let role_style = spec.role.style(tokens, font_scale);
-    let font_size = role_style.font_id.size;
+    if !painter.ctx().fonts(|fonts| {
+        fonts
+            .definitions()
+            .families
+            .contains_key(&role_style.font_id.family)
+    }) {
+        return Err(TextLayoutError::FontsNotInstalled);
+    }
     let mut job =
         LayoutJob::simple_singleline(text.to_owned(), role_style.font_id, role_style.colour);
     // Position the complete galley explicitly when painting. Keeping the job
@@ -319,18 +352,61 @@ pub fn measure_text(
         },
     };
     job.break_on_newline = spec.overflow == TextOverflow::Wrap;
-    if spec.overflow == TextOverflow::Wrap {
-        job.sections[0].format = TextFormat {
-            line_height: Some(font_size * tokens.typography.line_height.0),
-            ..job.sections[0].format.clone()
-        };
-    }
+    job.sections[0].format = TextFormat {
+        line_height: Some(role_style.line_height),
+        ..job.sections[0].format.clone()
+    };
     let galley = painter.layout_job(job);
     Ok(MeasuredText {
         galley,
         spec,
         colour: role_style.colour,
+        layout_error: None,
     })
+}
+
+/// Component boundary: invalid requests paint an explicit error and emit a
+/// failing observation instead of disappearing. Low-level callers can still
+/// use `measure_text` to handle the typed error themselves.
+pub fn measure_component_text(
+    painter: &Painter,
+    text: &str,
+    spec: TextSpec,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    max_width: f32,
+) -> MeasuredText {
+    match measure_text(painter, text, spec, tokens, font_scale, max_width) {
+        Ok(measured) => measured,
+        Err(error) => {
+            let colour: Color32 = tokens.colours.status_error.into();
+            let fallback = format!("Text unavailable ({error:?}): {text}");
+            let mut job = LayoutJob::simple_singleline(
+                fallback,
+                FontId::new(tokens.typography.body_size.0, FontFamily::Proportional),
+                colour,
+            );
+            job.wrap = TextWrapping {
+                max_width: if max_width.is_finite() {
+                    max_width.max(1.0)
+                } else {
+                    200.0
+                },
+                max_rows: 1,
+                break_anywhere: true,
+                overflow_character: Some('…'),
+            };
+            MeasuredText {
+                galley: painter.layout_job(job),
+                spec: TextSpec {
+                    interaction: spec.interaction,
+                    ..TextSpec::single_line(TextRole::Error, TextOverflow::Ellipsis)
+                },
+                colour,
+                layout_error: Some(error),
+            }
+        }
+    }
 }
 
 pub fn paint_measured_text(
@@ -484,6 +560,11 @@ fn position_measured_text(
     component_id: TextComponentId,
     parent_id: Option<TextComponentId>,
 ) -> (Pos2, TextLayoutObservation) {
+    crate::text_coverage::record_measured_component(
+        painter.ctx(),
+        component_id,
+        measured.layout_error.is_some(),
+    );
     let size = measured.galley.size();
     let anchor_x = match measured.spec.horizontal_alignment {
         HorizontalTextAlignment::Start => allocated_rect.left(),
@@ -524,6 +605,7 @@ fn position_measured_text(
         declared_max_lines: measured.spec.max_lines,
         line_count: measured.galley.rows.len().min(usize::from(u8::MAX)) as u8,
         truncated: measured.galley.elided,
+        layout_error: measured.layout_error,
     };
     (galley_position, observation)
 }
@@ -531,6 +613,10 @@ fn position_measured_text(
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TextAuditFinding {
+    LayoutFailed {
+        component_id: TextComponentId,
+        error: TextLayoutError,
+    },
     InvalidUsefulBounds {
         component_id: TextComponentId,
     },
@@ -561,6 +647,12 @@ pub enum TextAuditFinding {
 pub fn audit_text_layouts(observations: &[TextLayoutObservation]) -> Vec<TextAuditFinding> {
     let mut findings = Vec::new();
     for observation in observations {
+        if let Some(error) = observation.layout_error {
+            findings.push(TextAuditFinding::LayoutFailed {
+                component_id: observation.component_id,
+                error,
+            });
+        }
         if !observation.allocated_rect.is_finite()
             || !observation.allocated_rect.is_positive()
             || !observation.clip_rect.is_finite()
@@ -682,6 +774,7 @@ mod tests {
         scale: f32,
     ) -> TextLayoutObservation {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let input = egui::RawInput {
             screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0))),
             ..Default::default()
@@ -827,6 +920,7 @@ mod tests {
             declared_max_lines: 1,
             line_count: 2,
             truncated: true,
+            layout_error: None,
         };
         let mut sibling = base.clone();
         sibling.component_id = TextComponentId::new(TextComponentKind::DockTab, 2);

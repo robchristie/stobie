@@ -313,6 +313,7 @@ mod tests {
     fn shortcut_consumption_respects_scope() {
         fn pressed(action: TestAction, active_pane: bool, modifiers: Modifiers) -> bool {
             let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
             let shortcut = action
                 .specification()
                 .shortcut

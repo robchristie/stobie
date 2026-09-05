@@ -23,10 +23,12 @@ pub enum StoryId {
     ReferenceResults,
     ReferenceThumbnails,
     ReferenceDiagnostics,
+    TypographyDense,
+    TypographyReading,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 18] = [
+    pub const ALL: [Self; 20] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -45,6 +47,8 @@ impl StoryId {
         Self::ReferenceResults,
         Self::ReferenceThumbnails,
         Self::ReferenceDiagnostics,
+        Self::TypographyDense,
+        Self::TypographyReading,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -66,6 +70,8 @@ impl StoryId {
             Self::ReferenceInspector => "reference/inspector",
             Self::ReferenceResults => "reference/results",
             Self::ReferenceThumbnails => "reference/thumbnails",
+            Self::TypographyDense => "typography/dense",
+            Self::TypographyReading => "typography/reading",
             Self::ReferenceDiagnostics => "reference/diagnostics",
         }
     }
@@ -256,7 +262,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 18] = [
+pub static STORIES: [StoryDefinition; 20] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -413,6 +419,24 @@ pub static STORIES: [StoryDefinition; 18] = [
     story(
         StoryId::ReferenceDiagnostics,
         "Long diagnostics labels and large numeric values.",
+        StoryGroup::Reference,
+        640,
+        560,
+        REFERENCE_SCALE,
+        PASSIVE,
+    ),
+    story(
+        StoryId::TypographyDense,
+        "Dense semantic hierarchy and explicit content/slot geometry.",
+        StoryGroup::Reference,
+        640,
+        560,
+        REFERENCE_SCALE,
+        PASSIVE,
+    ),
+    story(
+        StoryId::TypographyReading,
+        "Reading profile with real semibold headings and content-sized text.",
         StoryGroup::Reference,
         640,
         560,

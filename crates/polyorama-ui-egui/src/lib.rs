@@ -15,6 +15,7 @@ mod style;
 mod test_actions;
 mod text;
 mod text_coverage;
+mod typography;
 
 pub use actions::*;
 pub use components::*;
@@ -27,6 +28,7 @@ pub use semantics::*;
 pub use style::*;
 pub use text::*;
 pub use text_coverage::*;
+pub use typography::*;
 pub use virtual_grid::*;
 
 use egui::{Pos2, Rect, Ui};
@@ -1222,7 +1224,9 @@ mod tests {
 
     #[test]
     fn dock_reports_current_semantic_tab_body_and_splitter_geometry() {
-        egui::__run_test_ui(|ui| {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        let mut output = context.run_ui(Default::default(), |ui| {
             let root = Rect::from_min_size(ui.min_rect().min, egui::vec2(800.0, 600.0));
             let mut workspace = Workspace::analytical_default();
             let mut expected_bodies = Vec::new();
@@ -1266,11 +1270,13 @@ mod tests {
                     .all(|(_, rect)| rect.is_positive() && root.contains_rect(*rect))
             );
         });
+        output.textures_delta.clear();
     }
 
     #[test]
     fn dock_emits_accesskit_tab_and_splitter_metadata() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
@@ -1406,6 +1412,7 @@ mod tests {
     #[test]
     fn dock_tab_accesskit_identity_survives_a_canonical_pane_move() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
@@ -1444,6 +1451,7 @@ mod tests {
     fn focused_tab_enter_and_space_activate_through_response_clicked() {
         for activation_key in [egui::Key::Enter, egui::Key::Space] {
             let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
             let mut workspace = Workspace::analytical_default();
             workspace.root = DockNode::Tabs {
                 id: DockNodeId(41),
@@ -1494,6 +1502,7 @@ mod tests {
             (egui::accesskit::Action::Decrement, 0.67),
         ] {
             let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
             context.enable_accesskit();
             let mut workspace = Workspace::analytical_default();
             let mut behaviour = DockBehaviour::default();
@@ -1540,6 +1549,7 @@ mod tests {
     #[test]
     fn focused_splitter_arrow_emits_one_resize_command() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
@@ -1614,6 +1624,7 @@ mod tests {
     #[test]
     fn focused_tab_keys_activate_and_move_focus_across_frames() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let mut workspace = Workspace::analytical_default();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(41),
@@ -1654,6 +1665,7 @@ mod tests {
     #[test]
     fn tab_activation_frames_keep_selection_body_and_focus_coherent() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
         workspace.root = DockNode::Tabs {
@@ -1720,6 +1732,7 @@ mod tests {
     #[test]
     fn roving_focus_reaches_hidden_overflow_tabs_and_wraps() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
         workspace.root = DockNode::Tabs {
@@ -1808,6 +1821,7 @@ mod tests {
                 for density in densities {
                     for scale in scales {
                         let context = egui::Context::default();
+                        crate::install_typography_fonts(&context);
                         let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(width, 320.0));
                         let input = egui::RawInput {
                             screen_rect: Some(root),
@@ -1867,6 +1881,7 @@ mod tests {
     #[test]
     fn splitter_preview_tracks_total_drag_and_release_commits_the_final_sample() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
@@ -1937,6 +1952,7 @@ mod tests {
     #[test]
     fn splitter_identity_survives_a_changing_parent_ui_id() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
@@ -1987,6 +2003,7 @@ mod tests {
     #[test]
     fn splitter_drag_returning_to_origin_emits_no_command() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let mut workspace = Workspace::analytical_default();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
@@ -2029,6 +2046,7 @@ mod tests {
     #[test]
     fn pane_interactions_are_clipped_before_they_can_steal_an_adjacent_splitter() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let mut workspace = Workspace::analytical_default();
         workspace.activate(PaneId(6));
         let mut behaviour = DockBehaviour::default();

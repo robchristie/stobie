@@ -80,7 +80,7 @@ done
 test -s "$SNAPSHOT"
 jq -e '
   .story == "reference/application-shell"
-  and .story_count == 18
+  and .story_count == 20
   and (.text | length) > 0
   and (.text_audit | length) == 0
   and (.ui_snapshot.nodes | length) > 0
@@ -96,4 +96,4 @@ if grep -E "panicked|WGPU error|Exiting because of error" "$APP_LOG"; then
   echo "native gallery smoke observed an application failure" >&2
   exit 1
 fi
-echo "native gallery smoke passed: GL/llvmpipe, 18 stories, empty text and semantic audits"
+echo "native gallery smoke passed: GL/llvmpipe, 20 stories, empty text and semantic audits"

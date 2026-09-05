@@ -2,7 +2,7 @@ use egui::{Color32, Response, Sense, Stroke};
 
 use crate::{
     DesignTokens, HorizontalTextAlignment, TextComponentId, TextInteraction, TextOverflow,
-    TextRole, TextSpec, VerticalTextAlignment, measure_text, present_measured_text,
+    TextRole, TextSpec, VerticalTextAlignment, present_measured_text,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -36,19 +36,16 @@ pub fn status_badge(
         vertical_alignment: VerticalTextAlignment::Centre,
         max_lines,
     };
-    let measured = measure_text(
+    let measured = crate::measure_component_text(
         ui.painter(),
         text,
         spec,
         tokens,
         font_scale,
         (maximum_width - tokens.spacing.inline.0 * 2.0).max(0.5),
-    )
-    .ok();
-    let height = measured.as_ref().map_or_else(
-        || tokens.geometry.control_height.0,
-        |text| (text.size().y + tokens.spacing.block.0 * 2.0).max(tokens.geometry.control_height.0),
     );
+    let height =
+        (measured.size().y + tokens.spacing.block.0 * 2.0).max(tokens.geometry.control_height.0);
     let (rect, response) =
         ui.allocate_exact_size(egui::vec2(maximum_width, height), Sense::hover());
     let colour: Color32 = match tone {
@@ -64,7 +61,7 @@ pub fn status_badge(
         Stroke::new(1.0, colour),
         egui::StrokeKind::Inside,
     );
-    if let Some(measured) = measured {
+    {
         let text_rect = rect.shrink2(egui::vec2(tokens.spacing.inline.0, tokens.spacing.block.0));
         let (_, observation) = present_measured_text(
             ui,

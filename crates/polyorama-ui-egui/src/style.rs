@@ -1,4 +1,4 @@
-use egui::{Color32, FontFamily, FontId, Stroke, TextStyle, Theme, Visuals};
+use egui::{Color32, Stroke, TextStyle, Theme, Visuals};
 
 use crate::{
     AppearancePreference, ContrastPreference, DesignTokens, MotionPreference, ThemeVariant,
@@ -9,6 +9,16 @@ use crate::{
 /// modes. Rebuilding from egui defaults makes repeated preference changes
 /// idempotent instead of multiplying font and spacing values each time.
 pub fn apply_design_system(context: &egui::Context, preferences: UiPreferences) {
+    apply_design_system_with_typography(context, preferences, crate::TypographyProfile::Dense);
+}
+
+/// Apply the same semantic typography profile to measured and native controls.
+pub fn apply_design_system_with_typography(
+    context: &egui::Context,
+    preferences: UiPreferences,
+    profile: crate::TypographyProfile,
+) {
+    crate::install_typography_fonts(context);
     let preferences = preferences.validated();
     match preferences.appearance {
         AppearancePreference::Light => context.set_theme(Theme::Light),
@@ -25,32 +35,23 @@ pub fn apply_design_system(context: &egui::Context, preferences: UiPreferences) 
             (Theme::Light, _) => ThemeVariant::Light,
             (Theme::Dark, _) => ThemeVariant::Dark,
         };
-        let tokens = DesignTokens::resolve(variant, preferences.density_variant());
+        let tokens = DesignTokens::resolve(variant, preferences.density_variant())
+            .with_typography_profile(profile);
         let mut style = egui::Style {
             visuals: visuals(theme, &tokens),
             ..egui::Style::default()
         };
-        let body = tokens.typography.body_size.0 * preferences.font_scale;
-        let label = tokens.typography.label_size.0 * preferences.font_scale;
-        style
-            .text_styles
-            .insert(TextStyle::Body, FontId::new(body, FontFamily::Proportional));
-        style.text_styles.insert(
-            TextStyle::Button,
-            FontId::new(label, FontFamily::Proportional),
-        );
-        style.text_styles.insert(
-            TextStyle::Small,
-            FontId::new(label, FontFamily::Proportional),
-        );
-        style.text_styles.insert(
-            TextStyle::Monospace,
-            FontId::new(body, FontFamily::Monospace),
-        );
-        style.text_styles.insert(
-            TextStyle::Heading,
-            FontId::new(label * 1.18, FontFamily::Proportional),
-        );
+        for (native, role) in [
+            (TextStyle::Body, crate::TextRole::Body),
+            (TextStyle::Button, crate::TextRole::ButtonLabel),
+            (TextStyle::Small, crate::TextRole::Caption),
+            (TextStyle::Monospace, crate::TextRole::MonospaceTechnical),
+            (TextStyle::Heading, crate::TextRole::SectionHeading),
+        ] {
+            style
+                .text_styles
+                .insert(native, role.style(&tokens, preferences.font_scale).font_id);
+        }
         style.spacing.item_spacing = egui::vec2(tokens.spacing.inline.0, tokens.spacing.block.0);
         style.spacing.button_padding = egui::vec2(
             tokens.geometry.control_padding_x.0,
@@ -121,6 +122,7 @@ mod tests {
     #[test]
     fn repeated_application_is_idempotent_and_uses_token_geometry() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let preferences = UiPreferences {
             appearance: AppearancePreference::Light,
             density: DensityPreference::Compact,
@@ -140,6 +142,7 @@ mod tests {
     #[test]
     fn high_contrast_and_font_scale_are_applied_to_both_theme_styles() {
         let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
         let preferences = UiPreferences {
             contrast: ContrastPreference::High,
             font_scale: MAX_FONT_SCALE,

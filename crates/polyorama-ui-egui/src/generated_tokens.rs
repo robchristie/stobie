@@ -82,6 +82,17 @@ pub struct GeometryTokens {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TypographyTokens {
+    pub application_title_size: Points,
+    pub pane_title_size: Points,
+    pub section_heading_size: Points,
+    pub secondary_size: Points,
+    pub caption_size: Points,
+    pub reading_application_title_size: Points,
+    pub reading_pane_title_size: Points,
+    pub reading_section_heading_size: Points,
+    pub reading_body_size: Points,
+    pub heading_line_height: Ratio,
+
     pub body_size: Points,
     pub body_weight: FontWeight,
     pub label_size: Points,
@@ -578,6 +589,17 @@ const GEOMETRY_COMFORTABLE: GeometryTokens = GeometryTokens {
 };
 
 const TYPOGRAPHY: TypographyTokens = TypographyTokens {
+    application_title_size: Points(18.0),
+    pane_title_size: Points(16.0),
+    section_heading_size: Points(14.0),
+    secondary_size: Points(12.5),
+    caption_size: Points(12.0),
+    reading_application_title_size: Points(21.0),
+    reading_pane_title_size: Points(18.0),
+    reading_section_heading_size: Points(15.0),
+    reading_body_size: Points(14.0),
+    heading_line_height: Ratio(1.25),
+
     body_size: Points(13.0),
     body_weight: FontWeight(400),
     label_size: Points(12.5),

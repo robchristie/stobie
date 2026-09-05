@@ -722,7 +722,16 @@ fn read_text_coverage(text: &Value) -> Result<TextAuditCoverage> {
         .iter()
         .map(|observation| observation["component_id"].to_string())
         .collect();
-    if coverage.measured_components != components.len()
+    if coverage.failed_components != 0
+        || observations
+            .iter()
+            .any(|observation| !observation["layout_error"].is_null())
+    {
+        bail!("text coverage contains failed component requests");
+    }
+    if coverage.attempted_components != coverage.successful_components + coverage.failed_components
+        || coverage.attempted_components < coverage.measured_components
+        || coverage.measured_components != components.len()
         || coverage.observed_native_controls > coverage.native_text_controls
     {
         bail!("text coverage counts disagree with their denominator");
@@ -928,6 +937,29 @@ mod tests {
         ])
         .unwrap_err();
         assert!(error.to_string().contains("unknown ui argument"));
+    }
+
+    #[test]
+    fn failed_or_inconsistent_attempt_coverage_cannot_pass_an_empty_audit() {
+        let mut text =
+            json!({"observations": [], "audit": [], "coverage": TextAuditCoverage::default()});
+        text["coverage"]["attempted_components"] = json!(1);
+        assert!(read_text_coverage(&text).is_err());
+        text["coverage"]["failed_components"] = json!(1);
+        assert!(
+            read_text_coverage(&text)
+                .unwrap_err()
+                .to_string()
+                .contains("failed component")
+        );
+        text["coverage"] = serde_json::to_value(TextAuditCoverage::default()).unwrap();
+        text["observations"] = json!([{"component_id": {"kind": "content_label", "instance": 1}, "layout_error": {"invalid_max_lines": 24}}]);
+        assert!(
+            read_text_coverage(&text)
+                .unwrap_err()
+                .to_string()
+                .contains("failed component")
+        );
     }
 
     #[test]

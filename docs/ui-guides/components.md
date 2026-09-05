@@ -25,6 +25,18 @@ to measure egui's internal labels. Collect `text_audit_coverage` at the end of
 the same UI pass; never substitute AccessKit nodes for layout observations.
 Ordinary labels, headings and hover text remain an explicit excluded category.
 
+Initialise fonts with `apply_design_system` before the first egui pass. For a
+reading surface, apply `apply_design_system_with_typography` and resolve the
+same `TypographyProfile` on its tokens. Native widgets can consume
+`TextRole::style(...).rich_text(...)` to share the complete role treatment.
+
+Choose `measured_content_label` for actual bounded content height and
+`measured_fixed_slot_label` only when the parent requires a deliberate line
+slot. Never use a bounded label as a document reader; long evidence belongs in
+a selectable scroll surface. Invalid component layouts paint a diagnostic and
+fail audits. Preserve failed observations when filtering geometry, retain
+coverage after the same layout pass, and assert required semantic content.
+
 Use `TextSpec`, `TextRole` and `TextOverflow`; production widths come from
 egui galley measurement, never character counts. Keep numeric values end
 aligned. Retain full semantic text when paint is elided. The five supported

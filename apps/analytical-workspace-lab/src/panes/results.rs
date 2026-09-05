@@ -207,6 +207,7 @@ mod tests {
     #[test]
     fn visible_virtual_result_rows_have_a_clean_measured_text_audit() {
         let context = egui::Context::default();
+        polyorama_ui_egui::apply_design_system(&context, Default::default());
         let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 360.0));
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
         let mut outputs = FrameOutput {

@@ -11,21 +11,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 543,
-        "min_y": 119,
-        "max_x": 585.65625,
-        "max_y": 147
+        "min_y": 123,
+        "max_x": 584.8125,
+        "max_y": 151
       },
       "painted_rect": {
         "min_x": 543,
-        "min_y": 126,
-        "max_x": 585.65625,
-        "max_y": 140
+        "min_y": 128.5,
+        "max_x": 584.8125,
+        "max_y": 145.5
       },
       "clip_rect": {
         "min_x": 543,
-        "min_y": 119,
-        "max_x": 585.65625,
-        "max_y": 147
+        "min_y": 123,
+        "max_x": 584.8125,
+        "max_y": 151
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -37,7 +37,10 @@
   "audit": [],
   "coverage": {
     "measured_components": 1,
-    "native_text_controls": 23,
+    "attempted_components": 1,
+    "successful_components": 1,
+    "failed_components": 0,
+    "native_text_controls": 25,
     "observed_native_controls": 0,
     "excluded_categories": [
       "ordinary_egui_labels",
