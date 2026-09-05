@@ -1,6 +1,9 @@
 # Polyorama design system and agent UI loop plan
 
-Status: complete; increments 1–9 landed
+Status: complete
+Landed commit: `8ee58de87db9d704ea76b347014fbfa4603d17f2`
+
+Delivery: [PR #17](https://github.com/robchristie/polyorama/pull/17) landed.
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
@@ -18,7 +21,7 @@ authority after exact-head independent review and successful gates. Release,
 deployment, publication, breaking compatibility, rights or security-policy
 changes remain human-review boundaries.
 
-## Current phase
+## Closeout
 
 Increment 9 landed as PR #17 at merge `8ee58de`. Its exact candidate head
 `d139fbb2e52b73be647a5fee21485f7eec9854da` passed local and hosted
@@ -100,11 +103,3 @@ After each material change:
 Profile before architectural optimisation. Never adopt a changed baseline
 until geometry, text observations and the responsible token/component source
 show that the change is intentional.
-
-## Next action
-
-Begin the next major increment from observed application usage rather than
-expanding the framework foundation without a concrete consumer need. A future
-usage-led accessibility increment should enable the relevant native and browser
-adapters, then test representative workflows with actual assistive technology
-on each supported platform before claiming end-user screen-reader support.

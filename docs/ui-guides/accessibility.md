@@ -45,3 +45,30 @@ semantic names and tooltip/description must retain the complete text. Automated
 tree inspection may verify adapter input but cannot replace actual
 assistive-technology use. Report every unqualified or unavailable platform
 accurately rather than inferring support from compilation or snapshots.
+
+## Qualification evidence
+
+Define observable acceptance before a qualification run: the exact source and
+binary, OS/desktop/session, graphics backend, AT and adapter versions; the
+representative [workflow](../accessibility-integration-report.md#qualification-workflow);
+and the expected names, focus, state, actions and dynamic announcements. Retain
+step-linked observations, failures and artefact identities. Actual Orca must
+consume platform accessibility events while the workflow operates Polyorama;
+retain its speech output/transcript or a recording (or the equivalent braille
+output). A tree walk, adapter compilation or application-generated speech alone
+does not establish that path. A speech-generation log alone also does not prove
+audible delivery when audible output is part of the claimed result.
+
+Automated input and capture can provide actual-AT evidence. Do not require a
+human operator solely because a test is automated; require a human observation
+only when an explicitly agreed criterion calls for it or the needed observation
+cannot be obtained otherwise. A missing observation calls for safe in-scope
+investigation and an explicit unproved result, without inventing a new approval
+gate. Existing authority still governs live side effects. Limit qualification
+to the environment and behaviour actually observed; a virtual-display result
+does not qualify an untested desktop or local seat.
+
+The retained qualification matrix and historical manual observations remain
+unchanged by this contract. Requalification needs new evidence and a deliberate
+report update; this guidance neither upgrades partial results nor extends
+platform support.

@@ -1,7 +1,9 @@
 # End-user accessibility integration plan
 
-Status: exact Debian GNOME/Orca environment qualified; final reconciliation
-and landing in progress
+Status: complete
+Landed commit: `7f3deea71080f83a5b3532d05d3c3debea357be5`
+
+Delivery: [PR #28](https://github.com/robchristie/polyorama/pull/28) landed.
 
 Baseline revision: `0e725f5a97a6d99a6bc4c961dfc05b4e9252ba1d`
 
@@ -24,10 +26,14 @@ perform release, deployment or publication work. `Workspace`, document,
 session, selection and application `ActionKey` paths remain authoritative.
 
 Ordinary code, tests, documentation and CI changes may land after canonical
-verification and exact-head independent review. A claim not exercised with
-actual assistive technology, materially unproved acceptance, and any release,
-deployment, breaking-compatibility, rights, credential or security-policy
-change remains a human-review boundary.
+verification and exact-head independent review. Claims require actual
+assistive-technology evidence under the
+[qualification contract](ui-guides/accessibility.md#qualification-evidence).
+Investigate missing proof safely within existing authority and retain an
+unqualified result until it is proved; automation alone does not require a
+human operator. Live release, deployment, breaking-compatibility, rights,
+credential or security-policy changes retain their existing authority
+boundaries.
 
 ## Exploration and calibration gate
 
@@ -61,7 +67,7 @@ the integration. Do not broaden into custom DOM or accessibility frameworks.
 | 2 | Bounded analytical viewport context and non-pointer workflow actions | 1 | Complete | Semantic parity, dynamic-state and custom-action tests |
 | 3 | Focus, dynamic state, virtualisation, dock restoration and physical checks | 1–2 | Complete | Kittest, native/browser harness and deterministic UI evidence |
 | 4 | Actual assistive-technology qualification and exact platform matrix | 1–3 | Complete for one exact native environment | The repeatable Debian 13 VM workflow passed and a human operator confirmed audible Orca 48.1 output in GNOME 48 over RDP; Arch/Xvfb remains partial and the browser adapter is unavailable in stock eframe 0.36.1 |
-| 5 | Canonical verification, report reconciliation, exact-head review and landing | 0–4 | In progress | The former human hold is closed for the exact Debian/GNOME/RDP/Orca combination; reconcile the evidence on draft PR [#28](https://github.com/robchristie/polyorama/pull/28), repeat canonical verification and exact-head review, then land if every gate passes |
+| 5 | Canonical verification, report reconciliation, exact-head review and landing | 0–4 | Complete | PR [#28](https://github.com/robchristie/polyorama/pull/28) landed at `7f3deea71080f83a5b3532d05d3c3debea357be5`; the former Debian/GNOME/RDP/Orca hold was closed with the retained human speech confirmation |
 
 ## Acceptance proof
 
@@ -84,14 +90,14 @@ the integration. Do not broaden into custom DOM or accessibility frameworks.
   exact-head review, and completes the repository's normal pull-request landing
   loop unless a documented human-review boundary remains.
 
-## Current phase
+## Closeout
 
 The exploration gate selected eframe's native AccessKit adapter and retained
 the stock WebRunner's discarded AccessKit update as the minimal browser
 blocker. Independent exact-head review found that momentary controls, Canvas
 and selection-only controls inherited an incorrect toggle state, and confirmed
 that the pinned Linux AT-SPI adapter does not carry Canvas custom actions. The
-same draft PR [#28](https://github.com/robchristie/polyorama/pull/28) now
+landed PR [#28](https://github.com/robchristie/polyorama/pull/28)
 distinguishes deliberate pressed modes from momentary and selected controls;
 the repeated actual Orca workflow, refreshed evidence, canonical verification
 and repair review passed to the former human boundary. A persistent Debian 13
@@ -99,9 +105,6 @@ VM then completed the repeatable workflow, and a human operator confirmed
 audible Orca 48.1 output in its GNOME 48 RDP desktop. That directly qualifies
 the exact environment without extending the claim to other platforms.
 
-## Next action
-
-Re-run canonical verification, obtain independent review of the reconciled
-exact head and complete the pull-request landing loop. Every platform outside
-the qualified Debian 13/GNOME 48/RDP/Orca 48.1 row remains independently
-unqualified.
+The work package is complete. The historical human confirmation remains valid
+evidence; it does not impose a human-only rule on future qualification. Every
+other environment retains its recorded qualification status.

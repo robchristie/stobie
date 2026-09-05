@@ -34,6 +34,7 @@
 - Instrument before optimising; profile a representative release scenario
   before changing architecture for performance.
 - Keep diagnostics honest: report unavailable GPU timing as unavailable.
+- Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 - Full verification is `cargo xtask verify`. It must retain formatting, lint,
   tests, release native build, WASM build, architecture checks and browser smoke.
 - Do not allocate the complete raster, one million result rows, or one hundred

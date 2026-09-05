@@ -2,6 +2,7 @@ use std::{env, fs, path::Path, process::Command};
 
 use anyhow::{Context, Result, anyhow, bail};
 
+mod plans;
 mod tokens;
 mod ui;
 
@@ -11,6 +12,7 @@ fn main() -> Result<()> {
         "verify" => verify(),
         "build-web" => build_web(),
         "architecture" => architecture(),
+        "plans" => plans::check(Path::new(".")),
         "tokens" => match env::args().nth(2).as_deref() {
             Some("generate") => tokens::generate(Path::new(".")),
             Some("check") => tokens::check(Path::new(".")),
@@ -24,6 +26,7 @@ fn main() -> Result<()> {
             );
             println!("cargo xtask build-web   build release WASM application and Worker packages");
             println!("cargo xtask architecture check dependency boundaries");
+            println!("cargo xtask plans      check documentation plan lifecycle");
             println!("cargo xtask tokens generate generate typed Rust from the token source");
             println!("cargo xtask tokens check    validate tokens and check generated drift");
             println!("cargo xtask ui list|render|inspect|audit-text|verify --output-dir <path>");
@@ -39,6 +42,7 @@ fn verify() -> Result<()> {
     fs::create_dir_all(&evidence_directory)
         .context("create ignored verification evidence directory")?;
     let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence_directory.as_path())];
+    plans::check(Path::new("."))?;
     tokens::check(Path::new("."))?;
     run("cargo", &["fmt", "--all", "--check"])?;
     run(
@@ -95,7 +99,7 @@ fn verify() -> Result<()> {
         )?;
     }
     println!(
-        "Polyorama verification passed: format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
+        "Polyorama verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
     );
     Ok(())
 }

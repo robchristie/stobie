@@ -1,6 +1,9 @@
 # UI source-organisation plan
 
-Status: terminal candidate; completes when PR #26 lands
+Status: complete
+Landed commit: `ea2340b5562e028a30b53efefe2bd6ade8a28317`
+
+Delivery: [PR #26](https://github.com/robchristie/polyorama/pull/26) landed.
 
 Baseline revision: `4ee27756698cbce19926ad2f02709107dda1036a`
 
@@ -50,11 +53,11 @@ evidence.
 | Increment | Outcome | Depends on | Status | Durable evidence |
 | --- | --- | --- | --- | --- |
 | 1 | Split reusable component recipes into eight leaf modules | — | Landed | PR #25; merge `941f1be6103721a3a2accad0ee56c0bed5762642`; exact-tree review, PR CI and post-merge CI passed |
-| 2 | Split gallery story rendering into five family modules | 1 | Terminal candidate | PR #26; focused checks and `cargo xtask verify` pass; exact-head review and hosted CI pending |
+| 2 | Split gallery story rendering into five family modules | 1 | Landed | PR #26; merge `ea2340b5562e028a30b53efefe2bd6ade8a28317`; focused checks and `cargo xtask verify` passed |
 
-## Current phase
+## Closeout
 
-PR #26 contains the final implementation increment. The gallery shell and
+PR #26 landed the final implementation increment. The gallery shell and
 action registry remain in `app.rs`; the closed `StoryId` set routes through five
-private story-family modules without catalogue or baseline changes. Exact-head
-review, hosted CI, landing and cleanup are the only remaining objective work.
+private story-family modules without catalogue or baseline changes. Review and
+hosted delivery evidence remain with the merged pull request.
