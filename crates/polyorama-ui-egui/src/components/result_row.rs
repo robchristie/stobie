@@ -41,10 +41,9 @@ pub fn result_row(
         response.request_focus();
     }
     response.widget_info(|| {
-        egui::WidgetInfo::selected(
+        egui::WidgetInfo::labeled(
             egui::WidgetType::SelectableLabel,
             true,
-            spec.selected,
             format!(
                 "{}; {}; {}; {}",
                 spec.identifier, spec.position, spec.confidence, spec.category
@@ -59,6 +58,7 @@ pub fn result_row(
             spec.identifier, spec.position, spec.confidence, spec.category
         ));
         node.set_author_id(format!("polyorama.result-row.{}", spec.instance));
+        node.clear_toggled();
         node.set_selected(spec.selected);
         node.add_action(Action::Click);
     });

@@ -182,7 +182,11 @@ try {
         null,
       );
     } else if (target.kind === 'first_result_row') {
-      rect = geometry.result_rows[0]?.rect;
+      const scroll = geometry.results_scroll;
+      rect = geometry.result_rows.find((item) => {
+        const centreY = (item.rect.min_y + item.rect.max_y) * 0.5;
+        return !scroll || (centreY >= scroll.min_y && centreY <= scroll.max_y);
+      })?.rect;
     } else {
       rect = geometry[target.kind].find((item) => item.pane === target.pane)?.rect;
     }
@@ -287,6 +291,8 @@ try {
     return semanticSnapshot();
   };
   const initialSemantic = await semanticSnapshot();
+  const primaryViewport = initialSemantic.ui_snapshot.nodes
+    .find((node) => node.id === 'pane.1.viewport');
   if (!initialSemantic.ui_geometry.root
       || !initialSemantic.ui_snapshot.nodes.length
       || initialSemantic.ui_snapshot.semantic_audit.length !== 0
@@ -295,6 +301,14 @@ try {
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('appearance_settings'))
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('display_settings') && node.pane === 1)
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.actions.includes('fit_view') && node.pane === 1)
+      || primaryViewport?.role !== 'viewport'
+      || primaryViewport.selected !== true
+      || !primaryViewport.actions.includes('fit_view')
+      || !primaryViewport.actions.includes('navigate_tool')
+      || !primaryViewport.description?.includes('active tool: Navigate')
+      || !primaryViewport.description?.includes('camera:')
+      || !primaryViewport.description?.includes('selected result:')
+      || !primaryViewport.description?.includes('available actions:')
       || !initialSemantic.ui_snapshot.nodes.some((node) => node.id === 'pane.1.image_status'
         && node.description?.includes('image ')
         && node.description?.includes(' tiles'))
@@ -317,6 +331,15 @@ try {
     })}`);
   }
   if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
+  await page.keyboard.press('2');
+  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+    .ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
+      && node.description?.includes('active tool: Polygon')));
+  const keyboardToolSemantic = await semanticSnapshot();
+  await page.keyboard.press('1');
+  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+    .ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
+      && node.description?.includes('active tool: Navigate')));
   if (initialSemantic.runtime.worker_queue_depth > initialSemantic.runtime.external_queue_capacity
       || initialSemantic.runtime.browser_credits_in_use > initialSemantic.runtime.browser_credit_capacity
       || initialSemantic.runtime.scheduler_high_water > initialSemantic.runtime.scheduler_capacity
@@ -477,6 +500,11 @@ try {
     viewport_status: {
       description: initialSemantic.ui_snapshot.nodes
         .find((node) => node.id === 'pane.1.image_status').description,
+    },
+    physical_keyboard_tool: {
+      shortcut: '2',
+      viewport_description: keyboardToolSemantic.ui_snapshot.nodes
+        .find((node) => node.id === 'pane.1.viewport').description,
     },
     linked_camera_and_render_plan: {
       cameras: cameraSemantic.cameras.filter((item) => item.pane === 1 || item.pane === 2),
@@ -661,6 +689,25 @@ try {
     const point = await targetPoint({ kind: 'results_scroll' });
     await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, 1800);
   });
+  await clickTarget({ kind: 'first_result_row' });
+  await page.waitForFunction(() => {
+    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    const selected = snapshot.ui_snapshot.nodes
+      .find((node) => node.role === 'result_row' && node.selected);
+    return selected
+      && snapshot.ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
+        && node.description?.includes(
+          `selected result: result ${selected.domain_reference.value}`,
+        ));
+  });
+  const resultSelectionSemantic = await semanticSnapshot();
+  const selectedResultNode = resultSelectionSemantic.ui_snapshot.nodes
+    .find((node) => node.role === 'result_row' && node.selected);
+  semanticEvidence.physical_result_selection = {
+    result: selectedResultNode.domain_reference.value,
+    viewport_description: resultSelectionSemantic.ui_snapshot.nodes
+      .find((node) => node.id === 'pane.1.viewport').description,
+  };
   await clickTarget({ kind: 'tabs', pane: 6 });
   await page.waitForFunction(() => {
     const virtualisation = window.__POLYORAMA_DIAGNOSTICS.virtualisation;

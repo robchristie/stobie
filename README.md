@@ -187,16 +187,24 @@ does not update them automatically.
   architecture, hardening results and retained runtime evidence.
 - [Design-system report](docs/design-agent-loop-report.md): the component
   system, application migration and native/browser verification evidence.
+- [Accessibility integration evidence](docs/accessibility-integration-report.md):
+  adapter decisions, automated proof and the exact assistive-technology
+  qualification matrix.
 
 ## Current limits
 
-Polyorama is **AccessKit-semantic and keyboard-tested**. Its tests cover roles,
-names, states, bounds, click/adjust actions, semantic parity and keyboard
-operation, but this is not yet evidence of working screen-reader support on
-Windows, macOS, Linux or in the browser. The native AccessKit adapter is not
-enabled, and the current web integration discards AccessKit updates. A later
-usage-led increment should enable the relevant adapters and test representative
-workflows with actual assistive technology.
+Polyorama compiles eframe's native AccessKit adapter and is
+**AccessKit-semantic and keyboard-tested**. The representative workflow is
+directly qualified with human-confirmed audible Orca output for the exact
+Debian 13/GNOME 48/RDP/Orca 48.1 environment. Its tests cover roles, names,
+states, bounds, actions, semantic parity and keyboard operation, but that one
+versioned result is not evidence of screen-reader support on Windows, macOS,
+other Linux configurations or browsers.
+Stock eframe 0.36.1 discards browser AccessKit updates and provides no web
+accessibility-tree adapter; the retained upstream reproduction and exact
+qualification state are in the
+[accessibility integration evidence](docs/accessibility-integration-report.md).
+The exact qualification and remaining platform boundaries are recorded there.
 
 The synthetic source and decoder demonstrate the architecture; they are not
 production image codecs or remote data integrations. Production geospatial

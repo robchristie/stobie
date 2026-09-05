@@ -7,7 +7,9 @@ mod status;
 mod thumbnail;
 mod viewport_status;
 
-pub use action_button::{ActionButtonSpec, ActionEmphasis, action_button, action_semantic_node};
+pub use action_button::{
+    ActionButtonSpec, ActionButtonState, ActionEmphasis, action_button, action_semantic_node,
+};
 pub use choice::choice_control;
 pub use property::property_row;
 pub use range::range_control;
@@ -222,18 +224,14 @@ pub fn paint_dock_tab(
     tokens: &DesignTokens,
 ) -> Option<crate::TextLayoutObservation> {
     response.widget_info(|| {
-        egui::WidgetInfo::selected(
-            egui::WidgetType::SelectableLabel,
-            ui.is_enabled(),
-            spec.selected,
-            title,
-        )
+        egui::WidgetInfo::labeled(egui::WidgetType::SelectableLabel, ui.is_enabled(), title)
     });
     ui.ctx().accesskit_node_builder(response.id, |node| {
         use egui::accesskit::{Action, Role};
         node.set_role(Role::Tab);
         node.set_label(title);
         node.set_author_id(format!("polyorama.dock.tab.{}", spec.component_id.instance));
+        node.clear_toggled();
         node.set_selected(spec.selected);
         node.add_action(Action::Click);
     });
@@ -463,7 +461,7 @@ mod tests {
                         availability: Availability::Disabled {
                             reason: "History is empty".into(),
                         },
-                        selected: false,
+                        state: ActionButtonState::Momentary,
                         emphasis: ActionEmphasis::Normal,
                         compact: true,
                     },
@@ -593,6 +591,7 @@ mod tests {
         let result = node("polyorama.result-row.12");
         assert_eq!(result.role(), egui::accesskit::Role::ListBoxOption);
         assert_eq!(result.is_selected(), Some(true));
+        assert_eq!(result.toggled(), None);
         assert!(result.supports_action(egui::accesskit::Action::Click));
 
         let label_count = |label: &str| {
@@ -630,6 +629,7 @@ mod tests {
         assert_eq!(thumbnail.role(), egui::accesskit::Role::ListBoxOption);
         assert_eq!(thumbnail.label(), Some("Tile 13; Resident"));
         assert_eq!(thumbnail.is_selected(), Some(true));
+        assert_eq!(thumbnail.toggled(), None);
         assert!(thumbnail.supports_action(egui::accesskit::Action::Click));
         let choice = node("test.display-map");
         assert_eq!(choice.role(), egui::accesskit::Role::ComboBox);

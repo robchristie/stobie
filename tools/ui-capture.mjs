@@ -282,12 +282,30 @@ try {
   await page.evaluate(({ configuration, story }) => {
     window.__POLYORAMA_GALLERY_HANDLE.set_configuration(configuration);
     window.__POLYORAMA_GALLERY_HANDLE.select_story(story);
+    window.__POLYORAMA_GALLERY_HANDLE.request_test_repaint();
   }, { configuration: fixture.configuration, story: fixture.story });
   await page.waitForFunction(({ story, frame }) => {
     const snapshot = window.__POLYORAMA_GALLERY_HANDLE.snapshot();
-    return snapshot.story === story && snapshot.frame >= frame;
+    return snapshot.story === story && snapshot.frame > frame;
   }, { story: fixture.story, frame: before.frame }, { timeout: 10_000 });
   await page.waitForTimeout(200);
+  // A cold software renderer can expose the first configured snapshot before
+  // egui has completed its follow-up layout. Request and observe two explicit
+  // test frames so text telemetry and the screenshot share settled geometry
+  // on both local and CI browsers.
+  for (let index = 0; index < 2; index += 1) {
+    const frame = await page.evaluate(
+      () => window.__POLYORAMA_GALLERY_HANDLE.snapshot().frame,
+    );
+    await page.evaluate(
+      () => window.__POLYORAMA_GALLERY_HANDLE.request_test_repaint(),
+    );
+    await page.waitForFunction(
+      (previousFrame) => window.__POLYORAMA_GALLERY_HANDLE.snapshot().frame > previousFrame,
+      frame,
+      { timeout: 10_000 },
+    );
+  }
   const snapshot = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
   if (snapshot.story !== fixture.story) throw new Error(`story did not settle to ${fixture.story}`);
   if (runtimeErrors.length) throw new Error(runtimeErrors.join('\n'));

@@ -1,8 +1,8 @@
 use eframe::egui;
 use polyorama_core::PaneId;
 use polyorama_ui_egui::{
-    ActionEmphasis, ActionTarget, Availability, DesignTokens, SemanticUiId, StatusTone,
-    TextLayoutObservation, UiNode, choice_control, range_control, status_badge,
+    ActionButtonState, ActionEmphasis, ActionTarget, Availability, DesignTokens, SemanticUiId,
+    StatusTone, TextLayoutObservation, UiNode, choice_control, range_control, status_badge,
 };
 
 use crate::app::GalleryAction;
@@ -26,11 +26,16 @@ pub(super) fn toolbar_story(
             (GalleryAction::FitView, false),
             (GalleryAction::LinkViews, true),
         ] {
+            let state = if action == GalleryAction::FitView {
+                ActionButtonState::Momentary
+            } else {
+                ActionButtonState::Toggle { pressed: selected }
+            };
             gallery_action_button(
                 ui,
                 ActionTarget::pane(action, PaneId(1)),
                 Availability::Enabled,
-                selected,
+                state,
                 ActionEmphasis::Quiet,
                 narrow,
                 tokens,

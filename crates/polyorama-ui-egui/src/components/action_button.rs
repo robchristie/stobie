@@ -13,10 +13,29 @@ pub enum ActionEmphasis {
     Primary,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ActionButtonState {
+    Momentary,
+    Toggle { pressed: bool },
+}
+
+impl ActionButtonState {
+    fn pressed(self) -> bool {
+        matches!(self, Self::Toggle { pressed: true })
+    }
+
+    fn toggled(self) -> Option<bool> {
+        match self {
+            Self::Momentary => None,
+            Self::Toggle { pressed } => Some(pressed),
+        }
+    }
+}
+
 pub struct ActionButtonSpec<A: ActionKey> {
     pub target: ActionTarget<A>,
     pub availability: Availability,
-    pub selected: bool,
+    pub state: ActionButtonState,
     pub emphasis: ActionEmphasis,
     pub compact: bool,
 }
@@ -83,16 +102,10 @@ pub fn action_button<A: ActionKey>(
     if response.clicked() {
         response.request_focus();
     }
-    response.widget_info(|| {
-        egui::WidgetInfo::selected(
-            egui::WidgetType::Button,
-            enabled,
-            spec.selected,
-            action.label,
-        )
-    });
+    response
+        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, action.label));
     ui.ctx().accesskit_node_builder(response.id, |node| {
-        use egui::accesskit::{Action, Role};
+        use egui::accesskit::{Action, Role, Toggled};
         node.set_role(Role::Button);
         node.set_label(action.label);
         node.set_author_id(spec.target.semantic_id());
@@ -104,7 +117,15 @@ pub fn action_button<A: ActionKey>(
         if !enabled {
             node.set_disabled();
         }
-        node.set_selected(spec.selected);
+        node.clear_selected();
+        node.clear_toggled();
+        if let Some(pressed) = spec.state.toggled() {
+            node.set_toggled(if pressed {
+                Toggled::True
+            } else {
+                Toggled::False
+            });
+        }
         if enabled {
             node.add_action(Action::Click);
         }
@@ -116,7 +137,7 @@ pub fn action_button<A: ActionKey>(
         Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
     } else if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
         tokens.colours.accent_primary.into()
-    } else if spec.selected || response.hovered() {
+    } else if spec.state.pressed() || response.hovered() {
         tokens.colours.selection_background.into()
     } else if spec.emphasis == ActionEmphasis::Quiet {
         Color32::TRANSPARENT
@@ -178,7 +199,7 @@ pub fn action_semantic_node<A: ActionKey>(
     response: &Response,
     target: ActionTarget<A>,
     availability: &Availability,
-    selected: bool,
+    state: ActionButtonState,
     parent: SemanticUiId,
 ) -> UiNode {
     let action = target.action.specification();
@@ -191,8 +212,8 @@ pub fn action_semantic_node<A: ActionKey>(
         rect: response.rect.into(),
         enabled: availability.enabled(),
         focused: response.has_focus(),
-        selected,
-        checked: None,
+        selected: false,
+        checked: state.toggled(),
         expanded: None,
         pane: target.pane,
         domain_reference: target.pane.map(DomainReference::Pane),
@@ -232,7 +253,7 @@ mod tests {
                     ActionButtonSpec {
                         target,
                         availability: availability.clone(),
-                        selected: false,
+                        state: ActionButtonState::Momentary,
                         emphasis: ActionEmphasis::Normal,
                         compact: false,
                     },
@@ -244,7 +265,7 @@ mod tests {
                     &response,
                     target,
                     &availability,
-                    false,
+                    ActionButtonState::Momentary,
                     SemanticUiId::root(),
                 ));
             },
@@ -254,6 +275,14 @@ mod tests {
             .accesskit_update
             .take()
             .expect("AccessKit update");
+        let action_node = update
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| node.author_id() == Some("action.undo"))
+            .expect("momentary action node");
+        assert_eq!(action_node.toggled(), None);
+        assert_eq!(action_node.is_selected(), None);
         output.textures_delta.clear();
         let root = SemanticUiId::root();
         let mut snapshot = UiSnapshot {
@@ -298,7 +327,7 @@ mod tests {
                     ActionButtonSpec {
                         target: ActionTarget::pane(TestAction::FitView, polyorama_core::PaneId(1)),
                         availability: Availability::Enabled,
-                        selected: false,
+                        state: ActionButtonState::Momentary,
                         emphasis: ActionEmphasis::Normal,
                         compact: false,
                     },
@@ -314,7 +343,7 @@ mod tests {
                         availability: Availability::Disabled {
                             reason: "History is empty".into(),
                         },
-                        selected: false,
+                        state: ActionButtonState::Momentary,
                         emphasis: ActionEmphasis::Normal,
                         compact: false,
                     },

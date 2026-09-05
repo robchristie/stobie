@@ -151,6 +151,14 @@ fn build_web() -> Result<()> {
 }
 
 fn architecture() -> Result<()> {
+    let workspace_manifest = fs::read_to_string("Cargo.toml")?;
+    let eframe_dependency = workspace_manifest
+        .lines()
+        .find(|line| line.starts_with("eframe = "))
+        .ok_or_else(|| anyhow!("workspace eframe dependency is missing"))?;
+    if !eframe_dependency.contains("\"accesskit\"") {
+        bail!("workspace eframe dependency must enable the native AccessKit adapter");
+    }
     assert_tree_excludes(
         "polyorama-core",
         &["egui", "eframe", "wgpu", "web-sys", "winit"],
@@ -353,7 +361,7 @@ fn architecture() -> Result<()> {
         }
     }
     println!(
-        "architecture boundaries passed: GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }

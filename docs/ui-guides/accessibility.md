@@ -7,12 +7,17 @@ disabled reason, pane/domain reference, text selectability and measured-text
 observations. The snapshot is an observation of the current frame, not a
 second application tree.
 
-Describe the current delivery state as **AccessKit-semantic and
-keyboard-tested**, not simply accessible. These framework-level checks do not
-establish working screen-reader support on Windows, macOS, Linux or in the
-browser. End-user support requires the relevant native and web adapters to be
-enabled and representative workflows to be exercised with actual assistive
-technology.
+The native applications compile eframe's AccessKit adapter, which consumes the
+same egui tree exercised by semantic tests. Adapter compilation, framework
+semantics and keyboard proof are independent evidence axes; none establishes
+working screen-reader support by itself. Claim end-user support only for an
+OS/assistive-technology combination whose representative workflow is retained
+in the
+[accessibility integration evidence](../accessibility-integration-report.md).
+Stock eframe 0.36.1 provides no browser AccessKit adapter and discards the tree
+update in `WebRunner`; keep that route blocked unless an upstream-supported
+integration replaces the retained reproduction. Do not substitute eframe's Web
+Speech event output for a browser accessibility tree.
 
 Custom interactive controls must expose a usable role and name, current state,
 supported action, focusability, visible focus and a token minimum hit target.
@@ -34,7 +39,9 @@ parents; and disabled reasons only on disabled nodes. Compare the snapshot with
 the AccessKit tree using the built-in parity audit: role, name, enabled state,
 selection, description, click/adjust actions and bounds must agree.
 
-Keyboard proof is not optional for buttons, tabs and splitters. Long visible
-labels may elide, but their semantic names and tooltip/description must retain
-the complete text. If native or browser platform screen-reader plumbing is not
-enabled, report that limit accurately rather than claiming delivered support.
+Keyboard proof is not optional for buttons, tabs, splitters, bounded result
+selection or viewport alternatives. Long visible labels may elide, but their
+semantic names and tooltip/description must retain the complete text. Automated
+tree inspection may verify adapter input but cannot replace actual
+assistive-technology use. Report every unqualified or unavailable platform
+accurately rather than inferring support from compilation or snapshots.

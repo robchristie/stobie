@@ -45,10 +45,9 @@ pub fn thumbnail_cell(
         response.request_focus();
     }
     response.widget_info(|| {
-        egui::WidgetInfo::selected(
+        egui::WidgetInfo::labeled(
             egui::WidgetType::SelectableLabel,
             true,
-            spec.selected,
             format!("{}; {:?}", spec.label, spec.state),
         )
     });
@@ -57,6 +56,7 @@ pub fn thumbnail_cell(
         node.set_role(Role::ListBoxOption);
         node.set_label(format!("{}; {:?}", spec.label, spec.state));
         node.set_author_id(format!("polyorama.thumbnail-cell.{}", spec.instance));
+        node.clear_toggled();
         node.set_selected(spec.selected);
         node.add_action(Action::Click);
     });

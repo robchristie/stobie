@@ -167,11 +167,36 @@ jq -e '
   and (.ui_snapshot.semantic_audit | length) == 0
   and any(.ui_snapshot.nodes[]; .actions | index("undo"))
   and any(.ui_snapshot.nodes[]; .pane == 1 and (.actions | index("fit_view")))
+  and any(.ui_snapshot.nodes[];
+    .id == "pane.1.viewport"
+    and .role == "viewport"
+    and .selected == true
+    and (.actions | index("fit_view"))
+    and (.actions | index("navigate_tool"))
+    and (.description | contains("active tool: Navigate"))
+    and (.description | contains("camera:"))
+    and (.description | contains("selected result:"))
+    and (.description | contains("available actions:")))
   and all(.ui_geometry.text_layouts[] | select(.role == "tab_label");
     .baseline == null
     and .overflow == "ellipsis"
     and .line_count == 1)
 ' "$SNAPSHOT" >/dev/null
+
+# Registered pane shortcuts propagate to the observed accessibility surface.
+xdo key 2
+sleep 0.2
+snapshot
+jq -e 'any(.ui_snapshot.nodes[];
+  .id == "pane.1.viewport"
+  and (.description | contains("active tool: Polygon")))' "$SNAPSHOT" >/dev/null
+KEYBOARD_TOOL_DESCRIPTION="$(jq -c '.ui_snapshot.nodes[] | select(.id == "pane.1.viewport") | .description' "$SNAPSHOT")"
+xdo key 1
+sleep 0.2
+snapshot
+jq -e 'any(.ui_snapshot.nodes[];
+  .id == "pane.1.viewport"
+  and (.description | contains("active tool: Navigate")))' "$SNAPSHOT" >/dev/null
 
 # Pointer-centred zoom and a coalesced linked-camera drag.
 move_target image_viewports 1 "" 0.35 0.45
@@ -288,6 +313,13 @@ move_target first_result_row 0 ""
 xdo click 1
 sleep 0.5
 snapshot
+SELECTED_RESULT="$(jq -r '[.ui_snapshot.nodes[]
+  | select(.role == "result_row" and .selected == true)
+  | .domain_reference.value][0] // empty' "$SNAPSHOT")"
+test -n "$SELECTED_RESULT"
+jq -e --arg result "$SELECTED_RESULT" 'any(.ui_snapshot.nodes[];
+  .id == "pane.1.viewport"
+  and (.description | contains("selected result: result " + $result)))' "$SNAPSHOT" >/dev/null
 move_target control 5 recenter_primary
 xdo click 1
 move_target tabs 6 ""
@@ -347,7 +379,9 @@ jq -n \
   --argjson polygon_undo_before "$POLYGON_UNDO_BEFORE" \
   --argjson polygon_undo_after "$POLYGON_UNDO_AFTER" \
   --argjson ui_geometry_initial "$UI_GEOMETRY_INITIAL" \
-  --argjson ui_snapshot_initial "$UI_SNAPSHOT_INITIAL" '
+  --argjson ui_snapshot_initial "$UI_SNAPSHOT_INITIAL" \
+  --argjson keyboard_tool_description "$KEYBOARD_TOOL_DESCRIPTION" \
+  --argjson selected_result "$SELECTED_RESULT" '
   {
     ui_snapshot: {
       frame: $ui_snapshot_initial.frame,
@@ -357,6 +391,13 @@ jq -n \
       semantic_audit: $ui_snapshot_initial.semantic_audit
     },
     ui_geometry: $ui_geometry_initial,
+    physical_keyboard_tool: {
+      shortcut: "2",
+      viewport_description: $keyboard_tool_description
+    },
+    physical_result_selection: {
+      result: $selected_result
+    },
     physical_pan: {
       pointer_delta: {x: 90, y: 50},
       before: [$pan_before, $linked_before],

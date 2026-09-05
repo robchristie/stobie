@@ -9,11 +9,11 @@ use polyorama_render_wgpu::{
 };
 use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionTarget, DockBehaviour, DockTextContext, SemanticUiId,
-    UiNode, UiPreferences, UiRole, UiSnapshot, action_button, application_bar_frame,
-    application_bar_height, apply_design_system, audit_text_layouts, consume_action_shortcut,
-    dock_workspace, measured_inline_label, preferences_control, stage_renderer_maintenance,
-    submit_render_plan,
+    ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionTarget, DockBehaviour,
+    DockTextContext, SemanticUiId, UiNode, UiPreferences, UiRole, UiSnapshot, action_button,
+    application_bar_frame, application_bar_height, apply_design_system, audit_text_layouts,
+    consume_action_shortcut, dock_workspace, measured_inline_label, preferences_control,
+    stage_renderer_maintenance, submit_render_plan,
 };
 use serde::{Deserialize, Serialize};
 use tracing::info_span;
@@ -808,7 +808,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ActionButtonSpec {
                             target: undo_target,
                             availability: undo_availability.clone(),
-                            selected: false,
+                            state: ActionButtonState::Momentary,
                             emphasis: ActionEmphasis::Quiet,
                             compact: compact_bar,
                         },
@@ -820,7 +820,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         application_bar_id.clone(),
                         undo_target,
                         &undo_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &undo,
                     );
                     if undo_availability.enabled()
@@ -840,7 +840,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ActionButtonSpec {
                             target: redo_target,
                             availability: redo_availability.clone(),
-                            selected: false,
+                            state: ActionButtonState::Momentary,
                             emphasis: ActionEmphasis::Quiet,
                             compact: compact_bar,
                         },
@@ -852,7 +852,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         application_bar_id.clone(),
                         redo_target,
                         &redo_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &redo,
                     );
                     if redo_availability.enabled()
@@ -872,7 +872,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ActionButtonSpec {
                             target: save_target,
                             availability: save_availability.clone(),
-                            selected: false,
+                            state: ActionButtonState::Momentary,
                             emphasis: ActionEmphasis::Quiet,
                             compact: compact_bar,
                         },
@@ -884,7 +884,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         application_bar_id.clone(),
                         save_target,
                         &save_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &save,
                     );
                     if save_availability.enabled()
@@ -902,7 +902,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ActionButtonSpec {
                             target: reset_target,
                             availability: reset_availability.clone(),
-                            selected: false,
+                            state: ActionButtonState::Momentary,
                             emphasis: ActionEmphasis::Quiet,
                             compact: compact_bar,
                         },
@@ -914,7 +914,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         application_bar_id.clone(),
                         reset_target,
                         &reset_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &reset,
                     );
                     if reset_availability.enabled() && reset.clicked() {
@@ -932,7 +932,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ActionButtonSpec {
                             target: appearance_target,
                             availability: appearance_availability.clone(),
-                            selected: false,
+                            state: ActionButtonState::Momentary,
                             emphasis: ActionEmphasis::Quiet,
                             compact: compact_bar,
                         },
@@ -944,7 +944,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         application_bar_id.clone(),
                         appearance_target,
                         &appearance_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &appearance,
                     );
                     if let Some(popup) = egui::Popup::menu(&appearance).show(|ui| {

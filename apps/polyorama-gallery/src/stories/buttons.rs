@@ -1,8 +1,8 @@
 use eframe::egui;
 use polyorama_core::PaneId;
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionKey, ActionTarget, Availability, DesignTokens,
-    SemanticUiId, TextLayoutObservation, UiNode, action_button, action_semantic_node,
+    ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionTarget, Availability,
+    DesignTokens, SemanticUiId, TextLayoutObservation, UiNode, action_button, action_semantic_node,
 };
 
 use crate::app::GalleryAction;
@@ -12,7 +12,7 @@ pub(super) fn gallery_action_button(
     ui: &mut egui::Ui,
     target: ActionTarget<GalleryAction>,
     availability: Availability,
-    selected: bool,
+    state: ActionButtonState,
     emphasis: ActionEmphasis,
     compact: bool,
     tokens: &DesignTokens,
@@ -25,7 +25,7 @@ pub(super) fn gallery_action_button(
         ActionButtonSpec {
             target,
             availability: availability.clone(),
-            selected,
+            state,
             emphasis,
             compact,
         },
@@ -37,7 +37,7 @@ pub(super) fn gallery_action_button(
         &response,
         target,
         &availability,
-        selected,
+        state,
         SemanticUiId::new("gallery.story"),
     ));
     response
@@ -68,7 +68,7 @@ pub(super) fn button_story(
             ui,
             ActionTarget::pane(GalleryAction::FitView, PaneId(1)),
             Availability::Enabled,
-            false,
+            ActionButtonState::Momentary,
             ActionEmphasis::Normal,
             false,
             tokens,
@@ -83,7 +83,7 @@ pub(super) fn button_story(
                 ui,
                 ActionTarget::application(GalleryAction::SaveLayout),
                 Availability::Enabled,
-                false,
+                ActionButtonState::Momentary,
                 ActionEmphasis::Normal,
                 false,
                 tokens,
@@ -95,7 +95,7 @@ pub(super) fn button_story(
                 ui,
                 ActionTarget::application(GalleryAction::ResetWorkspace),
                 Availability::Enabled,
-                false,
+                ActionButtonState::Momentary,
                 ActionEmphasis::Primary,
                 false,
                 tokens,
@@ -107,7 +107,7 @@ pub(super) fn button_story(
                 ui,
                 ActionTarget::pane(GalleryAction::LinkViews, PaneId(1)),
                 Availability::Enabled,
-                true,
+                ActionButtonState::Toggle { pressed: true },
                 ActionEmphasis::Quiet,
                 false,
                 tokens,
@@ -133,7 +133,7 @@ pub(super) fn disabled_story(
         Availability::Disabled {
             reason: "History is empty".into(),
         },
-        false,
+        ActionButtonState::Momentary,
         ActionEmphasis::Normal,
         false,
         tokens,

@@ -85,6 +85,10 @@ impl SemanticUiId {
         Self::new(format!("pane.{}", pane.0))
     }
 
+    pub fn viewport(pane: PaneId) -> Self {
+        Self::new(format!("pane.{}.viewport", pane.0))
+    }
+
     pub fn tab(pane: PaneId) -> Self {
         Self::new(format!("polyorama.dock.tab.{}", pane.0))
     }
@@ -320,12 +324,15 @@ pub enum AccessKitMismatch {
     Checked { id: SemanticUiId },
     ClickAction { id: SemanticUiId },
     AdjustAction { id: SemanticUiId },
+    CustomActions { id: SemanticUiId },
     Bounds { id: SemanticUiId },
 }
 
 /// Compare the common semantics for Polyorama-owned custom controls. Snapshot
-/// augmentations such as pane/domain references and action IDs intentionally
-/// have no AccessKit counterpart.
+/// augmentations such as pane/domain references intentionally have no
+/// AccessKit counterpart. Viewport action identities remain application-owned;
+/// the audit checks only that a distinct set of AccessKit custom-action
+/// transports is advertised, never that their numeric IDs equal action IDs.
 pub fn audit_accesskit(
     snapshot: &UiSnapshot,
     update: &egui::accesskit::TreeUpdate,
@@ -346,6 +353,7 @@ pub fn audit_accesskit(
                 | UiRole::Slider
                 | UiRole::Tab
                 | UiRole::Splitter
+                | UiRole::Viewport
                 | UiRole::ResultRow
                 | UiRole::ThumbnailCell
         )
@@ -370,6 +378,7 @@ pub fn audit_accesskit(
             UiRole::Slider => egui::accesskit::Role::Slider,
             UiRole::Tab => egui::accesskit::Role::Tab,
             UiRole::Splitter => egui::accesskit::Role::Splitter,
+            UiRole::Viewport => egui::accesskit::Role::Canvas,
             UiRole::ResultRow | UiRole::ThumbnailCell => egui::accesskit::Role::ListBoxOption,
             _ => unreachable!(),
         };
@@ -404,26 +413,24 @@ pub fn audit_accesskit(
         }
         if matches!(
             semantic.role,
-            UiRole::Tab | UiRole::ResultRow | UiRole::ThumbnailCell
+            UiRole::Tab | UiRole::Viewport | UiRole::ResultRow | UiRole::ThumbnailCell
         ) && node.is_selected() != Some(semantic.selected)
         {
             findings.push(AccessKitMismatch::Selected {
                 id: semantic.id.clone(),
             });
         }
-        if semantic.role == UiRole::RadioButton {
-            let expected = semantic.checked.map(|checked| {
-                if checked {
-                    egui::accesskit::Toggled::True
-                } else {
-                    egui::accesskit::Toggled::False
-                }
-            });
-            if node.toggled() != expected {
-                findings.push(AccessKitMismatch::Checked {
-                    id: semantic.id.clone(),
-                });
+        let expected_toggled = semantic.checked.map(|checked| {
+            if checked {
+                egui::accesskit::Toggled::True
+            } else {
+                egui::accesskit::Toggled::False
             }
+        });
+        if node.toggled() != expected_toggled {
+            findings.push(AccessKitMismatch::Checked {
+                id: semantic.id.clone(),
+            });
         }
         let should_click = semantic.enabled
             && matches!(
@@ -449,6 +456,26 @@ pub fn audit_accesskit(
             findings.push(AccessKitMismatch::AdjustAction {
                 id: semantic.id.clone(),
             });
+        }
+        if semantic.role == UiRole::Viewport {
+            let numeric_ids: BTreeSet<_> = node
+                .custom_actions()
+                .iter()
+                .map(|action| action.id)
+                .collect();
+            let advertised = if semantic.actions.is_empty() {
+                !node.supports_action(egui::accesskit::Action::CustomAction)
+                    && node.custom_actions().is_empty()
+            } else {
+                node.supports_action(egui::accesskit::Action::CustomAction)
+                    && node.custom_actions().len() == semantic.actions.len()
+                    && numeric_ids.len() == semantic.actions.len()
+            };
+            if !advertised {
+                findings.push(AccessKitMismatch::CustomActions {
+                    id: semantic.id.clone(),
+                });
+            }
         }
         if let Some(bounds) = node.bounds() {
             let accesskit = UiRect {

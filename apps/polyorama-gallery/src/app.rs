@@ -276,6 +276,11 @@ impl GalleryApp {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn request_test_repaint(&self) {
+        self.context.request_repaint();
+    }
+
     pub fn snapshot(&self) -> GallerySnapshot {
         self.snapshot.clone()
     }

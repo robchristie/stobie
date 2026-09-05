@@ -8,11 +8,11 @@ use polyorama_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
 use polyorama_ui_egui::{
-    ActionButtonSpec, ActionEmphasis, ActionKey, ActionScope, ActionTarget, Availability,
-    DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter, SemanticUiId,
-    TextLayoutObservation, UiNode, UiRole, action_button, allocate_viewport, choice_control,
-    consume_action_shortcut, diagnostic_row, image_status_height, paint_image_status,
-    range_control, section_heading, stage_render_callback,
+    ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionTarget,
+    Availability, DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter,
+    SemanticUiId, TextLayoutObservation, UiNode, UiRole, action_button, allocate_viewport,
+    choice_control, consume_action_shortcut, diagnostic_row, image_status_height,
+    paint_image_status, range_control, section_heading, stage_render_callback,
 };
 use web_time::Instant;
 
@@ -69,12 +69,23 @@ fn present_action(
     {
         return false;
     }
+    let state = if matches!(
+        target.action,
+        LabAction::LinkViews
+            | LabAction::NavigateTool
+            | LabAction::PolygonTool
+            | LabAction::EditVerticesTool
+    ) {
+        ActionButtonState::Toggle { pressed: selected }
+    } else {
+        ActionButtonState::Momentary
+    };
     let response = action_button(
         ui,
         ActionButtonSpec {
             target,
             availability: availability.clone(),
-            selected,
+            state,
             emphasis: ActionEmphasis::Quiet,
             compact,
         },
@@ -92,7 +103,7 @@ fn present_action(
             .control(target.pane, legacy_name, response.rect);
         outputs
             .ui_geometry
-            .action(parent.clone(), target, &availability, selected, &response);
+            .action(parent.clone(), target, &availability, state, &response);
     }
     availability.enabled()
         && (response.clicked() || consume_action_shortcut(ui, target.action, active_pane))
@@ -533,6 +544,171 @@ impl PaneSurface<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct RenderedWorkspace {
+        snapshot: polyorama_ui_egui::UiSnapshot,
+        accesskit: egui::accesskit::TreeUpdate,
+        virtualisation: VirtualisationMetrics,
+    }
+
+    /// Renders the representative workspace through the production dock and
+    /// pane presenter, preserving the single authoritative workspace tree.
+    fn render_representative_workspace_frame(
+        context: &egui::Context,
+        workspace: &Workspace,
+        events: Vec<egui::Event>,
+        selected_result: Option<ResultId>,
+        active_tools: std::collections::BTreeMap<PaneId, ActiveTool>,
+    ) -> RenderedWorkspace {
+        let mut fixture = workspace.clone();
+        let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1_800.0, 1_300.0));
+        let document = Document::default();
+        let session = Session::default();
+        let diagnostics = DiagnosticsSnapshot::default();
+        let tokens = DesignTokens::resolve(
+            polyorama_ui_egui::ThemeVariant::Dark,
+            polyorama_ui_egui::DensityVariant::Comfortable,
+        );
+        let mut gesture = None;
+        let mut behaviour = UiBehaviour::default();
+        let mut dock_behaviour = polyorama_ui_egui::DockBehaviour::default();
+        let mut virtualisation = VirtualisationMetrics::default();
+        let mut thumbnail_cache = ThumbnailCache::default();
+        let mut output = FrameOutput::with_ui_geometry(UiGeometry::new(root, 1.0));
+
+        let mut full_output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                focused: true,
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                ui.horizontal(|ui| {
+                    let parent = SemanticUiId::root();
+                    assert!(!present_action(
+                        ui,
+                        &mut output,
+                        &tokens,
+                        1.0,
+                        &parent,
+                        ActionTarget::application(LabAction::Undo),
+                        Availability::Disabled {
+                            reason: "History is empty".into(),
+                        },
+                        false,
+                        false,
+                        true,
+                        "undo",
+                    ));
+                    assert!(!present_action(
+                        ui,
+                        &mut output,
+                        &tokens,
+                        1.0,
+                        &parent,
+                        ActionTarget::application(LabAction::SaveLayout),
+                        Availability::Enabled,
+                        false,
+                        false,
+                        true,
+                        "save_layout",
+                    ));
+                    assert!(!present_action(
+                        ui,
+                        &mut output,
+                        &tokens,
+                        1.0,
+                        &parent,
+                        ActionTarget::application(LabAction::ResetWorkspace),
+                        Availability::Enabled,
+                        false,
+                        false,
+                        true,
+                        "reset_workspace",
+                    ));
+                    assert!(!present_action(
+                        ui,
+                        &mut output,
+                        &tokens,
+                        1.0,
+                        &parent,
+                        ActionTarget::application(LabAction::AppearanceSettings),
+                        Availability::Enabled,
+                        false,
+                        false,
+                        true,
+                        "appearance_settings",
+                    ));
+                });
+                let mut surface = PaneSurface::new(
+                    PaneReadModel {
+                        document: &document,
+                        cameras: &session.cameras,
+                        active_tools: active_tools.clone(),
+                        selected_result,
+                        selected_annotation: None,
+                        display: std::collections::BTreeMap::new(),
+                        diagnostics: &diagnostics,
+                        generation: 1,
+                        frame_number: 1,
+                        active_pane: fixture.active_pane,
+                        tokens,
+                        font_scale: 1.0,
+                    },
+                    PaneFeatureState {
+                        annotation_ui: AnnotationUiState::new(&mut gesture),
+                        ui_behaviour: &mut behaviour,
+                        virtualisation: &mut virtualisation,
+                        thumbnail_cache: &mut thumbnail_cache,
+                        outputs: &mut output,
+                    },
+                );
+                let command = polyorama_ui_egui::dock_workspace(
+                    ui,
+                    &mut fixture,
+                    &mut dock_behaviour,
+                    &mut surface,
+                    polyorama_ui_egui::DockTextContext {
+                        tokens,
+                        font_scale: 1.0,
+                    },
+                );
+                assert!(
+                    command.is_none(),
+                    "the fixture does not issue dock commands"
+                );
+            },
+        );
+        let accesskit = full_output
+            .platform_output
+            .accesskit_update
+            .take()
+            .expect("representative workspace AccessKit update");
+        full_output.textures_delta.clear();
+
+        RenderedWorkspace {
+            snapshot: output.ui_geometry.snapshot(1),
+            accesskit,
+            virtualisation,
+        }
+    }
+
+    fn render_representative_workspace(
+        workspace: Workspace,
+        selected_result: Option<ResultId>,
+        active_tools: std::collections::BTreeMap<PaneId, ActiveTool>,
+    ) -> RenderedWorkspace {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        render_representative_workspace_frame(
+            &context,
+            &workspace,
+            Vec::new(),
+            selected_result,
+            active_tools,
+        )
+    }
 
     fn camera_with_centre(x: f64, y: f64) -> Camera {
         Camera {
@@ -977,6 +1153,397 @@ mod tests {
             polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit).is_empty(),
             "{:#?}",
             polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit)
+        );
+    }
+
+    #[test]
+    fn representative_workspace_exposes_one_bounded_coherent_semantic_tree() {
+        let rendered = render_representative_workspace(
+            Workspace::analytical_default(),
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        let snapshot = &rendered.snapshot;
+
+        assert!(
+            snapshot.semantic_audit.is_empty(),
+            "{:#?}",
+            snapshot.semantic_audit
+        );
+        assert!(
+            polyorama_ui_egui::audit_accesskit(snapshot, &rendered.accesskit).is_empty(),
+            "{:#?}",
+            polyorama_ui_egui::audit_accesskit(snapshot, &rendered.accesskit)
+        );
+        assert!(snapshot.nodes.len() < 512);
+        assert!(rendered.virtualisation.materialised_rows < 64);
+        assert!(rendered.virtualisation.materialised_thumbnails < 128);
+
+        let undo = snapshot
+            .node(&SemanticUiId::new("action.undo"))
+            .expect("disabled application action");
+        assert!(!undo.enabled);
+        assert_eq!(undo.disabled_reason.as_deref(), Some("History is empty"));
+        let save = snapshot
+            .node(&SemanticUiId::new("action.save_layout"))
+            .expect("enabled application action");
+        assert!(save.enabled);
+        assert!(save.disabled_reason.is_none());
+        assert!(!save.selected);
+        assert_eq!(save.checked, None);
+        let save_accesskit = rendered
+            .accesskit
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| node.author_id() == Some("action.save_layout"))
+            .expect("enabled application AccessKit action");
+        assert_eq!(save_accesskit.toggled(), None);
+        assert_eq!(save_accesskit.is_selected(), None);
+
+        let tab = snapshot
+            .node(&SemanticUiId::tab(PaneId(1)))
+            .expect("dock tab");
+        assert_eq!(tab.role, UiRole::Tab);
+        assert_eq!(tab.domain_reference, Some(DomainReference::Pane(PaneId(1))));
+        let splitter = snapshot
+            .node(&SemanticUiId::splitter(DockNodeId(1)))
+            .expect("dock splitter");
+        assert_eq!(splitter.role, UiRole::Splitter);
+        assert_eq!(
+            splitter.domain_reference,
+            Some(DomainReference::DockNode(DockNodeId(1)))
+        );
+
+        let selected_result = snapshot
+            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .expect("bounded selected result row");
+        assert_eq!(selected_result.role, UiRole::ResultRow);
+        assert!(selected_result.selected);
+        assert_eq!(
+            selected_result.domain_reference,
+            Some(DomainReference::Result(ResultId(0)))
+        );
+
+        let viewport = snapshot
+            .node(&SemanticUiId::new("pane.1.viewport"))
+            .expect("primary analytical viewport");
+        assert_eq!(viewport.role, UiRole::Viewport);
+        assert!(viewport.selected);
+        assert_eq!(viewport.pane, Some(PaneId(1)));
+        assert_eq!(
+            viewport.domain_reference,
+            Some(DomainReference::Pane(PaneId(1)))
+        );
+        assert!(!viewport.actions.is_empty());
+        let viewport_accesskit = rendered
+            .accesskit
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| node.author_id() == Some("pane.1.viewport"))
+            .expect("primary analytical AccessKit viewport");
+        assert_eq!(viewport_accesskit.toggled(), None);
+
+        for required_id in [
+            SemanticUiId::new("action.undo"),
+            SemanticUiId::tab(PaneId(1)),
+            SemanticUiId::splitter(DockNodeId(1)),
+            SemanticUiId::new("polyorama.result-row.0"),
+            SemanticUiId::new("pane.1.viewport"),
+        ] {
+            assert_eq!(
+                snapshot
+                    .nodes
+                    .iter()
+                    .filter(|node| node.id == required_id)
+                    .count(),
+                1,
+                "{required_id:?} has one snapshot owner"
+            );
+            assert_eq!(
+                rendered
+                    .accesskit
+                    .nodes
+                    .iter()
+                    .filter(|(_, node)| node.author_id() == Some(required_id.0.as_str()))
+                    .count(),
+                1,
+                "{required_id:?} has one AccessKit owner"
+            );
+        }
+    }
+
+    #[test]
+    fn semantic_state_updates_selection_tool_and_viewport_context() {
+        let initial = render_representative_workspace(
+            Workspace::analytical_default(),
+            None,
+            Session::default().active_tools,
+        );
+        let mut tools = Session::default().active_tools;
+        tools.insert(PaneId(1), ActiveTool::Polygon);
+        let updated = render_representative_workspace(
+            Workspace::analytical_default(),
+            Some(ResultId(0)),
+            tools,
+        );
+
+        let initial_result = initial
+            .snapshot
+            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .expect("initial result row");
+        let updated_result = updated
+            .snapshot
+            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .expect("updated result row");
+        assert!(!initial_result.selected);
+        assert!(updated_result.selected);
+
+        let polygon_tool = updated
+            .snapshot
+            .by_action(LabAction::PolygonTool)
+            .find(|node| node.pane == Some(PaneId(1)))
+            .expect("primary polygon tool action");
+        assert!(!polygon_tool.selected);
+        assert_eq!(polygon_tool.checked, Some(true));
+        let polygon_accesskit = updated
+            .accesskit
+            .nodes
+            .iter()
+            .map(|(_, node)| node)
+            .find(|node| {
+                node.author_id()
+                    == Some(
+                        ActionTarget::pane(LabAction::PolygonTool, PaneId(1))
+                            .semantic_id()
+                            .as_str(),
+                    )
+            })
+            .expect("primary polygon AccessKit action");
+        assert_eq!(
+            polygon_accesskit.toggled(),
+            Some(egui::accesskit::Toggled::True)
+        );
+        assert!(
+            updated
+                .snapshot
+                .node(&SemanticUiId::new("pane.1.viewport"))
+                .expect("updated viewport")
+                .description
+                != initial
+                    .snapshot
+                    .node(&SemanticUiId::new("pane.1.viewport"))
+                    .expect("initial viewport")
+                    .description,
+            "selection and tool changes must update viewport context"
+        );
+        assert!(
+            polyorama_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit).is_empty(),
+            "{:#?}",
+            polyorama_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit)
+        );
+    }
+
+    #[test]
+    fn semantic_identity_survives_canonical_dock_rearrangement_and_restoration() {
+        let mut rearranged = Workspace::analytical_default();
+        assert!(rearranged.move_pane(PaneId(1), PaneId(2), DockDrop::Tab));
+        rearranged
+            .validate()
+            .expect("rearranged canonical workspace");
+        let restored: Workspace = serde_json::from_str(
+            &serde_json::to_string(&rearranged).expect("serialise rearranged workspace"),
+        )
+        .expect("restore rearranged workspace");
+        assert_eq!(restored, rearranged);
+
+        let rendered = render_representative_workspace(
+            restored,
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        let tab = rendered
+            .snapshot
+            .node(&SemanticUiId::tab(PaneId(1)))
+            .expect("rearranged tab keeps its pane identity");
+        let viewport = rendered
+            .snapshot
+            .node(&SemanticUiId::new("pane.1.viewport"))
+            .expect("rearranged viewport keeps its pane identity");
+        assert_eq!(tab.domain_reference, Some(DomainReference::Pane(PaneId(1))));
+        assert_eq!(
+            viewport.domain_reference,
+            Some(DomainReference::Pane(PaneId(1)))
+        );
+        assert_eq!(viewport.parent, Some(SemanticUiId::pane(PaneId(1))));
+        for id in [
+            SemanticUiId::tab(PaneId(1)),
+            SemanticUiId::new("pane.1.viewport"),
+        ] {
+            assert_eq!(
+                rendered
+                    .accesskit
+                    .nodes
+                    .iter()
+                    .filter(|(_, node)| node.author_id() == Some(id.0.as_str()))
+                    .count(),
+                1,
+                "{id:?} keeps one AccessKit owner after restoration"
+            );
+        }
+    }
+
+    fn tab_event(modifiers: egui::Modifiers) -> egui::Event {
+        egui::Event::Key {
+            key: egui::Key::Tab,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers,
+        }
+    }
+
+    fn focused_semantic_id(snapshot: &polyorama_ui_egui::UiSnapshot) -> Option<SemanticUiId> {
+        snapshot
+            .nodes
+            .iter()
+            .find(|node| node.focused)
+            .map(|node| node.id.clone())
+    }
+
+    #[test]
+    fn representative_workspace_tab_traversal_reaches_actions_dock_and_viewport() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let workspace = Workspace::analytical_default();
+        let save_focus = egui::Id::new(("polyorama.action-button", "save_layout", None::<PaneId>));
+        context.memory_mut(|memory| memory.request_focus(save_focus));
+
+        let initial = render_representative_workspace_frame(
+            &context,
+            &workspace,
+            Vec::new(),
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        assert_eq!(
+            focused_semantic_id(&initial.snapshot),
+            Some(SemanticUiId::new("action.save_layout"))
+        );
+
+        let mut sequence = vec![SemanticUiId::new("action.save_layout")];
+        for _ in 0..64 {
+            let _ = render_representative_workspace_frame(
+                &context,
+                &workspace,
+                vec![tab_event(egui::Modifiers::NONE)],
+                Some(ResultId(0)),
+                Session::default().active_tools,
+            );
+            let settled = render_representative_workspace_frame(
+                &context,
+                &workspace,
+                Vec::new(),
+                Some(ResultId(0)),
+                Session::default().active_tools,
+            );
+            if let Some(id) = focused_semantic_id(&settled.snapshot)
+                && sequence.last() != Some(&id)
+            {
+                sequence.push(id);
+            }
+            if sequence.contains(&SemanticUiId::new("pane.1.viewport")) {
+                break;
+            }
+        }
+
+        let position = |id: &str| {
+            sequence
+                .iter()
+                .position(|candidate| candidate == &SemanticUiId::new(id))
+                .unwrap_or_else(|| panic!("{id} was not reached: {sequence:#?}"))
+        };
+        let save = position("action.save_layout");
+        let reset = position("action.reset_workspace");
+        let appearance = position("action.appearance_settings");
+        let tab = position("polyorama.dock.tab.1");
+        let viewport = position("pane.1.viewport");
+        assert!(
+            save < reset && reset < appearance && appearance < tab && tab < viewport,
+            "{sequence:#?}"
+        );
+        assert_eq!(
+            sequence,
+            vec![
+                SemanticUiId::new("action.save_layout"),
+                SemanticUiId::new("action.reset_workspace"),
+                SemanticUiId::new("action.appearance_settings"),
+                SemanticUiId::splitter(DockNodeId(1)),
+                SemanticUiId::splitter(DockNodeId(2)),
+                SemanticUiId::splitter(DockNodeId(3)),
+                SemanticUiId::tab(PaneId(1)),
+                SemanticUiId::new("action.navigate_tool.pane.1"),
+                SemanticUiId::new("action.polygon_tool.pane.1"),
+                SemanticUiId::new("action.edit_vertices_tool.pane.1"),
+                SemanticUiId::new("action.fit_view.pane.1"),
+                SemanticUiId::new("action.link_views.pane.1"),
+                SemanticUiId::new("action.display_settings.pane.1"),
+                SemanticUiId::new("pane.1.viewport"),
+            ]
+        );
+
+        let _ = render_representative_workspace_frame(
+            &context,
+            &workspace,
+            vec![tab_event(egui::Modifiers::SHIFT)],
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        let reverse = render_representative_workspace_frame(
+            &context,
+            &workspace,
+            Vec::new(),
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        assert_eq!(
+            focused_semantic_id(&reverse.snapshot),
+            Some(SemanticUiId::new("action.display_settings.pane.1"))
+        );
+    }
+
+    #[test]
+    fn dock_tab_focus_identity_survives_a_canonical_pane_move() {
+        let context = egui::Context::default();
+        context.enable_accesskit();
+        let mut workspace = Workspace::analytical_default();
+        let tab_focus = egui::Id::new(("polyorama.dock.tab", 1_u32));
+        context.memory_mut(|memory| memory.request_focus(tab_focus));
+
+        let before = render_representative_workspace_frame(
+            &context,
+            &workspace,
+            Vec::new(),
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        assert_eq!(
+            focused_semantic_id(&before.snapshot),
+            Some(SemanticUiId::tab(PaneId(1)))
+        );
+        assert!(workspace.move_pane(PaneId(1), PaneId(2), DockDrop::Tab));
+        let after = render_representative_workspace_frame(
+            &context,
+            &workspace,
+            Vec::new(),
+            Some(ResultId(0)),
+            Session::default().active_tools,
+        );
+        assert_eq!(context.memory(|memory| memory.focused()), Some(tab_focus));
+        assert_eq!(
+            focused_semantic_id(&after.snapshot),
+            Some(SemanticUiId::tab(PaneId(1)))
         );
     }
 

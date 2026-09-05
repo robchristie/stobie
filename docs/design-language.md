@@ -153,13 +153,15 @@ nearby pane surfaces cannot steal the boundary gesture. Delayed drag
 recognition reconstructs the press origin from total drag delta, keeping the
 preview and final command faithful to the complete pointer movement.
 
-These are compatible egui AccessKit tree updates, not a claim of delivered OS
-or browser screen-reader support: the application has not enabled eframe's
-native adapter and its current web integration discards those updates. Describe
-the current state as **AccessKit-semantic and keyboard-tested**. A later
-usage-led increment should enable the relevant adapters and test representative
-workflows with actual assistive technology on Windows, macOS, Linux and in the
-browser before claiming end-user screen-reader support.
+These compatible egui AccessKit tree updates now feed eframe's native AccessKit
+adapter. This establishes adapter integration, not a claim of delivered
+screen-reader support: every claimed OS still requires the representative
+workflow to be exercised with actual assistive technology. Stock eframe 0.36.1
+discards browser AccessKit updates and has no web accessibility-tree adapter;
+the retained reproduction and platform matrix live in
+[accessibility integration evidence](accessibility-integration-report.md).
+Describe unqualified platforms as **AccessKit-semantic and keyboard-tested**,
+not simply accessible.
 
 ## Icons
 

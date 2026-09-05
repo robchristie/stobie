@@ -304,6 +304,22 @@ impl PaneSurface<'_> {
             metric_section(
                 ui,
                 5,
+                "Accessibility",
+                &[
+                    ("Platform integration", platform_accessibility_status().into()),
+                    (
+                        "End-user qualification",
+                        "No platform is qualified by this build alone; see the accessibility evidence report"
+                            .into(),
+                    ),
+                ],
+                &tokens,
+                font_scale,
+                observations,
+            );
+            metric_section(
+                ui,
+                6,
                 "Virtualisation",
                 &[
                     (
@@ -385,6 +401,16 @@ impl PaneSurface<'_> {
         scroll_node.pane = Some(pane);
         self.outputs.ui_geometry.record_node(scroll_node);
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn platform_accessibility_status() -> &'static str {
+    "Native AccessKit adapter compiled; activates when platform assistive technology connects"
+}
+
+#[cfg(target_arch = "wasm32")]
+fn platform_accessibility_status() -> &'static str {
+    "Unavailable: eframe 0.36.1 WebRunner does not expose AccessKit tree updates"
 }
 
 fn metric_section(

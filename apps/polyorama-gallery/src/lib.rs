@@ -65,6 +65,15 @@ impl WebHandle {
         Ok(())
     }
 
+    pub fn request_test_repaint(&self) -> Result<(), JsValue> {
+        let app = self
+            .runner
+            .app_mut::<GalleryApp>()
+            .ok_or_else(|| JsValue::from_str("Polyorama gallery is unavailable"))?;
+        app.request_test_repaint();
+        Ok(())
+    }
+
     pub fn snapshot(&self) -> Result<JsValue, JsValue> {
         let app = self
             .runner

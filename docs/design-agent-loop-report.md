@@ -2,6 +2,10 @@
 
 Status: complete; landed as PR #17
 
+This report records the accessibility state of that completed campaign. The
+current adapter and assistive-technology qualification state is maintained in
+[the later accessibility integration evidence](accessibility-integration-report.md).
+
 ## Outcome
 
 The design-system and agent-control-plane goal is implemented without changing

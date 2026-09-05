@@ -2,6 +2,171 @@ use super::annotations::screen_to_image;
 use super::*;
 use crate::actions::{ActionContext, availability};
 
+const VIEWPORT_ACTION_FIT: i32 = 1;
+const VIEWPORT_ACTION_LINK: i32 = 2;
+const VIEWPORT_ACTION_NAVIGATE: i32 = 3;
+const VIEWPORT_ACTION_POLYGON: i32 = 4;
+const VIEWPORT_ACTION_EDIT_VERTICES: i32 = 5;
+const VIEWPORT_ACTION_COMMIT_POLYGON: i32 = 6;
+const VIEWPORT_ACTION_DELETE_ANNOTATION: i32 = 7;
+
+fn viewport_actions(context: ActionContext, gesture_present: bool) -> Vec<LabAction> {
+    [
+        LabAction::FitView,
+        LabAction::LinkViews,
+        LabAction::NavigateTool,
+        LabAction::PolygonTool,
+        LabAction::EditVerticesTool,
+        LabAction::CommitPolygon,
+        LabAction::DeleteAnnotation,
+    ]
+    .into_iter()
+    .filter(|action| {
+        availability(*action, context).enabled()
+            && (*action != LabAction::CommitPolygon || gesture_present)
+            && (action.specification().scope != ActionScope::ActivePane
+                || context.target_pane == Some(context.active_pane))
+    })
+    .collect()
+}
+
+/// AccessKit custom-action IDs are transport-local numeric handles. They are
+/// deliberately separate from the application's stable string action IDs.
+fn viewport_custom_action_id(action: LabAction) -> i32 {
+    match action {
+        LabAction::FitView => VIEWPORT_ACTION_FIT,
+        LabAction::LinkViews => VIEWPORT_ACTION_LINK,
+        LabAction::NavigateTool => VIEWPORT_ACTION_NAVIGATE,
+        LabAction::PolygonTool => VIEWPORT_ACTION_POLYGON,
+        LabAction::EditVerticesTool => VIEWPORT_ACTION_EDIT_VERTICES,
+        LabAction::CommitPolygon => VIEWPORT_ACTION_COMMIT_POLYGON,
+        LabAction::DeleteAnnotation => VIEWPORT_ACTION_DELETE_ANNOTATION,
+        _ => unreachable!("only viewport actions have custom-action IDs"),
+    }
+}
+
+fn viewport_action_from_custom_id(id: i32) -> Option<LabAction> {
+    match id {
+        VIEWPORT_ACTION_FIT => Some(LabAction::FitView),
+        VIEWPORT_ACTION_LINK => Some(LabAction::LinkViews),
+        VIEWPORT_ACTION_NAVIGATE => Some(LabAction::NavigateTool),
+        VIEWPORT_ACTION_POLYGON => Some(LabAction::PolygonTool),
+        VIEWPORT_ACTION_EDIT_VERTICES => Some(LabAction::EditVerticesTool),
+        VIEWPORT_ACTION_COMMIT_POLYGON => Some(LabAction::CommitPolygon),
+        VIEWPORT_ACTION_DELETE_ANNOTATION => Some(LabAction::DeleteAnnotation),
+        _ => None,
+    }
+}
+
+fn viewport_action_label(action: LabAction, linked: bool) -> &'static str {
+    if action == LabAction::LinkViews && linked {
+        "Unlink views"
+    } else {
+        action.specification().label
+    }
+}
+
+fn requested_viewport_actions(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    available: &[LabAction],
+) -> Vec<LabAction> {
+    ui.input(|input| {
+        input
+            .accesskit_action_requests(response.id, egui::accesskit::Action::CustomAction)
+            .filter_map(|request| match request.data.as_ref() {
+                Some(egui::accesskit::ActionData::CustomAction(id)) => {
+                    viewport_action_from_custom_id(*id)
+                }
+                _ => None,
+            })
+            .filter(|action| available.contains(action))
+            .collect()
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn viewport_description(
+    active: bool,
+    tool: ActiveTool,
+    linked: bool,
+    selected_result: Option<ResultId>,
+    selected_annotation: Option<AnnotationId>,
+    camera: Camera,
+    diagnostics: &DiagnosticsSnapshot,
+    actions: &[LabAction],
+) -> String {
+    let tool = match tool {
+        ActiveTool::Navigate => "Navigate",
+        ActiveTool::Polygon => "Polygon",
+        ActiveTool::EditVertex => "Edit vertices",
+    };
+    let result = selected_result.map_or_else(
+        || "none".to_owned(),
+        |result| format!("result {}", result.0),
+    );
+    let annotation = selected_annotation.map_or_else(
+        || "none".to_owned(),
+        |annotation| format!("annotation {}", annotation.0),
+    );
+    let mut parts = vec![
+        "Scientific scalar image".to_owned(),
+        if active {
+            "active pane".to_owned()
+        } else {
+            "inactive pane".to_owned()
+        },
+        format!("active tool: {tool}"),
+        if linked {
+            "camera: linked to group A".to_owned()
+        } else {
+            "camera: unlinked".to_owned()
+        },
+        format!(
+            "view centre: image {:.1}, {:.1}; scale: {:.2} image pixels per screen point",
+            camera.centre.x, camera.centre.y, camera.pixels_per_screen_point
+        ),
+        format!("selected result: {result}"),
+        format!("selected annotation: {annotation}"),
+    ];
+    let runtime = &diagnostics.runtime;
+    match runtime.worker_health {
+        WorkerHealth::Starting => parts.push("data worker: starting".to_owned()),
+        WorkerHealth::Unavailable => {
+            let detail = if runtime.last_worker_error.is_empty() {
+                String::new()
+            } else {
+                format!(": {}", runtime.last_worker_error)
+            };
+            parts.push(format!("data worker: unavailable{detail}"));
+        }
+        WorkerHealth::Stopped => parts.push("data worker: stopped".to_owned()),
+        WorkerHealth::Running => {}
+    }
+    let loading = runtime.queued + runtime.in_flight;
+    if loading > 0 {
+        parts.push(format!("shared tile loading: {loading}"));
+    }
+    if runtime.failed > 0 {
+        parts.push(format!("shared tile load failures: {}", runtime.failed));
+    }
+    let stale = runtime.stale_demands_rejected + runtime.stale_discarded;
+    if stale > 0 {
+        parts.push(format!(
+            "shared stale tile work rejected or discarded: {stale}"
+        ));
+    }
+    parts.push(format!(
+        "available actions: {}",
+        actions
+            .iter()
+            .map(|action| viewport_action_label(*action, linked))
+            .collect::<Vec<_>>()
+            .join(", ")
+    ));
+    parts.join("; ")
+}
+
 impl PaneSurface<'_> {
     pub(super) fn image_pane(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
         let camera_index = self
@@ -10,6 +175,7 @@ impl PaneSurface<'_> {
             .position(|state| state.pane == pane)
             .expect("validated session has one camera per image pane");
         let mut fit = false;
+        let mut toggle_link = false;
         let mut commit_polygon = false;
         let mut delete_annotation = false;
         let before_display = self.display.get(&pane).copied().unwrap_or_default();
@@ -85,7 +251,7 @@ impl PaneSurface<'_> {
                 "fit",
             );
             let linked = self.cameras[camera_index].link.is_some();
-            if present_action(
+            toggle_link = present_action(
                 ui,
                 self.outputs,
                 &self.tokens,
@@ -97,12 +263,7 @@ impl PaneSurface<'_> {
                 true,
                 self.active_pane == pane,
                 "link_a",
-            ) {
-                self.outputs.intents.push(ImageIntent::SetCameraLink {
-                    pane,
-                    link: (!linked).then_some(LinkGroupId(1)),
-                });
-            }
+            );
             if !compact_toolbar {
                 present_display_controls(
                     ui,
@@ -120,7 +281,7 @@ impl PaneSurface<'_> {
                     ActionButtonSpec {
                         target,
                         availability: control_availability.clone(),
-                        selected: false,
+                        state: ActionButtonState::Momentary,
                         emphasis: ActionEmphasis::Quiet,
                         compact: true,
                     },
@@ -141,7 +302,7 @@ impl PaneSurface<'_> {
                         toolbar_id.clone(),
                         target,
                         &control_availability,
-                        false,
+                        ActionButtonState::Momentary,
                         &response,
                     );
                 }
@@ -217,13 +378,6 @@ impl PaneSurface<'_> {
         toolbar_node.name = "Image actions".into();
         toolbar_node.pane = Some(pane);
         self.outputs.ui_geometry.record_node(toolbar_node);
-        if active_tool != before_tool {
-            self.active_tools.insert(pane, active_tool);
-            self.outputs.pane_intents.push(PaneIntent::SetActiveTool {
-                pane,
-                tool: active_tool,
-            });
-        }
         if display != before_display {
             self.display.insert(pane, display);
             self.outputs.pane_intents.push(PaneIntent::SetDisplay {
@@ -231,28 +385,6 @@ impl PaneSurface<'_> {
                 settings: display,
             });
         }
-        if fit {
-            let size = ui.available_size();
-            self.outputs.intents.push(ImageIntent::SetCamera {
-                pane,
-                camera: Camera::fit(size.x as f64, size.y as f64),
-            });
-        }
-        if commit_polygon {
-            if let Some(GesturePreview::Polygon { layer, vertices }) = self.annotation_ui.take() {
-                self.outputs
-                    .intents
-                    .push(ImageIntent::CommitPolygon { layer, vertices });
-            }
-        }
-        if delete_annotation {
-            if let Some(annotation) = self.selected_annotation {
-                self.outputs
-                    .intents
-                    .push(ImageIntent::DeleteAnnotation { annotation });
-            }
-        }
-
         let status_height = image_status_height(&self.tokens, self.font_scale);
         let available = ui.available_rect_before_wrap().intersect(pane_rect);
         let desired = egui::vec2(
@@ -261,6 +393,55 @@ impl PaneSurface<'_> {
         );
         let (allocation, response) = allocate_viewport(ui, pane, desired);
         let rect = allocation.logical_rect;
+        if response.clicked() {
+            response.request_focus();
+        }
+        let linked = self.cameras[camera_index].link.is_some();
+        let available_actions =
+            viewport_actions(action_context, self.annotation_ui.get().is_some());
+        for action in requested_viewport_actions(ui, &response, &available_actions) {
+            match action {
+                LabAction::FitView => fit = true,
+                LabAction::LinkViews => toggle_link = true,
+                LabAction::NavigateTool => active_tool = ActiveTool::Navigate,
+                LabAction::PolygonTool => active_tool = ActiveTool::Polygon,
+                LabAction::EditVerticesTool => active_tool = ActiveTool::EditVertex,
+                LabAction::CommitPolygon => commit_polygon = true,
+                LabAction::DeleteAnnotation => delete_annotation = true,
+                _ => {}
+            }
+        }
+        if active_tool != before_tool {
+            self.active_tools.insert(pane, active_tool);
+            self.outputs.pane_intents.push(PaneIntent::SetActiveTool {
+                pane,
+                tool: active_tool,
+            });
+        }
+        if fit {
+            self.outputs.intents.push(ImageIntent::SetCamera {
+                pane,
+                camera: Camera::fit(rect.width() as f64, rect.height() as f64),
+            });
+        }
+        if toggle_link {
+            self.outputs.intents.push(ImageIntent::SetCameraLink {
+                pane,
+                link: (!linked).then_some(LinkGroupId(1)),
+            });
+        }
+        if commit_polygon
+            && let Some(GesturePreview::Polygon { layer, vertices }) = self.annotation_ui.take()
+        {
+            self.outputs
+                .intents
+                .push(ImageIntent::CommitPolygon { layer, vertices });
+        }
+        if delete_annotation && let Some(annotation) = self.selected_annotation {
+            self.outputs
+                .intents
+                .push(ImageIntent::DeleteAnnotation { annotation });
+        }
         self.outputs
             .ui_geometry
             .image_viewports
@@ -268,24 +449,6 @@ impl PaneSurface<'_> {
                 pane,
                 rect: rect.into(),
             });
-        self.outputs.ui_geometry.record_node(UiNode {
-            id: SemanticUiId::new(format!("pane.{}.viewport", pane.0)),
-            parent: Some(SemanticUiId::pane(pane)),
-            role: UiRole::Viewport,
-            name: format!("{} viewport", self.title(pane)),
-            description: Some("Scientific scalar image viewport".into()),
-            rect: rect.into(),
-            enabled: true,
-            focused: response.has_focus(),
-            selected: self.active_pane == pane,
-            checked: None,
-            expanded: None,
-            pane: Some(pane),
-            domain_reference: Some(DomainReference::Pane(pane)),
-            actions: Vec::new(),
-            text_selectable: false,
-            disabled_reason: None,
-        });
         ui.painter()
             .rect_filled(rect, 0.0, self.tokens.colours.surface_canvas);
         paint_placeholder(ui, rect, pane, &self.tokens);
@@ -300,6 +463,66 @@ impl PaneSurface<'_> {
         );
         let camera = frame.camera;
         let demands = frame.demands;
+        let viewport_id = SemanticUiId::viewport(pane);
+        let viewport_name = format!("{} viewport", self.title(pane));
+        let description = viewport_description(
+            self.active_pane == pane,
+            active_tool,
+            linked,
+            self.selected_result,
+            self.selected_annotation,
+            camera,
+            self.diagnostics,
+            &available_actions,
+        );
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Image, true, viewport_name.clone())
+        });
+        ui.ctx().accesskit_node_builder(response.id, |node| {
+            use egui::accesskit::{Action, CustomAction, Role};
+
+            node.set_role(Role::Canvas);
+            node.set_label(viewport_name.clone());
+            node.set_author_id(viewport_id.0.clone());
+            node.set_description(description.clone());
+            node.clear_toggled();
+            node.set_selected(self.active_pane == pane);
+            node.remove_action(Action::Click);
+            node.set_custom_actions(
+                available_actions
+                    .iter()
+                    .map(|action| CustomAction {
+                        id: viewport_custom_action_id(*action),
+                        description: viewport_action_label(*action, linked).into(),
+                    })
+                    .collect::<Vec<_>>(),
+            );
+            if !available_actions.is_empty() {
+                node.add_action(Action::CustomAction);
+            }
+        });
+        self.outputs.ui_geometry.record_node(UiNode {
+            id: viewport_id,
+            parent: Some(SemanticUiId::pane(pane)),
+            role: UiRole::Viewport,
+            name: viewport_name,
+            description: Some(description),
+            rect: rect.into(),
+            enabled: true,
+            focused: response.has_focus(),
+            selected: self.active_pane == pane,
+            checked: None,
+            expanded: None,
+            pane: Some(pane),
+            domain_reference: Some(DomainReference::Pane(pane)),
+            actions: available_actions
+                .iter()
+                .copied()
+                .map(polyorama_ui_egui::SemanticActionId::from_action)
+                .collect(),
+            text_selectable: false,
+            disabled_reason: None,
+        });
         self.outputs.demands.extend(demands.iter().copied());
         let request = ImageRenderRequest {
             pane,
@@ -367,6 +590,14 @@ impl PaneSurface<'_> {
                 ViewportPoint::new(rect.width() as f64, rect.height() as f64),
             );
             self.ui_behaviour.pointer_image.insert(pane, image);
+        }
+        if response.has_focus() {
+            ui.painter().rect_stroke(
+                rect,
+                0.0,
+                egui::Stroke::new(1.0, self.tokens.colours.focus_ring),
+                egui::StrokeKind::Inside,
+            );
         }
         let fallback_pointer = self
             .ui_behaviour
@@ -524,6 +755,7 @@ mod tests {
         document: Document,
         session: Session,
         display: BTreeMap<PaneId, DisplaySettings>,
+        diagnostics: DiagnosticsSnapshot,
         behaviour: UiBehaviour,
         output: FrameOutput,
     }
@@ -544,16 +776,15 @@ mod tests {
                     }
                     let mut virtualisation = VirtualisationMetrics::default();
                     let mut thumbnails = ThumbnailCache::default();
-                    let diagnostics = DiagnosticsSnapshot::default();
                     let mut surface = PaneSurface::new(
                         PaneReadModel {
                             document: &state.document,
                             cameras: &state.session.cameras,
                             active_tools: state.session.active_tools.clone(),
-                            selected_result: None,
+                            selected_result: state.session.selected_result,
                             selected_annotation: state.session.selected_annotation,
                             display: state.display.clone(),
-                            diagnostics: &diagnostics,
+                            diagnostics: &state.diagnostics,
                             generation: 1,
                             frame_number: 1,
                             active_pane: PaneId(1),
@@ -583,6 +814,227 @@ mod tests {
                 },
                 ImagePaneFixture::default(),
             )
+    }
+
+    fn request_viewport_action(harness: &Harness<'_, ImagePaneFixture>, action: LabAction) {
+        use egui_kittest::kittest::NodeT;
+
+        let (target_node, target_tree) = harness
+            .get_by_role_and_label(egui::accesskit::Role::Canvas, "Primary View viewport")
+            .accesskit_node()
+            .locate();
+        harness.event(egui::Event::AccessKitActionRequest(
+            egui::accesskit::ActionRequest {
+                action: egui::accesskit::Action::CustomAction,
+                target_tree,
+                target_node,
+                data: Some(egui::accesskit::ActionData::CustomAction(
+                    viewport_custom_action_id(action),
+                )),
+            },
+        ));
+    }
+
+    #[test]
+    fn viewport_semantics_follow_dynamic_context_and_expose_matching_actions() {
+        use egui_kittest::kittest::NodeT;
+
+        let mut harness = image_pane_harness(1_000.0);
+        let initial = harness
+            .state()
+            .output
+            .ui_geometry
+            .semantic_nodes
+            .iter()
+            .find(|node| node.role == UiRole::Viewport)
+            .expect("viewport semantic node");
+        assert_eq!(initial.id.0, "pane.1.viewport");
+        assert!(initial.selected);
+        assert!(
+            initial
+                .description
+                .as_deref()
+                .unwrap()
+                .contains("active tool: Navigate")
+        );
+        assert!(
+            initial
+                .description
+                .as_deref()
+                .unwrap()
+                .contains("selected result: none")
+        );
+        assert!(
+            initial
+                .actions
+                .iter()
+                .any(|action| action.as_str() == LabAction::FitView.stable_id())
+        );
+        assert!(
+            !initial
+                .actions
+                .iter()
+                .any(|action| action.as_str() == LabAction::DeleteAnnotation.stable_id())
+        );
+
+        let viewport =
+            harness.get_by_role_and_label(egui::accesskit::Role::Canvas, "Primary View viewport");
+        assert_eq!(
+            viewport.accesskit_node().author_id(),
+            Some("pane.1.viewport")
+        );
+        assert_eq!(
+            viewport.accesskit_node().description().as_deref(),
+            initial.description.as_deref()
+        );
+        assert_eq!(
+            viewport.accesskit_node().data().custom_actions().len(),
+            initial.actions.len()
+        );
+        assert_eq!(viewport.accesskit_node().toggled(), None);
+
+        let state = harness.state_mut();
+        state.session.selected_result = Some(ResultId(42));
+        state.session.selected_annotation = Some(AnnotationId(7));
+        state
+            .session
+            .active_tools
+            .insert(PaneId(1), ActiveTool::Polygon);
+        state.session.gesture = Some(GesturePreview::Polygon {
+            layer: LayerId(1),
+            vertices: vec![
+                WorldPoint::new(0.0, 0.0),
+                WorldPoint::new(1.0, 0.0),
+                WorldPoint::new(0.0, 1.0),
+            ],
+        });
+        state.session.cameras[0].link = Some(LinkGroupId(1));
+        state.diagnostics.runtime.worker_health = WorkerHealth::Unavailable;
+        state.diagnostics.runtime.last_worker_error = "decoder offline".into();
+        state.diagnostics.runtime.queued = 2;
+        state.diagnostics.runtime.in_flight = 1;
+        state.diagnostics.runtime.stale_discarded = 4;
+        harness.run();
+
+        let changed = harness
+            .state()
+            .output
+            .ui_geometry
+            .semantic_nodes
+            .iter()
+            .find(|node| node.role == UiRole::Viewport)
+            .expect("updated viewport semantic node");
+        let description = changed.description.as_deref().unwrap();
+        for expected in [
+            "active tool: Polygon",
+            "camera: linked to group A",
+            "selected result: result 42",
+            "selected annotation: annotation 7",
+            "data worker: unavailable: decoder offline",
+            "shared tile loading: 3",
+            "shared stale tile work rejected or discarded: 4",
+            "Unlink views",
+        ] {
+            assert!(
+                description.contains(expected),
+                "missing {expected:?}: {description}"
+            );
+        }
+        assert!(
+            changed
+                .actions
+                .iter()
+                .any(|action| action.as_str() == LabAction::DeleteAnnotation.stable_id())
+        );
+        assert!(
+            changed
+                .actions
+                .iter()
+                .any(|action| action.as_str() == LabAction::CommitPolygon.stable_id())
+        );
+    }
+
+    #[test]
+    fn viewport_custom_actions_route_through_existing_typed_intents() {
+        let mut harness = image_pane_harness(1_000.0);
+
+        request_viewport_action(&harness, LabAction::FitView);
+        harness.step();
+        assert!(harness.state().output.intents.iter().any(|intent| {
+            matches!(
+                intent,
+                ImageIntent::SetCamera {
+                    pane: PaneId(1),
+                    ..
+                }
+            )
+        }));
+
+        request_viewport_action(&harness, LabAction::PolygonTool);
+        harness.step();
+        assert!(harness.state().output.pane_intents.iter().any(|intent| {
+            matches!(
+                intent,
+                PaneIntent::SetActiveTool {
+                    pane: PaneId(1),
+                    tool: ActiveTool::Polygon
+                }
+            )
+        }));
+
+        request_viewport_action(&harness, LabAction::LinkViews);
+        harness.step();
+        assert!(harness.state().output.intents.iter().any(|intent| {
+            matches!(
+                intent,
+                ImageIntent::SetCameraLink {
+                    pane: PaneId(1),
+                    link: None
+                }
+            )
+        }));
+
+        harness.state_mut().session.gesture = Some(GesturePreview::Polygon {
+            layer: LayerId(1),
+            vertices: vec![
+                WorldPoint::new(0.0, 0.0),
+                WorldPoint::new(1.0, 0.0),
+                WorldPoint::new(0.0, 1.0),
+            ],
+        });
+        harness.run();
+        request_viewport_action(&harness, LabAction::CommitPolygon);
+        harness.step();
+        assert!(harness.state().output.intents.iter().any(|intent| {
+            matches!(
+                intent,
+                ImageIntent::CommitPolygon { vertices, .. } if vertices.len() == 3
+            )
+        }));
+    }
+
+    #[test]
+    fn viewport_accepts_accesskit_focus_and_reports_it_in_the_snapshot() {
+        let mut harness = image_pane_harness(1_000.0);
+        harness
+            .get_by_role_and_label(egui::accesskit::Role::Canvas, "Primary View viewport")
+            .focus();
+        harness.step();
+
+        assert!(
+            harness
+                .get_by_role_and_label(egui::accesskit::Role::Canvas, "Primary View viewport")
+                .is_focused()
+        );
+        assert!(
+            harness
+                .state()
+                .output
+                .ui_geometry
+                .semantic_nodes
+                .iter()
+                .any(|node| node.role == UiRole::Viewport && node.focused)
+        );
     }
 
     #[test]

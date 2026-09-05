@@ -2,8 +2,8 @@ use eframe::egui;
 use polyorama_core::{DockNodeId, PaneId, ResultId};
 pub use polyorama_ui_egui::UiRect;
 use polyorama_ui_egui::{
-    ActionTarget, Availability, SemanticUiId, TextAuditCoverage, TextAuditFinding,
-    TextLayoutObservation, UiNode, UiRole, UiSnapshot, action_semantic_node,
+    ActionButtonState, ActionTarget, Availability, SemanticUiId, TextAuditCoverage,
+    TextAuditFinding, TextLayoutObservation, UiNode, UiRole, UiSnapshot, action_semantic_node,
 };
 use serde::Serialize;
 
@@ -94,14 +94,14 @@ impl UiGeometry {
         parent: SemanticUiId,
         target: ActionTarget<LabAction>,
         availability: &Availability,
-        selected: bool,
+        state: ActionButtonState,
         response: &egui::Response,
     ) {
         self.record_node(action_semantic_node(
             response,
             target,
             availability,
-            selected,
+            state,
             parent,
         ));
     }
