@@ -1,4 +1,4 @@
-/target/
+/target
 /dist/
 /evidence/
 /node_modules/
@@ -7,3 +7,4 @@
 /apps/analytical-workspace-lab/web/worker-pkg/
 /apps/polyorama-gallery/web/pkg/
 *.profraw
+__pycache__/

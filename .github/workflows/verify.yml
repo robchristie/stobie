@@ -18,6 +18,12 @@ jobs:
       DISPLAY: ":95"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify verification scope
+        id: scope
+        run: python3 tools/verify.py --classify
 
       - uses: dtolnay/rust-toolchain@1.97.1
         with:
@@ -29,18 +35,21 @@ jobs:
           cache-on-failure: true
 
       - uses: actions/setup-node@v5
+        if: steps.scope.outputs.mode != 'docs'
         with:
           node-version: 25.8.2
           cache: npm
           cache-dependency-path: package-lock.json
 
       - name: Restore wasm-bindgen CLI
+        if: steps.scope.outputs.mode != 'docs'
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/wasm-bindgen
           key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
 
       - name: Install Linux UI prerequisites
+        if: steps.scope.outputs.mode != 'docs'
         run: |
           sudo apt-get update
           sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
@@ -48,9 +57,11 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Install wasm-bindgen CLI
+        if: steps.scope.outputs.mode != 'docs'
         run: command -v wasm-bindgen || cargo install --locked wasm-bindgen-cli --version 0.2.127
 
       - name: Verify
+        if: steps.scope.outputs.mode != 'docs'
         run: |
           mkdir -p .tools/runtime/verification-evidence
           Xvfb "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX \
@@ -59,7 +70,11 @@ jobs:
           trap 'kill "$browser_xvfb_pid" 2>/dev/null || true' EXIT
           sleep 1
           set -o pipefail
-          cargo xtask verify 2>&1 | tee .tools/runtime/verification-evidence/cargo-xtask-verify.log
+          python3 tools/verify.py 2>&1 | tee .tools/runtime/verification-evidence/cargo-xtask-verify.log
+
+      - name: Verify documentation
+        if: steps.scope.outputs.mode == 'docs'
+        run: python3 tools/verify.py
 
       - name: Upload verification evidence
         if: ${{ failure() }}

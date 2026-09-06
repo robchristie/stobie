@@ -34,40 +34,17 @@ find "$SMOKE_TMP" -mindepth 1 -maxdepth 1 ! -name '.X11-unix' -delete
 find "$SMOKE_TMP/.X11-unix" -mindepth 1 -delete
 chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
 
-ui_sandbox() {
-  if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
-    "$@"
-  else
-    bwrap --ro-bind / / --bind "$SMOKE_TMP" /tmp --ro-bind /usr/bin /opt \
-      --ro-bind "$SYSROOT/usr/bin" /usr/bin \
-      --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime" \
-      --bind "$EVIDENCE_DIR" "$EVIDENCE_DIR" \
-      --dev-bind /dev /dev --proc /proc "$@"
-  fi
-}
+source "$ROOT/tools/native-smoke-lifecycle.sh"
 
-ui_sandbox "$XVFB" "$DISPLAY_NUMBER" \
-  -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$XVFB_LOG" 2>&1 &
-XVFB_PID=$!
-APP_PID=""
-WINDOW_ID=""
-WINDOW_WIDTH=""
-WINDOW_HEIGHT=""
-cleanup() {
-  if [[ -n "$APP_PID" ]]; then kill "$APP_PID" 2>/dev/null || true; fi
-  kill "$XVFB_PID" 2>/dev/null || true
-  wait "$APP_PID" 2>/dev/null || true
-  wait "$XVFB_PID" 2>/dev/null || true
-}
-trap cleanup EXIT
+owned_start XVFB_PID "$XVFB" "$DISPLAY_NUMBER" \
+  -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$XVFB_LOG" 2>&1
 sleep 1
 
 launch_app() {
   DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl RUST_LOG=info \
     POLYORAMA_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
     POLYORAMA_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
-    ui_sandbox target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1 &
-  APP_PID=$!
+    owned_start APP_PID target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1
   sleep 5
   kill -0 "$APP_PID"
   WINDOW_ID="$(xdo search --onlyvisible --name 'Analytical Workspace Lab' | head -n 1)"
@@ -530,9 +507,7 @@ move_target action 0 save_layout
 xdo click 1
 sleep 1
 
-kill "$APP_PID"
-wait "$APP_PID" 2>/dev/null || true
-APP_PID=""
+owned_stop APP_PID
 launch_app
 capture native-restored-layout.png
 

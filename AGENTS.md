@@ -40,6 +40,15 @@
 - Do not allocate the complete raster, one million result rows, or one hundred
   thousand thumbnail widgets.
 
+For ordinary README, plan lifecycle prose and `docs/*-plan.md` closeout changes,
+`python3 tools/verify.py --base <comparison-commit>` is the scoped alternative.
+It derives committed, staged, unstaged and untracked scope from Git, checks
+whitespace, runs classifier and plan lifecycle regressions, and checks all plan
+fields. Every other path or unknown comparison state runs `cargo xtask verify`.
+Keep qualification reports, snapshots and evidence on the full surface. CI uses
+the same guard for pull requests and main pushes under the required `verify`
+check. Scope selection does not establish review, merge or acceptance evidence.
+
 ## UI guidance
 
 - Start UI implementation and review from [docs/ui-guides/README.md](docs/ui-guides/README.md);

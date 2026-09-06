@@ -42,6 +42,10 @@ fn verify() -> Result<()> {
     fs::create_dir_all(&evidence_directory)
         .context("create ignored verification evidence directory")?;
     let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence_directory.as_path())];
+    run(
+        "python3",
+        &["-m", "unittest", "discover", "-s", "tools/tests"],
+    )?;
     plans::check(Path::new("."))?;
     tokens::check(Path::new("."))?;
     run("cargo", &["fmt", "--all", "--check"])?;
