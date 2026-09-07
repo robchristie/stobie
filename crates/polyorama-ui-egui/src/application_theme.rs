@@ -51,7 +51,24 @@ impl ApplicationTheme {
         }
     }
 
-    /// Validate opaque semantic text/background pairs in every authored mode.
+    /// Import only the exact authored analytical reference palette.
+    ///
+    /// This explicit compatibility route preserves historical colours that do
+    /// not meet the strict muted-text state checks in [`Self::new`]. It accepts
+    /// no edits, including changes to otherwise unchecked roles. Edited themes
+    /// must pass [`Self::new`]; this is not a general validation bypass.
+    pub fn from_analytical_colours(colours: ThemeColours) -> Result<Self, ThemeValidationError> {
+        let reference = Self::analytical();
+        if colours != reference.colours {
+            return Err(ThemeValidationError(
+                "analytical compatibility requires the exact authored reference colours".into(),
+            ));
+        }
+        Ok(reference)
+    }
+
+    /// Validate opaque primary and muted text on canvas, panel, raised, hover,
+    /// selection and quiet-hover backgrounds in every authored mode.
     /// This establishes token contrast, not whole-application accessibility.
     /// Control borders must be opaque; their contrast against actual adjacent
     /// surfaces remains application-qualified. The analytical reference retains
@@ -77,9 +94,17 @@ impl ApplicationTheme {
                 ("selection", colour.selection_background),
                 ("quiet hover", colour.action_quiet_hover),
             ] {
-                check_pair(name, role, colour.text_primary, background, minimum)?;
-                if matches!(role, "canvas" | "panel" | "raised") {
-                    check_pair(name, role, colour.text_muted, background, minimum)?;
+                for (text_role, foreground) in [
+                    ("primary text", colour.text_primary),
+                    ("muted text", colour.text_muted),
+                ] {
+                    check_pair(
+                        name,
+                        &format!("{text_role} on {role}"),
+                        foreground,
+                        background,
+                        minimum,
+                    )?;
                 }
             }
             check_pair(
@@ -203,7 +228,16 @@ mod tests {
     #[test]
     fn analytical_resolution_is_compatible_and_application_pairs_are_validated() {
         let theme = ApplicationTheme::analytical();
-        assert_eq!(ApplicationTheme::new(theme.colours()).unwrap(), theme);
+        assert!(ApplicationTheme::new(theme.colours()).is_err());
+        let json = serde_json::to_string(&theme.colours()).unwrap();
+        assert_eq!(
+            ApplicationTheme::from_analytical_colours(serde_json::from_str(&json).unwrap())
+                .unwrap(),
+            theme
+        );
+        let mut edited = theme.colours();
+        edited.dark.border_decorative.red ^= 1;
+        assert!(ApplicationTheme::from_analytical_colours(edited).is_err());
         for variant in [
             ThemeVariant::Light,
             ThemeVariant::Dark,
@@ -217,9 +251,14 @@ mod tests {
                 );
             }
         }
-        let mut colours = theme.colours();
+        let mut colours = strict_colours();
         colours.dark.action_primary_foreground = colours.dark.action_primary_background;
-        assert!(ApplicationTheme::new(colours).is_err());
+        assert!(
+            ApplicationTheme::new(colours)
+                .unwrap_err()
+                .to_string()
+                .contains("primary action")
+        );
         let mut transparent_border = theme.colours();
         transparent_border.light.border_control.alpha = 0;
         assert!(
@@ -239,9 +278,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn native_and_custom_resolve_identical_application_values_in_each_mode() {
-        let context = egui::Context::default();
+    fn strict_colours() -> ThemeColours {
         let mut colours = ApplicationTheme::analytical().colours();
         // A deliberately high-contrast fixture isolates resolver wiring from
         // the analytical reference palette.
@@ -276,6 +313,140 @@ mod tests {
             colour.focus_ring = white;
             colour.selection_indicator = white;
         }
+        colours
+    }
+
+    #[test]
+    fn primary_and_muted_text_are_checked_on_every_state_in_all_modes() {
+        for mode in 0..4 {
+            for state in 0..6 {
+                for muted in [false, true] {
+                    let mut colours = strict_colours();
+                    let colour = match mode {
+                        0 => &mut colours.light,
+                        1 => &mut colours.dark,
+                        2 => &mut colours.light_high_contrast,
+                        _ => &mut colours.dark_high_contrast,
+                    };
+                    // The foreground remains valid on all other black surfaces.
+                    // It loses contrast only on the state under test.
+                    let foreground = Rgba8 {
+                        red: 170,
+                        green: 171,
+                        blue: 180,
+                        alpha: 255,
+                    };
+                    if muted {
+                        colour.text_muted = foreground;
+                    } else {
+                        colour.text_primary = foreground;
+                    }
+                    let background = Rgba8 {
+                        red: 74,
+                        green: 74,
+                        blue: 74,
+                        alpha: 255,
+                    };
+                    match state {
+                        0 => colour.surface_canvas = background,
+                        1 => colour.surface_panel = background,
+                        2 => colour.surface_raised = background,
+                        3 => colour.surface_hover = background,
+                        4 => colour.selection_background = background,
+                        _ => colour.action_quiet_hover = background,
+                    }
+                    let error = ApplicationTheme::new(colours).unwrap_err().to_string();
+                    let mode_name =
+                        ["light", "dark", "light-high-contrast", "dark-high-contrast"][mode];
+                    let state_name = [
+                        "canvas",
+                        "panel",
+                        "raised",
+                        "hover",
+                        "selection",
+                        "quiet hover",
+                    ][state];
+                    let text_role = if muted { "muted text" } else { "primary text" };
+                    assert!(
+                        error.contains(&format!("{mode_name} {text_role} on {state_name}")),
+                        "{error}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn high_contrast_modes_require_seven_to_one_for_muted_states() {
+        for mode in 0..4 {
+            for state in 0..3 {
+                let mut colours = strict_colours();
+                let colour = match mode {
+                    0 => &mut colours.light,
+                    1 => &mut colours.dark,
+                    2 => &mut colours.light_high_contrast,
+                    _ => &mut colours.dark_high_contrast,
+                };
+                colour.text_muted = Rgba8 {
+                    red: 170,
+                    green: 170,
+                    blue: 170,
+                    alpha: 255,
+                };
+                let background = Rgba8 {
+                    red: 51,
+                    green: 51,
+                    blue: 51,
+                    alpha: 255,
+                };
+                match state {
+                    0 => colour.surface_hover = background,
+                    1 => colour.selection_background = background,
+                    _ => colour.action_quiet_hover = background,
+                }
+                let result = ApplicationTheme::new(colours);
+                if mode < 2 {
+                    assert!(result.is_ok());
+                } else {
+                    let error = result.unwrap_err().to_string();
+                    assert!(
+                        error.contains("muted text") && error.contains("below 7:1"),
+                        "{error}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn review_hover_example_rejects_muted_text_despite_valid_primary_text() {
+        let mut colours = strict_colours();
+        colours.dark.surface_hover = Rgba8 {
+            red: 0x65,
+            green: 0x65,
+            blue: 0x6d,
+            alpha: 255,
+        };
+        colours.dark.text_primary = Rgba8 {
+            red: 0xf0,
+            green: 0xf0,
+            blue: 0xf2,
+            alpha: 255,
+        };
+        colours.dark.text_muted = Rgba8 {
+            red: 0xaa,
+            green: 0xab,
+            blue: 0xb4,
+            alpha: 255,
+        };
+        let error = ApplicationTheme::new(colours).unwrap_err().to_string();
+        assert!(error.contains("dark muted text on hover"), "{error}");
+    }
+
+    #[test]
+    fn native_and_custom_resolve_identical_application_values_in_each_mode() {
+        let context = egui::Context::default();
+        let colours = strict_colours();
         let theme = ApplicationTheme::new(colours)
             .unwrap()
             .with_geometry(ApplicationGeometry {

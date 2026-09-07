@@ -133,6 +133,11 @@ pub enum DomainReference {
     Result(ResultId),
     Annotation(AnnotationId),
     Thumbnail(TileKey),
+    /// An application-owned domain identity, independent of labels and row positions.
+    External {
+        namespace: String,
+        id: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

@@ -34,6 +34,34 @@ pub fn measured_content_label(
         font_scale,
         observations,
         false,
+        false,
+    )
+}
+
+/// Adapter entry point returning the existing stable accessible text response.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn scoped_content_label(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    spec: crate::ContentTextSpec,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) -> Response {
+    measured_label(
+        ui,
+        instance,
+        text,
+        spec.role,
+        spec.overflow,
+        spec.max_lines,
+        spec.interaction,
+        tokens,
+        font_scale,
+        observations,
+        false,
+        true,
     )
 }
 
@@ -64,6 +92,34 @@ pub fn measured_fixed_slot_label(
         font_scale,
         observations,
         true,
+        false,
+    )
+}
+
+/// Adapter entry point preserving the stable accessible text response.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn scoped_fixed_slot_label(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    spec: crate::ContentTextSpec,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) -> Response {
+    measured_label(
+        ui,
+        instance,
+        text,
+        spec.role,
+        spec.overflow,
+        spec.max_lines,
+        spec.interaction,
+        tokens,
+        font_scale,
+        observations,
+        true,
+        true,
     )
 }
 
@@ -80,6 +136,7 @@ fn measured_label(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
     fixed_slot: bool,
+    text_response_identity: bool,
 ) -> Response {
     let width = ui.available_width().max(1.0);
     let measured = crate::measure_component_text(
@@ -116,9 +173,13 @@ fn measured_label(
     };
     observations.push(observation);
     if measured.truncated() {
-        text_response.on_hover_text(measured.galley.text());
+        text_response.clone().on_hover_text(measured.galley.text());
     }
-    response
+    if text_response_identity {
+        text_response
+    } else {
+        response
+    }
 }
 
 /// Paint one measured, single-line label within an explicit chrome width.
@@ -186,14 +247,52 @@ pub fn section_heading(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> Response {
+    heading_impl(ui, instance, text, tokens, font_scale, observations, None)
+}
+
+/// Adapter entry point with identity independent of incidental layout.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn scoped_section_heading(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+    widget_id: egui::Id,
+) -> Response {
+    heading_impl(
+        ui,
+        instance,
+        text,
+        tokens,
+        font_scale,
+        observations,
+        Some(widget_id),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn heading_impl(
+    ui: &mut egui::Ui,
+    instance: u64,
+    text: &str,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+    widget_id: Option<egui::Id>,
+) -> Response {
     let width = ui.available_width().max(1.0);
     let line_height = TextRole::SectionHeading
         .style(tokens, font_scale)
         .line_height;
-    let (rect, response) = ui.allocate_exact_size(
-        egui::vec2(width, line_height + tokens.spacing.block.0),
-        Sense::hover(),
-    );
+    let size = egui::vec2(width, line_height + tokens.spacing.block.0);
+    let (rect, response) = if let Some(widget_id) = widget_id {
+        let (_, rect) = ui.allocate_space(size);
+        (rect, ui.interact(rect, widget_id, Sense::hover()))
+    } else {
+        ui.allocate_exact_size(size, Sense::hover())
+    };
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
     {
         let measured = crate::measure_component_text(

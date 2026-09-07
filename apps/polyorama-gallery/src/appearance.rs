@@ -33,12 +33,36 @@ impl AppearanceWorkbench {
         }
     }
 
+    fn accept_edits(&mut self) -> bool {
+        // The only non-strict candidate allowed is an exact restoration of the
+        // authored analytical reference, never an edited legacy palette.
+        match ApplicationTheme::new(self.colours).or_else(|error| {
+            ApplicationTheme::from_analytical_colours(self.colours).map_err(|_| error)
+        }) {
+            Ok(theme) => {
+                self.theme = theme;
+                self.error = None;
+                true
+            }
+            Err(error) => {
+                self.error = Some(error.to_string());
+                false
+            }
+        }
+    }
+
+    fn export_json(&self) -> Option<String> {
+        self.error.is_none().then(|| {
+            serde_json::to_string_pretty(&self.theme.colours()).expect("typed theme serialises")
+        })
+    }
+
     /// Return true only for an accepted identity change. Invalid edits stay
-    /// visible for repair and never replace the last valid preview.
+    /// visible for repair and never replace the last accepted preview.
     pub fn show(&mut self, context: &egui::Context, variant: ThemeVariant) -> bool {
         let mut changed = false;
         let mut open = self.open;
-        egui::Window::new("Appearance workbench").open(&mut open).default_width(350.0).show(context, |ui| {
+        egui::Window::new("Appearance workbench").open(&mut open).default_width(350.0).default_height(700.0).vscroll(true).show(context, |ui| {
             ui.label("Preview authored colours on the selected production story.");
             let previous = self.preset;
             let combo = egui::ComboBox::from_id_salt("workbench.theme").selected_text(["Analytical reference", "Neutral graphite", "Warm paper"][self.preset]).show_ui(ui, |ui| {
@@ -84,18 +108,22 @@ impl AppearanceWorkbench {
                 });
             }
             if edited {
-                match ApplicationTheme::new(self.colours) {
-                    Ok(theme) => { self.theme = theme; self.error = None; changed = true; }
-                    Err(error) => self.error = Some(error.to_string()),
-                }
+                changed |= self.accept_edits();
             }
-            if let Some(error) = &self.error { ui.label(format!("Preview retains last valid values: {error}")); }
+            if let Some(error) = &self.error { ui.label(format!("Preview retains last accepted values: {error}")); }
             let export = ui.add_enabled(self.error.is_none(), egui::Button::new("Copy theme JSON"));
             polyorama_ui_egui::record_native_text_control(&export, polyorama_ui_egui::NativeTextControlKind::Button);
-            if export.clicked() {
-                context.copy_text(serde_json::to_string_pretty(&self.theme.colours()).expect("typed theme serialises"));
+            if export.clicked()
+                && let Some(json) = self.export_json() {
+                context.copy_text(json);
             }
-            ui.label("Export is ThemeColours JSON for checked-in application source. Snapshot baselines require separate review.");
+            if self.theme.colours() == ApplicationTheme::analytical().colours() {
+                ui.label("Analytical reference uses legacy contrast compatibility. Only its exact original colours can use this exception; edits must meet all text contrast checks.");
+                ui.label("Reference JSON requires ApplicationTheme::from_analytical_colours; it does not pass ApplicationTheme::new.");
+            } else {
+                ui.label("Export is ThemeColours JSON for ApplicationTheme::new in checked-in application source.");
+            }
+            ui.label("Snapshot baselines require separate review.");
         });
         self.open = open;
         changed
@@ -247,8 +275,62 @@ mod tests {
     }
 
     #[test]
+    fn invalid_edits_retain_preview_and_disable_export_until_repaired() {
+        let theme = authored_theme(1);
+        let mut workbench = AppearanceWorkbench {
+            colours: theme.colours(),
+            theme: theme.clone(),
+            preset: 1,
+            ..Default::default()
+        };
+        workbench.colours.dark.surface_hover = rgb(0x65656d);
+        workbench.colours.dark.text_primary = rgb(0xf0f0f2);
+        workbench.colours.dark.text_muted = rgb(0xaaabb4);
+        assert!(!workbench.accept_edits());
+        assert_eq!(workbench.effective_theme(), theme);
+        assert!(
+            workbench
+                .error
+                .as_ref()
+                .unwrap()
+                .contains("muted text on hover")
+        );
+        assert!(workbench.export_json().is_none());
+        workbench.colours = theme.colours();
+        assert!(workbench.accept_edits());
+        let exported: ThemeColours =
+            serde_json::from_str(&workbench.export_json().unwrap()).unwrap();
+        assert_eq!(ApplicationTheme::new(exported).unwrap(), theme);
+    }
+
+    #[test]
+    fn analytical_export_is_exact_legacy_compatibility_and_edits_are_strict() {
+        let mut workbench = AppearanceWorkbench::default();
+        let reference = workbench.theme.clone();
+        let exported: ThemeColours =
+            serde_json::from_str(&workbench.export_json().unwrap()).unwrap();
+        assert!(ApplicationTheme::new(exported).is_err());
+        assert_eq!(
+            ApplicationTheme::from_analytical_colours(exported).unwrap(),
+            reference
+        );
+        // Even an edit outside the contrast roles cannot extend the exception.
+        workbench.colours.dark.border_decorative.red ^= 1;
+        assert!(!workbench.accept_edits());
+        assert_eq!(workbench.effective_theme(), reference);
+        assert!(workbench.export_json().is_none());
+        workbench.colours = reference.colours();
+        assert!(workbench.accept_edits());
+        assert!(workbench.export_json().is_some());
+        // A complete strict palette can replace the reference without an exception.
+        workbench.colours = authored_theme(2).colours();
+        assert!(workbench.accept_edits());
+        assert!(ApplicationTheme::new(workbench.theme.colours()).is_ok());
+    }
+
+    #[test]
     fn authored_presets_and_json_exports_are_validated() {
-        for index in 0..=2 {
+        for index in 1..=2 {
             let theme = authored_theme(index);
             let json = serde_json::to_string(&theme.colours()).unwrap();
             assert_eq!(

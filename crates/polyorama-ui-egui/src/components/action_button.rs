@@ -34,6 +34,29 @@ impl ActionButtonState {
     }
 }
 
+/// Widget, semantic and text identities for one displayed capability instance.
+/// Existing callers retain their historical target-derived identity.
+#[derive(Clone, Debug)]
+pub struct ActionButtonIdentity {
+    pub widget_id: egui::Id,
+    pub semantic_id: SemanticUiId,
+    pub text_instance: u64,
+}
+
+impl ActionButtonIdentity {
+    pub fn for_target<A: ActionKey>(target: ActionTarget<A>) -> Self {
+        Self {
+            widget_id: egui::Id::new((
+                "polyorama.action-button",
+                target.action.stable_id(),
+                target.pane,
+            )),
+            semantic_id: SemanticUiId::new(target.semantic_id()),
+            text_instance: crate::actions::stable_action_hash(target.action, target.pane),
+        }
+    }
+}
+
 pub struct ActionButtonSpec<A: ActionKey> {
     pub target: ActionTarget<A>,
     pub availability: Availability,
@@ -48,6 +71,19 @@ pub struct ActionButtonSpec<A: ActionKey> {
 pub fn action_button<A: ActionKey>(
     ui: &mut egui::Ui,
     spec: ActionButtonSpec<A>,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
+    let identity = ActionButtonIdentity::for_target(spec.target);
+    action_button_with_identity(ui, spec, &identity, tokens, font_scale, observations)
+}
+
+/// Render a distinct logical instance of a capability without changing its target.
+pub fn action_button_with_identity<A: ActionKey>(
+    ui: &mut egui::Ui,
+    spec: ActionButtonSpec<A>,
+    identity: &ActionButtonIdentity,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
@@ -90,11 +126,7 @@ pub fn action_button<A: ActionKey>(
     let (_, hit_rect) = ui.allocate_space(egui::vec2(width, hit_height));
     let response = ui.interact(
         hit_rect,
-        egui::Id::new((
-            "polyorama.action-button",
-            spec.target.action.stable_id(),
-            spec.target.pane,
-        )),
+        identity.widget_id,
         if enabled {
             Sense::click()
         } else {
@@ -110,7 +142,7 @@ pub fn action_button<A: ActionKey>(
         use egui::accesskit::{Action, Role, Toggled};
         node.set_role(Role::Button);
         node.set_label(action.label);
-        node.set_author_id(spec.target.semantic_id());
+        node.set_author_id(identity.semantic_id.0.clone());
         let description = spec.availability.disabled_reason().map_or_else(
             || action.description.to_owned(),
             |reason| format!("{}; unavailable: {reason}", action.description),
@@ -204,7 +236,7 @@ pub fn action_button<A: ActionKey>(
             label_rect,
             TextComponentId::new(
                 crate::TextComponentKind::ActionButton,
-                crate::actions::stable_action_hash(spec.target.action, spec.target.pane),
+                identity.text_instance,
             ),
             None,
         ));
@@ -226,9 +258,27 @@ pub fn action_semantic_node<A: ActionKey>(
     state: ActionButtonState,
     parent: SemanticUiId,
 ) -> UiNode {
+    action_semantic_node_with_identity(
+        response,
+        target,
+        availability,
+        state,
+        parent,
+        &ActionButtonIdentity::for_target(target),
+    )
+}
+
+pub fn action_semantic_node_with_identity<A: ActionKey>(
+    response: &Response,
+    target: ActionTarget<A>,
+    availability: &Availability,
+    state: ActionButtonState,
+    parent: SemanticUiId,
+    identity: &ActionButtonIdentity,
+) -> UiNode {
     let action = target.action.specification();
     UiNode {
-        id: SemanticUiId::new(target.semantic_id()),
+        id: identity.semantic_id.clone(),
         parent: Some(parent),
         role: UiRole::Button,
         name: action.label.to_owned(),
@@ -257,15 +307,25 @@ mod tests {
 
     #[test]
     fn emitted_action_label_vertices_use_primary_pressed_and_disabled_foregrounds() {
-        for (emphasis, disabled, pointer_down) in [
-            (ActionEmphasis::Primary, false, false),
-            (ActionEmphasis::Primary, false, true),
-            (ActionEmphasis::Normal, false, true),
-            (ActionEmphasis::Primary, true, false),
-        ] {
+        for (theme, (emphasis, disabled, pointer_down)) in [
+            ThemeVariant::Light,
+            ThemeVariant::Dark,
+            ThemeVariant::LightHighContrast,
+            ThemeVariant::DarkHighContrast,
+        ]
+        .into_iter()
+        .flat_map(|theme| {
+            [
+                (ActionEmphasis::Primary, false, false),
+                (ActionEmphasis::Primary, false, true),
+                (ActionEmphasis::Normal, false, true),
+                (ActionEmphasis::Primary, true, false),
+            ]
+            .map(|state| (theme, state))
+        }) {
             let context = egui::Context::default();
             crate::install_typography_fonts(&context);
-            let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+            let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
             let mut centre = egui::Pos2::ZERO;
             let mut paint = |input| {
                 context.run_ui(input, |ui| {
@@ -362,7 +422,7 @@ mod tests {
                 assert!(!vertices.is_empty());
                 assert!(
                     vertices.iter().all(|vertex| vertex.color == expected),
-                    "{emphasis:?}, disabled={disabled}, pressed={pointer_down}"
+                    "{theme:?}, {emphasis:?}, disabled={disabled}, pressed={pointer_down}"
                 );
             }
         }

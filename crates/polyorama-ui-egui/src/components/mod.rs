@@ -8,7 +8,8 @@ mod thumbnail;
 mod viewport_status;
 
 pub use action_button::{
-    ActionButtonSpec, ActionButtonState, ActionEmphasis, action_button, action_semantic_node,
+    ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis, action_button,
+    action_button_with_identity, action_semantic_node, action_semantic_node_with_identity,
 };
 pub use choice::choice_control;
 pub use property::property_row;

@@ -127,18 +127,27 @@ pub(super) fn disabled_story(
     observations: &mut Vec<TextLayoutObservation>,
     semantic_nodes: &mut Vec<UiNode>,
 ) {
-    gallery_action_button(
+    let mut presentation = polyorama_ui_egui::PresentationContext::new(
         ui,
-        ActionTarget::application(GalleryAction::Undo),
-        Availability::Disabled {
-            reason: "History is empty".into(),
-        },
-        ActionButtonState::Momentary,
-        ActionEmphasis::Normal,
-        false,
-        tokens,
+        *tokens,
         font_scale,
-        observations,
-        semantic_nodes,
+        polyorama_ui_egui::PresentationScope::new("gallery.button-disabled"),
+        SemanticUiId::new("gallery.story"),
     );
+    presentation.action(
+        ui,
+        "undo",
+        ActionButtonSpec {
+            target: ActionTarget::application(GalleryAction::Undo),
+            availability: Availability::Disabled {
+                reason: "History is empty".into(),
+            },
+            state: ActionButtonState::Momentary,
+            emphasis: ActionEmphasis::Normal,
+            compact: false,
+        },
+    );
+    let rendered = presentation.finish(ui);
+    observations.extend(rendered.text_layouts);
+    semantic_nodes.extend(rendered.semantic_nodes);
 }

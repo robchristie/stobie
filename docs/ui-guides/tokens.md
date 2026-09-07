@@ -32,6 +32,18 @@ and apply native styles with `apply_design_system_with_theme` using matching
 preferences and typography. The gallery's **Appearance workbench** previews
 three authored identities on the selected production story, switches back to
 the analytical reference for comparison, and edits nine bounded colour roles.
-Invalid edits retain the last valid preview and disable export. **Copy theme
+Primary and muted text must meet 4.5:1 in regular modes and 7:1 in high-contrast
+modes on canvas, panel, raised, hover, selection and quiet-hover backgrounds.
+Invalid edits retain the last accepted preview and disable export. **Copy theme
 JSON** exports the typed `ThemeColours` source; check it into the consuming
 application and parse/validate it once. It does not approve snapshot baselines.
+
+The unchanged analytical reference retains historical muted-text state contrast
+that fails strict `ApplicationTheme::new` validation. The workbench labels this
+compatibility status and the export's required import route. Its exact JSON
+round-trips through `ApplicationTheme::from_analytical_colours`, which accepts
+only the complete original palette, with no changed roles. This exception is
+not available for edited reference colours; they must pass `ApplicationTheme::new`
+in all four modes. An invalid reference edit retains the original preview and
+disables export until repaired or reset. Prefer an authored application preset
+as the starting point for strict theme editing.

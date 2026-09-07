@@ -283,8 +283,13 @@ reusable component increments.
 `ApplicationTheme::new(ThemeColours)` accepts four complete typed colour sets:
 light, dark, light high contrast and dark high contrast. Its private validated
 state prevents a partially edited theme becoming the production resolver.
-`ApplicationTheme::analytical()` preserves the original default colours. Its
-export also passes the same validation as application-owned source.
+`ApplicationTheme::analytical()` preserves the original default colours under
+an explicit legacy compatibility policy. Those colours do not pass the stricter
+muted-text state checks for new application themes. Exact analytical JSON can
+round-trip through `ApplicationTheme::from_analytical_colours`; that constructor
+accepts only equality with all four complete authored reference palettes. Any
+edit, including to an otherwise unchecked role, must use `ApplicationTheme::new`
+and satisfy strict validation. Neither route silently adjusts the palette.
 
 Applications call `theme.resolve(variant, density, typography_profile)` for
 custom recipes and `apply_design_system_with_theme` for native styles. Both
@@ -302,11 +307,11 @@ the independent keyboard-focus ring. A pointer press on an ordinary action uses
 selection colours, while a primary action retains its primary pair. Disabled
 foreground is resolved before text layout, including for primary actions.
 
-New themes validate opaque primary text on all content, hover and selection
-surfaces; muted text on canvas, panel and raised surfaces; and primary-action
-pairs, at 4.5:1 standard and 7:1 high contrast. Selected content uses primary
-text; muted metadata placed on selection needs application-specific checking. Focus against content/selection and selection markers against their
-background require 3:1. Validation is a bounded token check, not a claim that
+New themes validate opaque primary and muted text on canvas, panel, raised,
+hover, selection and quiet-hover backgrounds, plus primary-action pairs, at
+4.5:1 standard and 7:1 high contrast in every authored mode. Muted metadata must
+remain readable when its container is hovered or selected. Focus against
+content/selection and selection markers against their background require 3:1. Validation is a bounded token check, not a claim that
 all application controls, imagery, assistive technology or exported appearances
 have been qualified. Application-specific status, links and control-boundary
 uses still need actual component review. Control borders must be opaque, but
@@ -320,9 +325,12 @@ state contrast requirement.
 Parse and validate once at build/startup; never parse colours per frame. The
 framework does not acquire application names, runtime selectors or a stylesheet
 language. The gallery workbench exports this exact type for checking into an
-application repository. The analytical token generator remains unchanged as
-the default source-authoring route, with the new semantic roles generated from
-its checked-in source.
+application repository. Invalid edits preserve the last accepted preview and
+disable export. The workbench identifies analytical exports as legacy
+compatibility, names the exact-reference import route, and applies strict
+validation to every edited palette. The analytical token generator remains
+unchanged as the default source-authoring route, with the new semantic roles
+generated from its checked-in source.
 
 ## Gallery and reference recipes
 
