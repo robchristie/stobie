@@ -1,19 +1,22 @@
 # Polyorama design language
 
-Status: increment 5 gallery implementation candidate
+## Universal design contract
 
-## Visual thesis
+Polyorama supplies measured typography, coherent spacing, explicit overflow,
+readable states, minimum hit targets, stable semantics and predictable keyboard
+interaction. Application identity is independent of these interaction rules.
+Colours and chrome geometry may differ across applications while the same
+production components retain the same behavioural contracts.
 
-Polyorama is a precise analytical instrument: dense but not cramped,
-technically capable without looking unfinished, and visually quiet enough that
-scientific imagery, data and current selection remain dominant. Its chrome is
-matte and planar, its accent is cool cyan-teal, and hierarchy comes from
-surface tone, spacing and typography before borders or decoration.
+## Analytical reference appearance
 
-The operator goal is to inspect linked scientific views, results and
-annotations without losing selection, camera, tool or worker provenance. The
-application bar owns global lifecycle actions and status. The dock owns layout;
-each pane owns its content and scrolling.
+`ApplicationTheme::analytical()` retains the existing analytical instrument
+appearance: matte planar chrome, a cool cyan-teal accent and compact geometry.
+This is the Lab's reference personality and the compatible default, rather than
+a requirement for every Polyorama application. Its operator goal is to inspect
+linked scientific views, results and annotations without losing provenance.
+The application bar owns global lifecycle actions and status; the dock owns
+layout and each pane owns its content and scrolling.
 
 ## Surface and colour hierarchy
 
@@ -23,8 +26,9 @@ raised is reserved for transient or selected foreground content. Do not add a
 card merely to group related content; use spacing, alignment or a divider.
 
 Text has `primary` and `muted` roles. Muted text still carries useful state and
-must meet the same body-text contrast target. `accent.primary` identifies the
-current action or state; `selection.background` preserves readable primary
+must meet the same body-text contrast target. `accent.primary` identifies links and reference-theme emphasis;
+`action.primary.background` and `action.primary.foreground` independently
+identify primary actions; `selection.background` preserves readable primary
 text. `focus.ring` is visually independent of selection. Success, warning and
 error communicate status, never category or decoration.
 
@@ -49,7 +53,7 @@ Compact density uses 32-point application chrome, 24-point visual controls and
 Visual geometry and interaction geometry are distinct. A compact control may
 paint at 24 points while retaining at least a 32-point hit target; pointer and
 keyboard affordances must not shrink simply because information density rises.
-Corner radii are restrained at three points. Components may increase their
+The analytical reference uses three-point corner radii. Components may increase their
 allocation for 125% or 150% font scale, but must not silently reduce hit size.
 
 ## Semantic typography and overflow
@@ -141,7 +145,7 @@ ordinary egui labels and each unobserved native text category used in that pass.
 Missing or null coverage is unavailable. Required semantic content must also be
 asserted explicitly; zero findings alone cannot prove a component was submitted.
 
-Native combo boxes, radios, sliders and selectable options are recorded at their
+Native buttons, combo boxes, radios, sliders and selectable options are recorded at their
 recipe or application call sites. The denominator includes submitted clipped
 controls, gallery chrome and open popup options, but not closed popup options
 or virtual items that were never instantiated. A native control is counted once
@@ -232,7 +236,7 @@ complete application migration remains later work.
 ## Token source and supported subset
 
 [`../design/tokens/polyorama.tokens.json`](../design/tokens/polyorama.tokens.json)
-is the single machine-readable source. It uses a deliberately bounded,
+is the analytical reference token source. It uses a deliberately bounded,
 DTCG-style JSON subset:
 
 - nested JSON objects form groups and dot-separated token paths;
@@ -273,6 +277,52 @@ ratio, weight and duration fields. Runtime UI code selects `ThemeVariant` and
 first application-bar recipe and increment 3 applies typography, colour and
 spacing tokens to dock-tab text. Broader pane and control migration waits for
 reusable component increments.
+
+## Application-owned identity
+
+`ApplicationTheme::new(ThemeColours)` accepts four complete typed colour sets:
+light, dark, light high contrast and dark high contrast. Its private validated
+state prevents a partially edited theme becoming the production resolver.
+`ApplicationTheme::analytical()` preserves the original default colours. Its
+export also passes the same validation as application-owned source.
+
+Applications call `theme.resolve(variant, density, typography_profile)` for
+custom recipes and `apply_design_system_with_theme` for native styles. Both
+use the same resolver. Appearance preference, contrast, density, typography,
+font scale and motion retain their existing independent ownership. Optional
+`ApplicationGeometry` sets only application-bar height (32–64 points), control
+height (24–48) and radius (0–12); it preserves density spacing and hit minima.
+
+The bounded roles separate surface hover from selection background and its
+marker; primary action foreground/background from accent; quiet-action hover;
+decorative borders from control boundaries; and focus from selection. Existing
+legacy accent and subtle-border fields remain available. `QuietBorderless`
+actions omit their resting outline, retain hover treatment and always retain
+the independent keyboard-focus ring. A pointer press on an ordinary action uses
+selection colours, while a primary action retains its primary pair. Disabled
+foreground is resolved before text layout, including for primary actions.
+
+New themes validate opaque primary text on all content, hover and selection
+surfaces; muted text on canvas, panel and raised surfaces; and primary-action
+pairs, at 4.5:1 standard and 7:1 high contrast. Selected content uses primary
+text; muted metadata placed on selection needs application-specific checking. Focus against content/selection and selection markers against their
+background require 3:1. Validation is a bounded token check, not a claim that
+all application controls, imagery, assistive technology or exported appearances
+have been qualified. Application-specific status, links and control-boundary
+uses still need actual component review. Control borders must be opaque, but
+contrast depends on their actual adjacent surfaces. The analytical reference
+retains its historical border (about 2.06:1 on the dark raised surface); new
+applications must check meaningful control boundaries at 3:1 against the
+surfaces where they use them. Decorative dividers carry no text or
+state contrast requirement.
+
+`ThemeColours` supports strict JSON interchange for application-owned source.
+Parse and validate once at build/startup; never parse colours per frame. The
+framework does not acquire application names, runtime selectors or a stylesheet
+language. The gallery workbench exports this exact type for checking into an
+application repository. The analytical token generator remains unchanged as
+the default source-authoring route, with the new semantic roles generated from
+its checked-in source.
 
 ## Gallery and reference recipes
 

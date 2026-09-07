@@ -1,6 +1,7 @@
 //! Immediate-mode presentation and semantic pane interfaces.
 
 mod actions;
+mod application_theme;
 mod virtual_grid;
 
 mod components;
@@ -18,6 +19,7 @@ mod text_coverage;
 mod typography;
 
 pub use actions::*;
+pub use application_theme::*;
 pub use components::*;
 pub use generated_tokens::*;
 pub use pane_content::*;

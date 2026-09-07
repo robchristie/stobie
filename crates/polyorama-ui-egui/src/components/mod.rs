@@ -45,7 +45,7 @@ pub fn paint_splitter(
     let fill = if state.active {
         Color32::from(tokens.colours.accent_primary)
     } else if state.hovered {
-        Color32::from(tokens.colours.selection_background)
+        Color32::from(tokens.colours.surface_hover)
     } else {
         Color32::from(tokens.colours.surface_raised)
     };
@@ -329,7 +329,7 @@ pub fn dock_overflow_trigger(
 pub fn application_bar_frame(tokens: &DesignTokens) -> Frame {
     Frame::new()
         .fill(tokens.colours.surface_panel.into())
-        .stroke(Stroke::new(1.0, tokens.colours.border_subtle))
+        .stroke(Stroke::new(1.0, tokens.colours.border_decorative))
         .inner_margin(Margin::symmetric(
             bounded_margin(tokens.spacing.inline.0),
             0,

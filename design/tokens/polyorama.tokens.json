@@ -19,10 +19,13 @@
     "surface": {
       "canvas": { "$type": "color", "$value": "{colour.palette.canvas}" },
       "panel": { "$type": "color", "$value": "{colour.palette.panel}" },
-      "raised": { "$type": "color", "$value": "{colour.palette.raised}" }
+      "raised": { "$type": "color", "$value": "{colour.palette.raised}" },
+      "hover": { "$type": "color", "$value": "{colour.palette.selection}" }
     },
     "border": {
-      "subtle": { "$type": "color", "$value": "{colour.palette.border}" }
+      "subtle": { "$type": "color", "$value": "{colour.palette.border}" },
+      "decorative": { "$type": "color", "$value": "{colour.palette.border}" },
+      "control": { "$type": "color", "$value": "{colour.palette.border}" }
     },
     "text": {
       "primary": { "$type": "color", "$value": "{colour.palette.text}" },
@@ -33,7 +36,17 @@
       "onAccent": { "$type": "color", "$value": "{colour.palette.onAccent}" }
     },
     "selection": {
-      "background": { "$type": "color", "$value": "{colour.palette.selection}" }
+      "background": { "$type": "color", "$value": "{colour.palette.selection}" },
+      "indicator": { "$type": "color", "$value": "{colour.palette.accent}" }
+    },
+    "action": {
+      "primary": {
+        "background": { "$type": "color", "$value": "{colour.palette.accent}" },
+        "foreground": { "$type": "color", "$value": "{colour.palette.onAccent}" }
+      },
+      "quiet": {
+        "hover": { "$type": "color", "$value": "{colour.palette.selection}" }
+      }
     },
     "focus": {
       "ring": { "$type": "color", "$value": "{colour.palette.focus}" }

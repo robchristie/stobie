@@ -27,7 +27,8 @@ Ordinary labels, headings and hover text remain an explicit excluded category.
 
 Initialise fonts with `apply_design_system` before the first egui pass. For a
 reading surface, apply `apply_design_system_with_typography` and resolve the
-same `TypographyProfile` on its tokens. Native widgets can consume
+same `TypographyProfile` on its tokens. For application identity, use `apply_design_system_with_theme` and the same
+`ApplicationTheme::resolve` output for custom recipes. Native widgets can consume
 `TextRole::style(...).rich_text(...)` to share the complete role treatment.
 
 Choose `measured_content_label` for actual bounded content height and

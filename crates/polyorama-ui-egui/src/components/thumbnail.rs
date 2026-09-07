@@ -61,9 +61,9 @@ pub fn thumbnail_cell(
         node.add_action(Action::Click);
     });
     let border: Color32 = if spec.selected {
-        tokens.colours.accent_primary.into()
+        tokens.colours.selection_indicator.into()
     } else {
-        tokens.colours.border_subtle.into()
+        tokens.colours.border_decorative.into()
     };
     ui.painter().rect(
         rect,
@@ -133,7 +133,7 @@ pub fn thumbnail_cell(
             ui.painter().rect_stroke(
                 image_rect,
                 1.0,
-                Stroke::new(1.0, tokens.colours.border_subtle),
+                Stroke::new(1.0, tokens.colours.border_decorative),
                 egui::StrokeKind::Inside,
             );
         }

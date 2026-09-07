@@ -66,6 +66,16 @@ pub fn result_row(
         ui.painter()
             .rect_filled(rect, 0.0, tokens.colours.selection_background);
     }
+    if spec.selected {
+        ui.painter().rect_filled(
+            Rect::from_min_max(rect.min, egui::pos2(rect.min.x + 3.0, rect.max.y)),
+            0.0,
+            tokens.colours.selection_indicator,
+        );
+    } else if response.hovered() {
+        ui.painter()
+            .rect_filled(rect, 0.0, tokens.colours.surface_hover);
+    }
     if response.has_focus() {
         ui.painter().rect_stroke(
             rect,

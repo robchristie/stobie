@@ -9,6 +9,8 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ActionEmphasis {
     Quiet,
+    /// Transparent resting chrome with a hover fill and independent focus ring.
+    QuietBorderless,
     Normal,
     Primary,
 }
@@ -135,11 +137,23 @@ pub fn action_button<A: ActionKey>(
     let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(width, visual_height));
     let fill = if !enabled {
         Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
-    } else if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
-        tokens.colours.accent_primary.into()
-    } else if spec.state.pressed() || response.hovered() {
+    } else if spec.emphasis == ActionEmphasis::Primary {
+        tokens.colours.action_primary_background.into()
+    } else if spec.state.pressed() || response.is_pointer_button_down_on() {
         tokens.colours.selection_background.into()
-    } else if spec.emphasis == ActionEmphasis::Quiet {
+    } else if response.hovered() {
+        if matches!(
+            spec.emphasis,
+            ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
+        ) {
+            tokens.colours.action_quiet_hover.into()
+        } else {
+            tokens.colours.surface_hover.into()
+        }
+    } else if matches!(
+        spec.emphasis,
+        ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
+    ) {
         Color32::TRANSPARENT
     } else {
         tokens.colours.surface_raised.into()
@@ -148,7 +162,11 @@ pub fn action_button<A: ActionKey>(
         visual,
         tokens.geometry.control_radius.0,
         fill,
-        Stroke::new(1.0, tokens.colours.border_subtle),
+        if spec.emphasis == ActionEmphasis::QuietBorderless {
+            Stroke::NONE
+        } else {
+            Stroke::new(1.0, tokens.colours.border_control)
+        },
         egui::StrokeKind::Inside,
     );
     if response.has_focus() {
@@ -161,19 +179,24 @@ pub fn action_button<A: ActionKey>(
     }
     let label_rect = visual.shrink2(egui::vec2(tokens.geometry.control_padding_x.0, 0.0));
     {
-        let mut measured = crate::measure_component_text(
+        // Resolve the single-colour label before layout: a galley's explicit
+        // vertex colours take precedence over Painter::galley's fallback.
+        let mut label_tokens = *tokens;
+        label_tokens.colours.text_primary = if !enabled {
+            tokens.colours.text_muted
+        } else if spec.emphasis == ActionEmphasis::Primary {
+            tokens.colours.action_primary_foreground
+        } else {
+            tokens.colours.text_primary
+        };
+        let measured = crate::measure_component_text(
             ui.painter(),
             visible_label,
             text_spec,
-            tokens,
+            &label_tokens,
             font_scale,
             label_rect.width().max(0.5),
         );
-        if spec.emphasis == ActionEmphasis::Primary || response.is_pointer_button_down_on() {
-            measured.colour = tokens.colours.accent_on_accent.into();
-        } else if !enabled {
-            measured.colour = tokens.colours.text_muted.into();
-        }
         let truncated = measured.truncated();
         observations.push(paint_measured_text(
             &ui.painter_at(label_rect),
@@ -231,6 +254,119 @@ mod tests {
         AccessKitMismatch, DensityVariant, ThemeVariant, UiSnapshot, audit_accesskit,
         test_actions::TestAction,
     };
+
+    #[test]
+    fn emitted_action_label_vertices_use_primary_pressed_and_disabled_foregrounds() {
+        for (emphasis, disabled, pointer_down) in [
+            (ActionEmphasis::Primary, false, false),
+            (ActionEmphasis::Primary, false, true),
+            (ActionEmphasis::Normal, false, true),
+            (ActionEmphasis::Primary, true, false),
+        ] {
+            let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
+            let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+            let mut centre = egui::Pos2::ZERO;
+            let mut paint = |input| {
+                context.run_ui(input, |ui| {
+                    let response = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: ActionTarget::application(TestAction::Undo),
+                            availability: if disabled {
+                                Availability::Disabled {
+                                    reason: "Unavailable".into(),
+                                }
+                            } else {
+                                Availability::Enabled
+                            },
+                            state: ActionButtonState::Momentary,
+                            emphasis,
+                            compact: false,
+                        },
+                        &tokens,
+                        1.0,
+                        &mut Vec::new(),
+                    );
+                    centre = response.rect.center();
+                })
+            };
+            paint(egui::RawInput::default()).textures_delta.clear();
+            let events = if pointer_down {
+                vec![
+                    egui::Event::PointerMoved(centre),
+                    egui::Event::PointerButton {
+                        pos: centre,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            } else {
+                Vec::new()
+            };
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    let response = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: ActionTarget::application(TestAction::Undo),
+                            availability: if disabled {
+                                Availability::Disabled {
+                                    reason: "Unavailable".into(),
+                                }
+                            } else {
+                                Availability::Enabled
+                            },
+                            state: ActionButtonState::Momentary,
+                            emphasis,
+                            compact: false,
+                        },
+                        &tokens,
+                        1.0,
+                        &mut Vec::new(),
+                    );
+                    assert_eq!(response.is_pointer_button_down_on(), pointer_down);
+                },
+            );
+            output.textures_delta.clear();
+            let expected: Color32 = if disabled {
+                tokens.colours.text_muted
+            } else if emphasis == ActionEmphasis::Primary {
+                tokens.colours.action_primary_foreground
+            } else {
+                tokens.colours.text_primary
+            }
+            .into();
+            let labels: Vec<_> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) => Some(text),
+                    _ => None,
+                })
+                .collect();
+            assert!(!labels.is_empty());
+            for text in labels {
+                assert_eq!(text.galley.job.text, "Undo");
+                let vertices: Vec<_> = text
+                    .galley
+                    .rows
+                    .iter()
+                    .flat_map(|row| &row.visuals.mesh.vertices)
+                    .collect();
+                assert!(!vertices.is_empty());
+                assert!(
+                    vertices.iter().all(|vertex| vertex.color == expected),
+                    "{emphasis:?}, disabled={disabled}, pressed={pointer_down}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn action_snapshot_and_accesskit_semantics_cannot_disagree_silently() {

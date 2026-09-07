@@ -12,6 +12,7 @@ pub enum TextExclusion {
     /// Ordinary labels, headings and hover text are not enumerated.
     OrdinaryEguiLabels,
     NativeComboBoxText,
+    NativeButtonText,
     NativeRadioButtonText,
     NativeSliderText,
     NativeSelectableText,
@@ -55,6 +56,7 @@ impl Default for TextAuditCoverage {
 #[derive(Clone, Copy, Debug)]
 pub enum NativeTextControlKind {
     ComboBox,
+    Button,
     RadioButton,
     Slider,
     Selectable,
@@ -64,6 +66,7 @@ impl NativeTextControlKind {
     fn exclusion(self) -> TextExclusion {
         match self {
             Self::ComboBox => TextExclusion::NativeComboBoxText,
+            Self::Button => TextExclusion::NativeButtonText,
             Self::RadioButton => TextExclusion::NativeRadioButtonText,
             Self::Slider => TextExclusion::NativeSliderText,
             Self::Selectable => TextExclusion::NativeSelectableText,

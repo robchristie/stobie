@@ -40,11 +40,12 @@
     "attempted_components": 1,
     "successful_components": 1,
     "failed_components": 0,
-    "native_text_controls": 25,
+    "native_text_controls": 26,
     "observed_native_controls": 0,
     "excluded_categories": [
       "ordinary_egui_labels",
       "native_combo_box_text",
+      "native_button_text",
       "native_selectable_text"
     ]
   }

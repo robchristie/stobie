@@ -18,6 +18,21 @@ pub fn apply_design_system_with_typography(
     preferences: UiPreferences,
     profile: crate::TypographyProfile,
 ) {
+    apply_design_system_with_theme(
+        context,
+        preferences,
+        profile,
+        &crate::ApplicationTheme::analytical(),
+    );
+}
+
+/// Apply an application identity through the same resolver used by custom components.
+pub fn apply_design_system_with_theme(
+    context: &egui::Context,
+    preferences: UiPreferences,
+    profile: crate::TypographyProfile,
+    application_theme: &crate::ApplicationTheme,
+) {
     crate::install_typography_fonts(context);
     let preferences = preferences.validated();
     match preferences.appearance {
@@ -35,8 +50,7 @@ pub fn apply_design_system_with_typography(
             (Theme::Light, _) => ThemeVariant::Light,
             (Theme::Dark, _) => ThemeVariant::Dark,
         };
-        let tokens = DesignTokens::resolve(variant, preferences.density_variant())
-            .with_typography_profile(profile);
+        let tokens = application_theme.resolve(variant, preferences.density_variant(), profile);
         let mut style = egui::Style {
             visuals: visuals(theme, &tokens),
             ..egui::Style::default()
@@ -75,10 +89,19 @@ fn visuals(theme: Theme, tokens: &DesignTokens) -> Visuals {
     let canvas: Color32 = tokens.colours.surface_canvas.into();
     let panel: Color32 = tokens.colours.surface_panel.into();
     let raised: Color32 = tokens.colours.surface_raised.into();
-    let border: Color32 = tokens.colours.border_subtle.into();
+    let border: Color32 = tokens.colours.border_control.into();
     let text: Color32 = tokens.colours.text_primary.into();
     let accent: Color32 = tokens.colours.accent_primary.into();
-    visuals.override_text_color = Some(text);
+    visuals.override_text_color = None;
+    for widget in [
+        &mut visuals.widgets.noninteractive,
+        &mut visuals.widgets.inactive,
+        &mut visuals.widgets.hovered,
+        &mut visuals.widgets.active,
+        &mut visuals.widgets.open,
+    ] {
+        widget.fg_stroke = Stroke::new(1.0, text);
+    }
     visuals.panel_fill = panel;
     visuals.window_fill = panel;
     visuals.extreme_bg_color = canvas;
@@ -86,15 +109,26 @@ fn visuals(theme: Theme, tokens: &DesignTokens) -> Visuals {
     visuals.code_bg_color = canvas;
     visuals.window_stroke = Stroke::new(1.0, border);
     visuals.widgets.noninteractive.bg_fill = panel;
-    visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, border);
+    visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, tokens.colours.border_decorative);
     visuals.widgets.inactive.bg_fill = raised;
     visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, border);
-    visuals.widgets.hovered.bg_fill = tokens.colours.selection_background.into();
-    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, accent);
-    visuals.widgets.active.bg_fill = accent;
-    visuals.widgets.active.bg_stroke = Stroke::new(1.0, accent);
+    visuals.widgets.hovered.bg_fill = tokens.colours.surface_hover.into();
+    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, border);
+    visuals.widgets.active.bg_fill = tokens.colours.surface_hover.into();
+    visuals.widgets.active.bg_stroke = Stroke::new(1.0, tokens.colours.focus_ring);
     visuals.widgets.open.bg_fill = raised;
-    visuals.widgets.open.bg_stroke = Stroke::new(1.0, accent);
+    visuals.widgets.open.bg_stroke = Stroke::new(1.0, border);
+    // Native buttons and combo-box buttons use weak_bg_fill, while other
+    // controls consume bg_fill. Both must resolve the same authored surface.
+    for widget in [
+        &mut visuals.widgets.noninteractive,
+        &mut visuals.widgets.inactive,
+        &mut visuals.widgets.hovered,
+        &mut visuals.widgets.active,
+        &mut visuals.widgets.open,
+    ] {
+        widget.weak_bg_fill = widget.bg_fill;
+    }
     let radius = egui::CornerRadius::same(
         tokens
             .geometry
@@ -109,7 +143,7 @@ fn visuals(theme: Theme, tokens: &DesignTokens) -> Visuals {
     visuals.widgets.active.corner_radius = radius;
     visuals.widgets.open.corner_radius = radius;
     visuals.selection.bg_fill = tokens.colours.selection_background.into();
-    visuals.selection.stroke = Stroke::new(1.0, tokens.colours.focus_ring);
+    visuals.selection.stroke = Stroke::new(1.0, text);
     visuals.hyperlink_color = accent;
     visuals
 }

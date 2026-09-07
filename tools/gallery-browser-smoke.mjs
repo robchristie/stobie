@@ -139,7 +139,7 @@ try {
   let current = await snapshot();
   if (current.story !== 'reference/application-shell' || current.story_count !== 20
       || current.text.length === 0 || current.text_audit.length !== 0
-      || current.text_audit_coverage?.native_text_controls !== manifest.length + 5
+      || current.text_audit_coverage?.native_text_controls !== manifest.length + 6
       || current.text_audit_coverage.observed_native_controls !== 0
       || JSON.stringify(current.text_audit_coverage) !== JSON.stringify(current.ui_snapshot.text_audit_coverage)
       || current.ui_snapshot.nodes.length === 0 || current.ui_snapshot.nodes.length >= 1_000
