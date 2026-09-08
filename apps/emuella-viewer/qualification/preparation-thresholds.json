@@ -1,0 +1,27 @@
+{
+  "schema": "viewer-preparation-thresholds/1",
+  "frozen_unix_ms": 1788793309214,
+  "workload": {
+    "schema": "viewer-preparation-workload/1",
+    "width": 43008,
+    "height": 43008,
+    "components": 1,
+    "bits_per_sample": 11,
+    "tile_width": 512,
+    "tile_height": 512,
+    "decomposition_levels": 6,
+    "target_bpp": 2,
+    "source_recipe_sha256": "444f313c7343cc2484681e3f6975a26f55404087a2c5f77b6b7b3e26d23b1274"
+  },
+  "baseline_record_sha256": "f7264421eed016c8d001afb271b99a15fec0af66ad45bd30597a65cce2cc8a1c",
+  "bounds": {
+    "elapsed_ms_maximum": 280000,
+    "peak_rss_kib_maximum": 65536,
+    "peak_tile_index_bytes_maximum": 65536,
+    "encoded_bytes_maximum": 555000000,
+    "descriptor_to_encoded_ratio_maximum": 0.01,
+    "logical_read_operations_exact": 7056,
+    "logical_read_bytes_exact": 3699376128
+  },
+  "rationale": "Public U11 large-image streaming preparation only. Observed 223132.528 ms encode/preparation time plus 25% allowance rounded to 280 seconds. Fixed 64 MiB process and 64 KiB transient tile-index ceilings leave space for allocator/library variation while remaining independent of image area; baseline 5520 KiB and 16544 bytes. Stored representation cap allows about 2.4 bits per sample including headers at the selected 2 bpp target. Descriptor index must remain at most 1% of representation bytes (baseline 0.68%). Exactly one callback per 512-square tile and exact native sample byte total enforce the selected geometry. This does not freeze unmeasured NITF preparation latency or establish real-source rights, storage coldness or physical NFS traffic."
+}

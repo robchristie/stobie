@@ -11,6 +11,8 @@ fn main() -> Result<()> {
     match command.as_str() {
         "verify" => verify(),
         "build-web" => build_web(),
+        "build-viewer-web" => build_viewer_web(),
+        "viewer-smoke" => run("node", &["tools/viewer-browser-smoke.mjs"]),
         "architecture" => architecture(),
         "plans" => plans::check(Path::new(".")),
         "tokens" => match env::args().nth(2).as_deref() {
@@ -73,6 +75,8 @@ fn verify() -> Result<()> {
             "polyorama-gallery",
             "-p",
             "polyorama-tile-worker",
+            "-p",
+            "emuella-viewer",
             "--",
             "-D",
             "warnings",
@@ -155,6 +159,7 @@ fn build_web() -> Result<()> {
             "target/wasm32-unknown-unknown/release/polyorama_tile_worker.wasm",
         ],
     )?;
+    build_viewer_web()?;
     Ok(())
 }
 
@@ -456,5 +461,43 @@ fn run_with_environment(
             arguments.join(" ")
         );
     }
+    Ok(())
+}
+
+fn build_viewer_web() -> Result<()> {
+    ensure_wasm_bindgen_version("0.2.127")?;
+    run(
+        "cargo",
+        &[
+            "build",
+            "--release",
+            "--target",
+            "wasm32-unknown-unknown",
+            "-p",
+            "emuella-viewer",
+        ],
+    )?;
+    let output =
+        env::var("POLYORAMA_VIEWER_WEB_DIR").unwrap_or_else(|_| ".tools/runtime/viewer-web".into());
+    fs::create_dir_all(&output)?;
+    for asset in ["index.html", "bootstrap.js", "worker.js", "response.js"] {
+        fs::copy(
+            Path::new("apps/emuella-viewer/web").join(asset),
+            Path::new(&output).join(asset),
+        )?;
+    }
+    let package = Path::new(&output).join("pkg");
+    run(
+        "wasm-bindgen",
+        &[
+            "--target",
+            "web",
+            "--out-dir",
+            package.to_str().context("UTF-8 web output path")?,
+            "target/wasm32-unknown-unknown/release/emuella_viewer.wasm",
+        ],
+    )?;
+    run("node", &["tools/viewer-response-headers.mjs", &output])?;
+    println!("Serve the viewer's complete static root: {output}");
     Ok(())
 }

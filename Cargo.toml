@@ -7,6 +7,9 @@ members = [
     "apps/analytical-workspace-lab",
     "apps/polyorama-gallery",
     "apps/tile-worker",
+    "apps/emuella-viewer",
+    "crates/emuella-viewer-source",
+    "apps/emuella-viewer-tools",
     "xtask",
 ]
 resolver = "2"

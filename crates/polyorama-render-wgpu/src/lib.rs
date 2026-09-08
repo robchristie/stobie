@@ -1,5 +1,8 @@
 //! Typed renderer requests and renderer-owned wgpu resources.
 
+pub mod regional;
+pub use regional::*;
+
 use std::{
     collections::{BTreeMap, VecDeque},
     sync::Arc,

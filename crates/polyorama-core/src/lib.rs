@@ -7,6 +7,7 @@ pub mod data;
 pub mod diagnostics;
 pub mod dock;
 pub mod ids;
+pub mod regional;
 pub mod virtualise;
 
 pub use camera::*;
@@ -16,4 +17,5 @@ pub use data::*;
 pub use diagnostics::*;
 pub use dock::*;
 pub use ids::*;
+pub use regional::*;
 pub use virtualise::*;

@@ -1,0 +1,113 @@
+{
+  "schema": "composed_journey_thresholds/1",
+  "frozen_unix_ms": 1788791045308,
+  "workload_sha256": "de91f9293bae59fe30db79feb44e620d28f0c063a0ecf9f91984690c97bc2e02",
+  "baseline_evidence_sha256": {
+    "calibration-browser-v4-01": "5149479038f973fb08e4494175c943bae67728f4435b533012f7de5873518121",
+    "calibration-browser-v4-02": "527b907ef85698e6940105b43c269333de95e6a0b0af33c30a14eb5eaccb7528",
+    "calibration-browser-v4-03": "c7c69a24d4904717e36debc9efab9db67638bd46e7e311331a11d307aafb751f",
+    "calibration-browser-v4-04": "e3c8bbc0d948916cbe445869f747256abe794b4a7d602f91eae757f31610055e",
+    "calibration-browser-v4-05": "aa5c618b030f886f0b25c9793ac8497fcdb14127e93f05a5c319be44d2935d34"
+  },
+  "rationale": "Local desktop architectural proof on Ryzen 9 9950X3D with hardware NVIDIA rendering and loopback HTTP. Five independent fresh-client baselines per runtime; nearest-rank p95 with n=5 is the observed maximum, not an estimated population tail. Latency and process/WASM bounds use that maximum plus 25% scheduling and instrumentation allowance, rounded upwards to 10 ms or 1 MiB. Fixed shared cache and worker budgets are architectural caps, not fitted maxima. Primary-only first-useful wording clarifies the baseline: visible coarse primary demands dispatch before gallery demands. This does not claim GPU scanout, cold NFS server storage, remote-network performance or an identified browser GPU model beyond reported NVIDIA/Ampere. Separate recovery and preparation evidence is mandatory; these limits alone do not qualify the complete proof.",
+  "require_hardware_gpu": true,
+  "bounds": {
+    "first_useful_ms": {
+      "unit": "ms",
+      "boundary": "application startup to first primary-view region GPU resident",
+      "minimum": null,
+      "maximum": 240
+    },
+    "whole_overview_ms": {
+      "unit": "ms",
+      "boundary": "application startup to all overview and visible gallery demands GPU resident",
+      "minimum": null,
+      "maximum": 20290
+    },
+    "target_detail_ms": {
+      "unit": "ms",
+      "boundary": "worst detection-open intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 380
+    },
+    "visible_thumbnail_completion_ms": {
+      "unit": "ms",
+      "boundary": "worst gallery-scroll intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 2330
+    },
+    "warm_revisit_ms": {
+      "unit": "ms",
+      "boundary": "worst GPU fit or bookmark recall intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 460
+    },
+    "warm_compressed_ms": {
+      "unit": "ms",
+      "boundary": "clear settled decoded/GPU state to all current demands GPU resident with shared compressed cache retained",
+      "minimum": null,
+      "maximum": 19470
+    },
+    "wasm_linear_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker wasm_linear_bytes",
+      "minimum": null,
+      "maximum": 42991616
+    },
+    "decoded_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application decoded_peak_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "gpu_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application gpu_peak_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "peak_compressed_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_compressed_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "peak_descriptor_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_descriptor_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "peak_codec_workspace_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_codec_workspace_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "worker_concurrency": {
+      "unit": "count",
+      "boundary": "application outstanding worker reservations",
+      "minimum": null,
+      "maximum": 1
+    },
+    "original_storage_read_bytes": {
+      "unit": "bytes",
+      "boundary": "prepared representation service never opens original source during viewing",
+      "minimum": null,
+      "maximum": 0
+    },
+    "actual_browser_workers": {
+      "unit": "count",
+      "boundary": "Playwright Worker creation events",
+      "minimum": 1,
+      "maximum": 1
+    }
+  },
+  "required_events": [
+    "cache_initialisation",
+    "demand",
+    "dispatched",
+    "completion_Accepted",
+    "presentation_ready"
+  ]
+}

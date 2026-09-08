@@ -1,5 +1,8 @@
 //! Desired-set reconciliation and bounded CPU-only worker scheduling.
 
+pub mod regional;
+pub use regional::*;
+
 use polyorama_core::{
     DemandPriority, PYRAMID_LEVELS, ResourceState, RuntimeMetrics, TILE_SIZE, TileDemand, TileKey,
     WorkerHealth, reconcile_demands,

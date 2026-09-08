@@ -8,3 +8,5 @@
 /apps/polyorama-gallery/web/pkg/
 *.profraw
 __pycache__/
+
+/apps/emuella-viewer/web/pkg/

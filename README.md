@@ -5,10 +5,11 @@ analytical workspaces on native desktop and WebGPU-capable browsers. It brings
 together dockable panes, large tiled images, linked views, annotations and
 virtualised collections above **egui**, **eframe** and **wgpu**.
 
-The repository contains reusable framework crates and two runnable applications:
-**Analytical Workspace Lab**, which exercises an analytical workflow, and
-**Polyorama Gallery**, which demonstrates and verifies the UI components. Both
-run natively and in the browser from Rust application code.
+The repository contains reusable framework crates and three runnable applications:
+**Analytical Workspace Lab** exercises an analytical workflow, **Polyorama
+Gallery** demonstrates the UI components, and **Emuella Image Viewer** composes
+indexed JPEG 2000 regional delivery with multiple views and detection browsing.
+They run natively and in the browser from Rust application code.
 
 The project is under active development. Its APIs remain concrete and driven
 by the example applications; it is not yet a stable general-purpose framework.
@@ -49,6 +50,20 @@ fixed stories exercise buttons, tabs, splitters, status messages, virtual grids
 and application chrome across normal, narrow, long-text, loading and error
 states. It also exposes semantic snapshots and text-layout observations for
 repeatable UI inspection and verification.
+
+### Emuella Image Viewer
+
+The [viewer application](apps/emuella-viewer/README.md) reconstructs regions and
+detection thumbnails from larger indexed HTJ2K codestreams. A shared compressed
+cache serves multiple image panes and a virtualised gallery of 10000 logical
+detections; display stretch preserves compressed-data identity. Native and
+browser workers use Emuella, while Polyorama owns generic demands and bounded
+decoded/GPU resources.
+
+Start with the [preparation and local service commands](docs/emuella-viewer-service.md),
+then run the native application or its same-origin browser build. Deterministic
+fixtures require no external imagery. The [calibration guide](docs/emuella-viewer-calibration.md)
+distinguishes current evidence and frozen limits from final qualification.
 
 ## Run locally
 
@@ -182,6 +197,8 @@ does not update them automatically.
   backed by the [token source](design/tokens/polyorama.tokens.json).
 - [UI evaluation seed](docs/ui-evaluation-seed.md): frozen tasks and explicit
   scoring criteria for repeatable UI evaluation.
+- [Regional adapter contract](docs/regional-adapter-contract.md): immutable
+  parent-image demands, external workers, resource accounting and integer display.
 - [Vertical-slice contract](docs/vertical-slice-goal.md) and
   [report](docs/vertical-slice-report.md): the Lab's original requirements,
   architecture, hardening results and retained runtime evidence.

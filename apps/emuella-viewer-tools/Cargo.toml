@@ -1,0 +1,16 @@
+[package]
+name = "emuella-viewer-tools"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+emuella-viewer-source = { path = "../../crates/emuella-viewer-source" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"
+libloading = "0.8"
+
+[dev-dependencies]
+tempfile = "3"

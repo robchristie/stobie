@@ -1,0 +1,53 @@
+{
+  "schema": "viewer-nitf-preparation-thresholds/1",
+  "frozen_unix_ms": 1788829154400,
+  "source_sha256": "dcf61436814d33c75c876b173f2dc87fcbd61571be7e766489dd884ab9891c07",
+  "bands": [
+    1
+  ],
+  "measurement_mode": "performance",
+  "source_cache_state": "warm-os",
+  "profile": {
+    "width": 43008,
+    "height": 43008,
+    "tile_edge": 512,
+    "decomposition_levels": 6,
+    "bits_per_sample": 11,
+    "components": 1,
+    "bits_per_pixel": 2.0
+  },
+  "bounds": {
+    "peak_rss_kib": {
+      "maximum": 65536
+    },
+    "peak_tile_index_bytes": {
+      "maximum": 65536
+    },
+    "encoded_bytes": {
+      "maximum": 555000000
+    },
+    "descriptor_to_encoded_ratio": {
+      "maximum": 0.01
+    },
+    "logical_read_operations": {
+      "exact": 7056
+    },
+    "logical_read_bytes": {
+      "exact": 3699376128
+    },
+    "wall_ms": {
+      "maximum": 440000
+    }
+  },
+  "baseline_evidence_sha256": {
+    "baseline-8192-cold": "604d9f8b41efa1b7106cd8767c00d2c8b2434190b16434ce2babbd207218ef2f",
+    "baseline-8192-warm": "17f74ee971d5bd031b47d753ab53123c4423676268678c747314b3581dde4720",
+    "baseline-32768-warm": "01c8055586db4c4f575ba2d27f5795a0041e8a7abb9ede2da1af769a3dcfcd86",
+    "merged-8192-warm": "bdd43f7ca64fb2b64b310b8685cc79e6596613cc1dd4c7c1268adb5c1a2fab95",
+    "merged-8192-cold": "fae4a1eaa8516fadd1eed5cd6c7a261369b27fdc5b1ce1e028af088b5f1c0401",
+    "generation": "59e0c6ec56137d56b2288816070fcdfdcb4b435c7d53a3232c487891588c858b",
+    "source-43008-provenance": "1fb3ad3242b1a65e3d999945cfe4cce39ba9c7e7bab28168dc30892fba90511f",
+    "build-attestation": "c7c1b4ac9517d33b6830d5409accdd912cc9a44dec92dc7a648dc77555e881e5"
+  },
+  "rationale": "Authored U11 mono NITF, tile512/D6/2bpp HT. Time extrapolates 32768 baseline by 43008^2/32768^2 with25% allowance, upward10s rounding; observer includes8192 traced/untraced factor. Source syscall ceilings extrapolate8192 bypixels plus25%, rounded1GB/100k. Merged8192 confirmation reproduces payload and resource behaviour. These are prequalification predictions, not measured43008 results.64MiBRSS and64KiB tileindex preserve bounded architecture;555MB/1% descriptor ratio preserve prior preparation caps. Existing viewing limits unchanged. Syscalls include sourcehash and rereads, not physicaldevice/NFS traffic."
+}
