@@ -1,0 +1,40 @@
+{
+  "schema": "real-scene-viewing-codec-binding-correction/1",
+  "observed_codec_repository_head": "6586e3d50f95429b242cb2e3535742b002784f2d",
+  "actual_decoder_pin": "dc8ff1f432e132c0fddbbd94d8bcccfd6f5cf7db",
+  "build_source_revision": "1b01bbad62850fd749bc9ac6aee4af596d5dae19",
+  "build_identity": {
+    "path": "/nvme/development/emuella/.build-targets/real-scene-viewing/viewer/c/build-identity.json",
+    "sha256": "f4c6701da37d463aa5b050571ebbd10ed82d3a0fa76d83b08416511f058acc6d"
+  },
+  "source_cargo_lock_sha256": "385385ae2a679aa99c0fc98a6ca7ac617014c4a21c8a7ed67fae2b05c5f4631f",
+  "explanation": "The unchanged harness reads --codec-repo HEAD at execution; this is not linked-library build evidence. Both instrumented recovery runs used retained C baseline runtime hashes. Old records remain unchanged. Prepared representation encoder identities are independent of the runtime decoder.",
+  "affected": [
+    {
+      "scene": "development",
+      "run_identity": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-c-recovery-instrumented-01/development/run-identity.json",
+        "sha256": "08c1a673cf3329610de97225814bb5db02c02394c0a538e39467d40186114698"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-c-recovery-instrumented-01/development/composed-trace.json",
+        "sha256": "730f4d98dc4a6c9d23c42e210f1ae3d714da3cb06cd9b654216f000b42f6be85"
+      }
+    },
+    {
+      "scene": "boca",
+      "run_identity": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-c-recovery-instrumented-01/boca/run-identity.json",
+        "sha256": "2175a298c685c5fba9f7fda3720b05ebd77b4b31c40a67c0e39aa4ef6cf1e2df"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-c-recovery-instrumented-01/boca/composed-trace.json",
+        "sha256": "bfea9d24a978a43c21600cb218c7557c2ef46c6d1a32619b11b19d185ad6fa7a"
+      }
+    }
+  ],
+  "protected_correction": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-final-binding-correction-01/correction.json",
+    "sha256": "f85eac1996e03a1d09e86679ddbb6fc09c62900049b7f1ed503dfe1fe1d3a8ab"
+  }
+}

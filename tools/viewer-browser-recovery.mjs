@@ -3,7 +3,9 @@ import {chromium} from 'playwright';
 import {createServer, request as httpRequest} from 'node:http';
 import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
-const [upstreamUrl, output] = process.argv.slice(2);
+import {pressureWorkload, panSweep} from './viewer-recovery-workload.mjs';
+const [upstreamUrl, output, ...pressureArgs] = process.argv.slice(2);
+const pressure_workload=pressureWorkload(pressureArgs);
 const started=performance.now(), states=[], events=[], transfers=[], errors=[], adapters=[];
 const pageIdentities=new WeakMap();
 let mode='truncate-once', browser, browser_version, proxy, activePage, workers=0;
@@ -18,7 +20,7 @@ proxy=createServer((incoming,outgoing)=>{
   if(isJpp&&mode==='offline') {t.connection_destroyed_ms=at();outgoing.destroy();return;}
   const request=httpRequest(new URL(incoming.url,upstreamUrl),response=>{
     if(isJpp&&mode==='truncate-once') {
-      mode='online';const chunks=[];
+      mode='offline';const chunks=[];
       response.on('data',chunk=>chunks.push(chunk));
       response.on('end',()=>{const bytes=Buffer.concat(chunks);const part=bytes.subarray(0,Math.max(1,Math.floor(bytes.length/2)));outgoing.writeHead(response.statusCode,response.headers);outgoing.write(part);t.original_body_bytes=bytes.length;t.forwarded_body_bytes=part.length;setTimeout(()=>{t.connection_destroyed_ms=at();outgoing.destroy();},30);});
     } else {
@@ -62,6 +64,7 @@ try {
   const interrupted=await capture(page,'partial-transfer-failed');
   if(!transfers.some(t=>t.forwarded_body_bytes>0&&t.forwarded_body_bytes<t.original_body_bytes))throw new Error('partial real response was not interrupted');
   record('transfer_interrupted',interrupted,'proxy wrote a strict nonempty body prefix then destroyed the actual HTTP connection; worker reported failure');
+  mode='online';
   await page.evaluate(()=>window.emuellaViewer.intent({kind:'action',action:'retry'}));
   await settled(page);
   const retried=await capture(page,'partial-transfer-retried');
@@ -119,7 +122,31 @@ try {
   const cancelled=await capture(pressure,'cancellation-acknowledged');
   if(!transfers.some(t=>t.mode==='delay'&&t.client_closed_ms!==undefined))throw new Error('actual delayed transfer was not closed');
   record('cancel_acknowledged',cancelled,'delayed actual JPP connection closed after image switch; worker aborted counter incremented and reservation released',catalogue[0].target);
-  for(let index=2;index<=8;index++){
+  if(pressure_workload==='real-scene-pan-sweep'){
+  // Frozen bounded pressure: 64 full-resolution primary views across the
+  // largest single-component parent. Small overviews/gallery tiles alone do
+  // not fill the unchanged budgets in a two-parent real-scene catalogue.
+  const {panIndex,profile,factor,viewWidth,viewHeight}=panSweep(catalogue);
+  const apply=async intent=>{
+    const generation=(await snapshot(pressure)).generation;
+    await pressure.evaluate(intent=>window.emuellaViewer.intent(intent),intent);
+    await pressure.waitForFunction(g=>window.emuellaViewer.snapshot().generation>g,generation,{timeout:60000});
+    await settled(pressure);
+  };
+  await apply({kind:'select_image',index:panIndex});
+  await apply({kind:'zoom',factor});
+  await apply({kind:'pan',dx:-profile.width/viewWidth,dy:-profile.height/viewHeight});
+  const dx=(profile.width-viewWidth)/(7*viewWidth),dy=(profile.height-viewHeight)/(7*viewHeight);
+  for(let row=0;row<8;row++){
+    if(row)await apply({kind:'pan',dx:0,dy});
+    for(let col=0;col<8;col++){
+      if(col)await apply({kind:'pan',dx:row%2?-dx:dx,dy:0});
+      await capture(pressure,`pressure-pan-${row}-${col}`);
+    }
+  }
+  }else{
+  for(let step=2;step<=8;step++){
+    const index=step % catalogue.length;
     const generation=(await snapshot(pressure)).generation;
     await pressure.evaluate(index=>window.emuellaViewer.intent({kind:'select_image',index}),index);
     await pressure.waitForFunction(g=>window.emuellaViewer.snapshot().generation>g,generation);
@@ -129,14 +156,15 @@ try {
     await pressure.evaluate(row=>window.emuellaViewer.intent({kind:'gallery',row}),row);
     await pressure.waitForTimeout(100);await settled(pressure);
   }
+  }
   const final=await capture(pressure,'pressure-complete');
   if(!final.worker.representation_evictions||!final.gpu_evictions||final.worker.peak_compressed_bytes>1<<20||final.decoded_peak_bytes>4<<20||final.gpu_peak_bytes>16<<20||final.errors.length)throw new Error('pressure bounds or actual eviction failed');
   record('cache_eviction',final,'shared compressed representation and GPU eviction counters incremented within 1/4/16 MiB pressure budgets');
   if(errors.length)throw new Error('unexpected browser errors');
   await pressure.screenshot({path:join(output,'browser-recovery-final.png')});
-  await writeFile(join(output,'browser-recovery.json'),JSON.stringify({completed:true,started_monotonic_ms:started,browser_version,workers,workers_boundary,adapters,states,events,transfers,errors},null,2));
+  await writeFile(join(output,'browser-recovery.json'),JSON.stringify({completed:true,pressure_workload,started_monotonic_ms:started,browser_version,workers,workers_boundary,adapters,states,events,transfers,errors},null,2));
 } catch(error) {
   if(activePage)await capture(activePage,'failure-observation').catch(()=>{});
-  await writeFile(join(output,'browser-recovery.json'),JSON.stringify({completed:false,error:String(error),started_monotonic_ms:started,browser_version,workers,workers_boundary,adapters,states,events,transfers,errors},null,2));
+  await writeFile(join(output,'browser-recovery.json'),JSON.stringify({completed:false,pressure_workload,error:String(error),started_monotonic_ms:started,browser_version,workers,workers_boundary,adapters,states,events,transfers,errors},null,2));
   throw error;
 } finally {if(browser)await browser.close();proxy.closeAllConnections();await new Promise(resolve=>proxy.close(resolve));}

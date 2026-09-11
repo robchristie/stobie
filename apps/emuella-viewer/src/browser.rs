@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 fn encode_message(value: &serde_json::Value) -> Result<JsValue, serde_wasm_bindgen::Error> {
     value.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
 }
-use crate::engine::{Event, Job, WorkerMetrics};
+use crate::engine::{Event, Job, WorkerMetrics, pacing_now_ms};
 use polyorama_runtime::RegionalRequest;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
@@ -67,11 +67,15 @@ impl Executor {
         let sink = events.clone();
         let repaint = context.clone();
         let message = Closure::wrap(Box::new(move |event: MessageEvent| {
-            let event = decode_event(event.data()).unwrap_or_else(|e| Event::Failed {
+            let received_ms = pacing_now_ms();
+            let mut event = decode_event(event.data()).unwrap_or_else(|e| Event::Failed {
                 request: None,
                 error: format!("{e:?}"),
                 metrics: WorkerMetrics::default(),
             });
+            if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
+                timing.received_ms = Some(received_ms);
+            }
             sink.borrow_mut().push_back(event);
             repaint.request_repaint();
         }) as Box<dyn FnMut(MessageEvent)>);

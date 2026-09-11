@@ -1,0 +1,105 @@
+{
+  "schema": "composed_journey_thresholds/1",
+  "frozen_unix_ms": 1789088920133,
+  "workload_sha256": "6a6d5434d6e23bc147140fb69289000b6e56c8b7f94ee636f0a15f324922d9d9",
+  "baseline_evidence_sha256": {
+    "recovery-probe-03": "f64c71131543600639aafe94891f3288af1a79a267b8b09b6d2c288953a8c0c2"
+  },
+  "rationale": "All inherited recovery bounds and required events unchanged. Fixed 64-view full-resolution PAN sweep replaces ineffective small-catalogue image/gallery pressure. Both earlier pressure failures remain retained. Workload identity frozen before development and Boca execution; no threshold retuning.",
+  "require_hardware_gpu": true,
+  "bounds": {
+    "decoded_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application decoded_peak_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "gpu_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application gpu_peak_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "worker_concurrency": {
+      "unit": "count",
+      "boundary": "application outstanding worker reservations",
+      "minimum": null,
+      "maximum": 1
+    },
+    "original_storage_read_bytes": {
+      "unit": "bytes",
+      "boundary": "prepared representation service never opens original source during viewing",
+      "minimum": null,
+      "maximum": 0
+    },
+    "peak_compressed_bytes": {
+      "unit": "bytes",
+      "boundary": "maximum across sampled sequential fresh browser contexts; shared worker peak_compressed_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "peak_descriptor_bytes": {
+      "unit": "bytes",
+      "boundary": "maximum across sampled sequential fresh browser contexts; shared worker peak_descriptor_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "peak_codec_workspace_bytes": {
+      "unit": "bytes",
+      "boundary": "maximum across sampled sequential fresh browser contexts; shared worker peak_codec_workspace_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "wasm_linear_bytes": {
+      "unit": "bytes",
+      "boundary": "maximum across sampled sequential fresh browser contexts; shared worker wasm_linear_bytes",
+      "minimum": null,
+      "maximum": 42991616
+    },
+    "selected_code_blocks": {
+      "unit": "count",
+      "boundary": "sum of per-context sampled cumulative maxima across sequential fresh browser contexts; shared worker selected_code_blocks",
+      "minimum": 1,
+      "maximum": null
+    },
+    "selected_block_coefficients": {
+      "unit": "count",
+      "boundary": "sum of per-context sampled cumulative maxima across sequential fresh browser contexts; shared worker selected_block_coefficients",
+      "minimum": 1,
+      "maximum": null
+    },
+    "decoded_pixels": {
+      "unit": "count",
+      "boundary": "sum of per-context sampled cumulative maxima across sequential fresh browser contexts; shared worker decoded_pixels",
+      "minimum": 1,
+      "maximum": null
+    },
+    "synthesis_output_samples": {
+      "unit": "count",
+      "boundary": "sum of per-context sampled cumulative maxima across sequential fresh browser contexts; shared worker synthesis_output_samples",
+      "minimum": 1,
+      "maximum": null
+    },
+    "synthesis_lifting_updates": {
+      "unit": "count",
+      "boundary": "sum of per-context sampled cumulative maxima across sequential fresh browser contexts; shared worker synthesis_lifting_updates",
+      "minimum": 1,
+      "maximum": null
+    },
+    "actual_browser_workers": {
+      "unit": "count",
+      "boundary": "total Playwright Worker creation events across sequential fresh browser contexts; not concurrent workers",
+      "minimum": 3,
+      "maximum": 3
+    }
+  },
+  "required_events": [
+    "transfer_interrupted",
+    "retry",
+    "connection_lost",
+    "reconnect",
+    "stale_rejected",
+    "cancel_acknowledged",
+    "cache_eviction"
+  ]
+}

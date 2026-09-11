@@ -9,6 +9,6 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"
-# Merged codec owner: bounded reusable Part 1 indexing and short packet-prefix handling.
-emuella-j2k-codestream = { git = "https://github.com/emuella/emuella-j2k", rev = "2568f1c40c83a40f527c7ee8f1600af511e046d0" }
-emuella-jpip = { git = "https://github.com/emuella/emuella-j2k", rev = "2568f1c40c83a40f527c7ee8f1600af511e046d0" }
+# Merged codec owner: real-scene campaign baseline, including indexed HT persistence.
+emuella-j2k-codestream = { git = "https://github.com/emuella/emuella-j2k", rev = "6586e3d50f95429b242cb2e3535742b002784f2d" }
+emuella-jpip = { git = "https://github.com/emuella/emuella-j2k", rev = "6586e3d50f95429b242cb2e3535742b002784f2d" }

@@ -28,8 +28,40 @@ impl Job {
         }
     }
 }
+/// Native uses one process-wide monotonic origin; browser realms use
+/// performance.timeOrigin + performance.now(). These are diagnostic clocks.
+pub fn pacing_now_ms() -> f64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        static ORIGIN: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        ORIGIN
+            .get_or_init(std::time::Instant::now)
+            .elapsed()
+            .as_secs_f64()
+            * 1000.
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let performance = web_sys::window()
+            .expect("UI window")
+            .performance()
+            .expect("performance clock");
+        performance.time_origin() + performance.now()
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct WorkerTiming {
+    pub started_ms: f64,
+    pub finished_ms: f64,
+    pub published_ms: f64,
+    pub received_ms: Option<f64>,
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct WorkerMetrics {
+    #[serde(default)]
+    pub timing: Option<WorkerTiming>,
     pub decoded_evidence: Vec<DecodedEvidence>,
     pub decoded_evidence_dropped: u64,
     pub selected_block_coefficients: u64,
@@ -86,6 +118,16 @@ pub enum Event {
         error: String,
         metrics: WorkerMetrics,
     },
+}
+impl Event {
+    pub fn metrics_mut(&mut self) -> Option<&mut WorkerMetrics> {
+        match self {
+            Self::Catalogue(_) => None,
+            Self::Completed { metrics, .. }
+            | Self::Cancelled { metrics, .. }
+            | Self::Failed { metrics, .. } => Some(metrics),
+        }
+    }
 }
 pub fn representation(manifest: &Manifest) -> RepresentationId {
     let mut bytes = [0; 32];

@@ -1,0 +1,25 @@
+{
+  "note": "Tok RGB8 primary with already measured Mansfield RGB16 as comparison-only auxiliary, preserving distinct-image workload without acquiring or selecting another regression source.",
+  "sources": [
+    {
+      "source_sha256": "8337c700fa45605a8c6074b4dfae6d311a7d42644726a35921373cecee6c2f69",
+      "bands": [
+        1,
+        2,
+        3
+      ],
+      "width": 10651,
+      "height": 1581
+    },
+    {
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "width": 1213,
+      "height": 688
+    }
+  ]
+}

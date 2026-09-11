@@ -17,6 +17,8 @@ fn main() -> eframe::Result {
         << 20;
     let output = value("--script-output");
     let script = output.is_some();
+    let workload =
+        value("--workload").map(|path| std::fs::read_to_string(path).expect("read workload"));
     eframe::run_native(
         "Emuella image viewer",
         eframe::NativeOptions {
@@ -27,9 +29,14 @@ fn main() -> eframe::Result {
             ..Default::default()
         },
         Box::new(move |cc| {
-            Ok(Box::new(emuella_viewer::ViewerApp::new(
+            let mut app = emuella_viewer::ViewerApp::new(
                 cc, server, compressed, decoded, gpu, script, output,
-            )))
+            );
+            if let Some(json) = workload {
+                app.set_script_workload(&json)
+                    .map_err(std::io::Error::other)?;
+            }
+            Ok(Box::new(app))
         }),
     )
 }

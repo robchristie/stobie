@@ -1,0 +1,497 @@
+{
+  "schema": "real-scene-source-views/1",
+  "frozen_unix_ms": 1789085335056,
+  "selection_basis": "Opened original-TIFF overviews only; small-object candidates, low-contrast areas, edges, nodata and fixed 512-grid crossings selected before any compressed-output inspection. Feature identities are visual descriptions, not ground truth labels.",
+  "source_evidence": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-source-01",
+  "source_inspection_sha256": "3d886fa0730ae4f6c10f5bce7a141be4a463fb3f3272772d3616f0bf7a3b3ce4",
+  "scales": [
+    1,
+    4
+  ],
+  "display_method": "Decode each fixed full-resolution source window; display 1:1 and 4x4 arithmetic box-average reduction. Source and reconstruction use identical box averaging, then per-band stretch, clamp [0,1] and nearest integer U8. Gamma 1. This display quality comparison is separate from native DWT discard performance.",
+  "criteria": {
+    "per_band_display_rmse_max": 3,
+    "per_band_display_p99_absolute_max": 12,
+    "storage_peaks": [
+      65535,
+      255
+    ],
+    "visual": "No observed disappearing selected object, new blank or tile seam; agent inspection distinct from human acceptance."
+  },
+  "assets": [
+    {
+      "id": "94_104001000B823500-PAN16",
+      "source_path": "real/train/PAN/94_104001000B823500.tif",
+      "source_sha256": "328ec70ec0227effb92f25605b64df9bcf42fdd2ab142555a3e70ec543881aa3",
+      "bands": [
+        1
+      ],
+      "image": {
+        "components": 1,
+        "height": 2752,
+        "precision": 16,
+        "signed": false,
+        "width": 4851
+      },
+      "statistics": [
+        {
+          "maximum": 9914,
+          "minimum": 3,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 13349952,
+          "source_band": 1,
+          "storage_maximum_count": 0,
+          "zero_count": 0
+        }
+      ],
+      "stretches": {
+        "percentile_2_98": [
+          [
+            349,
+            1697
+          ]
+        ],
+        "full_storage": [
+          [
+            0,
+            65535
+          ]
+        ]
+      },
+      "nodata_presence": "absent in complete selected source; no nodata case claimed",
+      "views": [
+        {
+          "x": 1152,
+          "y": 256,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects on apron"
+        },
+        {
+          "x": 1536,
+          "y": 1024,
+          "width": 256,
+          "height": 256,
+          "feature": "low-contrast grass/runway"
+        },
+        {
+          "x": 2176,
+          "y": 512,
+          "width": 256,
+          "height": 256,
+          "feature": "hangar edges"
+        },
+        {
+          "x": 448,
+          "y": 448,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        }
+      ]
+    },
+    {
+      "id": "94_104001000B823500-RGB16",
+      "source_path": "real/train/MS/94_104001000B823500.tif",
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "image": {
+        "components": 3,
+        "height": 688,
+        "precision": 16,
+        "signed": false,
+        "width": 1213
+      },
+      "statistics": [
+        {
+          "maximum": 7957,
+          "minimum": 4,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 834544,
+          "source_band": 5,
+          "storage_maximum_count": 0,
+          "zero_count": 0
+        },
+        {
+          "maximum": 7551,
+          "minimum": 2,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 834544,
+          "source_band": 3,
+          "storage_maximum_count": 0,
+          "zero_count": 0
+        },
+        {
+          "maximum": 7591,
+          "minimum": 1,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 834544,
+          "source_band": 2,
+          "storage_maximum_count": 0,
+          "zero_count": 0
+        }
+      ],
+      "stretches": {
+        "percentile_2_98": [
+          [
+            221,
+            1777
+          ],
+          [
+            219,
+            1325
+          ],
+          [
+            160,
+            1100
+          ]
+        ],
+        "full_storage": [
+          [
+            0,
+            65535
+          ],
+          [
+            0,
+            65535
+          ],
+          [
+            0,
+            65535
+          ]
+        ]
+      },
+      "nodata_presence": "absent in complete selected source; no nodata case claimed",
+      "views": [
+        {
+          "x": 256,
+          "y": 0,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects on apron"
+        },
+        {
+          "x": 384,
+          "y": 256,
+          "width": 256,
+          "height": 256,
+          "feature": "low-contrast grass/runway"
+        },
+        {
+          "x": 448,
+          "y": 64,
+          "width": 256,
+          "height": 256,
+          "feature": "hangar edges"
+        },
+        {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        }
+      ]
+    },
+    {
+      "id": "106_10400100413CDF00-PAN16",
+      "source_path": "real/train/PAN/106_10400100413CDF00.tif",
+      "source_sha256": "56cb43dfd8b2d76fe13e3033392d6b53bc1341cbc8b4c0b25db1e517671e93e9",
+      "bands": [
+        1
+      ],
+      "image": {
+        "components": 1,
+        "height": 5036,
+        "precision": 16,
+        "signed": false,
+        "width": 5577
+      },
+      "statistics": [
+        {
+          "maximum": 9990,
+          "minimum": 0,
+          "nodata": 0.0,
+          "nodata_count": 13748272,
+          "samples": 28085772,
+          "source_band": 1,
+          "storage_maximum_count": 0,
+          "zero_count": 13748272
+        }
+      ],
+      "stretches": {
+        "percentile_2_98": [
+          [
+            436,
+            5639
+          ]
+        ],
+        "full_storage": [
+          [
+            0,
+            65535
+          ]
+        ]
+      },
+      "nodata_presence": "present",
+      "views": [
+        {
+          "x": 1408,
+          "y": 2560,
+          "width": 256,
+          "height": 256,
+          "feature": "small aircraft on apron"
+        },
+        {
+          "x": 1920,
+          "y": 3264,
+          "width": 256,
+          "height": 256,
+          "feature": "low-contrast runway"
+        },
+        {
+          "x": 1536,
+          "y": 3200,
+          "width": 256,
+          "height": 256,
+          "feature": "runway markings/edges"
+        },
+        {
+          "x": 448,
+          "y": 2432,
+          "width": 256,
+          "height": 256,
+          "feature": "nodata boundary and tile crossing"
+        }
+      ]
+    },
+    {
+      "id": "106_10400100413CDF00-RGB16",
+      "source_path": "real/train/MS/106_10400100413CDF00.tif",
+      "source_sha256": "9eba58b792268823475f0c35fa2e1ad3512a274d6aebe5434e8a7a7fc175c356",
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "image": {
+        "components": 3,
+        "height": 1259,
+        "precision": 16,
+        "signed": false,
+        "width": 1394
+      },
+      "statistics": [
+        {
+          "maximum": 10000,
+          "minimum": 0,
+          "nodata": 0.0,
+          "nodata_count": 860501,
+          "samples": 1755046,
+          "source_band": 5,
+          "storage_maximum_count": 0,
+          "zero_count": 860501
+        },
+        {
+          "maximum": 10000,
+          "minimum": 0,
+          "nodata": 0.0,
+          "nodata_count": 860501,
+          "samples": 1755046,
+          "source_band": 3,
+          "storage_maximum_count": 0,
+          "zero_count": 860501
+        },
+        {
+          "maximum": 10000,
+          "minimum": 0,
+          "nodata": 0.0,
+          "nodata_count": 860501,
+          "samples": 1755046,
+          "source_band": 2,
+          "storage_maximum_count": 0,
+          "zero_count": 860501
+        }
+      ],
+      "stretches": {
+        "percentile_2_98": [
+          [
+            246,
+            5523
+          ],
+          [
+            271,
+            4944
+          ],
+          [
+            184,
+            4817
+          ]
+        ],
+        "full_storage": [
+          [
+            0,
+            65535
+          ],
+          [
+            0,
+            65535
+          ],
+          [
+            0,
+            65535
+          ]
+        ]
+      },
+      "nodata_presence": "present",
+      "views": [
+        {
+          "x": 256,
+          "y": 608,
+          "width": 256,
+          "height": 256,
+          "feature": "small aircraft on apron"
+        },
+        {
+          "x": 448,
+          "y": 768,
+          "width": 256,
+          "height": 256,
+          "feature": "low-contrast runway"
+        },
+        {
+          "x": 320,
+          "y": 800,
+          "width": 256,
+          "height": 256,
+          "feature": "runway markings/edges"
+        },
+        {
+          "x": 448,
+          "y": 512,
+          "width": 256,
+          "height": 256,
+          "feature": "nodata boundary and tile crossing"
+        }
+      ]
+    },
+    {
+      "id": "105_104001002F92BB00-RGB8",
+      "source_path": "real/train/PS-RGB/105_104001002F92BB00.tif",
+      "source_sha256": "8337c700fa45605a8c6074b4dfae6d311a7d42644726a35921373cecee6c2f69",
+      "bands": [
+        1,
+        2,
+        3
+      ],
+      "image": {
+        "components": 3,
+        "height": 1581,
+        "precision": 8,
+        "signed": false,
+        "width": 10651
+      },
+      "statistics": [
+        {
+          "maximum": 255,
+          "minimum": 1,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 16839231,
+          "source_band": 1,
+          "storage_maximum_count": 10542,
+          "zero_count": 0
+        },
+        {
+          "maximum": 255,
+          "minimum": 1,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 16839231,
+          "source_band": 2,
+          "storage_maximum_count": 4013,
+          "zero_count": 0
+        },
+        {
+          "maximum": 255,
+          "minimum": 1,
+          "nodata": 0.0,
+          "nodata_count": 0,
+          "samples": 16839231,
+          "source_band": 3,
+          "storage_maximum_count": 2551,
+          "zero_count": 0
+        }
+      ],
+      "stretches": {
+        "percentile_2_98": [
+          [
+            5,
+            94
+          ],
+          [
+            5,
+            76
+          ],
+          [
+            3,
+            65
+          ]
+        ],
+        "full_storage": [
+          [
+            0,
+            255
+          ],
+          [
+            0,
+            255
+          ],
+          [
+            0,
+            255
+          ]
+        ]
+      },
+      "nodata_presence": "absent in complete selected source; no nodata case claimed",
+      "views": [
+        {
+          "x": 4736,
+          "y": 128,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects near apron"
+        },
+        {
+          "x": 7168,
+          "y": 704,
+          "width": 256,
+          "height": 256,
+          "feature": "low-contrast runway"
+        },
+        {
+          "x": 5632,
+          "y": 576,
+          "width": 256,
+          "height": 256,
+          "feature": "runway/apron edges"
+        },
+        {
+          "x": 5056,
+          "y": 448,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        }
+      ]
+    }
+  ]
+}

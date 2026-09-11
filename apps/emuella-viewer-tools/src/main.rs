@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, ensure};
 use emuella_viewer_source::{Identity, Profile, sha256};
-use emuella_viewer_tools::{Service, fixture, gdal::Raster, hash_file, prepare};
+use emuella_viewer_tools::{Service, fixture, gdal::Raster, hash_file, prepare_with_retention};
 use std::{collections::BTreeMap, net::TcpListener, path::PathBuf};
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -92,11 +92,12 @@ fn main() -> Result<()> {
                 descriptor_format: "EHTIDX01".into(),
             };
             let output = PathBuf::from(options.get("--output").context("--output required")?);
-            let (manifest, mut metrics) = prepare(
+            let (manifest, mut metrics) = prepare_with_retention(
                 &output,
                 &get("--target", "image"),
                 identity,
                 |rect, planes| raster.read_tile(rect, planes),
+                get("--retain-incomplete", "false").parse()?,
             )?;
             metrics.source_outer_driver = Some(raster.driver.clone());
             metrics.source_nitf_ic = raster.nitf_ic.clone();
@@ -151,6 +152,38 @@ fn main() -> Result<()> {
                 get("--len", "262144").parse()?,
             )?;
             println!("{}", serde_json::to_string_pretty(&result)?);
+        }
+        "reference-export" => {
+            use std::io::Write;
+            ensure!(roots.len() == 1, "exactly one --representation required");
+            let reference = emuella_viewer_tools::reference::Reference::open(&roots[0])?;
+            let region = emuella_viewer_source::Region {
+                x: get("--x", "0").parse()?,
+                y: get("--y", "0").parse()?,
+                width: get("--width", "256").parse()?,
+                height: get("--height", "256").parse()?,
+                discard: get("--discard", "0").parse()?,
+                components: (0..reference.manifest.identity.profile.components).collect(),
+            };
+            let mut metrics = emuella_viewer_tools::reference::Metrics::default();
+            let frame = reference.decode(&region, &mut metrics)?;
+            let output = PathBuf::from(options.get("--output").context("--output required")?);
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(output)?;
+            for sample in &frame.samples {
+                file.write_all(&sample.to_le_bytes())?;
+            }
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "method": "same-codec complete selected tiles, direct immutable file, crop; not independent decoding",
+                    "tid": reference.manifest.tid, "region": region,
+                    "width": frame.width, "height": frame.height, "metrics": metrics,
+                    "fnv1a64_u16le": emuella_viewer_tools::reference::checksum(&frame.samples),
+                }))?
+            );
         }
         "reference" => {
             ensure!(roots.len() == 1, "exactly one --representation required");

@@ -1036,12 +1036,12 @@ dependencies = [
 [[package]]
 name = "emuella-j2k-accel"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 
 [[package]]
 name = "emuella-j2k-codestream"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 dependencies = [
  "emuella-j2k-accel",
  "emuella-j2k-ht",
@@ -1052,7 +1052,7 @@ dependencies = [
 [[package]]
 name = "emuella-j2k-ht"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 dependencies = [
  "emuella-j2k-accel",
 ]
@@ -1060,12 +1060,12 @@ dependencies = [
 [[package]]
 name = "emuella-j2k-tier1"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 
 [[package]]
 name = "emuella-j2k-transform"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 dependencies = [
  "emuella-j2k-accel",
 ]
@@ -1073,7 +1073,7 @@ dependencies = [
 [[package]]
 name = "emuella-jpip"
 version = "0.1.0"
-source = "git+https://github.com/emuella/emuella-j2k?rev=2568f1c40c83a40f527c7ee8f1600af511e046d0#2568f1c40c83a40f527c7ee8f1600af511e046d0"
+source = "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
 
 [[package]]
 name = "emuella-viewer"

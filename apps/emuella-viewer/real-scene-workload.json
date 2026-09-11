@@ -1,0 +1,207 @@
+[
+  {
+    "label": "warm-compressed",
+    "intent": {
+      "kind": "clear_display_cache"
+    }
+  },
+  {
+    "label": "warm-gpu-revisit",
+    "intent": {
+      "kind": "action",
+      "action": "fit"
+    }
+  },
+  {
+    "label": "bookmark-large",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "zoom",
+    "intent": {
+      "kind": "zoom",
+      "factor": 0.25
+    }
+  },
+  {
+    "label": "pan",
+    "intent": {
+      "kind": "pan",
+      "dx": 0.3,
+      "dy": 0.2
+    }
+  },
+  {
+    "label": "clustered-gallery",
+    "intent": {
+      "kind": "gallery",
+      "row": 1200
+    }
+  },
+  {
+    "label": "clustered-detail",
+    "intent": {
+      "kind": "open_detection",
+      "index": 2400
+    }
+  },
+  {
+    "label": "scattered-detail",
+    "intent": {
+      "kind": "open_detection",
+      "index": 2401
+    }
+  },
+  {
+    "label": "scattered-gallery",
+    "intent": {
+      "kind": "gallery",
+      "row": 4000
+    }
+  },
+  {
+    "label": "scattered-detail-far",
+    "intent": {
+      "kind": "open_detection",
+      "index": 8001
+    }
+  },
+  {
+    "label": "stretch",
+    "intent": {
+      "kind": "stretch",
+      "low": 30,
+      "high": 1700,
+      "gamma": 1.4
+    }
+  },
+  {
+    "label": "image-1",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "bookmark-1",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-2",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "bookmark-2",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-3",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "bookmark-3",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-4",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "bookmark-4",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-5",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "image-6",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "image-7",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "image-8",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "recall-0",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-1",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-2",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-3",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-4",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "simultaneous-images",
+    "intent": {
+      "kind": "action",
+      "action": "compare_image"
+    }
+  }
+]

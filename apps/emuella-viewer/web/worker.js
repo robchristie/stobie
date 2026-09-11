@@ -5,6 +5,7 @@ const ready = init().then(value => { wasm = value; });
 let client, server, active, pending, running = false;
 const transport = { aborted: 0, retries: 0, cache_hits: 0, elapsed_ms: 0, transferred_sample_bytes: 0 };
 const cancelled = new Set();
+const pacingNow = () => performance.timeOrigin + performance.now();
 const key = request => JSON.stringify(request.token);
 const limit = 8 * 1024 * 1024;
 async function bounded(response, maximum, consume) {
@@ -27,6 +28,10 @@ async function bounded(response, maximum, consume) {
 }
 function metrics() { return {...(client?.metrics() ?? {}), ...transport, wasm_linear_bytes: wasm.memory.buffer.byteLength}; }
 function emit(value) {
+  for (const kind of ['Completed', 'Cancelled', 'Failed']) {
+    const timing = value[kind]?.metrics.timing;
+    if (timing) timing.published_ms = pacingNow();
+  }
   const buffer=value.Completed?.pixels.samples.buffer;
   postMessage(value, buffer ? [buffer] : []);
 }
@@ -34,7 +39,9 @@ async function work(job) {
   const controller = new AbortController(); active = { job, controller };
   const stopped = () => { if (cancelled.has(key(job.request))) throw new Error('cancelled'); };
   const get = path => fetch(server + path, { signal: controller.signal });
-  const started = performance.now();
+  const started = performance.now(), started_ms = pacingNow();
+  let finished_ms;
+  const timedMetrics = () => ({...metrics(), timing: {started_ms, finished_ms: finished_ms ?? pacingNow(), published_ms: 0, received_ms: null}});
   try {
     stopped(); client.register(job.manifest);
     // Admission can discard an earlier descriptor; recover the bounded working set.
@@ -60,15 +67,16 @@ async function work(job) {
       client.finish(); stopped();
       if (client.ready(job)) pixels = client.decode(job);
     }
+    finished_ms = pacingNow();
     // Yield after synchronous WASM decoding so queued cancellation is seen before publishing.
     await new Promise(resolve => setTimeout(resolve, 0)); stopped();
     transport.elapsed_ms += performance.now() - started;
     transport.transferred_sample_bytes += pixels.samples.byteLength;
-    const m = metrics();
+    const m = timedMetrics();
     emit({ Completed: { request: job.request, pixels, metrics: m } });
   } catch (error) {
-    if (cancelled.has(key(job.request))) { transport.aborted++; emit({ Cancelled: { request: job.request, metrics: metrics() } }); }
-    else emit({ Failed: { request: job.request, error: String(error), metrics: metrics() } });
+    if (cancelled.has(key(job.request))) { transport.aborted++; emit({ Cancelled: { request: job.request, metrics: timedMetrics() } }); }
+    else emit({ Failed: { request: job.request, error: String(error), metrics: timedMetrics() } });
   } finally { client.abandon_response(); cancelled.delete(key(job.request)); active = undefined; }
 }
 self.onmessage = async ({ data }) => {

@@ -82,8 +82,18 @@ pub fn hash_file(path: &Path) -> Result<String> {
 pub fn prepare(
     output: &Path,
     target: &str,
+    identity: Identity,
+    read_tile: impl FnMut(codec::TileRect, &mut [Vec<u8>]) -> Result<()>,
+) -> Result<(Manifest, IoMetrics)> {
+    prepare_with_retention(output, target, identity, read_tile, false)
+}
+/// Retain failed invocation artefacts when the source store forbids deletion.
+pub fn prepare_with_retention(
+    output: &Path,
+    target: &str,
     mut identity: Identity,
     mut read_tile: impl FnMut(codec::TileRect, &mut [Vec<u8>]) -> Result<()>,
+    retain_incomplete: bool,
 ) -> Result<(Manifest, IoMetrics)> {
     ensure!(
         !output.exists(),
@@ -181,7 +191,7 @@ pub fn prepare(
         fs::rename(&temporary, output)?;
         Ok((manifest, metrics))
     })();
-    if result.is_err() {
+    if result.is_err() && !retain_incomplete {
         fs::remove_dir_all(&temporary).context("remove own incomplete preparation")?;
     }
     result
@@ -644,5 +654,52 @@ impl Service {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod retention_tests {
+    use super::*;
+    #[test]
+    fn failed_preparation_retention_is_explicit_and_never_publishes() {
+        for retain in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            let output = root.path().join("representation");
+            let identity = Identity {
+                source_sha256: sha256(b"authored retention probe"),
+                bands: vec![1],
+                profile: Profile {
+                    width: 512,
+                    height: 512,
+                    tile_edge: 512,
+                    decomposition_levels: 6,
+                    bits_per_sample: 16,
+                    components: 1,
+                    bits_per_pixel: 2.0,
+                },
+                codec_revision: "test".into(),
+                encoding_contract: "test".into(),
+                spatial_policy_sha256: sha256(b"uniform-v1"),
+                payload_sha256: String::new(),
+                descriptor_format: "EHTIDX01".into(),
+            };
+            let error = prepare_with_retention(
+                &output,
+                "probe",
+                identity,
+                |_, _| anyhow::bail!("injected source failure"),
+                retain,
+            )
+            .unwrap_err();
+            assert!(error.to_string().contains("injected source failure"));
+            assert!(!output.exists());
+            let incomplete: Vec<_> = fs::read_dir(root.path()).unwrap().collect();
+            assert_eq!(incomplete.len(), usize::from(retain));
+            if retain {
+                let path = incomplete[0].as_ref().unwrap().path();
+                assert!(path.join("payload.j2c").exists());
+                assert!(!path.join("manifest.json").exists());
+            }
+        }
     }
 }

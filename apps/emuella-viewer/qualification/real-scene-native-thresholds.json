@@ -1,0 +1,107 @@
+{
+  "schema": "composed_journey_thresholds/1",
+  "frozen_unix_ms": 1789086069377,
+  "workload_sha256": "9c11bead76a2c556dd49c13164dd7a462aa01e325ed6d3fb03510054e17f50dd",
+  "baseline_evidence_sha256": {
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-dev-native-02/native-01/composed-trace.json": "8f7b3f6e067171664396a5a6d3bd66875cf2cd84871b566f42aae20a27b943f4",
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-dev-native-02/native-02/composed-trace.json": "4be07c67c67ca2d8890970f91330a937c728f6116ac7e891d46e22b695a0b0f7",
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-dev-native-02/native-03/composed-trace.json": "37c6b6de0493bd02286b9b555b1ec58a8acfcaf3ef5fa1cfe2488aa29ae60eee",
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-dev-native-02/native-04/composed-trace.json": "2a7cd18172b47cb7fc24348bd69892666777e6140a1414e96b3eb18cdd2f4105",
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/real-scene-viewing-viewer-dev-native-02/native-05/composed-trace.json": "1f2256c61d3b8adc63dfc52ca3e88bc310b9d366804090442a1bf45e20e2b2b6"
+  },
+  "rationale": "Frozen from five successful hardware development journeys after all failed startup attempts were retained. Rejected 4bpp real-scene representation: application diagnostic limits only, no display quality acceptance. Every latency ceiling is min(inherited ceiling, exactly 1.25 times development maximum), without upward rounding. Global budgets unchanged. Source groups and geometry are bound by separate frozen catalogue contracts; validation cannot retune.",
+  "require_hardware_gpu": true,
+  "bounds": {
+    "first_useful_ms": {
+      "unit": "ms",
+      "boundary": "application startup to first primary-view region GPU resident",
+      "minimum": null,
+      "maximum": 110
+    },
+    "whole_overview_ms": {
+      "unit": "ms",
+      "boundary": "application startup to all overview and visible gallery demands GPU resident",
+      "minimum": null,
+      "maximum": 940.2081399999998
+    },
+    "target_detail_ms": {
+      "unit": "ms",
+      "boundary": "worst detection-open intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 133.58994625000037
+    },
+    "visible_thumbnail_completion_ms": {
+      "unit": "ms",
+      "boundary": "worst gallery-scroll intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 756.1388200000001
+    },
+    "warm_revisit_ms": {
+      "unit": "ms",
+      "boundary": "worst GPU fit or bookmark recall intent to all current demands GPU resident",
+      "minimum": null,
+      "maximum": 66.81130499999938
+    },
+    "warm_compressed_ms": {
+      "unit": "ms",
+      "boundary": "clear settled decoded/GPU state to all current demands GPU resident with shared compressed cache retained",
+      "minimum": null,
+      "maximum": 854.4818687500001
+    },
+    "process_peak_rss_bytes": {
+      "unit": "bytes",
+      "boundary": "application process_peak_rss_bytes",
+      "minimum": null,
+      "maximum": 243269632
+    },
+    "decoded_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application decoded_peak_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "gpu_peak_bytes": {
+      "unit": "bytes",
+      "boundary": "application gpu_peak_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "peak_compressed_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_compressed_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "peak_descriptor_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_descriptor_bytes",
+      "minimum": null,
+      "maximum": 16777216
+    },
+    "peak_codec_workspace_bytes": {
+      "unit": "bytes",
+      "boundary": "shared worker peak_codec_workspace_bytes",
+      "minimum": null,
+      "maximum": 67108864
+    },
+    "worker_concurrency": {
+      "unit": "count",
+      "boundary": "application outstanding worker reservations",
+      "minimum": null,
+      "maximum": 1
+    },
+    "original_storage_read_bytes": {
+      "unit": "bytes",
+      "boundary": "prepared representation service never opens original source during viewing",
+      "minimum": null,
+      "maximum": 0
+    }
+  },
+  "required_events": [
+    "cache_initialisation",
+    "demand",
+    "dispatched",
+    "completion_Accepted",
+    "presentation_ready"
+  ]
+}

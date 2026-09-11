@@ -47,6 +47,14 @@ impl WebHandle {
             )
             .await
     }
+    pub fn set_script_workload(&self, json: &str) -> Result<(), JsValue> {
+        let mut app = self
+            .runner
+            .app_mut::<ViewerApp>()
+            .ok_or_else(|| JsValue::from_str("viewer unavailable"))?;
+        app.set_script_workload(json)
+            .map_err(|e| JsValue::from_str(&e))
+    }
     pub fn snapshot(&self) -> Result<JsValue, JsValue> {
         let app = self
             .runner

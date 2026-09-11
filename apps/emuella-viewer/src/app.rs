@@ -1,6 +1,6 @@
 use crate::{
     Executor,
-    engine::{Event, Job, WorkerMetrics, representation},
+    engine::{Event, Job, WorkerMetrics, pacing_now_ms, representation},
 };
 use emuella_viewer_source::Manifest;
 use polyorama_core::{
@@ -125,9 +125,61 @@ pub struct WorkEvent {
     pub key: RegionKey,
     pub token: polyorama_runtime::RequestToken,
     pub accounted_decoded_bytes: usize,
+    #[serde(default)]
+    pub pacing: Option<PacingSample>,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct PacingSample {
+    pub dispatch_ms: f64,
+    pub worker_started_ms: f64,
+    pub worker_finished_ms: f64,
+    pub published_ms: f64,
+    pub received_ms: f64,
+    pub ui_drained_ms: f64,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct PacingTotals {
+    pub requests: u64,
+    pub invalid_samples: u64,
+    pub dispatch_to_worker_ms: f64,
+    pub worker_execution_ms: f64,
+    pub finish_to_publish_ms: f64,
+    pub publish_to_receive_ms: f64,
+    pub receive_to_ui_ms: f64,
+    pub finish_to_ui_max_ms: f64,
+    pub same_frame_next_dispatches: u64,
+    pub ui_to_next_dispatch_ms: f64,
+}
+impl PacingTotals {
+    fn record(&mut self, s: &PacingSample) {
+        let stamps = [
+            s.dispatch_ms,
+            s.worker_started_ms,
+            s.worker_finished_ms,
+            s.published_ms,
+            s.received_ms,
+            s.ui_drained_ms,
+        ];
+        // Keep clock inversions visible instead of silently clipping them.
+        if stamps.iter().any(|v| !v.is_finite()) || stamps.windows(2).any(|w| w[1] < w[0]) {
+            self.invalid_samples += 1;
+            return;
+        }
+        self.requests += 1;
+        self.dispatch_to_worker_ms += s.worker_started_ms - s.dispatch_ms;
+        self.worker_execution_ms += s.worker_finished_ms - s.worker_started_ms;
+        self.finish_to_publish_ms += s.published_ms - s.worker_finished_ms;
+        self.publish_to_receive_ms += s.received_ms - s.published_ms;
+        self.receive_to_ui_ms += s.ui_drained_ms - s.received_ms;
+        self.finish_to_ui_max_ms = self
+            .finish_to_ui_max_ms
+            .max(s.ui_drained_ms - s.worker_finished_ms);
+    }
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Snapshot {
+    #[serde(default)]
+    pub pacing: PacingTotals,
     pub loaded: bool,
     pub events_dropped: u64,
     pub ready_demands: usize,
@@ -178,6 +230,12 @@ struct View {
     draws: Vec<RegionalDraw>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct ScriptStep {
+    label: String,
+    intent: Intent,
+}
+
 pub struct ViewerApp {
     server: String,
     compressed_limit: usize,
@@ -204,11 +262,14 @@ pub struct ViewerApp {
     script_stages: Vec<Snapshot>,
     started: Instant,
     script: bool,
+    script_workload: Vec<ScriptStep>,
     script_step: usize,
     step_started: Instant,
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     script_output: Option<String>,
     last_demands: Vec<RegionDemand>,
+    pacing_dispatch: Option<(polyorama_runtime::RequestToken, f64)>,
+    pacing_receipt: Option<f64>,
 }
 impl ViewerApp {
     pub fn new(
@@ -275,10 +336,14 @@ impl ViewerApp {
             script_stages: Vec::new(),
             started: Instant::now(),
             script,
+            script_workload: serde_json::from_str(include_str!("../qualification-workload.json"))
+                .unwrap(),
             script_step: 0,
             step_started: Instant::now(),
             script_output,
             last_demands: Vec::new(),
+            pacing_dispatch: None,
+            pacing_receipt: None,
         }
     }
     fn error(&mut self, error: String) {
@@ -431,6 +496,28 @@ impl ViewerApp {
         self.camera.y = (self.camera.y + dy * self.camera.height)
             .clamp(0., (p.height as f32 - self.camera.height).max(0.));
     }
+    /// Install an explicit bounded qualification workload before its first action.
+    pub fn set_script_workload(&mut self, json: &str) -> Result<(), String> {
+        if self.script_step != 0 || self.snapshot.script_complete {
+            return Err("workload already started".into());
+        }
+        if json.len() > 64 * 1024 {
+            return Err("workload exceeds 64 KiB".into());
+        }
+        let steps: Vec<ScriptStep> = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        let labels: std::collections::BTreeSet<_> = steps.iter().map(|s| &s.label).collect();
+        if steps.is_empty()
+            || steps.len() > 64
+            || labels.len() != steps.len()
+            || steps
+                .iter()
+                .any(|s| s.label.is_empty() || s.label == "empty-client-overview")
+        {
+            return Err("workload requires 1–64 uniquely labelled actions".into());
+        }
+        self.script_workload = steps;
+        Ok(())
+    }
     pub fn script_stages(&self) -> &[Snapshot] {
         &self.script_stages
     }
@@ -456,10 +543,41 @@ impl ViewerApp {
             key: key.clone(),
             token,
             accounted_decoded_bytes: self.runtime.metrics().accounted_decoded_bytes(),
+            pacing: None,
         });
     }
     fn receive(&mut self) {
-        for event in self.executor.drain() {
+        self.pacing_receipt = None;
+        for mut event in self.executor.drain() {
+            let drained_ms = pacing_now_ms();
+            let timing = event.metrics_mut().and_then(|m| m.timing.clone());
+            let request = match &event {
+                Event::Completed { request, .. } | Event::Cancelled { request, .. } => {
+                    Some(request)
+                }
+                Event::Failed { request, .. } => request.as_ref(),
+                Event::Catalogue(_) => None,
+            };
+            let sample = request.and_then(|request| {
+                let (token, dispatch_ms) = self.pacing_dispatch?;
+                let t = timing?;
+                if token != request.token {
+                    return None;
+                }
+                self.pacing_dispatch = None;
+                Some(PacingSample {
+                    dispatch_ms,
+                    worker_started_ms: t.started_ms,
+                    worker_finished_ms: t.finished_ms,
+                    published_ms: t.published_ms,
+                    received_ms: t.received_ms?,
+                    ui_drained_ms: drained_ms,
+                })
+            });
+            if let Some(sample) = &sample {
+                self.snapshot.pacing.record(sample);
+                self.pacing_receipt = Some(drained_ms);
+            }
             match event {
                 Event::Catalogue(c) => {
                     self.catalogue = c;
@@ -492,6 +610,11 @@ impl ViewerApp {
                     self.snapshot.worker = metrics;
                 }
             }
+            if let Some(sample) = sample
+                && let Some(event) = self.snapshot.events.last_mut()
+            {
+                event.pacing = Some(sample);
+            }
         }
     }
     fn script(&mut self) {
@@ -513,14 +636,7 @@ impl ViewerApp {
             return;
         }
         self.script_stages.push(self.snapshot.clone());
-        #[derive(Deserialize)]
-        struct Step {
-            label: String,
-            intent: Intent,
-        }
-        let steps: Vec<Step> =
-            serde_json::from_str(include_str!("../qualification-workload.json")).unwrap();
-        let Some(step) = steps.into_iter().nth(self.script_step) else {
+        let Some(step) = self.script_workload.get(self.script_step).cloned() else {
             self.snapshot.script_complete = true;
             return;
         };
@@ -835,6 +951,12 @@ impl eframe::App for ViewerApp {
             }
         }
         for request in self.runtime.dispatch() {
+            let dispatch_ms = pacing_now_ms();
+            if let Some(received_ms) = self.pacing_receipt.take() {
+                self.snapshot.pacing.same_frame_next_dispatches += 1;
+                self.snapshot.pacing.ui_to_next_dispatch_ms += dispatch_ms - received_ms;
+            }
+            self.pacing_dispatch = Some((request.token, dispatch_ms));
             self.work_event("dispatched", &request);
             if let Some(manifest) = self
                 .catalogue
@@ -1168,6 +1290,37 @@ mod tests {
             "encoded_bytes":1,"main_header_bytes":1,"descriptor_sha256":[]
         })).unwrap()
     }
+    #[test]
+    fn pacing_separates_worker_from_delivery_and_frame_wait() {
+        let sample = PacingSample {
+            dispatch_ms: 10.,
+            worker_started_ms: 11.,
+            worker_finished_ms: 14.,
+            published_ms: 16.,
+            received_ms: 18.,
+            ui_drained_ms: 30.,
+        };
+        let mut totals = PacingTotals::default();
+        totals.record(&sample);
+        totals.record(&sample);
+        assert_eq!(totals.requests, 2);
+        assert_eq!(totals.worker_execution_ms, 6.);
+        assert_eq!(totals.finish_to_publish_ms, 4.);
+        assert_eq!(totals.publish_to_receive_ms, 4.);
+        assert_eq!(totals.receive_to_ui_ms, 24.);
+        assert_eq!(totals.finish_to_ui_max_ms, 16.);
+        assert_eq!(totals.same_frame_next_dispatches, 0);
+        for received_ms in [15., f64::NAN] {
+            totals.record(&PacingSample {
+                received_ms,
+                ..sample.clone()
+            });
+        }
+        assert_eq!(totals.invalid_samples, 2);
+        assert_eq!(totals.requests, 2);
+        assert_eq!(totals.worker_execution_ms, 6.);
+    }
+
     #[test]
     fn large_overview_covers_every_pixel_in_bounded_source_tile_groups() {
         let m = manifest();

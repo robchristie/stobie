@@ -1,0 +1,22 @@
+{
+  "sources": [
+    {
+      "source_sha256": "328ec70ec0227effb92f25605b64df9bcf42fdd2ab142555a3e70ec543881aa3",
+      "bands": [
+        1
+      ],
+      "width": 4851,
+      "height": 2752
+    },
+    {
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "width": 1213,
+      "height": 688
+    }
+  ]
+}

@@ -1,11 +1,12 @@
 // The native and browser executables consume the same checked-in workload.
 import { chromium } from 'playwright';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-const [url, output] = process.argv.slice(2);
+const [url, output, workload] = process.argv.slice(2);
 if (!url || !output) throw new Error('usage: viewer-composed-browser.mjs URL EXISTING-OUTPUT');
 const browser = await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-webgpu','--use-angle=vulkan','--enable-features=Vulkan,CDPScreenshotNewSurface','--disable-vulkan-surface','--disable-dev-shm-usage']});
 const page = await browser.newPage({viewport:{width:1440,height:900}});
+if (workload) await page.addInitScript(value => { window.__viewerWorkload = value; }, JSON.parse(await readFile(workload, 'utf8')));
 const samples=[], errors=[], transfers=[];
 let workers=0;
 page.on('worker',()=>workers++);

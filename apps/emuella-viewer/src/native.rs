@@ -1,4 +1,4 @@
-use crate::engine::{CATALOGUE_LIMIT, Engine, Event, HTTP_LIMIT, Job};
+use crate::engine::{CATALOGUE_LIMIT, Engine, Event, HTTP_LIMIT, Job, WorkerTiming, pacing_now_ms};
 use anyhow::{Result, anyhow, ensure};
 use emuella_viewer_source::{Manifest, ResponseReader, SharedClient};
 use polyorama_runtime::{RegionalRequest, RequestToken};
@@ -52,6 +52,7 @@ impl Executor {
                 context.request_repaint();
                 while let Ok(job) = jobs.recv() {
                     let started = Instant::now();
+                    let started_ms = pacing_now_ms();
                     let stopped = || {
                         flags
                             .lock()
@@ -150,8 +151,13 @@ impl Executor {
                             engine.decode(&job).unwrap_err()
                         ))
                     })();
+                    engine.metrics.timing = Some(WorkerTiming {
+                        started_ms,
+                        finished_ms: pacing_now_ms(),
+                        ..Default::default()
+                    });
                     engine.metrics.elapsed_ms += started.elapsed().as_secs_f64() * 1000.;
-                    let event = if stopped() {
+                    let mut event = if stopped() {
                         engine.metrics.aborted += 1;
                         drop(result);
                         Event::Cancelled {
@@ -176,6 +182,9 @@ impl Executor {
                         .lock()
                         .expect("cancellation lock")
                         .remove(&job.request.token);
+                    if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
+                        timing.published_ms = pacing_now_ms();
+                    }
                     if events_tx.send(event).is_err() {
                         break;
                     }
@@ -203,8 +212,11 @@ impl Executor {
     pub fn drain(&self) -> Vec<Event> {
         self.events
             .try_iter()
-            .inspect(|event| {
-                let request = match event {
+            .map(|mut event| {
+                if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
+                    timing.received_ms = Some(pacing_now_ms());
+                }
+                let request = match &event {
                     Event::Completed { request, .. } | Event::Cancelled { request, .. } => {
                         Some(request)
                     }
@@ -218,6 +230,7 @@ impl Executor {
                         .expect("cancellation lock")
                         .remove(&request.token);
                 }
+                event
             })
             .collect()
     }
