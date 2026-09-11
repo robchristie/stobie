@@ -1,0 +1,303 @@
+{
+  "schema": "viewer-acceptance-browser-masks-repaired-results/1",
+  "status": "partial; invocation consumed before any browser launch",
+  "disposition": "quality-rejected-diagnostic-only",
+  "operation_owner": "repaired-proofs-execution-single-owner",
+  "protocol_commit": "6f1965043f6317e8655c5dce4c2bc8a27775c5d4",
+  "runtime_commit": "8633754fa28f2ca34f159a7368e0b8e7e953d205",
+  "build_record": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-repaired-build.json",
+    "bytes": 16546,
+    "sha256": "a00c9016ceb029a78b35c5d8e69b289fbb45fbf635bc70a2fa42aded795503f0"
+  },
+  "native_binary": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/measured-bin/emuella-viewer",
+    "bytes": 27275016,
+    "sha256": "3624000ce2d78ff1b646db572102df1a028800278d6fdb661fde43d36a10f0a6"
+  },
+  "web_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/web-manifest.json",
+    "bytes": 1149,
+    "sha256": "63cf2e1529b16e715edaf63747a901466e67f67318062968c76672d909e1da5d"
+  },
+  "chromium": {
+    "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+    "bytes": 290614600,
+    "sha256": "0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71"
+  },
+  "playwright_version": "1.62.1",
+  "actual_browser_version": null,
+  "service_source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "service_receipt": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/service-receipt.json",
+    "bytes": 6841,
+    "sha256": "9505e5358cfcafcd68aa1467c8bd0565c6e04ede79c5fedaf7ce8e2f940fb707"
+  },
+  "service_catalogue_sha256": "49dfe454bdcce17dc2212e5de3ee1b130b9b7e92f02f2440dff80f419c67841d",
+  "native_evidence": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-results.json",
+    "bytes": 57353,
+    "sha256": "37463f135f58b90c8916274c700da32d24523b10480ce36357a3ad21dfc24bd2"
+  },
+  "representations": [
+    {
+      "asset": "94_104001000B823500-PAN16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/representation"
+    },
+    {
+      "asset": "94_104001000B823500-RGB16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/representation"
+    },
+    {
+      "asset": "106_10400100413CDF00-PAN16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/representation"
+    },
+    {
+      "asset": "106_10400100413CDF00-RGB16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/representation"
+    },
+    {
+      "asset": "105_104001002F92BB00-RGB8",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/representation"
+    }
+  ],
+  "capsule_sha256": "da581cda9810294f7e313dd4752422c0da2b4e7e3360a7d6ab30882e889cb570",
+  "grant_sha256": "e3a01cd1aae75643743e36e19f9424c9d0fe4dcf4fbe9986dc1d10963d228337",
+  "plan_sha256": "45db6fd835feafebcb88aefc410a248943a32a2caf5893288c30f592b6d5def4",
+  "protocol_files": {
+    "tools/viewer-acceptance-browser-masks.mjs": "eee41f139e61ef90f67eebf0256fca06a8c13f64d2b1313469c5fd5b068afdef",
+    "tools/tests/viewer-acceptance-browser-masks.test.mjs": "9d808d8150216c73af96c6544bfef89e8c7e73240e396e16023601fe19c929a0",
+    "docs/viewer-acceptance-browser-masks.md": "1bc779d8868793a2a2a6f218fa92aba5010faccbd7c351b66a7ddbbf702b3adb",
+    "docs/viewer-acceptance-browser-environment.md": "b0351725457347e2b8ae50b16dc30c6a705732744aa1f296fb8a58397ceb6bb1"
+  },
+  "budget": {
+    "invocations": 1,
+    "contexts": 9,
+    "jobs": 2309,
+    "catalogue_masks": 1883,
+    "pressure_forward": 47,
+    "pressure_revisit": 47,
+    "warmups": 0,
+    "retries": 0,
+    "deadlines_seconds": [
+      60,
+      660,
+      6000,
+      6100
+    ]
+  },
+  "observed": {
+    "invocations": 1,
+    "browser_launches": 0,
+    "workers": 0,
+    "jobs": 0,
+    "catalogue_mask_comparisons": 0,
+    "sample_values_compared": 0,
+    "validity_values_compared": 0,
+    "fault_contexts": 0,
+    "pressure_jobs": 0,
+    "service_starts": 1,
+    "preparation_catalogue_requests": 1,
+    "preparation_catalogue_bytes": 148937,
+    "process_exit": 2
+  },
+  "observed_failure": {
+    "kind": "execution infrastructure",
+    "error": "ENOENT: no such file or directory, open '/nvme/development/polyorama-viewer-acceptance/node_modules/playwright/package.json'",
+    "cause": "Non-recursive detached-worktree bind did not carry the separate node_modules bind into the fixed repository path.",
+    "preflight_gap": "Package resolution through the final namespace was not checked before the invocation; this is an execution-owner setup failure, not a runtime predicate failure."
+  },
+  "contexts": [
+    {
+      "id": "scene-1",
+      "planned_jobs": 252,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "scene-2",
+      "planned_jobs": 504,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "scene-3",
+      "planned_jobs": 280,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "scene-4",
+      "planned_jobs": 672,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "scene-5",
+      "planned_jobs": 504,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "required-mask-missing",
+      "planned_jobs": 1,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "required-mask-corrupt",
+      "planned_jobs": 1,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "required-mask-stale",
+      "planned_jobs": 1,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    },
+    {
+      "id": "mask-pressure-revisit",
+      "planned_jobs": 94,
+      "status": "unperformed",
+      "reason": "invocation stopped before Playwright import: missing package through detached worktree mount"
+    }
+  ],
+  "missing_evidence": [
+    "All nine context proofs, all 2309 jobs and 1883 catalogue mask comparisons",
+    "Exact sample and validity agreement, fault rejection and cache bound observations",
+    "Pressure admitted working-set bytes, eviction, identical-key refetch and revisit agreement",
+    "Active reservations and pin metadata current/peaks/release",
+    "Actual browser/library/graphics execution identity; Chromium never started",
+    "Final immutable-input recheck inside runner"
+  ],
+  "pressure": {
+    "status": "unperformed",
+    "errors_observed": 0,
+    "admitted_working_set_bytes": null,
+    "compressed_limit_bytes": 1048576,
+    "mask_evictions": null,
+    "identical_mask_refetches": null,
+    "request_working_set_bytes": null,
+    "peak_request_working_set_bytes": null,
+    "request_pin_metadata_bytes": null,
+    "peak_request_pin_metadata_bytes": null,
+    "release_observation": null
+  },
+  "temporary_alias": {
+    "pinned": {
+      "kind": "private-linux-tmp/1",
+      "path": "/tmp",
+      "backing": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/tmp",
+      "dev": "60",
+      "ino": "288053408",
+      "parent_mount_namespace": "mnt:[4026531832]"
+    },
+    "observed": {
+      "platform": "linux",
+      "mount_namespace": "mnt:[4026534680]",
+      "backing": {
+        "realpath": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/tmp",
+        "directory": true,
+        "dev": "60",
+        "ino": "288053408",
+        "mount_id": "669"
+      },
+      "alias": {
+        "realpath": "/tmp",
+        "directory": true,
+        "dev": "60",
+        "ino": "288053408",
+        "mount_id": "687"
+      },
+      "mountinfo_sha256": "63ad94a957ac4524cdfbe45472e22dd8837304f499b6c555883be6130c59478a",
+      "alias_mountinfo": "687 642 0:56 /development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/tmp /tmp rw,noatime - btrfs /dev/nvme0n1p1 rw,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=5,subvol=/",
+      "backing_mountinfo": "669 572 0:56 / /nvme rw,noatime - btrfs /dev/nvme0n1p1 rw,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=5,subvol=/",
+      "parent_mount_namespace": "mnt:[4026531832]",
+      "backing_path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/tmp",
+      "alias_path": "/tmp"
+    },
+    "before_import_checks": 1,
+    "before_context_checks": 0,
+    "host_tmp_unchanged": true,
+    "host_namespace_unchanged": true
+  },
+  "cleanup": {
+    "operation_owner": "repaired-proofs-execution-single-owner",
+    "runner_identity": {
+      "pid": 429199,
+      "start_time_ticks": 545756952,
+      "process_group": 429199
+    },
+    "exit_code": 2,
+    "service_identity": {
+      "pid": 429153,
+      "start_time_ticks": 545756890,
+      "process_group": 429153
+    },
+    "service_exit_code": -15,
+    "service_alive": false,
+    "runner_alive": false,
+    "host_namespace_unchanged": true,
+    "host_tmp_unchanged": true,
+    "retention": "All protected groups and backing retained; only owned service and runner groups stopped"
+  },
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution",
+  "output_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01",
+  "historical": {
+    "pressure_failures": 40,
+    "forward_failures": 20,
+    "revisit_failures": 20,
+    "normal_jobs_completed": 2212,
+    "original_observation_bytes": 278794240,
+    "unchanged_ceiling_bytes": 243269632,
+    "preserved": [
+      "old launch failures",
+      "quality rejection",
+      "scheduling rejection",
+      "all protected groups"
+    ]
+  },
+  "viewer_acceptance": false,
+  "selected_configuration": null,
+  "rss_repair_claim": false,
+  "speed_claim": null,
+  "evidence": {
+    "result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/result.json",
+      "bytes": 991,
+      "sha256": "3477f5333563b685897b355029b960ea7d039ab4620e1748bdc99412d6592379"
+    },
+    "plan.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/plan.json",
+      "bytes": 153990,
+      "sha256": "d1945afdd899ed9740c3b1f01461dbc71a5ef9198d87e3cf2fd2de388cd626e6"
+    },
+    "inputs.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/inputs.json",
+      "bytes": 8173,
+      "sha256": "4585992bc0a62c25d6a561071a0312b9fad1511b04ca1b4d63c31ae3f373cc6a"
+    },
+    "temporary-alias.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/temporary-alias.json",
+      "bytes": 1201,
+      "sha256": "045e315779788993edbb430c9fc30cd13065c0dc73796403139757e31416c161"
+    },
+    "unperformed-slots.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/unperformed-slots.json",
+      "bytes": 2189,
+      "sha256": "1f74697ca3500e82eff900a8c72e6fdbecf1f9c2c10522b8566856084bb1207e"
+    },
+    "manifest": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01/evidence-manifest.json",
+      "bytes": 1720,
+      "sha256": "03da61634bf1776976e8c8b8546e1f1f39d52806664b1afe486e75fdad89125e"
+    }
+  },
+  "execution_evidence_manifest": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/evidence-manifest.json",
+    "bytes": 2939,
+    "sha256": "ed6ad6a0b7898bd437f98d6faffc94cd2fd2360045d2648a351a14189691d5b9"
+  },
+  "operation_receipt_path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-01-execution/operation-receipt.json"
+}

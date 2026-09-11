@@ -1,0 +1,340 @@
+{
+  "schema": "viewer-native-diagnostics-build/1",
+  "status": "Release native and complete WASM static root frozen; no application starts or measurement.",
+  "created_utc": "2026-09-11T06:53:29.622123+00:00",
+  "instrument": "native-completion-memory-v1",
+  "runtime_source": {
+    "revision": "fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+    "tree": "6d3e409f9954f8bf12cf0ebc2b3898b3574470a0",
+    "method": "git archive --format=tar --output=/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source.tar fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+    "archive": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source.tar",
+      "bytes": 93184000,
+      "sha256": "7fd9090266b497a2110d5dd3eb9c43bb58c6f15954558dfcd6e7ad906ed297a8"
+    },
+    "root": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source",
+    "archive_files_verified_unchanged": 813,
+    "locked_git_dependencies": [
+      "git+https://github.com/emuella/emuella-j2k?rev=6586e3d50f95429b242cb2e3535742b002784f2d#6586e3d50f95429b242cb2e3535742b002784f2d"
+    ]
+  },
+  "build": {
+    "cwd": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source",
+    "environment": {
+      "CARGO_TARGET_DIR": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/cargo",
+      "CARGO_NET_OFFLINE": "true",
+      "TMPDIR": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/tmp",
+      "POLYORAMA_VIEWER_WEB_DIR": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web-built (xtask only)"
+    },
+    "logical_target": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/target",
+      "symlink_target": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/cargo"
+    },
+    "commands": [
+      {
+        "command": "cargo build --offline --locked --release -p emuella-viewer",
+        "exit_code": 0,
+        "log": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/native-build.log",
+          "bytes": 11501,
+          "sha256": "bf51571a38173229e49f5b6fa71ab0ad3ab9de8e4ddbaa3338ce417d2eb8a5f1"
+        }
+      },
+      {
+        "command": "cargo build --offline --locked --release --target wasm32-unknown-unknown -p emuella-viewer",
+        "exit_code": 0,
+        "log": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/wasm-build.log",
+          "bytes": 5832,
+          "sha256": "d0df049bcce3b7b9aa44a94f9f0ec220afff29c17447b7b7abafffa9494ec49a"
+        }
+      },
+      {
+        "command": "cargo run --offline --locked --package xtask -- build-viewer-web",
+        "exit_code": 0,
+        "log": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web-build.log",
+          "bytes": 9410,
+          "sha256": "de5c5b5f90d8091073026992f83fa4d6b39b2862e3572eac037df9f4e8c9e436"
+        }
+      }
+    ],
+    "locking": "Explicit offline locked native/WASM builds and xtask bootstrap; nested xtask cargo build runs offline against the already-built graph; archived Cargo.lock unchanged after all commands.",
+    "release_profile": {
+      "lto": "thin",
+      "codegen-units": 1,
+      "opt-level": 3,
+      "debug": false,
+      "features": "Package defaults; no feature flags or workspace-wide unification."
+    },
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)\nbinary: rustc\ncommit-hash: 8bab26f4f68e0e26f0bb7960be334d5b520ea452\ncommit-date: 2026-07-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.97.1\nLLVM version: 22.1.6",
+    "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+    "wasm_bindgen": "wasm-bindgen 0.2.127",
+    "environment_manifest": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/build-environment.json",
+      "bytes": 5475,
+      "sha256": "fb7ef953175149777cc98df96f6bd4a93433009cbb8578c04f172cca5a94c0d9"
+    },
+    "inherited_flags": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/initial-build-environment.json",
+      "bytes": 428,
+      "sha256": "b080f5f0422d786e19f7bf8e6ad523769054a2997bc968af60c63cd8f227b917"
+    },
+    "xtask_nested_TMPDIR": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/.tools/runtime/verification-tmp"
+  },
+  "native": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/measured-bin/emuella-viewer",
+    "bytes": 27256192,
+    "sha256": "2603bf16880300e6375c6dfa97b7ad2e04086c18e8450ccf020afaefa38f4405"
+  },
+  "web": {
+    "root": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web",
+    "manifest": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web-manifest.json",
+      "bytes": 1964,
+      "sha256": "315798475c28253554d451c1b1c248fff03dbdbfd0cbd49eb1f4b7e08631d642"
+    },
+    "files": 8,
+    "wasm": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/pkg/emuella_viewer_bg.wasm",
+      "bytes": 11349576,
+      "sha256": "cae57286c3a557b6383a426e58e726de404451750c2f39b36e7af600fb27c24a"
+    },
+    "retention": "Independent read-only copy of complete xtask static root; native retained before WASM/xtask build. Content hashes define immutability; do not overwrite."
+  },
+  "inputs": {
+    "Cargo.lock": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/Cargo.lock",
+      "bytes": 128900,
+      "sha256": "8659266333ffacc69d40ab7f31336801acb800ff05cf1375c09a7bef6a3aeb75"
+    },
+    "apps/emuella-viewer/native-memory-workload.json": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/apps/emuella-viewer/native-memory-workload.json",
+      "bytes": 4320,
+      "sha256": "7eb3d21ca52edbf6597227b65b7a97ac933cc93f8ebc9a37ad7ab0530b138375"
+    },
+    "apps/emuella-viewer/qualification/native-memory-thresholds.json": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/apps/emuella-viewer/qualification/native-memory-thresholds.json",
+      "bytes": 4543,
+      "sha256": "65234f61d55fe6d4f3c79eb9e5fd4f96da8af497a7ff4570956415206d9dfc65"
+    },
+    "apps/emuella-viewer/qualification/real-scene-native-thresholds.json": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/apps/emuella-viewer/qualification/real-scene-native-thresholds.json",
+      "bytes": 4582,
+      "sha256": "ad6d9e596dbc9e2aa5142973433e7bb4b184498a98c4dd5123262305998e08d0"
+    },
+    "tools/viewer-native-diagnostics.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/viewer-native-diagnostics.py",
+      "bytes": 7249,
+      "sha256": "62700d0fbd860600052dcaa9fada25dbdff38605e3ff49afd9506f0d6e8ee4cd"
+    },
+    "tools/viewer-memory-diagnostics.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/viewer-memory-diagnostics.py",
+      "bytes": 17519,
+      "sha256": "fc7d3f9f77203357907bac6aefadb920bac29022a048d97781404ec6a28a2813"
+    },
+    "tools/viewer-composed-journey.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/viewer-composed-journey.py",
+      "bytes": 28027,
+      "sha256": "b6e5c9d613214a67b023d434b39cc18dbf3fecee55dc53beccf44fc328c9808c"
+    },
+    "tools/viewer-real-scene-source.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/viewer-real-scene-source.py",
+      "bytes": 4761,
+      "sha256": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b"
+    },
+    "tools/viewer-prepare-nitf.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/viewer-prepare-nitf.py",
+      "bytes": 25553,
+      "sha256": "5d776fda2065ba67b39f0e38e1ae933f00a0978e6fd5ec5dfdbcbf78a1e9569d"
+    },
+    "tools/tests/test_viewer_native_diagnostics.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source/tools/tests/test_viewer_native_diagnostics.py",
+      "bytes": 5328,
+      "sha256": "b62ce350fae18e6b0b823df7820c6fcaa9cf27b8f6abf7a368acffc2048b75e5"
+    }
+  },
+  "sourcehelper_and_harness_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/source-inputs.json",
+    "bytes": 13083,
+    "sha256": "c22ca306d83f61f8854d28880391bd770b2de7da02e6b5d41876663112d67f6b"
+  },
+  "harness": {
+    "checkout": "/nvme/development/polyorama-viewer-acceptance",
+    "source_revision": "fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+    "files_match_archive": true,
+    "execution": "Use this Git checkout for composed harness: clean archive has no .git. Coordinator records actual later harness HEAD separately after committing build record and verifies frozen helper hashes; it must not relabel runtime source."
+  },
+  "representation_service": {
+    "source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+    "source_tree": "cce91bc6f08203c6cb4906a13a6cb94dc892a063",
+    "binary": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+      "bytes": 1985328,
+      "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+    },
+    "build_record": {
+      "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-build.json",
+      "bytes": 27339,
+      "sha256": "481a873d2a7cf341a47d5a522933dcd7b43feccf78c935ff72221546dfbc864e"
+    },
+    "linked_codec_revision": "6586e3d50f95429b242cb2e3535742b002784f2d",
+    "state": "Existing binary only; not rebuilt, copied, launched or relabelled as current viewer source.",
+    "native_helper": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper-cargo/release/full-scenes-native",
+      "bytes": 1578496,
+      "sha256": "b1576646ae41555fdbbfc5a3ddf1565bc004df2130fa060d06feaa5e764a9565"
+    }
+  },
+  "authored": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 tools/viewer-native-diagnostics.py author --output /nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/authored-inputs-01",
+    "exit_code": 0,
+    "files": {
+      "catalogue-contract.json": {
+        "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/authored-inputs-01/catalogue-contract.json",
+        "bytes": 306,
+        "sha256": "588a603860c60f8945594b54a38c85c76a1f58ee68c770c9166643e58346de06"
+      },
+      "catalogue.json": {
+        "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/authored-inputs-01/catalogue.json",
+        "bytes": 234664,
+        "sha256": "ac087dcad4a316fd4a4f90198aa79000f3ed7245b721b4892c76f523c485480e"
+      },
+      "instrument.json": {
+        "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/authored-inputs-01/instrument.json",
+        "bytes": 445,
+        "sha256": "e4f8a4b9250bc7b2a2b3b4646b721a0855d48a3bd40fd873a808ec00e140aa92"
+      },
+      "workload.json": {
+        "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/authored-inputs-01/workload.json",
+        "bytes": 5897,
+        "sha256": "3c9d5fe71f37ea02c58d9eb9ebd6ac0cd4ea3e47d0ee1bc6b391b7455bae9705"
+      }
+    },
+    "boundary": "Authored metadata only; no pixel data, source payload or service launch."
+  },
+  "verification": {
+    "python_command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/tmp python3 -m unittest discover -s tools/tests -p test_viewer_native_diagnostics.py -v",
+    "exit_code": 0,
+    "tests_passed": 5,
+    "log": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/python-regressions.log",
+      "bytes": 1040,
+      "sha256": "d378a494a096041c84c5400e3fef48716e4728bf27003e84069438a483bff61d"
+    },
+    "xtask_node_wasm_check": "Authored Fetch/WASM response-header checks passed: 44 rejected cases without cache admission. No browser, viewer or service launched.",
+    "thresholds": "All inherited bounds, hardware requirement, required events and baseline identities unchanged; workload binding matches; original RSS observation 278794240 bytes; ceiling 243269632 bytes.",
+    "canonical": "Not run: browser smoke/app launches excluded by explicit build-only scope; coordinator owns later canonical verification."
+  },
+  "linked_libraries": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/linked-libraries.json",
+    "bytes": 14891,
+    "sha256": "75b88861c30625ca12c11ed2c7860472d23cc234146400fd5e39c200abe225a2"
+  },
+  "expected_graphics": {
+    "driver": "NVIDIA 610.43.03",
+    "backend": "vulkan",
+    "environment": {
+      "LD_LIBRARY_PATH": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/polyorama/.tools/sysroot/usr/lib",
+      "WGPU_BACKEND": "vulkan",
+      "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+    },
+    "files": [
+      {
+        "path": "/nvme/development/polyorama/.tools/sysroot/usr/bin/Xvfb",
+        "resolved_path": "/nvme/development/polyorama/.tools/sysroot/usr/bin/Xvfb",
+        "bytes": 1973888,
+        "sha256": "567a9b39284e303522fdc178059fe60d0e9917b811bd5066fb63260fd198a97c"
+      },
+      {
+        "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+        "resolved_path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+        "bytes": 660576,
+        "sha256": "33742ba1b7f8ae04a4f9e35f66c343e3789d7d431a396cacc66ec79b579eaf51"
+      },
+      {
+        "path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "resolved_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "bytes": 140,
+        "sha256": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1"
+      },
+      {
+        "path": "/usr/lib/libGLX_nvidia.so.0",
+        "resolved_path": "/usr/lib/libGLX_nvidia.so.610.43.03",
+        "bytes": 1211968,
+        "sha256": "f12814afa56c76b29f15ca6744431cd998f3f0c7ad910224075e990dad0ab2b4"
+      },
+      {
+        "path": "/usr/lib/libnvidia-glcore.so.610.43.03",
+        "resolved_path": "/usr/lib/libnvidia-glcore.so.610.43.03",
+        "bytes": 41760584,
+        "sha256": "6304dff2ee2e1ced2febf1e8b720f16c3cfdb698d4c8cc20f340bd1f09556687"
+      },
+      {
+        "path": "/usr/lib/libnvidia-glsi.so.610.43.03",
+        "resolved_path": "/usr/lib/libnvidia-glsi.so.610.43.03",
+        "bytes": 603016,
+        "sha256": "104468c9d2028508880692e9d7a570f97ec258a665aee1167665d882797672b2"
+      },
+      {
+        "path": "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+        "resolved_path": "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+        "bytes": 110902328,
+        "sha256": "4c16539192951d9b37c7db7e276560ad4f0a26d9d6c62e2004f0f563a418a8ec"
+      },
+      {
+        "path": "/usr/lib/libX11.so.6",
+        "resolved_path": "/usr/lib/libX11.so.6.4.0",
+        "bytes": 1313184,
+        "sha256": "97736fa2855baf2022d80a8881ffc79cdbecca11c96935e4ca3cfeb47eae1ea4"
+      },
+      {
+        "path": "/usr/lib/libxcb.so.1",
+        "resolved_path": "/usr/lib/libxcb.so.1.1.0",
+        "bytes": 169984,
+        "sha256": "40df5eff95408b67d969e559f2689b3e50e6151251b1f4e03608ce5cd9c9a133"
+      },
+      {
+        "path": "/usr/lib/libxkbcommon.so.0",
+        "resolved_path": "/usr/lib/libxkbcommon.so.0.13.2",
+        "bytes": 383144,
+        "sha256": "e475adbf5abd181b1bdfdeba70ad4d501cb296bbf05b13e8649fd71b3989ee07"
+      }
+    ],
+    "xvfb_arguments": [
+      "-screen",
+      "0",
+      "1440x900x24",
+      "-nolisten",
+      "tcp"
+    ],
+    "display": "Exclusive display number must be allocated and recorded in later execution capsule.",
+    "observed_hardware": null,
+    "observed_driver": null,
+    "observed_backend": null,
+    "allocator": "Build links glibc; actual mallinfo2 availability and interposition remain unobserved until authorised execution.",
+    "boundary": "File and loader-trace identities only; dynamically loaded objects, adapter, loaded driver and actual display must be observed during later authorised execution."
+  },
+  "execution": {
+    "authorisation": "No app starts authorised in this build task. Main first commits this record, waits for full-scene owner to stop, then grants bounded execution.",
+    "fresh_starts": 5,
+    "warmups": 0,
+    "retries": 0,
+    "cycles_per_start": 10,
+    "phase_deadline_seconds": 60,
+    "outer_deadline_seconds": 660,
+    "protected_output_root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1",
+    "protected_scope": "Builder has no protected payload scope. Later protected outputs require fresh attributed/lineaged approved groups; never scratch.",
+    "pending_owner_bindings": [
+      "Exact approved fresh evidence group and notice/lineage",
+      "Representation and mask identities plus matching catalogue contract",
+      "Verified representation service URL and cache state per start",
+      "Codec and benchmark owner checkout identities",
+      "Actual harness HEAD after record commit",
+      "Exclusive display and actual hardware/driver/backend observation"
+    ],
+    "measurement_performed": false,
+    "application_starts": 0,
+    "services_started": 0
+  }
+}

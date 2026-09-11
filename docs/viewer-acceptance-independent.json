@@ -1,0 +1,697 @@
+{
+  "schema": "viewer-acceptance-independent-protocol/1",
+  "status": "frozen-ready-unmeasured",
+  "approved_store": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1",
+  "output_group": "viewer-acceptance-independent-cohort-01",
+  "package": {
+    "name": "openjph",
+    "version": "0.30.1-1",
+    "licence": "BSD-2-Clause",
+    "metadata_owner": "local pacman database",
+    "local_use_verified": true,
+    "acquisition": false,
+    "implementation_source_consulted": false,
+    "help_observation": "No-argument installed CLI help; -h is unsupported. Only help invocations before readiness, no inputs or output paths."
+  },
+  "rate_algorithm": {
+    "maximum_encoder_invocations_per_product": 8,
+    "lower_qstep": "0.00001",
+    "upper_qstep": "0.5",
+    "next": "sqrt(lower*upper), Decimal precision 50, round-half-even, .16E formatting; formatted value becomes the updated bound",
+    "bounds": "Virtual initial bounds, no endpoint probes. If actual payload exceeds target set lower=qstep, otherwise upper=qstep. No quality feedback.",
+    "match": "payload_bytes > 0 and abs(payload_bytes-target_bytes)*100 <= target_bytes",
+    "stop": "First format-conforming match, first process/format failure, or eighth invocation. No retries or second sweep."
+  },
+  "committed_files": [
+    "tools/viewer-acceptance-independent.py",
+    "tools/tests/test_viewer_acceptance_independent.py",
+    "docs/viewer-acceptance-independent.md",
+    "docs/viewer-acceptance-independent.json",
+    "tools/viewer-real-scene-source.py",
+    "tools/viewer-real-scene-quality.py",
+    "docs/real-scene-viewing-source-views.json",
+    "docs/viewer-acceptance-quality-build.json",
+    "docs/viewer-acceptance-quality-results.json"
+  ],
+  "dependency_files": [
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-real-scene-source.py",
+      "sha256": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+      "bytes": 4761
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-real-scene-quality.py",
+      "sha256": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97",
+      "bytes": 7196
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/docs/real-scene-viewing-source-views.json",
+      "sha256": "9ab71669f6e182e0883bc3a9bb29608dde5f4c5d3a575e9a27eaaf6c1af1b3ce",
+      "bytes": 11551
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-quality-build.json",
+      "sha256": "c51133a04eab1b1acb7d345653cb5f9b38753e06bcc51e2295740f1c48d6d06b",
+      "bytes": 1567
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-quality-results.json",
+      "sha256": "a7c119c579e602fea0602889254cff9d0cdb2ba6a8a2d39ba9f3421277f0b6fa",
+      "bytes": 39504
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-workspace-viewer-acceptance/docs/plans/active/viewer-acceptance.md",
+      "sha256": "757ad654bc930a9ebb6ebeb842c710690d31eabf2900e6248c7b5460683fd5b0",
+      "bytes": 11481
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-workspace-viewer-acceptance/docs/evidence/viewer-acceptance/source-coverage.json",
+      "sha256": "9bba0a0ae9064fa6450ceb2b56263a6715b562e7aa7a5ab5cd1adf138ea117e8",
+      "bytes": 2813
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/LICENSING.md",
+      "sha256": "185b7fd7167efe752da8212da0b0c4576361a6340c69294d42b6b52a98aeb73a",
+      "bytes": 3285
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/recipes/rareplanes-expanded-v1.md",
+      "sha256": "1ebc7ccdcf2a6df144ff828a0e9276ab03698581479d5f4b0172f74ede951b73",
+      "bytes": 6778
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/LICENSE.txt",
+      "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba",
+      "bytes": 20605
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/prepared-final/prepared.json",
+      "sha256": "6c37b54bf75af0c17c1b67c5ad7bd2d56b5d34d45de9737ddb50d0fc1fe10e7b",
+      "bytes": 96155
+    }
+  ],
+  "environment_files": [
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/bin/python3.14",
+      "sha256": "43afbaa617cf52c3681155fffb3043b331c3fe008139204532a5e27357e1b19f",
+      "bytes": 36186104
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgdal.so.39.3.13.0",
+      "sha256": "275f9bda748f461c06e8aca79f9b3ebfa42b66d6a6c5864d77190d244495ea9a",
+      "bytes": 39101280
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_multiarray_tests.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "0f18ef1c2cf33895a9abbce3101e05f45dbfdc57c91a5d0ce10b14f518422e89",
+      "bytes": 146776
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "f34681e97d7eb6d5c3eabe1f4e4262ca07f79ce2727aeadc408369216859d429",
+      "bytes": 10674137
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_operand_flag_tests.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "d85a607996dfc3d9122e744fbaa9158c8599250c62a822ef682b7df546932918",
+      "bytes": 16800
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_rational_tests.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "1f91e9fc732ea6fed2993dcd2341c171ad2c050197ff94a093bcc156398eb327",
+      "bytes": 65880
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_simd.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "4b5d7b67058653495a96decca46e7df38ab27e75e3f624de3a4d4d10bc42f589",
+      "bytes": 1506088
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_struct_ufunc_tests.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "d88d9d823659e514409efedd99b84015254368bf0f866618b6f8739ef2e56f9a",
+      "bytes": 16928
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_umath_tests.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "37be61c068fad5169996b33ec13a1ae0d3655c64159dc4ddc1facf216b278978",
+      "bytes": 50344
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/fft/_pocketfft_umath.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "8532d109d939ca5e9d500f7b0d051728aa3d18266dd14cf925b42ab561da7e20",
+      "bytes": 539312
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "45a4bea3df883c7c4da8a3575a7e13ae51c186b0930d9baa8f1813f948070430",
+      "bytes": 231801
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/linalg/lapack_lite.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "e5edacfd745b593938cddccf825bf7825b91d6ebcc024a7cf4fbc47caa103738",
+      "bytes": 29985
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_bounded_integers.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "364b02d0a8e9b348ceb0d8d73495bcb7c82bced853a5dcad52a9b7bb1864ed15",
+      "bytes": 311824
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_common.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "5395da68448065b55be8e29566cde4bac319af470f7310e573118e1fbcff8e7e",
+      "bytes": 257720
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_generator.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "aabcacf978cf42424e6ddafb871c64ce40cebf2cc85c13302e0a05f3f9d5af4f",
+      "bytes": 818192
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_mt19937.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "19dac6b48e66a5cb7c611f9666aa9730454d54f27b0fc1bcebcea732b5b9e6d0",
+      "bytes": 130776
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_pcg64.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "582338c50dce82ae2fb24e6278df01870d43f6b8161aa8d3969fa50c2e0ffec7",
+      "bytes": 141760
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_philox.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "44c06a471e3772deaeb294fd84f1de6c2510930bda564c71a0e843950020977e",
+      "bytes": 122464
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/_sfc64.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "5a1e0367bbb7e5a0f47474e4477ffffd88e3b0e3048bcd68ee3fe0abd3a23543",
+      "bytes": 91952
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/bit_generator.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "24b152f1856639795b8f4bfee2332cb244a59b1177a19e965c034cb9b9be413b",
+      "bytes": 227704
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/random/mtrand.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "5b367e331af655c1f1665e6d1231eef20af5c42230af86fd79be57205c4295fc",
+      "bytes": 636536
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/osgeo/_gdal.cpython-314-x86_64-linux-gnu.so",
+      "sha256": "e5e2d28b371cec51f463392f6dc0171fd7f9f44a1b3837ae6975c682aa203b08",
+      "bytes": 1634272
+    },
+    {
+      "path": "/usr/bin/ojph_compress",
+      "sha256": "e44cec04b22cb2df17582d7426819649d90c80449bc51baae72896e7c5bd93a7",
+      "bytes": 67856
+    },
+    {
+      "path": "/usr/bin/ojph_expand",
+      "sha256": "e6999971961a5da0a35394265158d97188d4eceb415e33a0070c1d2d55f7020d",
+      "bytes": 43272
+    },
+    {
+      "path": "/usr/lib/ld-linux-x86-64.so.2",
+      "sha256": "d52fe2ff87fff536ed5c5eae8e954cb50655884e4709fedd24cf57f9ec98ad80",
+      "bytes": 246760
+    },
+    {
+      "path": "/usr/lib/libc.so.6",
+      "sha256": "9bf40a540836d90c7d46c95eeb222a217597834eea29ab9e537428317c021c3a",
+      "bytes": 2186528
+    },
+    {
+      "path": "/usr/lib/libdeflate.so.0",
+      "sha256": "15f0d713bfc0cc4922a661f8b7a1cc9a4b59139777edd9b7555b201c07ab81eb",
+      "bytes": 92064
+    },
+    {
+      "path": "/usr/lib/libgcc_s.so.1",
+      "sha256": "0c6c78d4632bf37a274e053fea871f35b06f0578644593a291ca1ee0f12dffbb",
+      "bytes": 182512
+    },
+    {
+      "path": "/usr/lib/libjbig.so.2.1",
+      "sha256": "a7e9d203c2488956e713ff61366cbbd94743c15a09ff67fc1f32307285dd802a",
+      "bytes": 53984
+    },
+    {
+      "path": "/usr/lib/libjpeg.so.8.3.2",
+      "sha256": "d6cd94abf2b7a9aa59a0e056c83bbfdf8900fbf7101bfba8ea0ee1ca45958665",
+      "bytes": 686104
+    },
+    {
+      "path": "/usr/lib/liblzma.so.5.8.3",
+      "sha256": "34d6782a6a5ef49f300eeaa740d11cb5900fced2557f0398dbd58699abb73bb3",
+      "bytes": 215248
+    },
+    {
+      "path": "/usr/lib/libm.so.6",
+      "sha256": "8f85ea3a02885cda4ecff8758e6e758c69ccaa25b6580cb97b5713ac512f0a1b",
+      "bytes": 1251952
+    },
+    {
+      "path": "/usr/lib/libopenjph.so.0.30.1",
+      "sha256": "1d5a60a90255912303d5144e7d5275a48a4ce50e59949f5bcfe87c744ecaa47f",
+      "bytes": 563304
+    },
+    {
+      "path": "/usr/lib/libsharpyuv.so.0.1.2",
+      "sha256": "cb3c84af219c532d6e3dad31cce657ae5d087a9dfb3aea491dee6486c2883566",
+      "bytes": 26512
+    },
+    {
+      "path": "/usr/lib/libstdc++.so.6.0.35",
+      "sha256": "2c0ec5cdcaa4a044329ad19ba40b73e3e61c16b3f00f5c8184b0d72816480614",
+      "bytes": 2935832
+    },
+    {
+      "path": "/usr/lib/libtiff.so.6.3.0",
+      "sha256": "50b85bdbdcc6cc5fa4cbebeb521fae7d02112f59adfbcb3c8ecbaa42687aeafa",
+      "bytes": 620584
+    },
+    {
+      "path": "/usr/lib/libwebp.so.7.2.0",
+      "sha256": "267dcd6cda1106607130a61a047f3ea28807137d45c56255dd7ca4bf32efcbf2",
+      "bytes": 542864
+    },
+    {
+      "path": "/usr/lib/libz.so.1.3.2",
+      "sha256": "9ba92a0b85dc9b659e8f5e596a69452cec801def6ece0883a8a2c1f032e52397",
+      "bytes": 104464
+    },
+    {
+      "path": "/usr/lib/libzstd.so.1.5.7",
+      "sha256": "f023d49e85fb22057bfdd21857263d2638b73356c06f3b342f678a75212379f8",
+      "bytes": 939976
+    },
+    {
+      "path": "/usr/share/licenses/openjph/LICENSE",
+      "sha256": "5ddf5177863dfc9ab65fa129d587db651241f00e21ed2427b218bea997591f98",
+      "bytes": 1448
+    },
+    {
+      "path": "/var/lib/pacman/local/openjph-0.30.1-1/desc",
+      "sha256": "84349cd8695966540e977308f29d911dc504117cbcfd3089caa2789573c9f572",
+      "bytes": 385
+    },
+    {
+      "path": "/var/lib/pacman/local/openjph-0.30.1-1/files",
+      "sha256": "224067baadabcc424415bbbe6f1d6ff7fbea7403fd2a58e7be1b3abe0c5eab99",
+      "bytes": 921
+    }
+  ],
+  "products": [
+    {
+      "key": "rgb16-12",
+      "asset": {
+        "id": "94_104001000B823500-RGB16",
+        "source_path": "../viewer-acceptance-quality-screen-rgb16-12-01/source.tif",
+        "source_sha256": "c4aea2cf214ae558eda36c5f58020252d5f92ef3c587072a8300d8495d6e9c0e",
+        "bands": [
+          5,
+          3,
+          2
+        ],
+        "image": {
+          "components": 3,
+          "height": 688,
+          "precision": 16,
+          "signed": false,
+          "width": 1024
+        },
+        "statistics": [
+          {
+            "maximum": 7957,
+            "minimum": 4,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 834544,
+            "source_band": 5,
+            "storage_maximum_count": 0,
+            "zero_count": 0
+          },
+          {
+            "maximum": 7551,
+            "minimum": 2,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 834544,
+            "source_band": 3,
+            "storage_maximum_count": 0,
+            "zero_count": 0
+          },
+          {
+            "maximum": 7591,
+            "minimum": 1,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 834544,
+            "source_band": 2,
+            "storage_maximum_count": 0,
+            "zero_count": 0
+          }
+        ],
+        "stretches": {
+          "percentile_2_98": [
+            [
+              221,
+              1777
+            ],
+            [
+              219,
+              1325
+            ],
+            [
+              160,
+              1100
+            ]
+          ],
+          "full_storage": [
+            [
+              0,
+              65535
+            ],
+            [
+              0,
+              65535
+            ],
+            [
+              0,
+              65535
+            ]
+          ]
+        },
+        "nodata_presence": "absent in complete selected source; no nodata case claimed",
+        "views": [
+          {
+            "x": 256,
+            "y": 0,
+            "width": 256,
+            "height": 256,
+            "feature": "small objects on apron"
+          },
+          {
+            "x": 384,
+            "y": 256,
+            "width": 256,
+            "height": 256,
+            "feature": "low-contrast grass/runway"
+          },
+          {
+            "x": 448,
+            "y": 64,
+            "width": 256,
+            "height": 256,
+            "feature": "hangar edges"
+          },
+          {
+            "x": 448,
+            "y": 432,
+            "width": 256,
+            "height": 256,
+            "feature": "tile crossing"
+          }
+        ]
+      },
+      "scales": [
+        1,
+        4
+      ],
+      "bpp": 12,
+      "target_bytes": 1056940,
+      "crop_rect": [
+        0,
+        0,
+        1024,
+        688
+      ],
+      "baseline_failed_cells": 6,
+      "files": {
+        "crop": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/source.tif",
+          "sha256": "c4aea2cf214ae558eda36c5f58020252d5f92ef3c587072a8300d8495d6e9c0e",
+          "bytes": 16778561
+        },
+        "views": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/views.json",
+          "sha256": "00284d567b311065bf0a3e2bf53e226a8250965cff843f56fc0feaaefdaee131",
+          "bytes": 14164
+        },
+        "manifest": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-encode/representation/manifest.json",
+          "sha256": "e3cf572ea32e80fd01638af49f9ed803b871459753364f6faf8695d5093fc4c2",
+          "bytes": 1237
+        },
+        "payload": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-encode/representation/payload.j2c",
+          "sha256": "f3cd747599d1919cd10cb3f1bbbd21877573344988d818b12c86a4e540085793",
+          "bytes": 1056940
+        },
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/protocol.json",
+          "sha256": "f480236094df1aea83d9f88cf3a8c7378748c02971f380621d6142f73caab059",
+          "bytes": 5336
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/result.json",
+          "sha256": "1a4421724f4ac5aa02eb42fc3ae8832d11a3bee78198fe1bb7931347008671cd",
+          "bytes": 10632
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/crop-lineage.json",
+          "sha256": "c6dc8b3029b1b36317c56a94369008382e9c1b9e14b3393c1a21b9c60bada6f8",
+          "bytes": 2570
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/quality.json",
+          "sha256": "bcf3802c19c6c3a527747a0e9662b910eddcfd3483b053219d8b5d2d8377a1e4",
+          "bytes": 69708
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-encode/preparation-result.json",
+          "sha256": "546578ef52811f52d10b86a88f00b82993d8917d59113157a7bc5700a9bbde6f",
+          "bytes": 2320
+        }
+      },
+      "references": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/view-0.u16le",
+          "sha256": "4749d73cb113bebb7261e1ca1f04489312bfd6ca87af28797396e99d08805807",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/view-1.u16le",
+          "sha256": "02b1fa493b085d2c3c2ca91d5293f7091579d7c3c345d22c37064640742c1685",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/view-2.u16le",
+          "sha256": "88c9a324ec5b458d0ecc4d7284c3efe98f634f351602ffacbab39f4a3eb41f79",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/view-3.u16le",
+          "sha256": "c1a63ae98582f3c8ed53935a3b89ff322ec6ac66fbee79d4472d68558fbc8981",
+          "bytes": 393216
+        }
+      ]
+    },
+    {
+      "key": "tok-rgb8-4",
+      "asset": {
+        "id": "105_104001002F92BB00-RGB8",
+        "source_path": "../viewer-acceptance-quality-screen-tok-rgb8-4-01/source.tif",
+        "source_sha256": "a95c26891091fbd82cba4bd26bc52846bf2e91dae64d2aa51e2ed3e95fba9d66",
+        "bands": [
+          1,
+          2,
+          3
+        ],
+        "image": {
+          "components": 3,
+          "height": 1024,
+          "precision": 8,
+          "signed": false,
+          "width": 3072
+        },
+        "statistics": [
+          {
+            "maximum": 255,
+            "minimum": 1,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 16839231,
+            "source_band": 1,
+            "storage_maximum_count": 10542,
+            "zero_count": 0
+          },
+          {
+            "maximum": 255,
+            "minimum": 1,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 16839231,
+            "source_band": 2,
+            "storage_maximum_count": 4013,
+            "zero_count": 0
+          },
+          {
+            "maximum": 255,
+            "minimum": 1,
+            "nodata": 0.0,
+            "nodata_count": 0,
+            "samples": 16839231,
+            "source_band": 3,
+            "storage_maximum_count": 2551,
+            "zero_count": 0
+          }
+        ],
+        "stretches": {
+          "percentile_2_98": [
+            [
+              5,
+              94
+            ],
+            [
+              5,
+              76
+            ],
+            [
+              3,
+              65
+            ]
+          ],
+          "full_storage": [
+            [
+              0,
+              255
+            ],
+            [
+              0,
+              255
+            ],
+            [
+              0,
+              255
+            ]
+          ]
+        },
+        "nodata_presence": "absent in complete selected source; no nodata case claimed",
+        "views": [
+          {
+            "x": 128,
+            "y": 128,
+            "width": 256,
+            "height": 256,
+            "feature": "small objects near apron"
+          },
+          {
+            "x": 2560,
+            "y": 704,
+            "width": 256,
+            "height": 256,
+            "feature": "low-contrast runway"
+          },
+          {
+            "x": 1024,
+            "y": 576,
+            "width": 256,
+            "height": 256,
+            "feature": "runway/apron edges"
+          },
+          {
+            "x": 448,
+            "y": 448,
+            "width": 256,
+            "height": 256,
+            "feature": "tile crossing"
+          }
+        ]
+      },
+      "scales": [
+        1,
+        4
+      ],
+      "bpp": 4,
+      "target_bytes": 1573332,
+      "crop_rect": [
+        4608,
+        0,
+        3072,
+        1024
+      ],
+      "baseline_failed_cells": 24,
+      "files": {
+        "crop": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/source.tif",
+          "sha256": "a95c26891091fbd82cba4bd26bc52846bf2e91dae64d2aa51e2ed3e95fba9d66",
+          "bytes": 9438547
+        },
+        "views": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/views.json",
+          "sha256": "bab4f8a6917e9ce07de7273ee3d283b94c615a6cb3f6f4c919d8871825b70a6a",
+          "bytes": 14168
+        },
+        "manifest": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-encode/representation/manifest.json",
+          "sha256": "72382950b233bd3efddf2b82b99b6d1701ecb2bd9dae416005dea33fd6a743a2",
+          "bytes": 1811
+        },
+        "payload": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-encode/representation/payload.j2c",
+          "sha256": "a98c93bcc84a5d8c272521a9f5ffd4d30945c986714541119cc4647fb2b54407",
+          "bytes": 1573332
+        },
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/protocol.json",
+          "sha256": "31e5f1f938f368ee8f15eb0f31d11ca772b8d48097b41327bef71a6983037d60",
+          "bytes": 5346
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/result.json",
+          "sha256": "e1a936b918cbda1d03c1a5c34bcc499e97c15214175a5112edaefa51cb2570f2",
+          "bytes": 29120
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/crop-lineage.json",
+          "sha256": "d06b429e391e44ec77ef88306477b6afca931b468e05d66222be1b419e78fa1b",
+          "bytes": 3040
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/quality.json",
+          "sha256": "550440fe8e8abf0fd0b67e6bb7715651bb2e8ed034c8b8a58cf4914a991505c1",
+          "bytes": 69608
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-encode/preparation-result.json",
+          "sha256": "ab83d6f2af63d8745f3543deced31294d7c165f161cd1e329c5700408054bad2",
+          "bytes": 2929
+        }
+      },
+      "references": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/view-0.u16le",
+          "sha256": "e4bd623d42317e07739b9229699d83200fc2902eb1ef571afdf4c0f858f2bb6a",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/view-1.u16le",
+          "sha256": "68be190c2118ce64e5fb2ece594eae30923600de0c7417a6def487b5992b441b",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/view-2.u16le",
+          "sha256": "8359f50ee48f3937c89cb489d8a3b2366ec51257c951401f8542c82d4f6cf463",
+          "bytes": 393216
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/view-3.u16le",
+          "sha256": "678233ddf512ce838aa17c660d34fc32caf58ed4c9e74a87d8c64be325793479",
+          "bytes": 393216
+        }
+      ]
+    }
+  ]
+}

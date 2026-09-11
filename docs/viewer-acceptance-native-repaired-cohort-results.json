@@ -1,0 +1,1531 @@
+{
+  "schema": "viewer-acceptance-native-repaired-cohort-results/1",
+  "status": "completed fixed cohort; exit 4; failed latency gates and missing final bracket retained",
+  "operation_owner": "repaired-proofs-execution-single-owner",
+  "protocol_commit": "6f1965043f6317e8655c5dce4c2bc8a27775c5d4",
+  "runtime_revision": "8633754fa28f2ca34f159a7368e0b8e7e953d205",
+  "native": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/measured-bin/emuella-viewer",
+    "bytes": 27275016,
+    "sha256": "3624000ce2d78ff1b646db572102df1a028800278d6fdb661fde43d36a10f0a6"
+  },
+  "web_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/web-manifest.json",
+    "bytes": 1149,
+    "sha256": "63cf2e1529b16e715edaf63747a901466e67f67318062968c76672d909e1da5d"
+  },
+  "service_source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "service_binary": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+    "bytes": 1985328,
+    "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+  },
+  "scope": {
+    "fresh_starts": 5,
+    "phases_per_start": 40,
+    "cycles_per_start": 10,
+    "allocation_markers_per_start": 102,
+    "warmups": 0,
+    "retries": 0,
+    "replacements": 0,
+    "captures": 10,
+    "phase_deadline_seconds": 60,
+    "native_deadline_seconds": 660,
+    "cohort_exit": 4
+  },
+  "observed_failed_predicates": [
+    {
+      "run": "native-02",
+      "predicate": "target_detail_ms",
+      "observed_ms": 168.96427500000027,
+      "maximum_ms": 133.58994625000037
+    },
+    {
+      "run": "native-05",
+      "predicate": "target_detail_ms",
+      "observed_ms": 170.73685999999998,
+      "maximum_ms": 133.58994625000037
+    }
+  ],
+  "missing_evidence": [
+    "native-03 cycle-10 external after-bracket",
+    "main actual image inspection",
+    "separate inherited seven-event recovery",
+    "browser exact-mask proof",
+    "final merged qualification"
+  ],
+  "historical_observation_bytes": 278794240,
+  "unchanged_ceiling_bytes": 243269632,
+  "rss_repair_claim": false,
+  "disposition": "quality-rejected-diagnostic-only",
+  "acceptance": false,
+  "selected_configuration": null,
+  "hardware_environment": {
+    "python": "3.14.4 | packaged by conda-forge | (main, Apr  8 2026, 01:59:35) [GCC 14.3.0]",
+    "executable": {
+      "path": "/home/rob/pixi/.pixi/envs/default/bin/python3",
+      "resolved_path": "/home/rob/pixi/.pixi/envs/default/bin/python3.14",
+      "bytes": 36186104,
+      "sha256": "43afbaa617cf52c3681155fffb3043b331c3fe008139204532a5e27357e1b19f"
+    },
+    "platform": "Linux-7.1.3-arch1-1-x86_64-with-glibc2.43",
+    "uname": [
+      "Linux",
+      "lv426",
+      "7.1.3-arch1-1",
+      "#1 SMP PREEMPT_DYNAMIC Tue, 07 Jul 2026 05:05:48 +0000",
+      "x86_64"
+    ],
+    "environment": {
+      "LD_PRELOAD": null,
+      "LD_LIBRARY_PATH": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/polyorama/.tools/sysroot/usr/lib",
+      "WGPU_BACKEND": "vulkan",
+      "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+      "WAYLAND_DISPLAY": null,
+      "DISPLAY": null,
+      "XDG_RUNTIME_DIR": "/run/user/3000",
+      "MALLOC_ARENA_MAX": null,
+      "GLIBC_TUNABLES": null
+    },
+    "loaded_nvidia_kernel_driver": "NVRM version: NVIDIA UNIX Open Kernel Module for x86_64  610.43.03  Release Build  (root@)  \nGCC version:  gcc version 16.1.1 20260625 (GCC) \n"
+  },
+  "display": ":179",
+  "actual_display_geometry": [
+    1440,
+    900,
+    24
+  ],
+  "inputs_unchanged": true,
+  "evidence_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01",
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01-execution",
+  "cleanup": {
+    "operation_owner": "repaired-proofs-execution-single-owner",
+    "runner_identity": {
+      "pid": 448345,
+      "start_time_ticks": 545768153,
+      "process_group": 448345
+    },
+    "exit_code": 4,
+    "runner_alive": false,
+    "display_lock_absent": true,
+    "display_socket_absent": true,
+    "service_connect_errno": 111,
+    "infrastructure_alive": {
+      "service_identity": false,
+      "display_identity": false
+    },
+    "native_alive": {
+      "1": false,
+      "2": false,
+      "3": false,
+      "4": false,
+      "5": false
+    },
+    "retention": "All protected groups, captures and worktree retained; original wrapper stops only owned processes"
+  },
+  "background_scope": "User excluded concurrent measurements/builds; preflight process snapshot retained; no builds or other measurements launched by this owner. Ordinary system services remain; no continuous system-load isolation evidence or speed claim.",
+  "limitations": [
+    "Capture/sampler/diagnostic overhead retained without subtraction.",
+    "Current-RSS brackets can share samples and include lifecycle release; no settled-workload plateau.",
+    "Physical GPU allocations and complete dynamic loading/tcache/foreign allocator coverage unavailable.",
+    "No natural mask eviction/refetch demonstrated by native display-cache release cycles.",
+    "Historical pressure, launch, quality and scheduling failures remain.",
+    "Canonical verification, independent review, image inspection and landing remain main-owned."
+  ],
+  "runs": [
+    {
+      "run": "native-01",
+      "application_exit": 0,
+      "application_exit_basis": "Frozen harness records any nonzero process.wait return as a trace failure; completed trace has no failures.",
+      "harness_exit": 0,
+      "benchmark": {
+        "admitted": true,
+        "qualified": true,
+        "reasons": [],
+        "exit_code": 0
+      },
+      "rss": {
+        "process_peak_rss_bytes": {
+          "bytes": 190349312,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "process_group_sampled_peak_rss_bytes": {
+          "bytes": 195854336,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "observed_process_high_water_sum_bytes": {
+          "bytes": 201568256,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        }
+      },
+      "phase_current_bytes": {
+        "startup": 4890624,
+        "graphics": 161132544,
+        "cycle_01": 189534208,
+        "cycle_10": 190349312
+      },
+      "overview_hwm_bytes": 175697920,
+      "marker_current_growth_bytes": 815104,
+      "external_current_growth": {
+        "after_bracket_current_rss_bytes": [
+          189595648,
+          189652992,
+          189771776,
+          189833216,
+          189833216,
+          189997056,
+          190099456,
+          190218240,
+          197562368,
+          197562368
+        ],
+        "last_minus_first_bytes": 7966720
+      },
+      "missing_brackets": [],
+      "external_bracket_limitation": "Final after-brackets may include export/teardown; cycles can share the same bracket. No settled plateau or historical repair claim.",
+      "coverage": {
+        "schema": "viewer_native_diagnostic_coverage/1",
+        "instrument": "native-completion-memory-v1",
+        "phase_count": 40,
+        "cycle_count": 10,
+        "marker_count": 102,
+        "trace_ring_dropped": 2170,
+        "allocator_unavailable": 0,
+        "boundary": "coverage only; ring loss remains explicit; no RSS, recovery, quality or speed acceptance"
+      },
+      "latencies_ms": {
+        "first_useful_ms": 77.150888,
+        "whole_overview_ms": 703.645848,
+        "target_detail_ms": 127.77093000000013,
+        "visible_thumbnail_completion_ms": 564.731479,
+        "warm_revisit_ms": 48.246720999999525,
+        "warm_compressed_ms": 638.2732460000001
+      },
+      "gpu": "AdapterInfo { name: \"NVIDIA GeForce RTX 3090\", vendor: 4318, device: 8708, device_type: DiscreteGpu, device_pci_bus_id: \"0000:01:00.0\", driver: \"NVIDIA\", driver_info: \"610.43.03\", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }",
+      "worker_final": {
+        "decoded_evidence_dropped": 384,
+        "selected_block_coefficients": 21545313,
+        "peak_codec_workspace_bytes": 6489012,
+        "synthesis_coefficients_loaded": 9721674,
+        "synthesis_horizontal_values": 11626982,
+        "synthesis_vertical_values": 10807511,
+        "synthesis_lifting_updates": 48766284,
+        "synthesis_output_samples": 7773025,
+        "wasm_linear_bytes": null,
+        "request_working_set_bytes": 0,
+        "request_pin_metadata_bytes": 0,
+        "peak_request_working_set_bytes": 217363,
+        "peak_request_pin_metadata_bytes": 5034,
+        "compressed_bytes": 2566649,
+        "peak_compressed_bytes": 2566649,
+        "peak_descriptor_bytes": 1083232,
+        "descriptor_bytes": 1083232,
+        "received_jpp_bytes": 1963454,
+        "received_descriptor_bytes": 30208,
+        "received_mask_bytes": 606740,
+        "mask_bytes": 606740,
+        "peak_mask_bytes": 606740,
+        "mask_evictions": 0,
+        "decode_count": 448,
+        "decoded_pixels": 6405099,
+        "selected_code_blocks": 22993,
+        "compressed_read_bytes": 12106949,
+        "cache_hits": 415,
+        "requests": 33,
+        "representation_evictions": 0,
+        "compressed_bin_evictions": 0,
+        "transferred_sample_bytes": 0,
+        "aborted": 0,
+        "retries": 0,
+        "elapsed_ms": 1648.3917420000007
+      },
+      "release_runtime_zero_all_cycles": true,
+      "lifetime_final": {
+        "boundary": "current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies",
+        "display_reset_released_items": 416,
+        "display_reset_released_logical_bytes": 27288064,
+        "event_ring_slots": 128,
+        "retained_stage_count": 39,
+        "runtime": {
+          "decoded_payloads": 0,
+          "desired_entries": 32,
+          "entries": 32,
+          "failed_entries": 0,
+          "outstanding_reservations": 0,
+          "resident_entries": 32,
+          "sample_capacity_bytes": 0,
+          "upload_bytes": 0,
+          "upload_entries": 0,
+          "validity_capacity_bytes": 0,
+          "worker_reserved_bytes": 0
+        },
+        "runtime_epoch": 11,
+        "stage_slots": 64,
+        "trace_ring_slots": 256
+      },
+      "allocator_cycle_10": {
+        "arena_bytes": 37330944,
+        "boundary": "current glibc arenas; free includes retained blocks, top is a subset; tcache and foreign/driver allocations are not fully attributed; not RSS or Rust live bytes",
+        "free_arena_bytes": 8691200,
+        "in_use_arena_bytes": 28639744,
+        "mmap_bytes": 15040976,
+        "mmap_regions": 2,
+        "provider": "glibc.mallinfo2",
+        "top_releasable_bytes": 380688,
+        "version": "2.43"
+      },
+      "allocator_in_use_cycle_growth_bytes": 1054128,
+      "retained_stages_first_last": [
+        30,
+        39
+      ],
+      "smaps_last": {
+        "Rss": 200052736,
+        "Pss": 194828288,
+        "Private_Clean": 121331712,
+        "Private_Dirty": 73056256,
+        "Shared_Clean": 5664768,
+        "Shared_Dirty": 0,
+        "Anonymous": 66146304,
+        "Swap": 0,
+        "SwapPss": 0
+      },
+      "pacing": {
+        "cross_realm_intervals_unavailable": false,
+        "cross_realm_inversions": 0,
+        "requests": 448,
+        "invalid_samples": 0,
+        "dispatch_to_worker_ms": 11.676890000022674,
+        "worker_execution_ms": 1648.3358389999878,
+        "finish_to_publish_ms": 3.464279999994112,
+        "publish_to_receive_ms": 9201.711714000012,
+        "receive_to_ui_ms": 0.2600209999918519,
+        "finish_to_ui_max_ms": 32.91701699999885,
+        "same_frame_next_dispatches": 430,
+        "ui_to_next_dispatch_ms": 89.91155299999286
+      },
+      "mapped_files": {
+        "hashed": 42,
+        "unavailable": [
+          {
+            "path": "/dev/nvidia0",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidia1",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidiactl",
+            "unavailable": "[Errno 22] Invalid argument"
+          }
+        ],
+        "expected_graphics_matches": [
+          "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+          "/usr/lib/libGLX_nvidia.so.0",
+          "/usr/lib/libnvidia-glcore.so.610.43.03",
+          "/usr/lib/libnvidia-glsi.so.610.43.03",
+          "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+          "/usr/lib/libX11.so.6",
+          "/usr/lib/libxcb.so.1",
+          "/usr/lib/libxkbcommon.so.0"
+        ],
+        "evidence": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01-wrapper.json",
+          "bytes": 45437,
+          "sha256": "a7bcc3c301a724088f366ae9942097398f1f6b4067aea0685f2d609e1d97ff92"
+        }
+      },
+      "screenshots": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01-captures/capture-02s.png",
+          "bytes": 146573,
+          "sha256": "d7e48216169c0cbf9130e26e5650433e8f96d75a0596e0393c825cd0cf45ad0c",
+          "offset_seconds": 2,
+          "lateness_ns": 12046172,
+          "duration_ns": 143976222,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01-captures/capture-05s.png",
+          "bytes": 145441,
+          "sha256": "076fb027f1d14deeb8ecb0a4bcc0c836c65e1d5781cda0423286242241723f26",
+          "offset_seconds": 5,
+          "lateness_ns": 4728267,
+          "duration_ns": 124384697,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        }
+      ],
+      "server_cache_state": "uncontrolled-first-observation",
+      "service_before": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01/service-before.json",
+        "bytes": 549,
+        "sha256": "9f70920bf3fffa80a23fb30474dd99351abea972ea9c1fadb371171bcfffdc51"
+      },
+      "service_after": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01/service-after.json",
+        "bytes": 595,
+        "sha256": "934d55b4f5d18e05a7a3d8356714685b5be58f5ce13fee45307bf66c4c178f59"
+      },
+      "summary": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01-summary.json",
+        "bytes": 299589,
+        "sha256": "c061feafcb9e2a01951d1d038bd8b817eefaf18c7ec5f4247a708c8c32720ef1"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-01/composed-trace.json",
+        "bytes": 784478,
+        "sha256": "080d282be3a6d04ea9c7ac78dc353de5a2b0a92c476e19f270e0aff99fb34ae1"
+      },
+      "errors": [],
+      "marker_runtime_observed_maxima": {
+        "outstanding_reservations": 0,
+        "worker_reserved_bytes": 0,
+        "decoded_payloads": 0,
+        "sample_capacity_bytes": 0,
+        "validity_capacity_bytes": 0,
+        "upload_bytes": 0
+      },
+      "marker_runtime_observation_boundary": "Observed maxima at declared allocation markers, which are settled/release boundaries; not continuous transient reservation peaks."
+    },
+    {
+      "run": "native-02",
+      "application_exit": 0,
+      "application_exit_basis": "Frozen harness records any nonzero process.wait return as a trace failure; completed trace has no failures.",
+      "harness_exit": 0,
+      "benchmark": {
+        "admitted": true,
+        "qualified": false,
+        "reasons": [
+          "threshold exceeded: target_detail_ms"
+        ],
+        "exit_code": 4
+      },
+      "rss": {
+        "process_peak_rss_bytes": {
+          "bytes": 191279104,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "process_group_sampled_peak_rss_bytes": {
+          "bytes": 193056768,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "observed_process_high_water_sum_bytes": {
+          "bytes": 203255808,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        }
+      },
+      "phase_current_bytes": {
+        "startup": 4751360,
+        "graphics": 162840576,
+        "cycle_01": 190496768,
+        "cycle_10": 191279104
+      },
+      "overview_hwm_bytes": 177418240,
+      "marker_current_growth_bytes": 782336,
+      "external_current_growth": {
+        "after_bracket_current_rss_bytes": [
+          190554112,
+          190611456,
+          190734336,
+          190775296,
+          190775296,
+          190943232,
+          191066112,
+          191160320,
+          181469184,
+          181469184
+        ],
+        "last_minus_first_bytes": -9084928
+      },
+      "missing_brackets": [],
+      "external_bracket_limitation": "Final after-brackets may include export/teardown; cycles can share the same bracket. No settled plateau or historical repair claim.",
+      "coverage": {
+        "schema": "viewer_native_diagnostic_coverage/1",
+        "instrument": "native-completion-memory-v1",
+        "phase_count": 40,
+        "cycle_count": 10,
+        "marker_count": 102,
+        "trace_ring_dropped": 2173,
+        "allocator_unavailable": 0,
+        "boundary": "coverage only; ring loss remains explicit; no RSS, recovery, quality or speed acceptance"
+      },
+      "latencies_ms": {
+        "first_useful_ms": 67.503782,
+        "whole_overview_ms": 750.366396,
+        "target_detail_ms": 168.96427500000027,
+        "visible_thumbnail_completion_ms": 578.2440990000002,
+        "warm_revisit_ms": 49.46635300000071,
+        "warm_compressed_ms": 641.564885
+      },
+      "gpu": "AdapterInfo { name: \"NVIDIA GeForce RTX 3090\", vendor: 4318, device: 8708, device_type: DiscreteGpu, device_pci_bus_id: \"0000:01:00.0\", driver: \"NVIDIA\", driver_info: \"610.43.03\", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }",
+      "worker_final": {
+        "decoded_evidence_dropped": 384,
+        "selected_block_coefficients": 21545313,
+        "peak_codec_workspace_bytes": 6489012,
+        "synthesis_coefficients_loaded": 9721674,
+        "synthesis_horizontal_values": 11626982,
+        "synthesis_vertical_values": 10807511,
+        "synthesis_lifting_updates": 48766284,
+        "synthesis_output_samples": 7773025,
+        "wasm_linear_bytes": null,
+        "request_working_set_bytes": 0,
+        "request_pin_metadata_bytes": 0,
+        "peak_request_working_set_bytes": 217363,
+        "peak_request_pin_metadata_bytes": 5034,
+        "compressed_bytes": 2566649,
+        "peak_compressed_bytes": 2566649,
+        "peak_descriptor_bytes": 1083232,
+        "descriptor_bytes": 1083232,
+        "received_jpp_bytes": 1963454,
+        "received_descriptor_bytes": 30208,
+        "received_mask_bytes": 606740,
+        "mask_bytes": 606740,
+        "peak_mask_bytes": 606740,
+        "mask_evictions": 0,
+        "decode_count": 448,
+        "decoded_pixels": 6405099,
+        "selected_code_blocks": 22993,
+        "compressed_read_bytes": 12106949,
+        "cache_hits": 415,
+        "requests": 33,
+        "representation_evictions": 0,
+        "compressed_bin_evictions": 0,
+        "transferred_sample_bytes": 0,
+        "aborted": 0,
+        "retries": 0,
+        "elapsed_ms": 1670.0393730000003
+      },
+      "release_runtime_zero_all_cycles": true,
+      "lifetime_final": {
+        "boundary": "current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies",
+        "display_reset_released_items": 416,
+        "display_reset_released_logical_bytes": 27288064,
+        "event_ring_slots": 128,
+        "retained_stage_count": 39,
+        "runtime": {
+          "decoded_payloads": 0,
+          "desired_entries": 32,
+          "entries": 32,
+          "failed_entries": 0,
+          "outstanding_reservations": 0,
+          "resident_entries": 32,
+          "sample_capacity_bytes": 0,
+          "upload_bytes": 0,
+          "upload_entries": 0,
+          "validity_capacity_bytes": 0,
+          "worker_reserved_bytes": 0
+        },
+        "runtime_epoch": 11,
+        "stage_slots": 64,
+        "trace_ring_slots": 256
+      },
+      "allocator_cycle_10": {
+        "arena_bytes": 37298176,
+        "boundary": "current glibc arenas; free includes retained blocks, top is a subset; tcache and foreign/driver allocations are not fully attributed; not RSS or Rust live bytes",
+        "free_arena_bytes": 8676080,
+        "in_use_arena_bytes": 28622096,
+        "mmap_bytes": 15040976,
+        "mmap_regions": 2,
+        "provider": "glibc.mallinfo2",
+        "top_releasable_bytes": 397360,
+        "version": "2.43"
+      },
+      "allocator_in_use_cycle_growth_bytes": 1032752,
+      "retained_stages_first_last": [
+        30,
+        39
+      ],
+      "smaps_last": {
+        "Rss": 181469184,
+        "Pss": 176243712,
+        "Private_Clean": 107814912,
+        "Private_Dirty": 67997696,
+        "Shared_Clean": 5656576,
+        "Shared_Dirty": 0,
+        "Anonymous": 59375616,
+        "Swap": 0,
+        "SwapPss": 0
+      },
+      "pacing": {
+        "cross_realm_intervals_unavailable": false,
+        "cross_realm_inversions": 0,
+        "requests": 448,
+        "invalid_samples": 0,
+        "dispatch_to_worker_ms": 12.450634999994321,
+        "worker_execution_ms": 1669.9846119999968,
+        "finish_to_publish_ms": 3.5252569999872065,
+        "publish_to_receive_ms": 9155.758232999991,
+        "receive_to_ui_ms": 0.2678530000198691,
+        "finish_to_ui_max_ms": 36.62737299999935,
+        "same_frame_next_dispatches": 430,
+        "ui_to_next_dispatch_ms": 97.85816500001081
+      },
+      "mapped_files": {
+        "hashed": 42,
+        "unavailable": [
+          {
+            "path": "/dev/nvidia0",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidia1",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidiactl",
+            "unavailable": "[Errno 22] Invalid argument"
+          }
+        ],
+        "expected_graphics_matches": [
+          "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+          "/usr/lib/libGLX_nvidia.so.0",
+          "/usr/lib/libnvidia-glcore.so.610.43.03",
+          "/usr/lib/libnvidia-glsi.so.610.43.03",
+          "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+          "/usr/lib/libX11.so.6",
+          "/usr/lib/libxcb.so.1",
+          "/usr/lib/libxkbcommon.so.0"
+        ],
+        "evidence": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02-wrapper.json",
+          "bytes": 55542,
+          "sha256": "8345f686d448fcf1e8645fa0f3af1b9e0bb1157f415a111bf6eb40ec0f2fa40e"
+        }
+      },
+      "screenshots": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02-captures/capture-02s.png",
+          "bytes": 151321,
+          "sha256": "87792f023cd015539af01968d61d01c762eda15777a58104995fe22eb0327ca0",
+          "offset_seconds": 2,
+          "lateness_ns": 12511702,
+          "duration_ns": 163890171,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02-captures/capture-05s.png",
+          "bytes": 258011,
+          "sha256": "8f19d772a54b1aeba28d0d1810d1661d68d6f26852826f3a5205c71d92a95d89",
+          "offset_seconds": 5,
+          "lateness_ns": 5612945,
+          "duration_ns": 244731025,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        }
+      ],
+      "server_cache_state": "warm-server",
+      "service_before": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02/service-before.json",
+        "bytes": 595,
+        "sha256": "934d55b4f5d18e05a7a3d8356714685b5be58f5ce13fee45307bf66c4c178f59"
+      },
+      "service_after": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02/service-after.json",
+        "bytes": 597,
+        "sha256": "98320a5bea37969f2635941f0ea3420ee8155e485262cefb99f26f51e20c8f6c"
+      },
+      "summary": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02-summary.json",
+        "bytes": 299603,
+        "sha256": "c7bd38fd6d390c3338592f57c4627c44f4852a3aa9bf63fb7e67491fc5e2e1e6"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-02/composed-trace.json",
+        "bytes": 784612,
+        "sha256": "383ae6d56e708a74308c5233d7b348d43775f83d844eba1e7b0dce4187e195ce"
+      },
+      "errors": [],
+      "marker_runtime_observed_maxima": {
+        "outstanding_reservations": 0,
+        "worker_reserved_bytes": 0,
+        "decoded_payloads": 0,
+        "sample_capacity_bytes": 0,
+        "validity_capacity_bytes": 0,
+        "upload_bytes": 0
+      },
+      "marker_runtime_observation_boundary": "Observed maxima at declared allocation markers, which are settled/release boundaries; not continuous transient reservation peaks."
+    },
+    {
+      "run": "native-03",
+      "application_exit": 0,
+      "application_exit_basis": "Frozen harness records any nonzero process.wait return as a trace failure; completed trace has no failures.",
+      "harness_exit": 0,
+      "benchmark": {
+        "admitted": true,
+        "qualified": true,
+        "reasons": [],
+        "exit_code": 0
+      },
+      "rss": {
+        "process_peak_rss_bytes": {
+          "bytes": 191127552,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "process_group_sampled_peak_rss_bytes": {
+          "bytes": 192897024,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "observed_process_high_water_sum_bytes": {
+          "bytes": 203710464,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        }
+      },
+      "phase_current_bytes": {
+        "startup": 4808704,
+        "graphics": 161976320,
+        "cycle_01": 190357504,
+        "cycle_10": 191127552
+      },
+      "overview_hwm_bytes": 176463872,
+      "marker_current_growth_bytes": 770048,
+      "external_current_growth": null,
+      "missing_brackets": [
+        {
+          "cycle": "cycle-10",
+          "side": "after_sample",
+          "reason": "no same-identity read wholly after marker within 1500 ms"
+        }
+      ],
+      "external_bracket_limitation": "Final after-brackets may include export/teardown; cycles can share the same bracket. No settled plateau or historical repair claim.",
+      "coverage": {
+        "schema": "viewer_native_diagnostic_coverage/1",
+        "instrument": "native-completion-memory-v1",
+        "phase_count": 40,
+        "cycle_count": 10,
+        "marker_count": 102,
+        "trace_ring_dropped": 2169,
+        "allocator_unavailable": 0,
+        "boundary": "coverage only; ring loss remains explicit; no RSS, recovery, quality or speed acceptance"
+      },
+      "latencies_ms": {
+        "first_useful_ms": 73.882151,
+        "whole_overview_ms": 702.679179,
+        "target_detail_ms": 129.76123400000006,
+        "visible_thumbnail_completion_ms": 563.1080819999997,
+        "warm_revisit_ms": 57.61453500000016,
+        "warm_compressed_ms": 629.402493
+      },
+      "gpu": "AdapterInfo { name: \"NVIDIA GeForce RTX 3090\", vendor: 4318, device: 8708, device_type: DiscreteGpu, device_pci_bus_id: \"0000:01:00.0\", driver: \"NVIDIA\", driver_info: \"610.43.03\", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }",
+      "worker_final": {
+        "decoded_evidence_dropped": 384,
+        "selected_block_coefficients": 21545313,
+        "peak_codec_workspace_bytes": 6489012,
+        "synthesis_coefficients_loaded": 9721674,
+        "synthesis_horizontal_values": 11626982,
+        "synthesis_vertical_values": 10807511,
+        "synthesis_lifting_updates": 48766284,
+        "synthesis_output_samples": 7773025,
+        "wasm_linear_bytes": null,
+        "request_working_set_bytes": 0,
+        "request_pin_metadata_bytes": 0,
+        "peak_request_working_set_bytes": 217363,
+        "peak_request_pin_metadata_bytes": 5034,
+        "compressed_bytes": 2566649,
+        "peak_compressed_bytes": 2566649,
+        "peak_descriptor_bytes": 1083232,
+        "descriptor_bytes": 1083232,
+        "received_jpp_bytes": 1963454,
+        "received_descriptor_bytes": 30208,
+        "received_mask_bytes": 606740,
+        "mask_bytes": 606740,
+        "peak_mask_bytes": 606740,
+        "mask_evictions": 0,
+        "decode_count": 448,
+        "decoded_pixels": 6405099,
+        "selected_code_blocks": 22993,
+        "compressed_read_bytes": 12106949,
+        "cache_hits": 415,
+        "requests": 33,
+        "representation_evictions": 0,
+        "compressed_bin_evictions": 0,
+        "transferred_sample_bytes": 0,
+        "aborted": 0,
+        "retries": 0,
+        "elapsed_ms": 1652.489907000001
+      },
+      "release_runtime_zero_all_cycles": true,
+      "lifetime_final": {
+        "boundary": "current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies",
+        "display_reset_released_items": 416,
+        "display_reset_released_logical_bytes": 27288064,
+        "event_ring_slots": 128,
+        "retained_stage_count": 39,
+        "runtime": {
+          "decoded_payloads": 0,
+          "desired_entries": 32,
+          "entries": 32,
+          "failed_entries": 0,
+          "outstanding_reservations": 0,
+          "resident_entries": 32,
+          "sample_capacity_bytes": 0,
+          "upload_bytes": 0,
+          "upload_entries": 0,
+          "validity_capacity_bytes": 0,
+          "worker_reserved_bytes": 0
+        },
+        "runtime_epoch": 11,
+        "stage_slots": 64,
+        "trace_ring_slots": 256
+      },
+      "allocator_cycle_10": {
+        "arena_bytes": 37306368,
+        "boundary": "current glibc arenas; free includes retained blocks, top is a subset; tcache and foreign/driver allocations are not fully attributed; not RSS or Rust live bytes",
+        "free_arena_bytes": 8680688,
+        "in_use_arena_bytes": 28625680,
+        "mmap_bytes": 15040976,
+        "mmap_regions": 2,
+        "provider": "glibc.mallinfo2",
+        "top_releasable_bytes": 413072,
+        "version": "2.43"
+      },
+      "allocator_in_use_cycle_growth_bytes": 1045424,
+      "retained_stages_first_last": [
+        30,
+        39
+      ],
+      "smaps_last": {
+        "Rss": 191033344,
+        "Pss": 185899008,
+        "Private_Clean": 117116928,
+        "Private_Dirty": 68349952,
+        "Shared_Clean": 5566464,
+        "Shared_Dirty": 0,
+        "Anonymous": 57262080,
+        "Swap": 0,
+        "SwapPss": 0
+      },
+      "pacing": {
+        "cross_realm_intervals_unavailable": false,
+        "cross_realm_inversions": 0,
+        "requests": 448,
+        "invalid_samples": 0,
+        "dispatch_to_worker_ms": 11.724428000003066,
+        "worker_execution_ms": 1652.4359440000073,
+        "finish_to_publish_ms": 3.2305870000008383,
+        "publish_to_receive_ms": 8993.042639999987,
+        "receive_to_ui_ms": 0.2459380000002085,
+        "finish_to_ui_max_ms": 33.37852600000042,
+        "same_frame_next_dispatches": 430,
+        "ui_to_next_dispatch_ms": 91.72536800000594
+      },
+      "mapped_files": {
+        "hashed": 42,
+        "unavailable": [
+          {
+            "path": "/dev/nvidia0",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidia1",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidiactl",
+            "unavailable": "[Errno 22] Invalid argument"
+          }
+        ],
+        "expected_graphics_matches": [
+          "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+          "/usr/lib/libGLX_nvidia.so.0",
+          "/usr/lib/libnvidia-glcore.so.610.43.03",
+          "/usr/lib/libnvidia-glsi.so.610.43.03",
+          "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+          "/usr/lib/libX11.so.6",
+          "/usr/lib/libxcb.so.1",
+          "/usr/lib/libxkbcommon.so.0"
+        ],
+        "evidence": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03-wrapper.json",
+          "bytes": 45959,
+          "sha256": "7dcb2f2a370ce5cd0ad95ff3eb69e47973bbe95052750f00b1e05aca94b137b6"
+        }
+      },
+      "screenshots": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03-captures/capture-02s.png",
+          "bytes": 146573,
+          "sha256": "d7e48216169c0cbf9130e26e5650433e8f96d75a0596e0393c825cd0cf45ad0c",
+          "offset_seconds": 2,
+          "lateness_ns": 12231131,
+          "duration_ns": 163783226,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03-captures/capture-05s.png",
+          "bytes": 145441,
+          "sha256": "076fb027f1d14deeb8ecb0a4bcc0c836c65e1d5781cda0423286242241723f26",
+          "offset_seconds": 5,
+          "lateness_ns": 5507662,
+          "duration_ns": 124213391,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        }
+      ],
+      "server_cache_state": "warm-server",
+      "service_before": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03/service-before.json",
+        "bytes": 597,
+        "sha256": "98320a5bea37969f2635941f0ea3420ee8155e485262cefb99f26f51e20c8f6c"
+      },
+      "service_after": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03/service-after.json",
+        "bytes": 598,
+        "sha256": "3a3846e51c4a8c7186086fc5bfe82c5f00d9a4def0d31d416645977a13b8cd3b"
+      },
+      "summary": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03-summary.json",
+        "bytes": 298820,
+        "sha256": "78b869b49e30e5e1d26aabea1939afde382df29c96596aa7ad9edb4b95c087a7"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-03/composed-trace.json",
+        "bytes": 784620,
+        "sha256": "67f91d0b2f2bbad80cb6c04b18aac018eaa7cc1c3163096f18cb8794321c258f"
+      },
+      "errors": [],
+      "marker_runtime_observed_maxima": {
+        "outstanding_reservations": 0,
+        "worker_reserved_bytes": 0,
+        "decoded_payloads": 0,
+        "sample_capacity_bytes": 0,
+        "validity_capacity_bytes": 0,
+        "upload_bytes": 0
+      },
+      "marker_runtime_observation_boundary": "Observed maxima at declared allocation markers, which are settled/release boundaries; not continuous transient reservation peaks."
+    },
+    {
+      "run": "native-04",
+      "application_exit": 0,
+      "application_exit_basis": "Frozen harness records any nonzero process.wait return as a trace failure; completed trace has no failures.",
+      "harness_exit": 0,
+      "benchmark": {
+        "admitted": true,
+        "qualified": true,
+        "reasons": [],
+        "exit_code": 0
+      },
+      "rss": {
+        "process_peak_rss_bytes": {
+          "bytes": 189775872,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "process_group_sampled_peak_rss_bytes": {
+          "bytes": 191672320,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "observed_process_high_water_sum_bytes": {
+          "bytes": 201482240,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        }
+      },
+      "phase_current_bytes": {
+        "startup": 4714496,
+        "graphics": 161087488,
+        "cycle_01": 189001728,
+        "cycle_10": 189775872
+      },
+      "overview_hwm_bytes": 176037888,
+      "marker_current_growth_bytes": 774144,
+      "external_current_growth": {
+        "after_bracket_current_rss_bytes": [
+          189063168,
+          189120512,
+          189239296,
+          189239296,
+          189353984,
+          189440000,
+          189546496,
+          189652992,
+          162484224,
+          162484224
+        ],
+        "last_minus_first_bytes": -26578944
+      },
+      "missing_brackets": [],
+      "external_bracket_limitation": "Final after-brackets may include export/teardown; cycles can share the same bracket. No settled plateau or historical repair claim.",
+      "coverage": {
+        "schema": "viewer_native_diagnostic_coverage/1",
+        "instrument": "native-completion-memory-v1",
+        "phase_count": 40,
+        "cycle_count": 10,
+        "marker_count": 102,
+        "trace_ring_dropped": 2168,
+        "allocator_unavailable": 0,
+        "boundary": "coverage only; ring loss remains explicit; no RSS, recovery, quality or speed acceptance"
+      },
+      "latencies_ms": {
+        "first_useful_ms": 77.709322,
+        "whole_overview_ms": 704.825229,
+        "target_detail_ms": 110.68213999999989,
+        "visible_thumbnail_completion_ms": 568.0023379999998,
+        "warm_revisit_ms": 49.93970300000092,
+        "warm_compressed_ms": 625.9506670000001
+      },
+      "gpu": "AdapterInfo { name: \"NVIDIA GeForce RTX 3090\", vendor: 4318, device: 8708, device_type: DiscreteGpu, device_pci_bus_id: \"0000:01:00.0\", driver: \"NVIDIA\", driver_info: \"610.43.03\", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }",
+      "worker_final": {
+        "decoded_evidence_dropped": 384,
+        "selected_block_coefficients": 21545313,
+        "peak_codec_workspace_bytes": 6489012,
+        "synthesis_coefficients_loaded": 9721674,
+        "synthesis_horizontal_values": 11626982,
+        "synthesis_vertical_values": 10807511,
+        "synthesis_lifting_updates": 48766284,
+        "synthesis_output_samples": 7773025,
+        "wasm_linear_bytes": null,
+        "request_working_set_bytes": 0,
+        "request_pin_metadata_bytes": 0,
+        "peak_request_working_set_bytes": 217363,
+        "peak_request_pin_metadata_bytes": 5034,
+        "compressed_bytes": 2566649,
+        "peak_compressed_bytes": 2566649,
+        "peak_descriptor_bytes": 1083232,
+        "descriptor_bytes": 1083232,
+        "received_jpp_bytes": 1963454,
+        "received_descriptor_bytes": 30208,
+        "received_mask_bytes": 606740,
+        "mask_bytes": 606740,
+        "peak_mask_bytes": 606740,
+        "mask_evictions": 0,
+        "decode_count": 448,
+        "decoded_pixels": 6405099,
+        "selected_code_blocks": 22993,
+        "compressed_read_bytes": 12106949,
+        "cache_hits": 415,
+        "requests": 33,
+        "representation_evictions": 0,
+        "compressed_bin_evictions": 0,
+        "transferred_sample_bytes": 0,
+        "aborted": 0,
+        "retries": 0,
+        "elapsed_ms": 1647.1105970000012
+      },
+      "release_runtime_zero_all_cycles": true,
+      "lifetime_final": {
+        "boundary": "current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies",
+        "display_reset_released_items": 416,
+        "display_reset_released_logical_bytes": 27288064,
+        "event_ring_slots": 128,
+        "retained_stage_count": 39,
+        "runtime": {
+          "decoded_payloads": 0,
+          "desired_entries": 32,
+          "entries": 32,
+          "failed_entries": 0,
+          "outstanding_reservations": 0,
+          "resident_entries": 32,
+          "sample_capacity_bytes": 0,
+          "upload_bytes": 0,
+          "upload_entries": 0,
+          "validity_capacity_bytes": 0,
+          "worker_reserved_bytes": 0
+        },
+        "runtime_epoch": 11,
+        "stage_slots": 64,
+        "trace_ring_slots": 256
+      },
+      "allocator_cycle_10": {
+        "arena_bytes": 37306368,
+        "boundary": "current glibc arenas; free includes retained blocks, top is a subset; tcache and foreign/driver allocations are not fully attributed; not RSS or Rust live bytes",
+        "free_arena_bytes": 8680864,
+        "in_use_arena_bytes": 28625504,
+        "mmap_bytes": 15040976,
+        "mmap_regions": 2,
+        "provider": "glibc.mallinfo2",
+        "top_releasable_bytes": 353216,
+        "version": "2.43"
+      },
+      "allocator_in_use_cycle_growth_bytes": 1042656,
+      "retained_stages_first_last": [
+        30,
+        39
+      ],
+      "smaps_last": {
+        "Rss": 162484224,
+        "Pss": 157233152,
+        "Private_Clean": 98988032,
+        "Private_Dirty": 57802752,
+        "Shared_Clean": 5693440,
+        "Shared_Dirty": 0,
+        "Anonymous": 57802752,
+        "Swap": 0,
+        "SwapPss": 0
+      },
+      "pacing": {
+        "cross_realm_intervals_unavailable": false,
+        "cross_realm_inversions": 0,
+        "requests": 448,
+        "invalid_samples": 0,
+        "dispatch_to_worker_ms": 11.851813000001513,
+        "worker_execution_ms": 1647.0572859999788,
+        "finish_to_publish_ms": 3.4658070000159,
+        "publish_to_receive_ms": 9072.52256599999,
+        "receive_to_ui_ms": 0.24945200001496914,
+        "finish_to_ui_max_ms": 32.88903500000015,
+        "same_frame_next_dispatches": 430,
+        "ui_to_next_dispatch_ms": 91.10949999999339
+      },
+      "mapped_files": {
+        "hashed": 42,
+        "unavailable": [
+          {
+            "path": "/dev/nvidia0",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidia1",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidiactl",
+            "unavailable": "[Errno 22] Invalid argument"
+          }
+        ],
+        "expected_graphics_matches": [
+          "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+          "/usr/lib/libGLX_nvidia.so.0",
+          "/usr/lib/libnvidia-glcore.so.610.43.03",
+          "/usr/lib/libnvidia-glsi.so.610.43.03",
+          "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+          "/usr/lib/libX11.so.6",
+          "/usr/lib/libxcb.so.1",
+          "/usr/lib/libxkbcommon.so.0"
+        ],
+        "evidence": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04-wrapper.json",
+          "bytes": 48118,
+          "sha256": "160c6afec75a7445a2a0505a0e06fe08f86a8d5aaba05fe2fdf176686c5faa2d"
+        }
+      },
+      "screenshots": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04-captures/capture-02s.png",
+          "bytes": 146573,
+          "sha256": "d7e48216169c0cbf9130e26e5650433e8f96d75a0596e0393c825cd0cf45ad0c",
+          "offset_seconds": 2,
+          "lateness_ns": 7138197,
+          "duration_ns": 163971585,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04-captures/capture-05s.png",
+          "bytes": 221444,
+          "sha256": "db9bd507d905b8f116e9affb6997faf450c5c2b508b59e9b3e5a18342eeafcb5",
+          "offset_seconds": 5,
+          "lateness_ns": 1043186,
+          "duration_ns": 204555823,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        }
+      ],
+      "server_cache_state": "warm-server",
+      "service_before": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04/service-before.json",
+        "bytes": 598,
+        "sha256": "3a3846e51c4a8c7186086fc5bfe82c5f00d9a4def0d31d416645977a13b8cd3b"
+      },
+      "service_after": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04/service-after.json",
+        "bytes": 599,
+        "sha256": "eedf420bab4271c967d4d7f0e8bde16e9fcaf37959adc973073c60e626c02e4d"
+      },
+      "summary": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04-summary.json",
+        "bytes": 299571,
+        "sha256": "88e3713b920826f64535de3dbbe96d8826ac91d04e9baea6ef28bb21a6813c0a"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-04/composed-trace.json",
+        "bytes": 784408,
+        "sha256": "80b8146e90b44874bdc34781d56b5429ed0e11b2c1d10c22c05acc735d0874f3"
+      },
+      "errors": [],
+      "marker_runtime_observed_maxima": {
+        "outstanding_reservations": 0,
+        "worker_reserved_bytes": 0,
+        "decoded_payloads": 0,
+        "sample_capacity_bytes": 0,
+        "validity_capacity_bytes": 0,
+        "upload_bytes": 0
+      },
+      "marker_runtime_observation_boundary": "Observed maxima at declared allocation markers, which are settled/release boundaries; not continuous transient reservation peaks."
+    },
+    {
+      "run": "native-05",
+      "application_exit": 0,
+      "application_exit_basis": "Frozen harness records any nonzero process.wait return as a trace failure; completed trace has no failures.",
+      "harness_exit": 0,
+      "benchmark": {
+        "admitted": true,
+        "qualified": false,
+        "reasons": [
+          "threshold exceeded: target_detail_ms"
+        ],
+        "exit_code": 4
+      },
+      "rss": {
+        "process_peak_rss_bytes": {
+          "bytes": 190029824,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "process_group_sampled_peak_rss_bytes": {
+          "bytes": 191811584,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        },
+        "observed_process_high_water_sum_bytes": {
+          "bytes": 200138752,
+          "ceiling_bytes": 243269632,
+          "boundary": "existing composed trace observation",
+          "within_ceiling": true
+        }
+      },
+      "phase_current_bytes": {
+        "startup": 4763648,
+        "graphics": 161566720,
+        "cycle_01": 189239296,
+        "cycle_10": 190029824
+      },
+      "overview_hwm_bytes": 176230400,
+      "marker_current_growth_bytes": 790528,
+      "external_current_growth": {
+        "after_bracket_current_rss_bytes": [
+          189296640,
+          189366272,
+          189485056,
+          189485056,
+          189616128,
+          189706240,
+          189808640,
+          189927424,
+          177623040,
+          177623040
+        ],
+        "last_minus_first_bytes": -11673600
+      },
+      "missing_brackets": [],
+      "external_bracket_limitation": "Final after-brackets may include export/teardown; cycles can share the same bracket. No settled plateau or historical repair claim.",
+      "coverage": {
+        "schema": "viewer_native_diagnostic_coverage/1",
+        "instrument": "native-completion-memory-v1",
+        "phase_count": 40,
+        "cycle_count": 10,
+        "marker_count": 102,
+        "trace_ring_dropped": 2173,
+        "allocator_unavailable": 0,
+        "boundary": "coverage only; ring loss remains explicit; no RSS, recovery, quality or speed acceptance"
+      },
+      "latencies_ms": {
+        "first_useful_ms": 76.202279,
+        "whole_overview_ms": 734.199456,
+        "target_detail_ms": 170.73685999999998,
+        "visible_thumbnail_completion_ms": 551.6437189999997,
+        "warm_revisit_ms": 43.8908679999995,
+        "warm_compressed_ms": 647.4709840000002
+      },
+      "gpu": "AdapterInfo { name: \"NVIDIA GeForce RTX 3090\", vendor: 4318, device: 8708, device_type: DiscreteGpu, device_pci_bus_id: \"0000:01:00.0\", driver: \"NVIDIA\", driver_info: \"610.43.03\", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }",
+      "worker_final": {
+        "decoded_evidence_dropped": 384,
+        "selected_block_coefficients": 21545313,
+        "peak_codec_workspace_bytes": 6489012,
+        "synthesis_coefficients_loaded": 9721674,
+        "synthesis_horizontal_values": 11626982,
+        "synthesis_vertical_values": 10807511,
+        "synthesis_lifting_updates": 48766284,
+        "synthesis_output_samples": 7773025,
+        "wasm_linear_bytes": null,
+        "request_working_set_bytes": 0,
+        "request_pin_metadata_bytes": 0,
+        "peak_request_working_set_bytes": 217363,
+        "peak_request_pin_metadata_bytes": 5034,
+        "compressed_bytes": 2566649,
+        "peak_compressed_bytes": 2566649,
+        "peak_descriptor_bytes": 1083232,
+        "descriptor_bytes": 1083232,
+        "received_jpp_bytes": 1963454,
+        "received_descriptor_bytes": 30208,
+        "received_mask_bytes": 606740,
+        "mask_bytes": 606740,
+        "peak_mask_bytes": 606740,
+        "mask_evictions": 0,
+        "decode_count": 448,
+        "decoded_pixels": 6405099,
+        "selected_code_blocks": 22993,
+        "compressed_read_bytes": 12106949,
+        "cache_hits": 415,
+        "requests": 33,
+        "representation_evictions": 0,
+        "compressed_bin_evictions": 0,
+        "transferred_sample_bytes": 0,
+        "aborted": 0,
+        "retries": 0,
+        "elapsed_ms": 1665.876689999999
+      },
+      "release_runtime_zero_all_cycles": true,
+      "lifetime_final": {
+        "boundary": "current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies",
+        "display_reset_released_items": 416,
+        "display_reset_released_logical_bytes": 27288064,
+        "event_ring_slots": 128,
+        "retained_stage_count": 39,
+        "runtime": {
+          "decoded_payloads": 0,
+          "desired_entries": 32,
+          "entries": 32,
+          "failed_entries": 0,
+          "outstanding_reservations": 0,
+          "resident_entries": 32,
+          "sample_capacity_bytes": 0,
+          "upload_bytes": 0,
+          "upload_entries": 0,
+          "validity_capacity_bytes": 0,
+          "worker_reserved_bytes": 0
+        },
+        "runtime_epoch": 11,
+        "stage_slots": 64,
+        "trace_ring_slots": 256
+      },
+      "allocator_cycle_10": {
+        "arena_bytes": 37318656,
+        "boundary": "current glibc arenas; free includes retained blocks, top is a subset; tcache and foreign/driver allocations are not fully attributed; not RSS or Rust live bytes",
+        "free_arena_bytes": 8662624,
+        "in_use_arena_bytes": 28656032,
+        "mmap_bytes": 15040976,
+        "mmap_regions": 2,
+        "provider": "glibc.mallinfo2",
+        "top_releasable_bytes": 404384,
+        "version": "2.43"
+      },
+      "allocator_in_use_cycle_growth_bytes": 1043840,
+      "retained_stages_first_last": [
+        30,
+        39
+      ],
+      "smaps_last": {
+        "Rss": 177623040,
+        "Pss": 172376064,
+        "Private_Clean": 104706048,
+        "Private_Dirty": 67239936,
+        "Shared_Clean": 5677056,
+        "Shared_Dirty": 0,
+        "Anonymous": 58093568,
+        "Swap": 0,
+        "SwapPss": 0
+      },
+      "pacing": {
+        "cross_realm_intervals_unavailable": false,
+        "cross_realm_inversions": 0,
+        "requests": 448,
+        "invalid_samples": 0,
+        "dispatch_to_worker_ms": 13.060368999999994,
+        "worker_execution_ms": 1665.822719000002,
+        "finish_to_publish_ms": 3.304357999987687,
+        "publish_to_receive_ms": 9139.719415,
+        "receive_to_ui_ms": 0.2676440000198852,
+        "finish_to_ui_max_ms": 33.36419500000193,
+        "same_frame_next_dispatches": 430,
+        "ui_to_next_dispatch_ms": 92.2052829999922
+      },
+      "mapped_files": {
+        "hashed": 42,
+        "unavailable": [
+          {
+            "path": "/dev/nvidia0",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidia1",
+            "unavailable": "[Errno 22] Invalid argument"
+          },
+          {
+            "path": "/dev/nvidiactl",
+            "unavailable": "[Errno 22] Invalid argument"
+          }
+        ],
+        "expected_graphics_matches": [
+          "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+          "/usr/lib/libGLX_nvidia.so.0",
+          "/usr/lib/libnvidia-glcore.so.610.43.03",
+          "/usr/lib/libnvidia-glsi.so.610.43.03",
+          "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+          "/usr/lib/libX11.so.6",
+          "/usr/lib/libxcb.so.1",
+          "/usr/lib/libxkbcommon.so.0"
+        ],
+        "evidence": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05-wrapper.json",
+          "bytes": 49687,
+          "sha256": "bcbb3f786937c7c275381988a8a8feef1f5abeed427d99314e785f9886cab2e8"
+        }
+      },
+      "screenshots": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05-captures/capture-02s.png",
+          "bytes": 142889,
+          "sha256": "7c23714080be5855725d1f5f12c31e88e9b7982c7022be1b2840174d7dc43e51",
+          "offset_seconds": 2,
+          "lateness_ns": 11490491,
+          "duration_ns": 143018992,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05-captures/capture-05s.png",
+          "bytes": 107426,
+          "sha256": "9e5ec02d7cf8aaffaad8a9cc51ea401d1486159755e4c3ea1dd61b6c21330e6d",
+          "offset_seconds": 5,
+          "lateness_ns": 3457408,
+          "duration_ns": 123627566,
+          "exit_code": 0,
+          "dimensions": [
+            1440,
+            900
+          ],
+          "inspection": "pending main; execution owner did not inspect"
+        }
+      ],
+      "server_cache_state": "warm-server",
+      "service_before": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05/service-before.json",
+        "bytes": 599,
+        "sha256": "eedf420bab4271c967d4d7f0e8bde16e9fcaf37959adc973073c60e626c02e4d"
+      },
+      "service_after": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05/service-after.json",
+        "bytes": 600,
+        "sha256": "5718e97f5c7234aa4532a74e0e4df3f087944104a0d2e6599bfbccb3d3dc2fc6"
+      },
+      "summary": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05-summary.json",
+        "bytes": 299599,
+        "sha256": "286ff99d94f478e5719ddf8c525f2f136b8d3bf3a14f8047f9090a780740a96a"
+      },
+      "trace": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/native-05/composed-trace.json",
+        "bytes": 784151,
+        "sha256": "29d8087c721bea79111a54bfcfca12b62fd3cde1c46724d8475ff408f2e9f2ac"
+      },
+      "errors": [],
+      "marker_runtime_observed_maxima": {
+        "outstanding_reservations": 0,
+        "worker_reserved_bytes": 0,
+        "decoded_payloads": 0,
+        "sample_capacity_bytes": 0,
+        "validity_capacity_bytes": 0,
+        "upload_bytes": 0
+      },
+      "marker_runtime_observation_boundary": "Observed maxima at declared allocation markers, which are settled/release boundaries; not continuous transient reservation peaks."
+    }
+  ],
+  "evidence": {
+    "execution.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/execution.json",
+      "bytes": 287670,
+      "sha256": "91dbe7f4a6d79a666c0f8cc615822cdf07ed0e94d00dce181455972e1ff664b1"
+    },
+    "infrastructure.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/infrastructure.json",
+      "bytes": 48260,
+      "sha256": "f8139b1a2f63688037ef189a8a3a807c4db524e84a33868b70fff327df4066f1"
+    },
+    "outcomes.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/outcomes.json",
+      "bytes": 261701,
+      "sha256": "2300350c17bd52441bc9ec095ece4c5257082c9b69fdd9e62d1c584c05281475"
+    },
+    "inputs-after.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/inputs-after.json",
+      "bytes": 266424,
+      "sha256": "006f46302d9fd79dbf1e097f6caf24a666663de7f608fe3844e18dc8bfb232b9"
+    },
+    "summary.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/summary.json",
+      "bytes": 279908,
+      "sha256": "2acfecee4403d04fa49f7a58f422493a6f109d1a199bfc2e5fb6033bc885d177"
+    },
+    "derived-resource-analysis.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/derived-resource-analysis.json",
+      "bytes": 1505994,
+      "sha256": "43afeca1067ac28c2c5d1bf9969b1dcefdee050562454517d1aa2fb563daec0b"
+    },
+    "manifest": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01/evidence-manifest.json",
+      "bytes": 51477,
+      "sha256": "a79b01e77025a9d7a5ebf1083880f73d26890225fab9a270ae6f97884e899a2a"
+    }
+  },
+  "execution_evidence_manifest": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01-execution/evidence-manifest.json",
+    "bytes": 1852,
+    "sha256": "5650b1bb44d31ec015be4c0277d4da12cdbe89dd8ebd7b10c9a88b6a48045250"
+  },
+  "operation_receipt_path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-repaired-01-execution/operation-receipt.json"
+}

@@ -19,6 +19,42 @@ pub struct Raster {
     bands: Vec<u16>,
     pub bits: u8,
 }
+struct MaskWindow {
+    x: c_int,
+    y: c_int,
+    width: c_int,
+    height: c_int,
+    pixels: usize,
+}
+
+fn mask_window(rect: codec::TileRect, width: u32, height: u32) -> Result<MaskWindow> {
+    // The indexed preparation contract admits tiles no larger than 1024 square.
+    ensure!(
+        (1..=1024).contains(&rect.width) && (1..=1024).contains(&rect.height),
+        "source mask rectangle must be a non-empty supported tile"
+    );
+    ensure!(
+        rect.x
+            .checked_add(rect.width)
+            .is_some_and(|end| end <= width && c_int::try_from(end).is_ok())
+            && rect
+                .y
+                .checked_add(rect.height)
+                .is_some_and(|end| end <= height && c_int::try_from(end).is_ok()),
+        "source mask rectangle outside raster"
+    );
+    let pixels = usize::try_from(rect.width)?
+        .checked_mul(usize::try_from(rect.height)?)
+        .ok_or_else(|| anyhow::anyhow!("source mask allocation overflow"))?;
+    Ok(MaskWindow {
+        x: c_int::try_from(rect.x)?,
+        y: c_int::try_from(rect.y)?,
+        width: c_int::try_from(rect.width)?,
+        height: c_int::try_from(rect.height)?,
+        pixels,
+    })
+}
+
 impl Raster {
     /// GDAL is used synchronously on the creating preparation thread.
     pub fn open(
@@ -184,6 +220,57 @@ impl Raster {
             components: self.components,
             bits_per_pixel,
         }
+    }
+    /// Read the original selected bands' GDAL validity, without sample conversion.
+    pub fn read_masks(&mut self, rect: codec::TileRect) -> Result<Vec<Vec<u8>>> {
+        let window = mask_window(rect, self.width, self.height)?;
+        let mut planes = vec![vec![0; window.pixels]; self.bands.len()];
+        // SAFETY: GDAL's mask handles belong to the live dataset; each output is
+        // a checked tile-sized Byte plane, read synchronously before dataset close.
+        unsafe {
+            let band = self
+                .library
+                .get::<unsafe extern "C" fn(Handle, c_int) -> Handle>(b"GDALGetRasterBand\0")?;
+            let mask = self
+                .library
+                .get::<unsafe extern "C" fn(Handle) -> Handle>(b"GDALGetMaskBand\0")?;
+            let read = self.library.get::<unsafe extern "C" fn(
+                Handle,
+                c_int,
+                c_int,
+                c_int,
+                c_int,
+                c_int,
+                *mut c_void,
+                c_int,
+                c_int,
+                c_int,
+                c_int,
+                c_int,
+            ) -> c_int>(b"GDALRasterIO\0")?;
+            for (&number, plane) in self.bands.iter().zip(&mut planes) {
+                let handle = mask(band(self.dataset, i32::from(number)));
+                ensure!(!handle.is_null(), "GDAL source mask unavailable");
+                ensure!(
+                    read(
+                        handle,
+                        0,
+                        window.x,
+                        window.y,
+                        window.width,
+                        window.height,
+                        plane.as_mut_ptr().cast(),
+                        window.width,
+                        window.height,
+                        1,
+                        0,
+                        0
+                    ) == 0,
+                    "GDAL source mask read failed"
+                );
+            }
+        }
+        Ok(planes)
     }
     pub fn read_tile(&mut self, rect: codec::TileRect, planes: &mut [Vec<u8>]) -> Result<()> {
         ensure!(planes.len() == self.bands.len(), "plane count");
@@ -382,4 +469,57 @@ pub fn write_fixture(library_path: &Path, output: &Path, profile: &Profile) -> R
     }
     std::fs::rename(temporary, output)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod mask_window_tests {
+    use super::*;
+
+    fn rect(x: u32, y: u32, width: u32, height: u32) -> codec::TileRect {
+        codec::TileRect {
+            tile_index: 0,
+            tile_x: 0,
+            tile_y: 0,
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_geometry_before_allocation_or_gdal() {
+        for r in [
+            rect(0, 0, 65_537, 65_537),
+            rect(0, 0, 0, 512),
+            rect(0, 0, 512, 0),
+            rect(0, 0, 1025, 1),
+            rect(u32::MAX, 0, 2, 1),
+            rect(0, u32::MAX, 1, 2),
+            rect(i32::MAX as u32, 0, 1, 1),
+            rect(i32::MAX as u32 + 1, 0, 1, 1),
+            rect(0, i32::MAX as u32 + 1, 1, 1),
+        ] {
+            assert!(mask_window(r, u32::MAX, u32::MAX).is_err());
+        }
+        assert!(mask_window(rect(500, 0, 18, 1), 517, 261).is_err());
+        assert!(mask_window(rect(0, 256, 1, 6), 517, 261).is_err());
+    }
+
+    #[test]
+    fn accepts_full_and_clipped_supported_tiles() {
+        let full = mask_window(rect(0, 0, 1024, 1024), 1024, 1024).unwrap();
+        assert_eq!(full.pixels, 1_048_576);
+        let clipped = mask_window(rect(512, 256, 5, 5), 517, 261).unwrap();
+        assert_eq!(
+            (
+                clipped.x,
+                clipped.y,
+                clipped.width,
+                clipped.height,
+                clipped.pixels
+            ),
+            (512, 256, 5, 5, 25)
+        );
+    }
 }

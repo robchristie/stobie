@@ -11,13 +11,26 @@ use std::{
 
 pub struct Executor {
     sender: mpsc::SyncSender<Job>,
-    events: mpsc::Receiver<Event>,
+    events: mpsc::Receiver<(Event, Option<Arc<std::sync::OnceLock<f64>>>)>,
     cancelled: Arc<Mutex<BTreeSet<RequestToken>>>,
 }
 impl Executor {
     pub fn new(server: String, compressed: usize, context: egui::Context) -> Self {
+        Self::new_diagnostic(
+            server,
+            compressed,
+            context,
+            crate::DiagnosticOptions::default(),
+        )
+    }
+    pub fn new_diagnostic(
+        server: String,
+        compressed: usize,
+        context: egui::Context,
+        diagnostic: crate::DiagnosticOptions,
+    ) -> Self {
         let (sender, jobs) = mpsc::sync_channel::<Job>(1);
-        let (events_tx, events) = mpsc::channel();
+        let (events_tx, events) = mpsc::sync_channel(2);
         let cancelled = Arc::new(Mutex::new(BTreeSet::new()));
         let flags = cancelled.clone();
         std::thread::Builder::new()
@@ -37,6 +50,15 @@ impl Executor {
                     ensure!(manifests.len() <= 32, "catalogue capacity");
                     for m in &manifests {
                         m.validate()?;
+                        if diagnostic.authored_immediate {
+                            ensure!(
+                                m.identity.encoding_contract == "authored-completion-diagnostic-v1"
+                                    && m.identity.source_sha256
+                                        == "authored-completion-diagnostic-v1"
+                                    && m.identity.validity.is_none(),
+                                "immediate results reject non-authored catalogue"
+                            );
+                        }
                     }
                     Ok(manifests)
                 })();
@@ -48,7 +70,7 @@ impl Executor {
                         metrics: engine.snapshot(),
                     },
                 };
-                let _ = events_tx.send(event);
+                let _ = events_tx.send((event, None));
                 context.request_repaint();
                 while let Ok(job) = jobs.recv() {
                     let started = Instant::now();
@@ -61,6 +83,9 @@ impl Executor {
                     };
                     let result = (|| -> Result<_> {
                         ensure!(!stopped(), "cancelled");
+                        if diagnostic.authored_immediate {
+                            return engine.authored_immediate(&job);
+                        }
                         engine.client.register(job.manifest.clone())?;
                         // Metadata admission may evict an earlier tile from this batch.
                         // Recheck the complete bounded region before requesting any bins.
@@ -99,6 +124,37 @@ impl Executor {
                                 .missing_tiles(&job.manifest.tid, &job.region())?
                                 .is_empty(),
                             "regional descriptors exceed admitted metadata budget"
+                        );
+                        engine.begin_request(&job)?;
+                        for tile in engine
+                            .client
+                            .missing_masks(&job.manifest.tid, &job.region())?
+                        {
+                            ensure!(!stopped(), "cancelled");
+                            let bytes = body(
+                                http.get(format!(
+                                    "{server}/mask/{}/{}/{tile}?tid={}",
+                                    job.manifest.target,
+                                    job.region().discard,
+                                    job.manifest.tid
+                                ))
+                                .send()?,
+                                HTTP_LIMIT,
+                            )?;
+                            ensure!(!stopped(), "cancelled");
+                            engine.client.install_mask(
+                                &job.manifest.tid,
+                                tile,
+                                job.region().discard,
+                                &bytes,
+                            )?;
+                        }
+                        ensure!(
+                            engine
+                                .client
+                                .missing_masks(&job.manifest.tid, &job.region())?
+                                .is_empty(),
+                            "regional masks exceed admitted budget"
                         );
                         if engine.client.ready(&job.manifest.tid, &job.region())? {
                             engine.metrics.cache_hits += 1;
@@ -146,11 +202,9 @@ impl Executor {
                                 return engine.decode(&job);
                             }
                         }
-                        Err(anyhow!(
-                            "regional decode failed after bounded retry budget: {}",
-                            engine.decode(&job).unwrap_err()
-                        ))
+                        Err(anyhow!("regional continuation exhausted after 64 rounds"))
                     })();
+                    engine.end_request();
                     engine.metrics.timing = Some(WorkerTiming {
                         started_ms,
                         finished_ms: pacing_now_ms(),
@@ -182,11 +236,17 @@ impl Executor {
                         .lock()
                         .expect("cancellation lock")
                         .remove(&job.request.token);
+                    let wakeup = diagnostic
+                        .enabled
+                        .then(|| Arc::new(std::sync::OnceLock::new()));
                     if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
                         timing.published_ms = pacing_now_ms();
                     }
-                    if events_tx.send(event).is_err() {
+                    if events_tx.send((event, wakeup.clone())).is_err() {
                         break;
+                    }
+                    if let Some(wakeup) = wakeup {
+                        let _ = wakeup.set(pacing_now_ms());
                     }
                     context.request_repaint();
                 }
@@ -212,9 +272,10 @@ impl Executor {
     pub fn drain(&self) -> Vec<Event> {
         self.events
             .try_iter()
-            .map(|mut event| {
+            .map(|(mut event, wakeup)| {
                 if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
                     timing.received_ms = Some(pacing_now_ms());
+                    timing.wakeup_requested_ms = wakeup.and_then(|w| w.get().copied());
                 }
                 let request = match &event {
                     Event::Completed { request, .. } | Event::Cancelled { request, .. } => {
@@ -264,11 +325,140 @@ mod tests {
     use emuella_viewer_source::{ClientLimits, Identity, Profile, jpip};
     use reqwest::header::{HeaderMap, HeaderValue};
 
+    #[test]
+    fn authored_python_catalogue_has_valid_native_identities() {
+        let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tools/viewer-native-diagnostics.py");
+        let output = std::process::Command::new("python3")
+            .args(["-B", "-c", "import runpy,json,sys; print(json.dumps(runpy.run_path(sys.argv[1])['catalogue']()))"])
+            .arg(script).output().unwrap();
+        assert!(output.status.success());
+        let manifests: Vec<Manifest> = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(manifests.len(), 3);
+        for manifest in manifests {
+            manifest.validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn immediate_worker_uses_real_receipt_reservations_and_upload_handoff() {
+        use polyorama_core::{DemandPriority, RegionConsumerId, RegionDemand};
+        use polyorama_runtime::{RegionalCompletion, RegionalRuntime, RegionalRuntimeLimits};
+        use std::{io::Write, net::TcpListener};
+        let job = crate::engine::diagnostic_tests::job();
+        job.manifest.validate().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let server = format!("http://{}", listener.local_addr().unwrap());
+        let catalogue = serde_json::to_vec(&vec![job.manifest.clone()]).unwrap();
+        let fixture = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut request = [0; 4096];
+            let n = socket.read(&mut request).unwrap();
+            assert!(
+                std::str::from_utf8(&request[..n])
+                    .unwrap()
+                    .starts_with("GET /catalogue ")
+            );
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                catalogue.len()
+            )
+            .unwrap();
+            socket.write_all(&catalogue).unwrap();
+        });
+        let executor = Executor::new_diagnostic(
+            server,
+            64 << 20,
+            egui::Context::default(),
+            crate::DiagnosticOptions {
+                enabled: true,
+                authored_immediate: true,
+            },
+        );
+        let receive = || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                let events = executor.drain();
+                if !events.is_empty() {
+                    return events;
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "authored executor did not publish"
+                );
+                std::thread::yield_now();
+            }
+        };
+        assert!(matches!(&receive()[0], Event::Catalogue(_)));
+        fixture.join().unwrap(); // No descriptor/sample server exists: completion must be authored.
+        let mut runtime = RegionalRuntime::new(RegionalRuntimeLimits {
+            max_demands: 2,
+            max_in_flight: 1,
+            decoded_bytes: job.request.max_decoded_bytes,
+        });
+        let first = RegionDemand {
+            consumer: RegionConsumerId(1),
+            key: job.request.key.clone(),
+            priority: DemandPriority::Visible,
+            max_decoded_bytes: job.request.max_decoded_bytes,
+        };
+        let mut second = first.clone();
+        second.key.region.x = 512;
+        second.consumer = RegionConsumerId(2);
+        runtime.reconcile(1, [first, second]).unwrap();
+        let request = runtime.dispatch().remove(0);
+        assert!(runtime.dispatch().is_empty());
+        executor
+            .submit(Job {
+                request: request.clone(),
+                manifest: job.manifest,
+            })
+            .unwrap();
+        let Event::Completed {
+            request: received,
+            pixels,
+            metrics,
+        } = receive().remove(0)
+        else {
+            panic!("expected real completion event")
+        };
+        assert_eq!(received, request);
+        assert_eq!(runtime.metrics().in_flight, 1); // Publication did not release the UI reservation.
+        let timing = metrics.timing.unwrap();
+        assert!(
+            timing.published_ms >= timing.finished_ms
+                && timing.received_ms.unwrap() >= timing.published_ms
+        );
+        assert_eq!(
+            runtime.complete_frame(&received, pixels),
+            RegionalCompletion::Accepted
+        );
+        assert!(runtime.dispatch().is_empty());
+        let allocation = runtime.allocation_diagnostics();
+        assert_eq!(allocation.decoded_payloads, 1);
+        assert_eq!(allocation.sample_capacity_bytes, 512 * 512 * 3 * 2);
+        let upload = runtime.take_decoded_frame().unwrap();
+        assert!(runtime.dispatch().is_empty());
+        assert_eq!(runtime.allocation_diagnostics().sample_capacity_bytes, 0);
+        assert_eq!(
+            runtime.allocation_diagnostics().upload_bytes,
+            512 * 512 * 3 * 2
+        );
+        drop(upload);
+        assert!(runtime.finish_upload(&received.key, received.token, true));
+        assert_eq!(runtime.dispatch().len(), 1);
+    }
+
     fn client() -> (SharedClient, String) {
         let mut manifest = Manifest {
             target: "response-test".into(),
             tid: String::new(),
             identity: Identity {
+                validity: None,
                 source_sha256: "test-source".into(),
                 bands: vec![0],
                 profile: Profile {

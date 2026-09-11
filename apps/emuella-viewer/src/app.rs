@@ -136,9 +136,15 @@ pub struct PacingSample {
     pub published_ms: f64,
     pub received_ms: f64,
     pub ui_drained_ms: f64,
+    #[serde(default)]
+    pub wakeup_requested_ms: Option<f64>,
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct PacingTotals {
+    #[serde(default)]
+    pub cross_realm_intervals_unavailable: bool,
+    #[serde(default)]
+    pub cross_realm_inversions: u64,
     pub requests: u64,
     pub invalid_samples: u64,
     pub dispatch_to_worker_ms: f64,
@@ -152,6 +158,28 @@ pub struct PacingTotals {
 }
 impl PacingTotals {
     fn record(&mut self, s: &PacingSample) {
+        self.record_realms(s, cfg!(target_arch = "wasm32"));
+    }
+    fn record_realms(&mut self, s: &PacingSample, browser: bool) {
+        if browser {
+            self.cross_realm_intervals_unavailable = true;
+            let worker = [s.worker_started_ms, s.worker_finished_ms, s.published_ms];
+            let ui = [s.dispatch_ms, s.received_ms, s.ui_drained_ms];
+            if worker.iter().chain(ui.iter()).any(|v| !v.is_finite())
+                || worker.windows(2).chain(ui.windows(2)).any(|w| w[1] < w[0])
+            {
+                self.invalid_samples += 1;
+                return;
+            }
+            if s.worker_started_ms < s.dispatch_ms || s.received_ms < s.published_ms {
+                self.cross_realm_inversions += 1;
+            }
+            self.requests += 1;
+            self.worker_execution_ms += s.worker_finished_ms - s.worker_started_ms;
+            self.finish_to_publish_ms += s.published_ms - s.worker_finished_ms;
+            self.receive_to_ui_ms += s.ui_drained_ms - s.received_ms;
+            return;
+        }
         let stamps = [
             s.dispatch_ms,
             s.worker_started_ms,
@@ -176,8 +204,35 @@ impl PacingTotals {
             .max(s.ui_drained_ms - s.worker_finished_ms);
     }
 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DiagnosticBoundary {
+    pub kind: String,
+    pub clock_ms: f64,
+    pub frame: u64,
+    pub phase: String,
+    pub token: Option<polyorama_runtime::RequestToken>,
+    pub worker_reserved_bytes: usize,
+    pub decoded_bytes: usize,
+    pub upload_bytes: usize,
+}
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Snapshot {
+    #[serde(default)]
+    pub instrument: Option<String>,
+    #[serde(default)]
+    pub diagnostic_options: crate::DiagnosticOptions,
+    #[serde(default)]
+    pub diagnostic_trace: Vec<DiagnosticBoundary>,
+    #[serde(default)]
+    pub diagnostic_trace_dropped: u64,
+    #[serde(default)]
+    pub phase_data_ready_ms: Option<f64>,
+    #[serde(default)]
+    pub diagnostic_cycles_completed: usize,
+    #[serde(default)]
+    pub display_reset_released_items: usize,
+    #[serde(default)]
+    pub display_reset_released_logical_bytes: usize,
     #[serde(default)]
     pub pacing: PacingTotals,
     pub loaded: bool,
@@ -234,6 +289,10 @@ struct View {
 struct ScriptStep {
     label: String,
     intent: Intent,
+    #[serde(default)]
+    diagnostic_cycle: Option<usize>,
+    #[serde(default)]
+    authored_completion: bool,
 }
 
 pub struct ViewerApp {
@@ -270,6 +329,11 @@ pub struct ViewerApp {
     last_demands: Vec<RegionDemand>,
     pacing_dispatch: Option<(polyorama_runtime::RequestToken, f64)>,
     pacing_receipt: Option<f64>,
+    diagnostic: crate::DiagnosticOptions,
+    authored_workload_admitted: bool,
+    cycle: Option<(usize, std::collections::BTreeSet<RegionKey>)>,
+    #[cfg(not(target_arch = "wasm32"))]
+    memory: Option<crate::memory::MemoryMarkers>,
 }
 impl ViewerApp {
     pub fn new(
@@ -281,6 +345,24 @@ impl ViewerApp {
         script: bool,
         script_output: Option<String>,
     ) -> Self {
+        Self::new_diagnostic(
+            cc,
+            server,
+            (compressed, decoded, gpu),
+            script,
+            script_output,
+            crate::DiagnosticOptions::default(),
+        )
+    }
+    pub fn new_diagnostic(
+        cc: &eframe::CreationContext<'_>,
+        server: String,
+        limits: (usize, usize, usize),
+        script: bool,
+        script_output: Option<String>,
+        diagnostic: crate::DiagnosticOptions,
+    ) -> Self {
+        let (compressed, decoded, gpu) = limits;
         apply_design_system(&cc.egui_ctx, UiPreferences::default());
         let state = cc.wgpu_render_state.as_ref().expect("viewer requires WGPU");
         state
@@ -304,7 +386,11 @@ impl ViewerApp {
             gpu_limit: gpu,
             clear_display_cache: false,
             context: cc.egui_ctx.clone(),
-            executor: Executor::new(server, compressed, cc.egui_ctx.clone()),
+            executor: if diagnostic.enabled {
+                Executor::new_diagnostic(server, compressed, cc.egui_ctx.clone(), diagnostic)
+            } else {
+                Executor::new(server, compressed, cc.egui_ctx.clone())
+            },
             runtime: RegionalRuntime::new(RegionalRuntimeLimits {
                 max_demands: 1024,
                 max_in_flight: 1,
@@ -329,6 +415,10 @@ impl ViewerApp {
             diagnostics: false,
             scroll_to: None,
             snapshot: Snapshot {
+                instrument: diagnostic
+                    .enabled
+                    .then(|| "native-completion-memory-v1".into()),
+                diagnostic_options: diagnostic,
                 phase_label: "empty-client-overview".into(),
                 gpu_adapter: format!("{:?}", state.adapter.get_info()),
                 ..Default::default()
@@ -344,6 +434,11 @@ impl ViewerApp {
             last_demands: Vec::new(),
             pacing_dispatch: None,
             pacing_receipt: None,
+            diagnostic,
+            authored_workload_admitted: false,
+            cycle: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            memory: None,
         }
     }
     fn error(&mut self, error: String) {
@@ -375,10 +470,11 @@ impl ViewerApp {
                     action: ViewerAction::Retry
                 }
             ) {
-                self.executor = Executor::new(
+                self.executor = Executor::new_diagnostic(
                     self.server.clone(),
                     self.compressed_limit,
                     self.context.clone(),
+                    self.diagnostic,
                 );
                 self.snapshot.errors.clear();
                 self.context.request_repaint();
@@ -515,6 +611,8 @@ impl ViewerApp {
         {
             return Err("workload requires 1–64 uniquely labelled actions".into());
         }
+        validate_diagnostic_steps(&steps, self.diagnostic)?;
+        self.authored_workload_admitted = self.diagnostic.authored_immediate;
         self.script_workload = steps;
         Ok(())
     }
@@ -523,6 +621,59 @@ impl ViewerApp {
     }
     pub fn snapshot(&self) -> Snapshot {
         self.snapshot.clone()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn attach_memory_markers(&mut self, memory: Option<crate::memory::MemoryMarkers>) {
+        self.memory = memory;
+        self.boundary("phase-start", None);
+        self.memory_boundary("phase-start");
+    }
+    fn memory_boundary(&mut self, kind: &str) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.memory.is_some() {
+            let lifetimes = serde_json::json!({
+                "runtime_epoch":self.snapshot.runtime_epoch,
+                "runtime":self.runtime.allocation_diagnostics(),
+                "display_reset_released_items":self.snapshot.display_reset_released_items,
+                "display_reset_released_logical_bytes":self.snapshot.display_reset_released_logical_bytes,
+                "event_ring_slots":self.snapshot.events.capacity(),
+                "trace_ring_slots":self.snapshot.diagnostic_trace.capacity(),
+                "stage_slots":self.script_stages.capacity(),
+                "retained_stage_count":self.script_stages.len(),
+                "boundary":"current owner counts/capacities, not allocator totals; runtime counters reset at epoch; display release totals cumulative; retained stages contain bounded evidence copies"
+            });
+            if let Err(error) =
+                self.memory
+                    .as_mut()
+                    .unwrap()
+                    .emit(kind, &self.snapshot.phase_label, lifetimes)
+            {
+                self.error(format!("Memory diagnostics: {error}"));
+                self.memory = None;
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = kind;
+    }
+    fn boundary(&mut self, kind: &str, token: Option<polyorama_runtime::RequestToken>) {
+        if !self.diagnostic.enabled {
+            return;
+        }
+        if self.snapshot.diagnostic_trace.len() == 256 {
+            self.snapshot.diagnostic_trace.remove(0);
+            self.snapshot.diagnostic_trace_dropped += 1;
+        }
+        let m = self.runtime.metrics();
+        self.snapshot.diagnostic_trace.push(DiagnosticBoundary {
+            kind: kind.into(),
+            clock_ms: pacing_now_ms(),
+            frame: self.snapshot.frame,
+            phase: self.snapshot.phase_label.clone(),
+            token,
+            worker_reserved_bytes: m.worker_reserved_bytes,
+            decoded_bytes: m.decoded_bytes,
+            upload_bytes: m.upload_bytes,
+        });
     }
     fn work_event(&mut self, kind: &str, request: &polyorama_runtime::RegionalRequest) {
         self.resource_event(kind, &request.key, request.token);
@@ -572,6 +723,7 @@ impl ViewerApp {
                     published_ms: t.published_ms,
                     received_ms: t.received_ms?,
                     ui_drained_ms: drained_ms,
+                    wakeup_requested_ms: t.wakeup_requested_ms,
                 })
             });
             if let Some(sample) = &sample {
@@ -588,7 +740,8 @@ impl ViewerApp {
                     pixels,
                     metrics,
                 } => {
-                    let outcome = self.runtime.complete(&request, pixels);
+                    self.boundary("ui-drain", Some(request.token));
+                    let outcome = self.runtime.complete_frame(&request, pixels);
                     self.work_event(&format!("completion_{outcome:?}"), &request);
                     self.snapshot.worker = metrics;
                 }
@@ -640,11 +793,20 @@ impl ViewerApp {
             self.snapshot.script_complete = true;
             return;
         };
+        self.cycle = step.diagnostic_cycle.map(|number| {
+            (
+                number,
+                self.last_demands.iter().map(|d| d.key.clone()).collect(),
+            )
+        });
         self.snapshot.phase_label = step.label;
         self.snapshot.phase_started_ms = self.started.elapsed().as_secs_f64() * 1000.;
         self.snapshot.phase_started_frame = self.snapshot.frame;
         self.snapshot.phase_settled_ms = None;
         self.snapshot.phase_first_useful_ms = None;
+        self.snapshot.phase_data_ready_ms = None;
+        self.boundary("phase-start", None);
+        self.memory_boundary("phase-start");
         let intent = step.intent;
         self.intent(intent);
         self.script_step += 1;
@@ -659,10 +821,23 @@ impl eframe::App for ViewerApp {
     }
     fn ui(&mut self, root_ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = root_ui.ctx().clone();
+        if self.diagnostic.authored_immediate && !self.authored_workload_admitted {
+            self.error("Authored diagnostic workload must be admitted before dispatch".into());
+            return;
+        }
         self.receive();
         self.script();
         let state = frame.wgpu_render_state().expect("WGPU");
         if self.clear_display_cache {
+            let released = state
+                .renderer
+                .read()
+                .callback_resources
+                .get::<RegionalRenderer>()
+                .unwrap()
+                .metrics();
+            let released_items = released.texture_items;
+            let released_bytes = released.texture_bytes;
             self.runtime = RegionalRuntime::new(RegionalRuntimeLimits {
                 max_demands: 1024,
                 max_in_flight: 1,
@@ -684,6 +859,19 @@ impl eframe::App for ViewerApp {
                 ));
             self.snapshot.runtime_epoch += 1;
             self.clear_display_cache = false;
+            if self.diagnostic.enabled {
+                self.snapshot.display_reset_released_items += released_items;
+                self.snapshot.display_reset_released_logical_bytes += released_bytes;
+            }
+            if self.cycle.is_some() {
+                if released_items == 0 || released_bytes == 0 {
+                    self.error("Diagnostic cycle did not release resident textures".into());
+                    self.cycle = None;
+                } else {
+                    self.boundary("cycle-evicted", None);
+                    self.memory_boundary("cycle-evicted");
+                }
+            }
         }
         let mut intents = Vec::new();
         let mut demands = Vec::new();
@@ -926,7 +1114,7 @@ impl eframe::App for ViewerApp {
                 .get_mut::<RegionalRenderer>()
                 .unwrap();
             renderer.begin_frame();
-            while let Some(upload) = self.runtime.take_decoded() {
+            while let Some(upload) = self.runtime.take_decoded_frame() {
                 let key = upload.key.clone();
                 let token = upload.token;
                 if !self.runtime.is_upload_current(&key, token) {
@@ -934,13 +1122,15 @@ impl eframe::App for ViewerApp {
                     self.runtime.finish_upload(&key, token, false);
                     continue;
                 }
-                match renderer.upload(&state.device, &state.queue, upload) {
+                self.boundary("upload-start", Some(token));
+                match renderer.upload_frame(&state.device, &state.queue, upload) {
                     Ok(admission) => {
                         for evicted in admission.evicted {
                             self.resource_event("gpu_evicted", &evicted.key, evicted.token);
                             self.runtime.evict_resident(&evicted.key, evicted.token);
                         }
                         self.runtime.finish_upload(&key, token, true);
+                        self.boundary("upload-finished", Some(token));
                     }
                     Err((upload, error)) => {
                         drop(upload);
@@ -958,6 +1148,7 @@ impl eframe::App for ViewerApp {
             }
             self.pacing_dispatch = Some((request.token, dispatch_ms));
             self.work_event("dispatched", &request);
+            self.boundary("dispatch", Some(request.token));
             if let Some(manifest) = self
                 .catalogue
                 .iter()
@@ -995,6 +1186,9 @@ impl eframe::App for ViewerApp {
             self.snapshot.gpu_uploads = g.uploads;
             self.snapshot.gpu_evictions = g.evictions;
             self.snapshot.rendered_regions = g.prepared_draws;
+        }
+        if self.pacing_receipt.is_some() || self.snapshot.phase_data_ready_ms.is_none() {
+            self.boundary("render-submitted", None);
         }
         for intent in intents {
             self.intent(intent);
@@ -1054,16 +1248,45 @@ impl eframe::App for ViewerApp {
             self.snapshot.phase_first_useful_ms =
                 Some(self.snapshot.elapsed_ms - self.snapshot.phase_started_ms);
         }
-        // ScrollArea applies requested scroll on a subsequent frame. Observe three
-        // complete frames before accepting the new desired state as settled.
-        if self.snapshot.frame >= self.snapshot.phase_started_frame + 3
-            && self.snapshot.desired > 0
+        if self.snapshot.desired > 0
             && self.snapshot.ready_demands == self.snapshot.desired
             && m.in_flight == 0
-            && self.snapshot.phase_settled_ms.is_none()
+            && self.snapshot.phase_data_ready_ms.is_none()
+        {
+            self.snapshot.phase_data_ready_ms =
+                Some(self.snapshot.elapsed_ms - self.snapshot.phase_started_ms);
+            self.boundary("data-ready", None);
+        }
+        // ScrollArea applies requested scroll on a subsequent frame. Observe three
+        // complete frames before accepting the new desired state as settled.
+        if phase_is_settled(
+            self.snapshot.frame,
+            self.snapshot.phase_started_frame,
+            self.snapshot.desired,
+            self.snapshot.ready_demands,
+            m.in_flight,
+        ) && self.snapshot.phase_settled_ms.is_none()
         {
             self.snapshot.phase_settled_ms =
                 Some(self.snapshot.elapsed_ms - self.snapshot.phase_started_ms);
+            self.boundary("phase-settled", None);
+            self.memory_boundary("phase-settled");
+            if let Some((number, keys)) = self.cycle.take() {
+                let restored = self.last_demands.iter().map(|d| d.key.clone()).collect();
+                if cycle_restored(
+                    number,
+                    self.snapshot.diagnostic_cycles_completed,
+                    &keys,
+                    &restored,
+                    self.snapshot.gpu_uploads,
+                ) {
+                    self.snapshot.diagnostic_cycles_completed += 1;
+                    self.boundary("cycle-revisited", None);
+                    self.memory_boundary("cycle-revisited");
+                } else {
+                    self.error("Diagnostic revisit did not restore the same demands with actual uploads in cycle order".into());
+                }
+            }
         }
         if self.snapshot.rendered_regions > 0 && self.snapshot.first_useful_ms.is_none() {
             self.snapshot.first_useful_ms = Some(self.snapshot.elapsed_ms);
@@ -1089,6 +1312,52 @@ impl eframe::App for ViewerApp {
         }
     }
 }
+fn phase_is_settled(
+    frame: u64,
+    started_frame: u64,
+    desired: usize,
+    ready: usize,
+    in_flight: usize,
+) -> bool {
+    frame >= started_frame + 3 && desired > 0 && ready == desired && in_flight == 0
+}
+
+fn validate_diagnostic_steps(
+    steps: &[ScriptStep],
+    options: crate::DiagnosticOptions,
+) -> Result<(), String> {
+    let cycles: Vec<_> = steps
+        .iter()
+        .filter(|s| s.diagnostic_cycle.is_some())
+        .collect();
+    if !cycles.is_empty()
+        && (!options.enabled
+            || cycles.len() != 10
+            || cycles.iter().enumerate().any(|(i, s)| {
+                s.diagnostic_cycle != Some(i + 1)
+                    || s.label != format!("cycle-{:02}", i + 1)
+                    || !matches!(s.intent, Intent::ClearDisplayCache)
+            }))
+    {
+        return Err("diagnostic workload requires exactly ten ordered display eviction/revisit cycles and --native-diagnostics".into());
+    }
+    if options.authored_immediate
+        && (!options.enabled || steps.iter().any(|s| !s.authored_completion))
+    {
+        return Err("immediate mode requires an explicitly authored diagnostic workload".into());
+    }
+    Ok(())
+}
+fn cycle_restored(
+    number: usize,
+    completed: usize,
+    before: &std::collections::BTreeSet<RegionKey>,
+    after: &std::collections::BTreeSet<RegionKey>,
+    uploads: u64,
+) -> bool {
+    number == completed + 1 && !before.is_empty() && before == after && uploads > 0
+}
+
 fn button(ui: &mut egui::Ui, action: ViewerAction) -> bool {
     let mut observations = Vec::new();
     action_button(
@@ -1165,7 +1434,10 @@ fn demand(
             stage: SourceStage(1),
         },
         priority,
-        max_decoded_bytes: width * height * m.identity.profile.components as usize * 4,
+        max_decoded_bytes: width
+            * height
+            * (m.identity.profile.components as usize * 4
+                + if m.identity.validity.is_some() { 2 } else { 0 }),
     }
 }
 #[allow(clippy::too_many_arguments)]
@@ -1291,6 +1563,84 @@ mod tests {
         })).unwrap()
     }
     #[test]
+    fn data_readiness_does_not_shortcut_three_frame_settlement() {
+        assert!(!phase_is_settled(12, 10, 30, 30, 0));
+        assert!(phase_is_settled(13, 10, 30, 30, 0));
+        assert!(!phase_is_settled(13, 10, 30, 29, 0));
+        assert!(!phase_is_settled(13, 10, 30, 30, 1));
+        assert!(!phase_is_settled(13, 10, 0, 0, 0));
+    }
+    #[test]
+    fn diagnostic_workloads_require_ten_ordered_real_reset_actions() {
+        let memory: Vec<ScriptStep> =
+            serde_json::from_str(include_str!("../native-memory-workload.json")).unwrap();
+        let authored: Vec<ScriptStep> =
+            serde_json::from_str(include_str!("../authored-completion-workload.json")).unwrap();
+        let normal: Vec<ScriptStep> =
+            serde_json::from_str(include_str!("../real-scene-workload.json")).unwrap();
+        let options = crate::DiagnosticOptions {
+            enabled: true,
+            authored_immediate: false,
+        };
+        assert!(validate_diagnostic_steps(&memory, options).is_ok());
+        assert!(validate_diagnostic_steps(&memory, crate::DiagnosticOptions::default()).is_err());
+        assert!(validate_diagnostic_steps(&normal, crate::DiagnosticOptions::default()).is_ok());
+        assert!(
+            validate_diagnostic_steps(
+                &memory,
+                crate::DiagnosticOptions {
+                    authored_immediate: true,
+                    ..options
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            validate_diagnostic_steps(
+                &authored,
+                crate::DiagnosticOptions {
+                    authored_immediate: true,
+                    ..options
+                }
+            )
+            .is_ok()
+        );
+        let mut truncated = memory.clone();
+        truncated.pop();
+        assert!(validate_diagnostic_steps(&truncated, options).is_err());
+        let last = truncated.last_mut().unwrap();
+        last.diagnostic_cycle = Some(3);
+        assert!(validate_diagnostic_steps(&truncated, options).is_err());
+        let key = crate::engine::diagnostic_tests::job().request.key;
+        let before = std::collections::BTreeSet::from([key]);
+        assert!(cycle_restored(1, 0, &before, &before, 1));
+        assert!(!cycle_restored(1, 0, &before, &before, 0));
+        assert!(!cycle_restored(2, 0, &before, &before, 1));
+        assert!(!cycle_restored(1, 0, &before, &Default::default(), 1));
+    }
+    #[test]
+    fn browser_intervals_remain_same_realm_even_with_inverted_delivery() {
+        let s = PacingSample {
+            dispatch_ms: 10.,
+            worker_started_ms: 100.,
+            worker_finished_ms: 105.,
+            published_ms: 107.,
+            received_ms: 12.,
+            ui_drained_ms: 20.,
+            wakeup_requested_ms: Some(13.),
+        };
+        let mut totals = PacingTotals::default();
+        totals.record_realms(&s, true);
+        assert!(totals.cross_realm_intervals_unavailable);
+        assert_eq!(totals.cross_realm_inversions, 1);
+        assert_eq!(totals.worker_execution_ms, 5.);
+        assert_eq!(totals.receive_to_ui_ms, 8.);
+        assert_eq!(totals.publish_to_receive_ms, 0.);
+        assert_eq!(totals.dispatch_to_worker_ms, 0.);
+        assert_eq!(totals.finish_to_ui_max_ms, 0.);
+    }
+
+    #[test]
     fn pacing_separates_worker_from_delivery_and_frame_wait() {
         let sample = PacingSample {
             dispatch_ms: 10.,
@@ -1299,6 +1649,7 @@ mod tests {
             published_ms: 16.,
             received_ms: 18.,
             ui_drained_ms: 30.,
+            wakeup_requested_ms: Some(17.),
         };
         let mut totals = PacingTotals::default();
         totals.record(&sample);

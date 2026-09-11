@@ -1,0 +1,2603 @@
+{
+  "schema": "viewer-acceptance-browser-masks-corrected-results/1",
+  "execution_date": "2026-09-11",
+  "status": "partial",
+  "disposition": "quality-rejected-diagnostic-only",
+  "operation_owner": "browser-mask-corrected-execution",
+  "protocol_commit": "3d0565f66003605a86d2a118c1d683864649ff64",
+  "protocol_files": {
+    "tools/viewer-acceptance-browser-masks.mjs": "eee41f139e61ef90f67eebf0256fca06a8c13f64d2b1313469c5fd5b068afdef",
+    "tools/tests/viewer-acceptance-browser-masks.test.mjs": "9d808d8150216c73af96c6544bfef89e8c7e73240e396e16023601fe19c929a0",
+    "docs/viewer-acceptance-browser-masks.md": "1bc779d8868793a2a2a6f218fa92aba5010faccbd7c351b66a7ddbbf702b3adb",
+    "docs/viewer-acceptance-browser-environment.md": "b0351725457347e2b8ae50b16dc30c6a705732744aa1f296fb8a58397ceb6bb1"
+  },
+  "runtime_commit": "fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+  "build_record": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-native-diagnostics-build.json",
+    "bytes": 17745,
+    "sha256": "758e93fe81b06e36650ad742a95b58c07cf18bff2648a3b6d06011e44c674eea"
+  },
+  "web_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web-manifest.json",
+    "bytes": 1964,
+    "sha256": "315798475c28253554d451c1b1c248fff03dbdbfd0cbd49eb1f4b7e08631d642"
+  },
+  "chromium": {
+    "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+    "bytes": 290614600,
+    "sha256": "0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71"
+  },
+  "browser_version": [
+    "151.0.7922.34"
+  ],
+  "playwright_version": "1.62.1",
+  "service_source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "service_binary": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+    "bytes": 1985328,
+    "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+  },
+  "service_catalogue_sha256": "49dfe454bdcce17dc2212e5de3ee1b130b9b7e92f02f2440dff80f419c67841d",
+  "native_evidence": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-results.json",
+    "bytes": 57353,
+    "sha256": "37463f135f58b90c8916274c700da32d24523b10480ce36357a3ad21dfc24bd2"
+  },
+  "source_coverage": {
+    "path": "/nvme/development/emuella/emuella-workspace-viewer-acceptance/docs/evidence/viewer-acceptance/source-coverage.json",
+    "bytes": 2813,
+    "sha256": "9bba0a0ae9064fa6450ceb2b56263a6715b562e7aa7a5ab5cd1adf138ea117e8"
+  },
+  "representations": [
+    {
+      "asset": "94_104001000B823500-PAN16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/representation"
+    },
+    {
+      "asset": "94_104001000B823500-RGB16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/representation"
+    },
+    {
+      "asset": "106_10400100413CDF00-PAN16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/representation"
+    },
+    {
+      "asset": "106_10400100413CDF00-RGB16",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/representation"
+    },
+    {
+      "asset": "105_104001002F92BB00-RGB8",
+      "root": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/representation"
+    }
+  ],
+  "capsule_sha256": "6ecfcd49231c0b5ed12ada056a35f8a70ebba1eb4fd80f92b48c9af02d3d1403",
+  "grant_sha256": "f0204423c41474fcef78ee2a5f22e279ddab7a9ad4de120460e2c5b41db720ba",
+  "plan_sha256": "45db6fd835feafebcb88aefc410a248943a32a2caf5893288c30f592b6d5def4",
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution",
+  "output_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02",
+  "temporary_alias": {
+    "kind": "private-linux-tmp/1",
+    "path": "/tmp",
+    "backing": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/tmp",
+    "dev": "60",
+    "ino": "287838754",
+    "parent_mount_namespace": "mnt:[4026531832]"
+  },
+  "observed_temporary_alias": {
+    "platform": "linux",
+    "mount_namespace": "mnt:[4026534680]",
+    "backing": {
+      "realpath": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/tmp",
+      "directory": true,
+      "dev": "60",
+      "ino": "287838754",
+      "mount_id": "669"
+    },
+    "alias": {
+      "realpath": "/tmp",
+      "directory": true,
+      "dev": "60",
+      "ino": "287838754",
+      "mount_id": "685"
+    },
+    "mountinfo_sha256": "a7da7aa431e68b4aa390bd2f71e5bc38401b19bf55eb0f8e61e8c981f6ad7902",
+    "alias_mountinfo": "685 642 0:56 /development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/tmp /tmp rw,noatime - btrfs /dev/nvme0n1p1 rw,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=5,subvol=/",
+    "backing_mountinfo": "669 572 0:56 / /nvme rw,noatime - btrfs /dev/nvme0n1p1 rw,compress=zstd:3,ssd,discard=async,space_cache=v2,subvolid=5,subvol=/",
+    "parent_mount_namespace": "mnt:[4026531832]",
+    "backing_path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/tmp",
+    "alias_path": "/tmp"
+  },
+  "alias_checks": {
+    "before_playwright_import": 1,
+    "before_context_launches": 9,
+    "all_match": true,
+    "host_tmp_unchanged": true,
+    "host_mount_namespace_unchanged": true
+  },
+  "budget": {
+    "invocations": 1,
+    "serial_contexts": 9,
+    "worker_jobs": 2309,
+    "catalogue_mask_comparisons": 1883,
+    "pressure_forward_jobs": 47,
+    "pressure_revisit_jobs": 47,
+    "runner_retries": 0,
+    "job_seconds": 60,
+    "context_seconds": 660,
+    "invocation_seconds": 6000,
+    "process_timeout_seconds": 6100
+  },
+  "actual": {
+    "invocations": 1,
+    "browser_launches": 9,
+    "usable_contexts": 9,
+    "workers": 9,
+    "runner_retries": 0,
+    "warmups": 0,
+    "blank_page_probes": 0,
+    "jobs": 2309,
+    "terminal_envelopes": 2309,
+    "unexpected_terminal_envelopes": 0,
+    "worker_errors": 0,
+    "page_errors": 0,
+    "exit_code": 2,
+    "elapsed_seconds": 41.80878440197557,
+    "process_timeout": false,
+    "deadline_failures": 0
+  },
+  "all_jobs": {
+    "jobs": 2309,
+    "completed": 2266,
+    "failed": 43,
+    "comparisons": {
+      "samples_checked": 28327712,
+      "validity_checked": 19349648,
+      "sample_differences": 0,
+      "false_valid": 0,
+      "false_invalid": 0,
+      "valid_cells": 16806506,
+      "invalid_cells": 2543142,
+      "nonbinary": 0,
+      "nonbinary_expected": 0
+    },
+    "samples_agree_on_completed": true,
+    "validity_agrees_on_completed": true,
+    "request_and_bounds_agree_all_jobs": true,
+    "metric_max": {
+      "compressed_bytes": 3765101,
+      "peak_compressed_bytes": 3765101,
+      "descriptor_bytes": 325418,
+      "peak_descriptor_bytes": 336578,
+      "mask_bytes": 2091750,
+      "peak_mask_bytes": 2091750,
+      "mask_evictions": 79,
+      "received_mask_bytes": 7095030,
+      "decode_count": 672,
+      "retries": 1412,
+      "received_jpp_bytes": 76231736,
+      "received_descriptor_bytes": 65502,
+      "peak_codec_workspace_bytes": 1953079,
+      "wasm_linear_bytes": 9043968
+    },
+    "failure_errors": {
+      "Error: HTTP 404": 1,
+      "mask digest mismatch": 1,
+      "Error: HTTP 400": 1,
+      "TypeError: Cannot read properties of undefined (reading 'samples')": 22,
+      "Error: regional masks exceed admitted budget": 18
+    }
+  },
+  "scene_jobs": {
+    "jobs": 2212,
+    "completed": 2212,
+    "failed": 0,
+    "comparisons": {
+      "samples_checked": 23501248,
+      "validity_checked": 17037656,
+      "sample_differences": 0,
+      "false_valid": 0,
+      "false_invalid": 0,
+      "valid_cells": 14704640,
+      "invalid_cells": 2333016,
+      "nonbinary": 0,
+      "nonbinary_expected": 0
+    },
+    "samples_agree_on_completed": true,
+    "validity_agrees_on_completed": true,
+    "request_and_bounds_agree_all_jobs": true,
+    "metric_max": {
+      "compressed_bytes": 3765101,
+      "peak_compressed_bytes": 3765101,
+      "descriptor_bytes": 325418,
+      "peak_descriptor_bytes": 325418,
+      "mask_bytes": 2091750,
+      "peak_mask_bytes": 2091750,
+      "mask_evictions": 0,
+      "received_mask_bytes": 2091750,
+      "decode_count": 672,
+      "retries": 3,
+      "received_jpp_bytes": 1675984,
+      "received_descriptor_bytes": 12989,
+      "peak_codec_workspace_bytes": 1953079,
+      "wasm_linear_bytes": 9043968
+    },
+    "failure_errors": {}
+  },
+  "mask_comparisons": {
+    "catalogue_comparisons": 1883,
+    "catalogue_body_bytes": 20780351,
+    "worker_mask_comparisons": 502,
+    "worker_mask_body_bytes": 11916699,
+    "total_mask_comparisons": 2385,
+    "total_mask_body_bytes": 32697050,
+    "maximum_mask_body_bytes": 98304,
+    "byte_differences": 0,
+    "noncanonical_padding": 0,
+    "all_without_any": 0,
+    "oracle_planes_compared": 8634,
+    "oracle_plane_disagreements": 0,
+    "catalogue_partial_band_cells": 3865,
+    "catalogue_partial_by_scene": {
+      "scene-1": 0,
+      "scene-2": 0,
+      "scene-3": 1033,
+      "scene-4": 2832,
+      "scene-5": 0
+    },
+    "catalogue_per_scene": {
+      "scene-1": 420,
+      "scene-2": 42,
+      "scene-3": 770,
+      "scene-4": 63,
+      "scene-5": 588
+    }
+  },
+  "http": {
+    "requests": 8704,
+    "body_bytes": 192773751,
+    "maximum_inflight": 2,
+    "proxy_errors": 0,
+    "maximum_context_body_bytes": 95506228,
+    "preflight_catalogue_requests": 1,
+    "preflight_catalogue_bytes": 148937,
+    "preparation_only_catalogue_requests": 1,
+    "preparation_only_catalogue_bytes": 148937,
+    "counter_scope": "Runner HTTP body counter excludes pinned static asset delivery; retained source governs accounting. Separate catalogue preflights are not proof comparisons."
+  },
+  "contexts": [
+    {
+      "id": "scene-1",
+      "kind": "agreement",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 252,
+        "worker_errors": 0
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 36,
+        "cross_tile_cases": 56,
+        "clipped_source_edge_cases": 84,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      },
+      "http": {
+        "requests": 1019,
+        "body_bytes": 10293301,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 490,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 252,
+        "completed": 252,
+        "failed": 0,
+        "comparisons": {
+          "samples_checked": 1955684,
+          "validity_checked": 1955684,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 1955684,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 1491083,
+          "peak_compressed_bytes": 1491083,
+          "descriptor_bytes": 93952,
+          "peak_descriptor_bytes": 93952,
+          "mask_bytes": 438452,
+          "peak_mask_bytes": 438452,
+          "mask_evictions": 0,
+          "received_mask_bytes": 438452,
+          "decode_count": 252,
+          "retries": 2,
+          "received_jpp_bytes": 1053373,
+          "received_descriptor_bytes": 4100,
+          "peak_codec_workspace_bytes": 1926978,
+          "wasm_linear_bytes": 6946816
+        },
+        "failure_errors": {}
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-1/result.json",
+        "bytes": 395174,
+        "sha256": "6fc99833a09aee2fed4bccf93f480abf834fcd5eb9d200e19714dea4bdc5b966"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-1/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "scene-2",
+      "kind": "agreement",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 504,
+        "worker_errors": 0
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 72,
+        "cross_tile_cases": 224,
+        "clipped_source_edge_cases": 224,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      },
+      "http": {
+        "requests": 1119,
+        "body_bytes": 18098390,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 84,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 504,
+        "completed": 504,
+        "failed": 0,
+        "comparisons": {
+          "samples_checked": 5867832,
+          "validity_checked": 3911888,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 3911888,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 1773800,
+          "peak_compressed_bytes": 1773800,
+          "descriptor_bytes": 125596,
+          "peak_descriptor_bytes": 125596,
+          "mask_bytes": 521826,
+          "peak_mask_bytes": 521826,
+          "mask_evictions": 0,
+          "received_mask_bytes": 521826,
+          "decode_count": 504,
+          "retries": 0,
+          "received_jpp_bytes": 1253104,
+          "received_descriptor_bytes": 5042,
+          "peak_codec_workspace_bytes": 1910121,
+          "wasm_linear_bytes": 7405568
+        },
+        "failure_errors": {}
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-2/result.json",
+        "bytes": 781623,
+        "sha256": "f41f8a25db05090ec8986c703720d83111aed00718099def8f91c5880c9eb01f"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-2/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "scene-3",
+      "kind": "agreement",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 280,
+        "worker_errors": 0
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 40,
+        "cross_tile_cases": 140,
+        "clipped_source_edge_cases": 84,
+        "source_boundaries": [
+          {
+            "component": 0,
+            "checked_native_cases": 8
+          }
+        ],
+        "missing_selections": [],
+        "source_boundary_applicability": "observed-native-transitions",
+        "proved": true
+      },
+      "http": {
+        "requests": 1467,
+        "body_bytes": 14296035,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 875,
+        "mask_disagreements": 0,
+        "partial_band_cells": 1218,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 280,
+        "completed": 280,
+        "failed": 0,
+        "comparisons": {
+          "samples_checked": 2154788,
+          "validity_checked": 2154788,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 1474124,
+          "invalid_cells": 680664,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 1824809,
+          "peak_compressed_bytes": 1824809,
+          "descriptor_bytes": 102520,
+          "peak_descriptor_bytes": 102520,
+          "mask_bytes": 790606,
+          "peak_mask_bytes": 790606,
+          "mask_evictions": 0,
+          "received_mask_bytes": 790606,
+          "decode_count": 280,
+          "retries": 3,
+          "received_jpp_bytes": 1035249,
+          "received_descriptor_bytes": 5228,
+          "peak_codec_workspace_bytes": 1935211,
+          "wasm_linear_bytes": 7143424
+        },
+        "failure_errors": {}
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-3/result.json",
+        "bytes": 441465,
+        "sha256": "1ff120fb8ee8ed783329629cc4fa059a75b91fbd1b6db322cb28464991b2f8f7"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-3/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "scene-4",
+      "kind": "agreement",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 672,
+        "worker_errors": 0
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 96,
+        "cross_tile_cases": 392,
+        "clipped_source_edge_cases": 168,
+        "source_boundaries": [
+          {
+            "component": 0,
+            "checked_native_cases": 12
+          },
+          {
+            "component": 1,
+            "checked_native_cases": 12
+          },
+          {
+            "component": 2,
+            "checked_native_cases": 12
+          }
+        ],
+        "missing_selections": [],
+        "source_boundary_applicability": "observed-native-transitions",
+        "proved": true
+      },
+      "http": {
+        "requests": 1498,
+        "body_bytes": 23925711,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 119,
+        "mask_disagreements": 0,
+        "partial_band_cells": 4896,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 672,
+        "completed": 672,
+        "failed": 0,
+        "comparisons": {
+          "samples_checked": 7655112,
+          "validity_checked": 5103408,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 3451056,
+          "invalid_cells": 1652352,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 2258660,
+          "peak_compressed_bytes": 2258660,
+          "descriptor_bytes": 110272,
+          "peak_descriptor_bytes": 110272,
+          "mask_bytes": 979035,
+          "peak_mask_bytes": 979035,
+          "mask_evictions": 0,
+          "received_mask_bytes": 979035,
+          "decode_count": 672,
+          "retries": 0,
+          "received_jpp_bytes": 1281077,
+          "received_descriptor_bytes": 5392,
+          "peak_codec_workspace_bytes": 1935169,
+          "wasm_linear_bytes": 7864320
+        },
+        "failure_errors": {}
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-4/result.json",
+        "bytes": 1042164,
+        "sha256": "bc9880e46b8f8af6a9eb3153206ffb603cbc8107050f42c7a56f8e37bca31ac0"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-4/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "scene-5",
+      "kind": "agreement",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 504,
+        "worker_errors": 0
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 72,
+        "cross_tile_cases": 224,
+        "clipped_source_edge_cases": 168,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      },
+      "http": {
+        "requests": 1749,
+        "body_bytes": 30105473,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 693,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 504,
+        "completed": 504,
+        "failed": 0,
+        "comparisons": {
+          "samples_checked": 5867832,
+          "validity_checked": 3911888,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 3911888,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 3765101,
+          "peak_compressed_bytes": 3765101,
+          "descriptor_bytes": 325418,
+          "peak_descriptor_bytes": 325418,
+          "mask_bytes": 2091750,
+          "peak_mask_bytes": 2091750,
+          "mask_evictions": 0,
+          "received_mask_bytes": 2091750,
+          "decode_count": 504,
+          "retries": 0,
+          "received_jpp_bytes": 1675984,
+          "received_descriptor_bytes": 12989,
+          "peak_codec_workspace_bytes": 1953079,
+          "wasm_linear_bytes": 9043968
+        },
+        "failure_errors": {}
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-5/result.json",
+        "bytes": 787742,
+        "sha256": "c72ad23443a880d8a8f83c4276a3348f5d2ea90b4afa5a159c8ba075c2ccace3"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/scene-5/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "required-mask-missing",
+      "kind": "missing",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "failure_proved": true,
+      "http": {
+        "requests": 8,
+        "body_bytes": 150113,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 0,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": {
+          "kind": "missing",
+          "target": "106_10400100413CDF00-RGB16",
+          "discard": 0,
+          "tile": 3,
+          "status": 404,
+          "bytes": 25,
+          "forwarded_sha256": "b44c02d98cee9b93354122e7b64e68c3ae14991a87121bc68117b1f6f0eae04e",
+          "stale_identity_rejected": null
+        }
+      },
+      "job_summary": {
+        "jobs": 1,
+        "completed": 0,
+        "failed": 1,
+        "comparisons": {
+          "samples_checked": 0,
+          "validity_checked": 0,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 0,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 0,
+          "peak_compressed_bytes": 0,
+          "descriptor_bytes": 23424,
+          "peak_descriptor_bytes": 23424,
+          "mask_bytes": 0,
+          "peak_mask_bytes": 0,
+          "mask_evictions": 0,
+          "received_mask_bytes": 0,
+          "decode_count": 0,
+          "retries": 0,
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "peak_codec_workspace_bytes": 0,
+          "wasm_linear_bytes": 6619136
+        },
+        "failure_errors": {
+          "Error: HTTP 404": 1
+        }
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-missing/result.json",
+        "bytes": 3183,
+        "sha256": "2b2648292be3e32940d5382bce5164355cf66711e3488a0e907e489dd6e9c328"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-missing/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "required-mask-corrupt",
+      "kind": "corrupt",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "failure_proved": true,
+      "http": {
+        "requests": 8,
+        "body_bytes": 248392,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 0,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": {
+          "kind": "corrupt",
+          "target": "106_10400100413CDF00-RGB16",
+          "discard": 0,
+          "tile": 3,
+          "status": 200,
+          "bytes": 98304,
+          "forwarded_sha256": "c3b3ebf7d370557a7adefdf24a5680b1b253ff3965249259d1cb438a5710bbdd",
+          "stale_identity_rejected": null
+        }
+      },
+      "job_summary": {
+        "jobs": 1,
+        "completed": 0,
+        "failed": 1,
+        "comparisons": {
+          "samples_checked": 0,
+          "validity_checked": 0,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 0,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 0,
+          "peak_compressed_bytes": 0,
+          "descriptor_bytes": 23424,
+          "peak_descriptor_bytes": 23424,
+          "mask_bytes": 0,
+          "peak_mask_bytes": 0,
+          "mask_evictions": 0,
+          "received_mask_bytes": 98304,
+          "decode_count": 0,
+          "retries": 0,
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "peak_codec_workspace_bytes": 0,
+          "wasm_linear_bytes": 6619136
+        },
+        "failure_errors": {
+          "mask digest mismatch": 1
+        }
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-corrupt/result.json",
+        "bytes": 3196,
+        "sha256": "a323f45e47a4956e32cf88a4447e48df6a844220cca8fb9f68d5dce7d0664e95"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-corrupt/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "required-mask-stale",
+      "kind": "stale",
+      "status": "complete-diagnostic",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "failure_proved": true,
+      "http": {
+        "requests": 8,
+        "body_bytes": 150108,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 0,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": {
+          "kind": "stale",
+          "target": "106_10400100413CDF00-RGB16",
+          "discard": 0,
+          "tile": 3,
+          "status": 400,
+          "bytes": 20,
+          "forwarded_sha256": "6a10aa827f1c07a1c5cad5b821ecd2372fcf7a292d56e9a3c1fe9828420357b9",
+          "stale_identity_rejected": true
+        }
+      },
+      "job_summary": {
+        "jobs": 1,
+        "completed": 0,
+        "failed": 1,
+        "comparisons": {
+          "samples_checked": 0,
+          "validity_checked": 0,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 0,
+          "invalid_cells": 0,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 0,
+          "peak_compressed_bytes": 0,
+          "descriptor_bytes": 23424,
+          "peak_descriptor_bytes": 23424,
+          "mask_bytes": 0,
+          "peak_mask_bytes": 0,
+          "mask_evictions": 0,
+          "received_mask_bytes": 0,
+          "decode_count": 0,
+          "retries": 0,
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "peak_codec_workspace_bytes": 0,
+          "wasm_linear_bytes": 6619136
+        },
+        "failure_errors": {
+          "Error: HTTP 400": 1
+        }
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-stale/result.json",
+        "bytes": 3178,
+        "sha256": "7ca820cd0981ee25935f540ccc2a07607eccc0a445bbbac2133d3785ca175fe1"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/required-mask-stale/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    },
+    {
+      "id": "mask-pressure-revisit",
+      "kind": "pressure",
+      "status": "partial",
+      "browser_version": "151.0.7922.34",
+      "workers": 1,
+      "page_errors": 0,
+      "missing_proof": [
+        "actual-mask-eviction-and-revisit"
+      ],
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 94,
+        "worker_errors": 0
+      },
+      "pressure": {
+        "actual_mask_evictions": 79,
+        "refetched_previously_loaded_masks": 54,
+        "completed_revisits": 27,
+        "proved": false
+      },
+      "http": {
+        "requests": 1828,
+        "body_bytes": 95506228,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "error_details": [],
+        "mask_comparisons": 124,
+        "mask_disagreements": 0,
+        "partial_band_cells": 0,
+        "fault": null
+      },
+      "job_summary": {
+        "jobs": 94,
+        "completed": 54,
+        "failed": 40,
+        "comparisons": {
+          "samples_checked": 4826464,
+          "validity_checked": 2311992,
+          "sample_differences": 0,
+          "false_valid": 0,
+          "false_invalid": 0,
+          "valid_cells": 2101866,
+          "invalid_cells": 210126,
+          "nonbinary": 0,
+          "nonbinary_expected": 0
+        },
+        "samples_agree_on_completed": true,
+        "validity_agrees_on_completed": true,
+        "request_and_bounds_agree_all_jobs": true,
+        "metric_max": {
+          "compressed_bytes": 1048575,
+          "peak_compressed_bytes": 1048575,
+          "descriptor_bytes": 325418,
+          "peak_descriptor_bytes": 336578,
+          "mask_bytes": 589824,
+          "peak_mask_bytes": 589824,
+          "mask_evictions": 79,
+          "received_mask_bytes": 7095030,
+          "decode_count": 54,
+          "retries": 1412,
+          "received_jpp_bytes": 76231736,
+          "received_descriptor_bytes": 65502,
+          "peak_codec_workspace_bytes": 1953079,
+          "wasm_linear_bytes": 7864320
+        },
+        "failure_errors": {
+          "TypeError: Cannot read properties of undefined (reading 'samples')": 22,
+          "Error: regional masks exceed admitted budget": 18
+        }
+      },
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/mask-pressure-revisit/result.json",
+        "bytes": 142296,
+        "sha256": "4a1cfa1e1465a90c87a87a5db922a21b6d672d63bae849f0b4f47eed4906fda2"
+      },
+      "temporary_alias_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/mask-pressure-revisit/temporary-alias.json",
+        "bytes": 1210,
+        "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+      }
+    }
+  ],
+  "pressure": {
+    "actual_mask_evictions": 79,
+    "refetched_previously_loaded_masks": 54,
+    "completed_revisits": 27,
+    "proved": false,
+    "forward": {
+      "jobs": 47,
+      "completed": 27,
+      "failed": 20,
+      "comparisons": {
+        "samples_checked": 2413232,
+        "validity_checked": 1155996,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "valid_cells": 1050933,
+        "invalid_cells": 105063,
+        "nonbinary": 0,
+        "nonbinary_expected": 0
+      },
+      "samples_agree_on_completed": true,
+      "validity_agrees_on_completed": true,
+      "request_and_bounds_agree_all_jobs": true,
+      "metric_max": {
+        "compressed_bytes": 1048575,
+        "peak_compressed_bytes": 1048575,
+        "descriptor_bytes": 325418,
+        "peak_descriptor_bytes": 325418,
+        "mask_bytes": 589824,
+        "peak_mask_bytes": 589824,
+        "mask_evictions": 39,
+        "received_mask_bytes": 3547515,
+        "decode_count": 27,
+        "retries": 706,
+        "received_jpp_bytes": 38115868,
+        "received_descriptor_bytes": 32751,
+        "peak_codec_workspace_bytes": 1953079,
+        "wasm_linear_bytes": 7864320
+      },
+      "failure_errors": {
+        "TypeError: Cannot read properties of undefined (reading 'samples')": 11,
+        "Error: regional masks exceed admitted budget": 9
+      }
+    },
+    "revisit": {
+      "jobs": 47,
+      "completed": 27,
+      "failed": 20,
+      "comparisons": {
+        "samples_checked": 2413232,
+        "validity_checked": 1155996,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "valid_cells": 1050933,
+        "invalid_cells": 105063,
+        "nonbinary": 0,
+        "nonbinary_expected": 0
+      },
+      "samples_agree_on_completed": true,
+      "validity_agrees_on_completed": true,
+      "request_and_bounds_agree_all_jobs": true,
+      "metric_max": {
+        "compressed_bytes": 1048575,
+        "peak_compressed_bytes": 1048575,
+        "descriptor_bytes": 325418,
+        "peak_descriptor_bytes": 336578,
+        "mask_bytes": 589824,
+        "peak_mask_bytes": 589824,
+        "mask_evictions": 79,
+        "received_mask_bytes": 7095030,
+        "decode_count": 54,
+        "retries": 1412,
+        "received_jpp_bytes": 76231736,
+        "received_descriptor_bytes": 65502,
+        "peak_codec_workspace_bytes": 1953079,
+        "wasm_linear_bytes": 7864320
+      },
+      "failure_errors": {
+        "TypeError: Cannot read properties of undefined (reading 'samples')": 11,
+        "Error: regional masks exceed admitted budget": 9
+      }
+    },
+    "failed_jobs": [
+      {
+        "phase": "forward",
+        "position": 3,
+        "scene": 0,
+        "native_request_index": 84,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 5,
+        "scene": 0,
+        "native_request_index": 140,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 12,
+        "scene": 1,
+        "native_request_index": 174,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 14,
+        "scene": 1,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 16,
+        "scene": 1,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 21,
+        "scene": 2,
+        "native_request_index": 84,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 23,
+        "scene": 2,
+        "native_request_index": 140,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 27,
+        "scene": 2,
+        "native_request_index": 252,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 30,
+        "scene": 3,
+        "native_request_index": 118,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 31,
+        "scene": 3,
+        "native_request_index": 174,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 33,
+        "scene": 3,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 35,
+        "scene": 3,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 36,
+        "scene": 3,
+        "native_request_index": 454,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 37,
+        "scene": 3,
+        "native_request_index": 510,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 41,
+        "scene": 4,
+        "native_request_index": 174,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 42,
+        "scene": 4,
+        "native_request_index": 230,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 43,
+        "scene": 4,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "forward",
+        "position": 44,
+        "scene": 4,
+        "native_request_index": 342,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 45,
+        "scene": 4,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "forward",
+        "position": 46,
+        "scene": 4,
+        "native_request_index": 454,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 3,
+        "scene": 0,
+        "native_request_index": 84,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 5,
+        "scene": 0,
+        "native_request_index": 140,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 12,
+        "scene": 1,
+        "native_request_index": 174,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 14,
+        "scene": 1,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 16,
+        "scene": 1,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 21,
+        "scene": 2,
+        "native_request_index": 84,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 23,
+        "scene": 2,
+        "native_request_index": 140,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 27,
+        "scene": 2,
+        "native_request_index": 252,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 30,
+        "scene": 3,
+        "native_request_index": 118,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 31,
+        "scene": 3,
+        "native_request_index": 174,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 33,
+        "scene": 3,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 35,
+        "scene": 3,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 36,
+        "scene": 3,
+        "native_request_index": 454,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 37,
+        "scene": 3,
+        "native_request_index": 510,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 41,
+        "scene": 4,
+        "native_request_index": 174,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 42,
+        "scene": 4,
+        "native_request_index": 230,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 43,
+        "scene": 4,
+        "native_request_index": 286,
+        "error": "Error: regional masks exceed admitted budget"
+      },
+      {
+        "phase": "revisit",
+        "position": 44,
+        "scene": 4,
+        "native_request_index": 342,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 45,
+        "scene": 4,
+        "native_request_index": 398,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      },
+      {
+        "phase": "revisit",
+        "position": 46,
+        "scene": 4,
+        "native_request_index": 454,
+        "error": "TypeError: Cannot read properties of undefined (reading 'samples')"
+      }
+    ],
+    "missing_predicate": "All 47 forward and all 47 revisit jobs must return Completed with exact native samples/validity, matching request and observed cache bounds. Only 27/47 completed in each phase; 20/47 returned Failed in each phase. Positive eviction and refetch predicates passed."
+  },
+  "faults": [
+    {
+      "id": "required-mask-missing",
+      "proved": true,
+      "fault": {
+        "kind": "missing",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 404,
+        "bytes": 25,
+        "forwarded_sha256": "b44c02d98cee9b93354122e7b64e68c3ae14991a87121bc68117b1f6f0eae04e",
+        "stale_identity_rejected": null
+      },
+      "envelope": "Failed",
+      "error": "Error: HTTP 404",
+      "decode_count": 0,
+      "decoded_publications": 0,
+      "request_agrees": true
+    },
+    {
+      "id": "required-mask-corrupt",
+      "proved": true,
+      "fault": {
+        "kind": "corrupt",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 200,
+        "bytes": 98304,
+        "forwarded_sha256": "c3b3ebf7d370557a7adefdf24a5680b1b253ff3965249259d1cb438a5710bbdd",
+        "stale_identity_rejected": null
+      },
+      "envelope": "Failed",
+      "error": "mask digest mismatch",
+      "decode_count": 0,
+      "decoded_publications": 0,
+      "request_agrees": true
+    },
+    {
+      "id": "required-mask-stale",
+      "proved": true,
+      "fault": {
+        "kind": "stale",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 400,
+        "bytes": 20,
+        "forwarded_sha256": "6a10aa827f1c07a1c5cad5b821ecd2372fcf7a292d56e9a3c1fe9828420357b9",
+        "stale_identity_rejected": true
+      },
+      "envelope": "Failed",
+      "error": "Error: HTTP 400",
+      "decode_count": 0,
+      "decoded_publications": 0,
+      "request_agrees": true
+    }
+  ],
+  "worker_transport_counters": {
+    "normal_terminal_retries": 5,
+    "pressure_terminal_retries": 1412,
+    "interpretation": "Existing bounded production transport/continuation counters, not additional runner retries."
+  },
+  "timing_observations": {
+    "page_job_and_comparison_ms": {
+      "observations": 2309,
+      "min": 2.59999942779541,
+      "max": 190,
+      "negative": 0,
+      "interpretation": "same-realm diagnostic interval; no application latency claim"
+    },
+    "worker_execution_ms": {
+      "observations": 2309,
+      "min": 0.099853515625,
+      "max": 189.39990234375,
+      "negative": 0,
+      "interpretation": "same-realm diagnostic interval; no application latency claim"
+    }
+  },
+  "process_closeout": {
+    "schema": "viewer-acceptance-browser-masks-corrected-execution/1",
+    "operation_owner": "browser-mask-corrected-execution",
+    "started_utc": "2026-09-11T08:09:32.979765+00:00",
+    "invocations": 1,
+    "runner_retries": 0,
+    "service_starts": 1,
+    "service_pid": 4071361,
+    "outer_pid": 4071820,
+    "invoked_utc": "2026-09-11T08:09:33.746490+00:00",
+    "exit_code": 2,
+    "elapsed_seconds": 41.80878440197557,
+    "process_timeout": false,
+    "finished_utc": "2026-09-11T08:10:15.555006+00:00",
+    "service_exit_code": -15,
+    "owned_stop_actions": [
+      {
+        "pid": 4071361,
+        "signal": "SIGTERM",
+        "owner": "service"
+      }
+    ],
+    "remaining_owned_processes": [],
+    "cleanup_complete": true,
+    "observed_processes": [
+      {
+        "pid": 4071361,
+        "name": "emuella-viewer-",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4071361,
+        "start_time_ticks": "545452825",
+        "rss_bytes": 4993024,
+        "mount_namespace": "mnt:[4026531832]"
+      },
+      {
+        "pid": 4071820,
+        "name": "timeout",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4071820,
+        "start_time_ticks": "545452897",
+        "rss_bytes": 3829760,
+        "mount_namespace": "mnt:[4026531832]"
+      },
+      {
+        "pid": 4071821,
+        "name": "node-MainThread",
+        "state": "R",
+        "ppid": 4071820,
+        "pgrp": 4071820,
+        "start_time_ticks": "545452898",
+        "rss_bytes": 570880000,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071876,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071854,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452972",
+        "rss_bytes": 111140864,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071847,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452968",
+        "rss_bytes": 201334784,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071879,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071847,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452972",
+        "rss_bytes": 122712064,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071849,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4071848,
+        "start_time_ticks": "545452970",
+        "rss_bytes": 3919872,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071880,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071855,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452973",
+        "rss_bytes": 57368576,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071851,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4071850,
+        "start_time_ticks": "545452970",
+        "rss_bytes": 3325952,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071854,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071847,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452970",
+        "rss_bytes": 79732736,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071855,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071847,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452970",
+        "rss_bytes": 79081472,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071915,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071855,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452977",
+        "rss_bytes": 75177984,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4071916,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071855,
+        "pgrp": 4071847,
+        "start_time_ticks": "545452977",
+        "rss_bytes": 298381312,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072588,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453415",
+        "rss_bytes": 201142272,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072616,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072595,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453419",
+        "rss_bytes": 108576768,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072619,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072588,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453419",
+        "rss_bytes": 123248640,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072590,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4072589,
+        "start_time_ticks": "545453417",
+        "rss_bytes": 3403776,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072592,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4072591,
+        "start_time_ticks": "545453417",
+        "rss_bytes": 3424256,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072620,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072596,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453420",
+        "rss_bytes": 53317632,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072656,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072596,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453424",
+        "rss_bytes": 72318976,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072595,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072588,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453417",
+        "rss_bytes": 71745536,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072596,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072588,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453417",
+        "rss_bytes": 72077312,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4072657,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4072596,
+        "pgrp": 4072588,
+        "start_time_ticks": "545453424",
+        "rss_bytes": 272171008,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073776,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073755,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454043",
+        "rss_bytes": 106774528,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073779,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073748,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454043",
+        "rss_bytes": 122900480,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073748,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454040",
+        "rss_bytes": 198270976,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073750,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4073749,
+        "start_time_ticks": "545454041",
+        "rss_bytes": 3346432,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073782,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073756,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454044",
+        "rss_bytes": 56446976,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073752,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4073751,
+        "start_time_ticks": "545454041",
+        "rss_bytes": 3330048,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073755,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073748,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454041",
+        "rss_bytes": 73969664,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4073756,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073748,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454041",
+        "rss_bytes": 74477568,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074052,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073756,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454048",
+        "rss_bytes": 367849472,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074028,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4073756,
+        "pgrp": 4073748,
+        "start_time_ticks": "545454048",
+        "rss_bytes": 72318976,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074925,
+        "name": "chrome",
+        "state": "R",
+        "ppid": 4074903,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454615",
+        "rss_bytes": 113090560,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074896,
+        "name": "chrome",
+        "state": "R",
+        "ppid": 4071821,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454611",
+        "rss_bytes": 202960896,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074928,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4074896,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454615",
+        "rss_bytes": 126402560,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074898,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4074897,
+        "start_time_ticks": "545454612",
+        "rss_bytes": 3948544,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074929,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4074904,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454616",
+        "rss_bytes": 55230464,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074900,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4074899,
+        "start_time_ticks": "545454612",
+        "rss_bytes": 3338240,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074964,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4074904,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454619",
+        "rss_bytes": 74407936,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074965,
+        "name": "chrome",
+        "state": "R",
+        "ppid": 4074904,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454619",
+        "rss_bytes": 280256512,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074903,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4074896,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454613",
+        "rss_bytes": 76115968,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4074904,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4074896,
+        "pgrp": 4074896,
+        "start_time_ticks": "545454613",
+        "rss_bytes": 74088448,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076495,
+        "name": "chrome",
+        "state": "R",
+        "ppid": 4071821,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455425",
+        "rss_bytes": 203014144,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076497,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4076496,
+        "start_time_ticks": "545455426",
+        "rss_bytes": 3395584,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076499,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4076498,
+        "start_time_ticks": "545455426",
+        "rss_bytes": 3407872,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076502,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076495,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455427",
+        "rss_bytes": 74977280,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076503,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076495,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455427",
+        "rss_bytes": 74969088,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076562,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076503,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455433",
+        "rss_bytes": 73904128,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076563,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076503,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455433",
+        "rss_bytes": 362553344,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076523,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076502,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455429",
+        "rss_bytes": 108494848,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076526,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076495,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455429",
+        "rss_bytes": 124743680,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4076527,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4076503,
+        "pgrp": 4076495,
+        "start_time_ticks": "545455430",
+        "rss_bytes": 55349248,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078195,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456332",
+        "rss_bytes": 184545280,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078197,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078196,
+        "start_time_ticks": "545456333",
+        "rss_bytes": 3862528,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078199,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078198,
+        "start_time_ticks": "545456333",
+        "rss_bytes": 3317760,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078202,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078195,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456333",
+        "rss_bytes": 73588736,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078203,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078195,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456333",
+        "rss_bytes": 72953856,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078223,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078202,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456335",
+        "rss_bytes": 107970560,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078226,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078195,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456335",
+        "rss_bytes": 113975296,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078227,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078203,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456336",
+        "rss_bytes": 52928512,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078263,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078203,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456339",
+        "rss_bytes": 68849664,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078264,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078203,
+        "pgrp": 4078195,
+        "start_time_ticks": "545456339",
+        "rss_bytes": 184438784,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078339,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456366",
+        "rss_bytes": 189915136,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078341,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078340,
+        "start_time_ticks": "545456368",
+        "rss_bytes": 3870720,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078343,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078342,
+        "start_time_ticks": "545456368",
+        "rss_bytes": 3354624,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078346,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078339,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456368",
+        "rss_bytes": 76369920,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078347,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078339,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456368",
+        "rss_bytes": 73289728,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078407,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078347,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456373",
+        "rss_bytes": 70352896,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078408,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078347,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456373",
+        "rss_bytes": 187375616,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078369,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078346,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456370",
+        "rss_bytes": 108773376,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078372,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078339,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456370",
+        "rss_bytes": 114413568,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078373,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078347,
+        "pgrp": 4078339,
+        "start_time_ticks": "545456371",
+        "rss_bytes": 52801536,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078499,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078498,
+        "start_time_ticks": "545456402",
+        "rss_bytes": 3604480,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078501,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078500,
+        "start_time_ticks": "545456402",
+        "rss_bytes": 3428352,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078488,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456400",
+        "rss_bytes": 185163776,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078530,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078488,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456404",
+        "rss_bytes": 114053120,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078531,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078505,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456405",
+        "rss_bytes": 52965376,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078565,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078505,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456408",
+        "rss_bytes": 71938048,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078566,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078505,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456409",
+        "rss_bytes": 189722624,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078504,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078488,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456402",
+        "rss_bytes": 70377472,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078505,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078488,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456402",
+        "rss_bytes": 70295552,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078527,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078504,
+        "pgrp": 4078488,
+        "start_time_ticks": "545456404",
+        "rss_bytes": 107180032,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078669,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078647,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456439",
+        "rss_bytes": 104931328,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078640,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4071821,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456435",
+        "rss_bytes": 202739712,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078672,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078640,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456439",
+        "rss_bytes": 124768256,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078642,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078641,
+        "start_time_ticks": "545456437",
+        "rss_bytes": 3870720,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078673,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078648,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456440",
+        "rss_bytes": 52879360,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078644,
+        "name": "chrome_crashpad",
+        "state": "S",
+        "ppid": 4071350,
+        "pgrp": 4078643,
+        "start_time_ticks": "545456437",
+        "rss_bytes": 3428352,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078708,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078648,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456443",
+        "rss_bytes": 71475200,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078709,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078648,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456443",
+        "rss_bytes": 366944256,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078647,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078640,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456437",
+        "rss_bytes": 73273344,
+        "mount_namespace": "mnt:[4026534680]"
+      },
+      {
+        "pid": 4078648,
+        "name": "chrome",
+        "state": "S",
+        "ppid": 4078640,
+        "pgrp": 4078640,
+        "start_time_ticks": "545456437",
+        "rss_bytes": 73019392,
+        "mount_namespace": "mnt:[4026534680]"
+      }
+    ],
+    "observed_peak_live_processes": 13,
+    "observed_peak_summed_rss_bytes": 1659211776,
+    "resource_limitation": "100 ms /proc sampling can miss transient processes and RSS peaks; summed RSS includes shared pages and service, and is not a cache or latency acceptance result.",
+    "host_tmp_unchanged": true,
+    "host_mount_namespace_unchanged": true,
+    "closed_utc": "2026-09-11T08:10:15.696834+00:00",
+    "post_closeout_namespace_processes_remaining": 0
+  },
+  "retained_storage_at_manifest": {
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-01-execution": {
+      "regular_files": 12,
+      "logical_bytes": 258379,
+      "allocated_bytes": 286720
+    },
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution": {
+      "regular_files": 16,
+      "logical_bytes": 274424,
+      "allocated_bytes": 315392
+    },
+    "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02": {
+      "regular_files": 1443,
+      "logical_bytes": 33685445,
+      "allocated_bytes": 29138944
+    }
+  },
+  "immutable_inputs_rechecked": true,
+  "historical_pinned_evidence_rechecked": 38,
+  "prior_outcomes_preserved": true,
+  "missing_proof": [
+    "incomplete-context-proof"
+  ],
+  "preparation_failure": {
+    "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-01-execution",
+    "invocations": 0,
+    "browser_launches": 0,
+    "service_starts": 1,
+    "service_exit_code": -15,
+    "cause": "Lifecycle metadata JavaScript string escaping produced SyntaxError before capsule/grant validation. All files retained; corrected orchestration prepared a fresh group before the sole browser invocation.",
+    "changes": "No repository code edits or browser retries; two total owned service starts across preparation and execution, both stopped."
+  },
+  "viewer_acceptance": false,
+  "selected_configuration": null,
+  "gpu_viewing": "unmeasured",
+  "normal_latency": "unmeasured",
+  "inherited_seven_event_recovery": "unmeasured",
+  "speed_claim": null,
+  "limitations": [
+    "The corrected environment identity proves startup here only; the earlier nine failed contexts and long-path diagnosis are not relabelled.",
+    "Pressure failed envelopes have no compared samples/validity; zero disagreement applies only to Completed outputs. No repair or retry was attempted.",
+    "Hardware UI, GPU limits/timing, normal latency and seven-event recovery remain separate; no human, ML or product acceptance.",
+    "Startup library identities cover ldd resolution, not future dlopen loads.",
+    "OS cache state uncontrolled. Sampled summed process RSS includes shared pages, service and runner; it is not cache residency or acceptance.",
+    "No new store, preparation of representations, source TIFF reads, acquisition, terms, external codec source, protected deletion, downstream agents, commits or pushes.",
+    "Full verification/browser smoke excluded by the one-invocation instruction; only evidence reconciliation, report checks and whitespace checks performed."
+  ],
+  "evidence": {
+    "result": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/result.json",
+      "bytes": 8545,
+      "sha256": "d9415622e431c256b7d5528ab1378ee580c2b37aea7f40bf5d4028bc629a8e58"
+    },
+    "comparisons": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/comparisons.jsonl",
+      "bytes": 5435319,
+      "sha256": "1583317232f1c9369a396d30a972848f0f67e1eb6ad5d2af3a8158d17a770091"
+    },
+    "plan": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/plan.json",
+      "bytes": 153990,
+      "sha256": "d1945afdd899ed9740c3b1f01461dbc71a5ef9198d87e3cf2fd2de388cd626e6"
+    },
+    "inputs": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/inputs.json",
+      "bytes": 7960,
+      "sha256": "f7e7d10551c43646db1ff89c49a487ee9f79eab800ad184901c220f92f74911c"
+    },
+    "temporary_alias": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02/temporary-alias.json",
+      "bytes": 1210,
+      "sha256": "d43a792299b99188f657f9877b2d843909463e83df5ea4f452254ca826e456e5"
+    },
+    "capsule": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/browser-masks-input.json",
+      "bytes": 4100,
+      "sha256": "6ecfcd49231c0b5ed12ada056a35f8a70ebba1eb4fd80f92b48c9af02d3d1403"
+    },
+    "grant": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/browser-masks-grant.json",
+      "bytes": 3056,
+      "sha256": "f0204423c41474fcef78ee2a5f22e279ddab7a9ad4de120460e2c5b41db720ba"
+    },
+    "prelaunch": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/prelaunch.json",
+      "bytes": 4205,
+      "sha256": "5a13c17a808daeef2d969841f981ce3a97baedf89791663c85559139dd8e10e1"
+    },
+    "libraries": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/libraries.json",
+      "bytes": 18293,
+      "sha256": "bd1bf5a10ad3cb187c0d50dd76be0c2a33630dbab9db7756e81a4e47f922bd27"
+    },
+    "service": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/service-receipt.json",
+      "bytes": 3782,
+      "sha256": "ad117550ffcdcff261af397a54a218d6b910e5489e3240fb08984e25fa39c988"
+    },
+    "execution": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/execution-receipt.json",
+      "bytes": 23367,
+      "sha256": "0f4a38ee35fbcd951a9b71d4cde75b54bdff987a9f87351681414339f3612826"
+    },
+    "invocation": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/invocation-receipt.json",
+      "bytes": 1099,
+      "sha256": "a2f9814032f68173785901e07850da8d1aaa7ee81ddffee6d151a59eafdb43b5"
+    },
+    "process_log": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/browser-masks-process.log",
+      "bytes": 155,
+      "sha256": "568b4dd226c68230ffcd0ef94d8ddcfe77884e5f53f86a016be9bdce251abf16"
+    },
+    "manifest": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-02-execution/evidence-manifest.json",
+      "bytes": 456596,
+      "sha256": "a5d4b51019894555c3ca1217328b70908deed4927f91802cdd0600d4af3ad389"
+    },
+    "preparation_failure": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-01-execution/execution-receipt.json",
+      "bytes": 1208,
+      "sha256": "3ccb42086462771a2d2e9a1f9f85b0fafd3c3e0a44c9ef46e2305b383b842fa2"
+    },
+    "preparation_error": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-private-tmp-01-execution/validate.log",
+      "bytes": 811,
+      "sha256": "274f8d9d994a5945e319b784da074871e35e9a1d5330c75df4865206fb2e35df"
+    }
+  }
+}

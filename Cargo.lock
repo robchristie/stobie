@@ -1086,6 +1086,7 @@ dependencies = [
  "egui-wgpu",
  "emuella-viewer-source",
  "js-sys",
+ "libc",
  "polyorama-core",
  "polyorama-render-wgpu",
  "polyorama-runtime",

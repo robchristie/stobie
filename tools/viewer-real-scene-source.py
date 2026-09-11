@@ -22,7 +22,7 @@ def write_json(path, value):
 
 
 def fresh_group(store, name, modification):
-    if not name.startswith('real-scene-viewing-viewer-') or Path(name).name != name:
+    if not name.startswith(('real-scene-viewing-viewer-', 'viewer-acceptance-')) or Path(name).name != name:
         raise ValueError('fresh direct campaign child required')
     notice = store / 'source/LICENSE.txt'
     manifest = store / 'prepared-final/prepared.json'

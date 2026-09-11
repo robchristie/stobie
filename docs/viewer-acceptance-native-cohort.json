@@ -1,0 +1,310 @@
+{
+  "schema": "viewer_native_cohort_protocol/1",
+  "status": "Prepared only; no native/service/display starts or measurements",
+  "cohort_id": "native-frozen-v1-mansfield-memory-five-capture-v1",
+  "runtime_revision": "fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+  "source_build_receipt_commit": "e1e5ce738d7fb0452cd2e9d2ad8c30486ea6988d",
+  "harness_identity": "native-cohort-external-wrapper-v1; actual committed HEAD and file hashes in execution.json",
+  "budget": {
+    "fresh_starts": 5,
+    "warmups": 0,
+    "retries": 0,
+    "cycles_per_start": 10,
+    "phase_seconds": 60,
+    "outer_seconds": 660
+  },
+  "native": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/measured-bin/emuella-viewer",
+    "bytes": 27256192,
+    "sha256": "2603bf16880300e6375c6dfa97b7ad2e04086c18e8450ccf020afaefa38f4405"
+  },
+  "service": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+    "bytes": 1985328,
+    "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+  },
+  "build_receipt": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-native-diagnostics-build.json",
+    "bytes": 17745,
+    "sha256": "758e93fe81b06e36650ad742a95b58c07cf18bff2648a3b6d06011e44c674eea"
+  },
+  "workload": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/native-memory-workload.json",
+    "bytes": 4320,
+    "sha256": "7eb3d21ca52edbf6597227b65b7a97ac933cc93f8ebc9a37ad7ab0530b138375"
+  },
+  "thresholds": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/qualification/native-memory-thresholds.json",
+    "bytes": 4543,
+    "sha256": "65234f61d55fe6d4f3c79eb9e5fd4f96da8af497a7ff4570956415206d9dfc65"
+  },
+  "inherited_thresholds": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/qualification/real-scene-native-thresholds.json",
+    "bytes": 4582,
+    "sha256": "ad6d9e596dbc9e2aa5142973433e7bb4b184498a98c4dd5123262305998e08d0"
+  },
+  "catalogue_contract": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/development-catalogue.json",
+    "bytes": 407,
+    "sha256": "0ba9c081775b5f7663119ee86ccadd0c86e054175c9fbaa26f1f856ca9388680"
+  },
+  "web_root": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web",
+  "web_files": [
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/bootstrap.js",
+      "bytes": 548,
+      "sha256": "2d2ab31541bc4391d0d347977ecb1cae075fcbc655cbfa61aa2bd448d166a115"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/index.html",
+      "bytes": 409,
+      "sha256": "b333a11ac87eb1910cef1cb5e5d129aaa02dd33b9fbdab46afeba3f3336429f0"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/pkg/emuella_viewer.d.ts",
+      "bytes": 7128,
+      "sha256": "066de61e9c61790dfaf095a30ec3f438a56dfb8c98771053bb33c69100a4c0ad"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/pkg/emuella_viewer.js",
+      "bytes": 171035,
+      "sha256": "fcb80a710441e431eedd1847e55208ba8873cd52adaf1328c46fb5e361a96024"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/pkg/emuella_viewer_bg.wasm",
+      "bytes": 11349576,
+      "sha256": "cae57286c3a557b6383a426e58e726de404451750c2f39b36e7af600fb27c24a"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/pkg/emuella_viewer_bg.wasm.d.ts",
+      "bytes": 5102,
+      "sha256": "74cf8c3a5f0157113057134d3a96327503d17b594e837a4e4ebaa00b9c5a4146"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/response.js",
+      "bytes": 183,
+      "sha256": "166cdf7228437c660033dc7a75fbc3d8ac07be75518f25431da75bfae5c229aa"
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web/worker.js",
+      "bytes": 5893,
+      "sha256": "f4d13241b83535ca290f1736a264d0322ff9d7592b7305fe0c08b575a9e7d4f7"
+    }
+  ],
+  "frozen_helpers": [
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-composed-journey.py",
+      "bytes": 28027,
+      "sha256": "b6e5c9d613214a67b023d434b39cc18dbf3fecee55dc53beccf44fc328c9808c"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-memory-diagnostics.py",
+      "bytes": 17519,
+      "sha256": "fc7d3f9f77203357907bac6aefadb920bac29022a048d97781404ec6a28a2813"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-native-diagnostics.py",
+      "bytes": 7249,
+      "sha256": "62700d0fbd860600052dcaa9fada25dbdff38605e3ff49afd9506f0d6e8ee4cd"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-real-scene-source.py",
+      "bytes": 4761,
+      "sha256": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/real-scene-workload.json",
+      "bytes": 3129,
+      "sha256": "9c11bead76a2c556dd49c13164dd7a462aa01e325ed6d3fb03510054e17f50dd"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/apps/emuella-viewer/qualification-workload.json",
+      "bytes": 3129,
+      "sha256": "de91f9293bae59fe30db79feb44e620d28f0c063a0ecf9f91984690c97bc2e02"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-composed-browser.mjs",
+      "bytes": 3037,
+      "sha256": "b2f99cd67addf1b908d62ecb770595f361630ab5af1ba89204200455f5dd30b9"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-browser-recovery.mjs",
+      "bytes": 12167,
+      "sha256": "9ecc31cba55500d4cdee7608a888147d3e4fc15aebe28797d5969c797541f315"
+    },
+    {
+      "path": "/nvme/development/polyorama-viewer-acceptance/tools/viewer-recovery-workload.mjs",
+      "bytes": 1162,
+      "sha256": "e3338914cbfc574ab3c7a50dc75165db788c67da221c2d0c0a1d35de43a8a50d"
+    }
+  ],
+  "runtime_environment": {
+    "LD_LIBRARY_PATH": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/polyorama/.tools/sysroot/usr/lib",
+    "WGPU_BACKEND": "vulkan",
+    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+  },
+  "graphics_files": [
+    {
+      "path": "/nvme/development/polyorama/.tools/sysroot/usr/bin/Xvfb",
+      "resolved_path": "/nvme/development/polyorama/.tools/sysroot/usr/bin/Xvfb",
+      "bytes": 1973888,
+      "sha256": "567a9b39284e303522fdc178059fe60d0e9917b811bd5066fb63260fd198a97c"
+    },
+    {
+      "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+      "resolved_path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/libvulkan.so.1",
+      "bytes": 660576,
+      "sha256": "33742ba1b7f8ae04a4f9e35f66c343e3789d7d431a396cacc66ec79b579eaf51"
+    },
+    {
+      "path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+      "resolved_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+      "bytes": 140,
+      "sha256": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1"
+    },
+    {
+      "path": "/usr/lib/libGLX_nvidia.so.0",
+      "resolved_path": "/usr/lib/libGLX_nvidia.so.610.43.03",
+      "bytes": 1211968,
+      "sha256": "f12814afa56c76b29f15ca6744431cd998f3f0c7ad910224075e990dad0ab2b4"
+    },
+    {
+      "path": "/usr/lib/libnvidia-glcore.so.610.43.03",
+      "resolved_path": "/usr/lib/libnvidia-glcore.so.610.43.03",
+      "bytes": 41760584,
+      "sha256": "6304dff2ee2e1ced2febf1e8b720f16c3cfdb698d4c8cc20f340bd1f09556687"
+    },
+    {
+      "path": "/usr/lib/libnvidia-glsi.so.610.43.03",
+      "resolved_path": "/usr/lib/libnvidia-glsi.so.610.43.03",
+      "bytes": 603016,
+      "sha256": "104468c9d2028508880692e9d7a570f97ec258a665aee1167665d882797672b2"
+    },
+    {
+      "path": "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+      "resolved_path": "/usr/lib/libnvidia-gpucomp.so.610.43.03",
+      "bytes": 110902328,
+      "sha256": "4c16539192951d9b37c7db7e276560ad4f0a26d9d6c62e2004f0f563a418a8ec"
+    },
+    {
+      "path": "/usr/lib/libX11.so.6",
+      "resolved_path": "/usr/lib/libX11.so.6.4.0",
+      "bytes": 1313184,
+      "sha256": "97736fa2855baf2022d80a8881ffc79cdbecca11c96935e4ca3cfeb47eae1ea4"
+    },
+    {
+      "path": "/usr/lib/libxcb.so.1",
+      "resolved_path": "/usr/lib/libxcb.so.1.1.0",
+      "bytes": 169984,
+      "sha256": "40df5eff95408b67d969e559f2689b3e50e6151251b1f4e03608ce5cd9c9a133"
+    },
+    {
+      "path": "/usr/lib/libxkbcommon.so.0",
+      "resolved_path": "/usr/lib/libxkbcommon.so.0.13.2",
+      "bytes": 383144,
+      "sha256": "e475adbf5abd181b1bdfdeba70ad4d501cb296bbf05b13e8649fd71b3989ee07"
+    }
+  ],
+  "xvfb": "/nvme/development/polyorama/.tools/sysroot/usr/bin/Xvfb",
+  "original_observation_bytes": 278794240,
+  "unchanged_ceiling_bytes": 243269632,
+  "benchmark": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-cohort-benchmark-v1/cargo/release/emuella-benchmark",
+    "bytes": 1902504,
+    "sha256": "af0685cdba760f1a56db162fcfd087a1e32781c1a784690d733d1ba4c8f98ab7"
+  },
+  "benchmark_build": {
+    "command": "env CARGO_TARGET_DIR=/nvme/development/emuella/.build-targets/viewer-acceptance/native-cohort-benchmark-v1/cargo cargo build --offline --locked --release --manifest-path /nvme/development/emuella/emuella-benchmark/Cargo.toml --bin emuella-benchmark",
+    "exit_code": 0,
+    "log": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-cohort-benchmark-v1/build.log",
+      "bytes": 781,
+      "sha256": "5cb2ce4cceed3de26d5cf4542b3025f7abb1d9bc460be09b0efcef6b2ad74088"
+    },
+    "lock": {
+      "path": "/nvme/development/emuella/emuella-benchmark/Cargo.lock",
+      "bytes": 7341,
+      "sha256": "dc1283b4af49d39d6cae3a658e4641bc4a5fb71c669cb059e1c15b04f38f6047"
+    },
+    "measurement_performed": false
+  },
+  "owners": {
+    "codec": {
+      "path": "/nvme/development/emuella/emuella-j2k",
+      "revision": "6586e3d50f95429b242cb2e3535742b002784f2d"
+    },
+    "benchmark": {
+      "path": "/nvme/development/emuella/emuella-benchmark",
+      "revision": "70eb3d1d9448f617333d658d9a60bb5b9439ecb2"
+    },
+    "testdata": {
+      "path": "/nvme/development/emuella/emuella-testdata",
+      "revision": "89a1681d6ed6900d057d09a87cb34a57f2a4f30c"
+    }
+  },
+  "representations": [
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/representation",
+      "manifest": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/representation/manifest.json",
+        "bytes": 38368,
+        "sha256": "e16dc9670e50b3187e74c9b2bfa4cfd0aa320a1f93a2e633b9b4b336402d1621"
+      },
+      "notice": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/LICENSE.txt",
+        "bytes": 20605,
+        "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+      },
+      "lineage": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/lineage.json",
+        "bytes": 687,
+        "sha256": "da64f2f7649c5db4fb84e86227463c669b738228a6e9c459cab94f57d8fcc468"
+      }
+    },
+    {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/representation",
+      "manifest": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/representation/manifest.json",
+        "bytes": 5036,
+        "sha256": "a96824638b4be9889d7580ccc2c574e68fe0d5d981b1e9500d134c4ebb8eb49d"
+      },
+      "notice": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/LICENSE.txt",
+        "bytes": 20605,
+        "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+      },
+      "lineage": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/lineage.json",
+        "bytes": 687,
+        "sha256": "da64f2f7649c5db4fb84e86227463c669b738228a6e9c459cab94f57d8fcc468"
+      }
+    }
+  ],
+  "captures": {
+    "tool": {
+      "path": "/home/rob/pixi/.pixi/envs/default/bin/import",
+      "bytes": 21688,
+      "sha256": "738ce107e1ab020f6981fbbb4f8cd51e743fd64f762bcdb095e98bc0edbdad63"
+    },
+    "capability": "ImageMagick 7.1.2-23 Q16-HDRI; installed X delegate; version/help checked read-only, no display opened",
+    "offset_seconds": [
+      2,
+      5
+    ],
+    "clock": "Linux CLOCK_MONOTONIC immediately before the single native Popen; retain actual Popen-return and capture Unix/monotonic timestamps; not an exact phase claim",
+    "deadline_seconds": 2,
+    "max_images_per_run": 2,
+    "max_bytes_per_image": 8388608,
+    "display": [
+      1440,
+      900,
+      24
+    ],
+    "target": "root of exclusive owned Xvfb; no window manager, browser or second viewer",
+    "overhead": "Separate sibling capture process, excluded from native descendant RSS. CPU/GPU/X11/contention and sampler overhead remain in observed latency; no subtraction or uninstrumented speed claim. Duration, lateness and exit retained. No capture retry.",
+    "inspection": "Coordinator opens actual native screenshots in approved store; inspect visible native UI/content/masks/blank or partial display, record unavailable phases honestly. Authored GPU readback is insufficient."
+  },
+  "recovery": "Separate inherited seven-event pressure/recovery journey remains mandatory; these ten explicit display release cycles do not establish recovery or natural LRU eviction.",
+  "authority": "Main commits protocol and grants execution after authored probe owner stops; this prepared protocol is not a grant.",
+  "protected_boundary": "Fresh attributed group via existing source.fresh_group only. No acquisition/new terms/external codec source; no input preparation, mutation or deletion; source arrays/MSI/defaults unchanged."
+}

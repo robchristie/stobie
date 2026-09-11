@@ -1,0 +1,639 @@
+{
+  "schema": "viewer-acceptance-full-scenes-build/1",
+  "source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "source_tree": "cce91bc6f08203c6cb4906a13a6cb94dc892a063",
+  "source_method": "clean git archive; offline locked native tool build; authored public-API adapter",
+  "linked_codec_revision": "6586e3d50f95429b242cb2e3535742b002784f2d",
+  "files": {
+    "cargo/release/emuella-viewer-tools": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+      "bytes": 1985328,
+      "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+    },
+    "helper-cargo/release/full-scenes-native": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper-cargo/release/full-scenes-native",
+      "bytes": 1578496,
+      "sha256": "b1576646ae41555fdbbfc5a3ddf1565bc004df2130fa060d06feaa5e764a9565"
+    },
+    "gdal": {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgdal.so.39.3.13.0",
+      "bytes": 39101280,
+      "sha256": "275f9bda748f461c06e8aca79f9b3ebfa42b66d6a6c5864d77190d244495ea9a"
+    },
+    "source/Cargo.lock": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/Cargo.lock",
+      "bytes": 128891,
+      "sha256": "dba540a51c6231c72c5f0cb63beb6860659147cbaee6c7632bcd1e1810a929d0"
+    },
+    "helper/Cargo.lock": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper/Cargo.lock",
+      "bytes": 7282,
+      "sha256": "3c715b3893be9d75cd82227eed7b7ed673e1ec64ff1020c9293b311ea18e0d19"
+    },
+    "helper/src/main.rs": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper/src/main.rs",
+      "bytes": 4548,
+      "sha256": "b5b94f6240ab36a26e98e37786b34146e2c2701b25fe8bc4a308e392d97b03cf"
+    },
+    "helper/Cargo.toml": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper/Cargo.toml",
+      "bytes": 449,
+      "sha256": "510b14bf808c7b08b8a0e3aae72b84f994697c321dabb69525d9f67f537fd51b"
+    },
+    "source.tar": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source.tar",
+      "bytes": 92866560,
+      "sha256": "e30caa56afd0e7dd81fa73cf4c99cd5d755b1f6c6da54efaa45130b0f3cd1a27"
+    },
+    "build.log": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/build.log",
+      "bytes": 1840,
+      "sha256": "287b90ec2d4645fc608044584f7185b83af39fa0f4362aa6a6f376428b82cdf5"
+    },
+    "helper-build.log": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper-build.log",
+      "bytes": 187,
+      "sha256": "5e6f23482c004810d6a6614ea3c7e2a0d0511f869251f9179135900a26f4871b"
+    },
+    "build-inputs.json": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/build-inputs.json",
+      "bytes": 219751,
+      "sha256": "66bb242c4c9ac7ae833e6e1c937e99b4b1d26964c373f8a1426252b53962feb7"
+    },
+    "source/tools/viewer-acceptance-quality.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-acceptance-quality.py",
+      "bytes": 17837,
+      "sha256": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e"
+    },
+    "source/tools/viewer-calibration-summary.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-calibration-summary.py",
+      "bytes": 2317,
+      "sha256": "f9c7ccb16ca64e1edc5c5b2ed61e4833794744a4f7709b97dfdc07f2a830f553"
+    },
+    "source/tools/viewer-composed-journey.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-composed-journey.py",
+      "bytes": 26670,
+      "sha256": "6f2fb495c395e15d057521301e33d68148926486d3b6cfef2ff04df2a68c65bc"
+    },
+    "source/tools/viewer-memory-diagnostics.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-memory-diagnostics.py",
+      "bytes": 17519,
+      "sha256": "fc7d3f9f77203357907bac6aefadb920bac29022a048d97781404ec6a28a2813"
+    },
+    "source/tools/viewer-pacing-compare.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-pacing-compare.py",
+      "bytes": 4853,
+      "sha256": "89be96d7d72180adffc572aecdf592ef93460a62c8bce152a266ebcb9422f1b8"
+    },
+    "source/tools/viewer-prepare-nitf.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-prepare-nitf.py",
+      "bytes": 25553,
+      "sha256": "5d776fda2065ba67b39f0e38e1ae933f00a0978e6fd5ec5dfdbcbf78a1e9569d"
+    },
+    "source/tools/viewer-prepare-workload.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-prepare-workload.py",
+      "bytes": 4609,
+      "sha256": "f49b4dd76be7f7344232035a15474cc4714265ad8fe32259aa53ba3565e9a287"
+    },
+    "source/tools/viewer-real-scene-independent.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-real-scene-independent.py",
+      "bytes": 3547,
+      "sha256": "1226aeca964cbc07c1986f96485b35c8d86cee626c74d8a8b7d4614150daccdb"
+    },
+    "source/tools/viewer-real-scene-prepare.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-real-scene-prepare.py",
+      "bytes": 3712,
+      "sha256": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e"
+    },
+    "source/tools/viewer-real-scene-quality.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-real-scene-quality.py",
+      "bytes": 7196,
+      "sha256": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+    },
+    "source/tools/viewer-real-scene-source.py": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/source/tools/viewer-real-scene-source.py",
+      "bytes": 4761,
+      "sha256": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b"
+    }
+  },
+  "linked_libraries": [
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgcc_s.so.1",
+      "bytes": 902640,
+      "sha256": "e1e904051f77f9569c2ea53c83bb4083c26575e0fbd4010e46f1cb8b21037ad1"
+    },
+    {
+      "path": "/usr/lib/ld-linux-x86-64.so.2",
+      "bytes": 246760,
+      "sha256": "d52fe2ff87fff536ed5c5eae8e954cb50655884e4709fedd24cf57f9ec98ad80"
+    },
+    {
+      "path": "/usr/lib/libc.so.6",
+      "bytes": 2186528,
+      "sha256": "9bf40a540836d90c7d46c95eeb222a217597834eea29ab9e537428317c021c3a"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libLerc.so.4",
+      "bytes": 881424,
+      "sha256": "0399ae767d06495893058b74bbab723aefad43d2d86ae7e00adee171e7707e20"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libarchive.so.13.8.7",
+      "bytes": 965392,
+      "sha256": "ad37ce8b26c88028bc174b9e48a944fee9937e52326587edc4a324a5c549e67b"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libblosc.so.1.21.6",
+      "bytes": 79568,
+      "sha256": "68e87addc9d4171270bce8ebd72d9405851063f370fa5ba4d2c4e249fdeaef70"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libbrotlicommon.so.1.2.0",
+      "bytes": 143408,
+      "sha256": "d5bba266a5752ababb4a56a79aec3071f9eac8984a3c818493ad006b4b74beb4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libbrotlidec.so.1.2.0",
+      "bytes": 59768,
+      "sha256": "ad80d23baef2449aa9163b77217eca29e8370f0f6c62caa06dfcaf51d15c34d4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libbrotlienc.so.1.2.0",
+      "bytes": 776496,
+      "sha256": "486fafa6ed14344798e408763f5a716aca427bcb71fe0febc916afd33dce8f91"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libbz2.so.1.0.8",
+      "bytes": 241888,
+      "sha256": "cc570bce44ed3ab1b0f480bdb95c04e8224432811bfb5a55b533135a6001a03b"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libcharset.so.1.0.0",
+      "bytes": 15336,
+      "sha256": "ec0a1feba7737a4295075dd84e53a99688e4a749eccc1666fa127e185c2903ca"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libcom_err.so.3.0",
+      "bytes": 21952,
+      "sha256": "fe5ed407808dd249f6d680d0f47572f6621d3cfad78fd9679cf1287665b53217"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libcrypto.so.3",
+      "bytes": 7202968,
+      "sha256": "af2ce118de983c91377d0ea69cebd0b563cacdd37296ebc4b3ab25f5d5e21acc"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libcurl.so.4.8.0",
+      "bytes": 1064648,
+      "sha256": "706cd58963aa33f3e345d56a8ab2174af39255d0e4c90714af4c75720f6d55c5"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libdeflate.so.0",
+      "bytes": 101872,
+      "sha256": "9f915c3467f59a215e969f24fa341425fe7bd6972a340079529d2cf21f818a28"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libexpat.so.1.12.0",
+      "bytes": 195520,
+      "sha256": "344adc89d1d7c6a482cdecac5ac62d0196b5055566fd71d4dda969c78e2411f0"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libfreexl.so.1.2.0",
+      "bytes": 73480,
+      "sha256": "c4b2df3279020aaadde2a349f62ce96f29576465477caa085690387598c2f2f7"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgeos.so.3.14.1",
+      "bytes": 4655616,
+      "sha256": "ed87fcf52cce24558016569307423492e4e36002c42a5f8ac08ff8b1f0e19e90"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgeos_c.so.1.20.5",
+      "bytes": 503744,
+      "sha256": "9cc17e9e63286a51a749255d01614f9f65851a4f1f261c5b65bab02035eaabbc"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgif.so.7.2.0",
+      "bytes": 61016,
+      "sha256": "179299f29216c2ba0ac284098c6959b46c862a9b29638292993f547793faa466"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgomp.so.1.0.0",
+      "bytes": 1586592,
+      "sha256": "23edb748d6c9584e337fc00cb22eba3bf535478204d6e5eddbb637b7f417fd25"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgssapi_krb5.so.2.2",
+      "bytes": 396168,
+      "sha256": "61c43509bfb9b4a0da69d45d05ca61031677664f1f0df3b3a4e6ca8e77126790"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libhwy.so.1.4.0",
+      "bytes": 80216,
+      "sha256": "e25dfbe9e006cc6a1d7f2b01814a0668dafa807cfad6b6bd7478d7d7affb6326"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libiconv.so.2.7.0",
+      "bytes": 1178544,
+      "sha256": "ec9f94edf6d531397d6a53e5fd0a93747d683d64eafcb12e7a75546824152a3d"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libicudata.so.78.3",
+      "bytes": 33113032,
+      "sha256": "7befd60c8f9bdcd992393bc68daecada96b9910595ad6e310f0e210091b85889"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libicui18n.so.78.3",
+      "bytes": 4941416,
+      "sha256": "e5c4775450011ea93bfe1133363c1e323ab46a37d01f3d6d11a4987d2d8d023c"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libicuuc.so.78.3",
+      "bytes": 2702352,
+      "sha256": "2fb3bb9614a5362816a41f4c405a3a30bcce3fb4f98be520f9160bc77ec02a68"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libjpeg.so.8.3.2",
+      "bytes": 889744,
+      "sha256": "33e09b75d2acfbc778e465ba6f5cfcec1ea75033456f0912e013e289a15b34c8"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libjson-c.so.5.4.0",
+      "bytes": 88968,
+      "sha256": "b891e0526fe7e7a36b288eaf9b99ad5ed6d759cfb501e70b846bb45b07758389"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libjxl.so.0.11.2",
+      "bytes": 5283968,
+      "sha256": "0bbba36e5bb3cc2201d5d87b8c361dd38934d2868cf5a8bcedfe88053f6d154a"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libjxl_cms.so.0.11.2",
+      "bytes": 217536,
+      "sha256": "57a0af0577a42c9d59c04b8dfa414894ced9d9ec9e0ed3a650c41f36a1c8a35a"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libjxl_threads.so.0.11.2",
+      "bytes": 28448,
+      "sha256": "d3e5544d9cef8db8fc76852023c837439f6b58663a82ff1087acb2e9d228c5ae"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libk5crypto.so.3.1",
+      "bytes": 112448,
+      "sha256": "e88cafebc536fb49224291c378df0b8c16663bc949798417c55c151ec013a758"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkeyutils.so.1.10",
+      "bytes": 39152,
+      "sha256": "cdae6f9f149f3d9a31f5ac337d940c58313de4a475e757fe31abcb139c2b50e0"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkmlbase.so.1.3.0",
+      "bytes": 177728,
+      "sha256": "8d735b5c2c69101de3e5425728b6cbdf9a2b26a250c89f61bdc2578b870d493e"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkmldom.so.1.3.0",
+      "bytes": 981776,
+      "sha256": "4c24f45c9b3ef88ab52eb6b66e04fc91f3f86c6d2d875a17400fbc0089384e8f"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkmlengine.so.1.3.0",
+      "bytes": 309880,
+      "sha256": "f44d936f2b433b2bda0d46e44a6c6341417437868943855b6e4e8ff4f695b6d2"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkrb5.so.3.3",
+      "bytes": 1064768,
+      "sha256": "7def6a0969944ba4983a4165522e65d6ad3771bbbf96904f21d3f716793491f4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libkrb5support.so.0.1",
+      "bytes": 66072,
+      "sha256": "7673c32e27bb65027cfead188b26367dd8f8b363f9a25b84c873c054241c9eeb"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/liblz4.so.1.10.0",
+      "bytes": 190600,
+      "sha256": "34f4953d4e73474636347458db1f1048ba4b1ba967f36ef3da53051d0d1bc4da"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/liblzma.so.5",
+      "bytes": 222712,
+      "sha256": "07dceced575343c83860aedde6e7e2ac5deb7a0fa31b0f195c44388544817abc"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/liblzo2.so.2.0.0",
+      "bytes": 229264,
+      "sha256": "7fb098ccaf6ce5c1c925dff401bfcd9d70e46ca878cc63051da80489b7392038"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libminizip.so.4.2.1",
+      "bytes": 219512,
+      "sha256": "7b9d50d28fbae2b868bd56777e9ba9237f2d11b69ea8d4f32e1300601abdbbaa"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libmuparser.so.2.3.5",
+      "bytes": 622752,
+      "sha256": "13774a594efccd47554795e3c7a4b40371c4295c4b5a2f26fd008f9a87fb3996"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libnghttp2.so.14.29.3",
+      "bytes": 200576,
+      "sha256": "e873cd685f198aa20db57ad90e71ef4b7c98e8ab24b248ff391e9e60b4dc96fd"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libnsl.so.3.0.0",
+      "bytes": 31496,
+      "sha256": "61d409bf7c9d115d008dbc30cbbd43c98255f6272f328f2311466bcc37485518"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libpcre2-8.so.0.15.0",
+      "bytes": 796984,
+      "sha256": "86a12ebcc8d3222048e7f8e762e3d30826f189afff46158bd29fec5dee0b63d7"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libpng16.so.16.58.0",
+      "bytes": 280280,
+      "sha256": "e5a2fba93692cc3b3e57c734821348c6a020bd9a40a62b637fc6aac97942d196"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libproj.so.25.9.8.1",
+      "bytes": 5657416,
+      "sha256": "ba9b7943be6c711e095aa411fc55ec2d932f5b220ecdb1fc7ef77878c5f18aef"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/librttopo.so.1.1.0",
+      "bytes": 534624,
+      "sha256": "f3c43600328d2ee30cb6fed5cfea682a4c5cbe8217338adb32aa87719a6e1941"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libsharpyuv.so.0.1.2",
+      "bytes": 46048,
+      "sha256": "4ca18185ea0d828d54b9f7c0f52c10ce5fb146bae387298d84bab3dcb94bded4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libsnappy.so.1.2.2",
+      "bytes": 68648,
+      "sha256": "760fde12da87cb6e21a697151458fe864df1021c7f0a56c6e61fb3812796f6cf"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libspatialite.so.8.1.0",
+      "bytes": 8257408,
+      "sha256": "f508df1d598173d87f85db724df280e3a71e62631968bbe68998c65bbe9671b6"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libsqlite3.so.3.53.1",
+      "bytes": 1762400,
+      "sha256": "2e0f600be582f72f02d3eed3b859c7fb1e1184b833afcb875c65e3843e9d1e38"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libssh2.so.1.0.1",
+      "bytes": 346776,
+      "sha256": "00a449127b38133d531d9d3fc97619e71d8d18ce2aa4aa8e1d1582ad84a1db34"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libssl.so.3",
+      "bytes": 1202328,
+      "sha256": "e5822ab6dd9aaa1712428f81757b44f26370c0b8ba9be07cb0aa95b96120b4fb"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libstdc++.so.6.0.34",
+      "bytes": 21295144,
+      "sha256": "9581ad615b7c073423f57b69a3b148a89f8ea76fc909124211f9007909b807a6"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libtiff.so.6.2.0",
+      "bytes": 667120,
+      "sha256": "1c9c4392893fcf25ec9d41cfbf0567e422955016a6ea908ebae336cd4beb487f"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/liburiparser.so.1.0.31",
+      "bytes": 69664,
+      "sha256": "0bf6d6c7675d77603d0bf93e0aa942d6417daef64c04b84a486418e07c44b153"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libwebp.so.7.2.0",
+      "bytes": 785488,
+      "sha256": "d97406a18e48cae0a4c98f77e74f4ea6bb77471f188224c094d42f04a682da0d"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libxerces-c-3.3.so",
+      "bytes": 4847352,
+      "sha256": "3dff6baaa175b5fea6abecce1a41eb14e93d22530752403dfe41403ff2e25e71"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libxml2.so.16.1.3",
+      "bytes": 1448936,
+      "sha256": "cc8fae007b1517398c450754c64bb1fa2f99207e1bdb86e809ac404d62b4e7c5"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libz.so.1.3.2",
+      "bytes": 117128,
+      "sha256": "22f1601237b86f0f48ed5b83071d1505167ae2e16365b33b4eed6e96dbf71ab0"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libzstd.so.1.5.7",
+      "bytes": 1198840,
+      "sha256": "e32f1e98942e91193d137ae9d460adf8e8cfbf504c8a8aedfb5825576d53a801"
+    },
+    {
+      "path": "/usr/lib/libdl.so.2",
+      "bytes": 14352,
+      "sha256": "20160c529bfd255fd820273cfed23698f4a70e5d80e4d9ad1f580ab9ce5e2463"
+    },
+    {
+      "path": "/usr/lib/libm.so.6",
+      "bytes": 1251952,
+      "sha256": "8f85ea3a02885cda4ecff8758e6e758c69ccaa25b6580cb97b5713ac512f0a1b"
+    },
+    {
+      "path": "/usr/lib/libpthread.so.0",
+      "bytes": 14360,
+      "sha256": "efd89a5cf95482cd92f1230320e95c3ab5f1f27bbf099fd166db36e2122a2882"
+    },
+    {
+      "path": "/usr/lib/libresolv.so.2",
+      "bytes": 72000,
+      "sha256": "eab605e3d0f50dede21ea28e3665bc58c5f31a6cefa1af30b9e5828690f3d7d3"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/bin/python3.14",
+      "bytes": 36186104,
+      "sha256": "43afbaa617cf52c3681155fffb3043b331c3fe008139204532a5e27357e1b19f"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/osgeo/_ogr.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 930928,
+      "sha256": "4cb406f8d68be55a3f5676f8995710a05bf74c1ca021342d69272152804a7b4e"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/osgeo/_osr.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 511224,
+      "sha256": "6ae5bdf0dda38f79b0ebd95edcc0cc23612d6bb3409e6fef0597cd439d473d22"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/osgeo/_gdalconst.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 53824,
+      "sha256": "12c46c1ad95cd84c0306d046bf52d02e1e2d4309ba203683519749ebff793afa"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libgdal.so.39.3.13.0",
+      "bytes": 39101280,
+      "sha256": "275f9bda748f461c06e8aca79f9b3ebfa42b66d6a6c5864d77190d244495ea9a"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/osgeo/_gdal.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 1634272,
+      "sha256": "e5e2d28b371cec51f463392f6dc0171fd7f9f44a1b3837ae6975c682aa203b08"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy.libs/libquadmath-2284e583-a9307bba.so.0.0.0",
+      "bytes": 275553,
+      "sha256": "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy.libs/libgfortran-83c28eba-b4027c22.so.5.0.0",
+      "bytes": 2862249,
+      "sha256": "fd1eab02b28ddb97628ca82220f0141336e390990d1d92ae6a3475aaf4f51b03"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-017048f4.so",
+      "bytes": 25128625,
+      "sha256": "7f88e5cb3075a73d1610511f5de871c93e11701e862341c002ec8db936a60af8"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 231801,
+      "sha256": "45a4bea3df883c7c4da8a3575a7e13ae51c186b0930d9baa8f1813f948070430"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/site-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 10674137,
+      "sha256": "f34681e97d7eb6d5c3eabe1f4e4262ca07f79ce2727aeadc408369216859d429"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 989352,
+      "sha256": "469a0fae3c194c9ea9c5f70af346f11c2d0d824b75e98a2d24b36f084503a961"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_struct.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 233704,
+      "sha256": "6692f44857e2aa46b6b7476d75b0794faea185736f8dd5cd3e430954f8a7c544"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 214256,
+      "sha256": "c9c15d5b585dee8d576154f68736aac4e858207d7e13629c13beada56b85ea12"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 256176,
+      "sha256": "d89b11793ceeb4fc2f1036383fa64ac09cb5866c5d87514bae94e1e076475967"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 93320,
+      "sha256": "9bac54757d8a6bcd1614d54b6a3296f99efa20f231c1a00012f3e2164e04b869"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/zlib.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 180072,
+      "sha256": "dff357f10ce3a0a11bf638b76265d9bced2abe430466f1619ba6f31136cb5b21"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/grp.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 56792,
+      "sha256": "8a0e8e65466e38df6202a0ebbee84b2e8db92d389898bd56376d343f8257cd58"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_json.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 297032,
+      "sha256": "60eed7ef303ee8ace4ffeddc03420765718ea1b68cdfa7b735b428d024bb4a6f"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_blake2.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 1576152,
+      "sha256": "e1a236dad6976f3fbac695547e4ef006977093dcaf8b34d6830ee6dbf5f6feb4"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 330624,
+      "sha256": "3acf3015d59c157a2c32c134d31f718051ec9208e62288396674af5a73976208"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/math.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 397832,
+      "sha256": "512e0879b97fe1d0045828a9882ab37fe94fc241bd7f612fe244e68c5eb625dc"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/select.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 216632,
+      "sha256": "ccae280ca7fdbb956c8aabdefc8096016a2df6d192e97396bc67c6bbdc8c9959"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_posixsubprocess.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 120256,
+      "sha256": "98078a6d26a1748fd8834211052f44631bbdb34a69975671ad6a66daad0f7056"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/libffi.so.8.2.0",
+      "bytes": 50744,
+      "sha256": "cff0ea6932fe2986f3a33410d2008692cc93caecfde282a2b2a961f7963a13df"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/_pickle.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 688288,
+      "sha256": "e5f137e5cbb104f29f96aad0ed8b09267ed76287a1e5e351b24256e5e2e9fe50"
+    },
+    {
+      "path": "/usr/lib/libutil.so.1",
+      "bytes": 14352,
+      "sha256": "4ac88f90d22b5737c4126206973010d35abb473acd79851ed4b72ef55382679b"
+    },
+    {
+      "path": "/home/rob/pixi/.pixi/envs/default/lib/python3.14/lib-dynload/fcntl.cpython-314-x86_64-linux-gnu.so",
+      "bytes": 56792,
+      "sha256": "6738b254a9ae2043e91f9064c988386ca7526d2bad8ad991d67c8947aeac4779"
+    }
+  ],
+  "tool": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+    "bytes": 1985328,
+    "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+  },
+  "native_helper": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper-cargo/release/full-scenes-native",
+    "bytes": 1578496,
+    "sha256": "b1576646ae41555fdbbfc5a3ddf1565bc004df2130fa060d06feaa5e764a9565"
+  },
+  "gdal": {
+    "path": "/home/rob/pixi/.pixi/envs/default/lib/libgdal.so.39.3.13.0",
+    "bytes": 39101280,
+    "sha256": "275f9bda748f461c06e8aca79f9b3ebfa42b66d6a6c5864d77190d244495ea9a"
+  },
+  "helper_command": [
+    "cargo",
+    "build",
+    "--offline",
+    "--release",
+    "--manifest-path",
+    "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/helper/Cargo.toml"
+  ],
+  "tool_command": [
+    "cargo",
+    "build",
+    "--offline",
+    "--locked",
+    "--release",
+    "-p",
+    "emuella-viewer-tools"
+  ],
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)\nbinary: rustc\ncommit-hash: 8bab26f4f68e0e26f0bb7960be334d5b520ea452\ncommit-date: 2026-07-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.97.1\nLLVM version: 22.1.6\n",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)\n",
+  "python": "3.14.4 | packaged by conda-forge | (main, Apr  8 2026, 01:59:35) [GCC 14.3.0]",
+  "numpy": "2.5.1",
+  "python_gdal": "3130000",
+  "measurement_performed": false
+}

@@ -1,0 +1,1219 @@
+{
+  "schema": "viewer-acceptance-browser-masks-repaired-completion-results/1",
+  "status": "partial",
+  "disposition": "quality-rejected-diagnostic-only",
+  "strict_pressure_predicate_passed": false,
+  "operation_owner": "main-remaining-browser-slots",
+  "protocol_commit": "51cdad08b4f38d1a9e94f9d9f028483e51b2dda9",
+  "runtime_commit": "8633754fa28f2ca34f159a7368e0b8e7e953d205",
+  "protocol_files": {
+    "tools/viewer-acceptance-browser-masks.mjs": "eee41f139e61ef90f67eebf0256fca06a8c13f64d2b1313469c5fd5b068afdef",
+    "tools/tests/viewer-acceptance-browser-masks.test.mjs": "9d808d8150216c73af96c6544bfef89e8c7e73240e396e16023601fe19c929a0",
+    "docs/viewer-acceptance-browser-masks.md": "1bc779d8868793a2a2a6f218fa92aba5010faccbd7c351b66a7ddbbf702b3adb",
+    "docs/viewer-acceptance-browser-environment.md": "b0351725457347e2b8ae50b16dc30c6a705732744aa1f296fb8a58397ceb6bb1"
+  },
+  "build_record": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-repaired-build.json",
+    "bytes": 16546,
+    "sha256": "a00c9016ceb029a78b35c5d8e69b289fbb45fbf635bc70a2fa42aded795503f0"
+  },
+  "runtime_tree": "df6faac74c811315d07d5ec463f4e5450db56931",
+  "native_binary": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/measured-bin/emuella-viewer",
+    "bytes": 27275016,
+    "sha256": "3624000ce2d78ff1b646db572102df1a028800278d6fdb661fde43d36a10f0a6"
+  },
+  "web_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/web-manifest.json",
+    "bytes": 1149,
+    "sha256": "63cf2e1529b16e715edaf63747a901466e67f67318062968c76672d909e1da5d"
+  },
+  "static_root": "/nvme/development/emuella/.build-targets/viewer-acceptance/repaired-frozen-v1/web",
+  "static_assets": [
+    {
+      "path": "bootstrap.js",
+      "bytes": 548,
+      "sha256": "2d2ab31541bc4391d0d347977ecb1cae075fcbc655cbfa61aa2bd448d166a115"
+    },
+    {
+      "path": "index.html",
+      "bytes": 409,
+      "sha256": "b333a11ac87eb1910cef1cb5e5d129aaa02dd33b9fbdab46afeba3f3336429f0"
+    },
+    {
+      "path": "pkg/emuella_viewer.d.ts",
+      "bytes": 7332,
+      "sha256": "9d560a53752b10dc23622d3fd9ffa499c90b018931d14057bc48917b57f4f7b8"
+    },
+    {
+      "path": "pkg/emuella_viewer.js",
+      "bytes": 171350,
+      "sha256": "793b307f1cdbc111e354649ac51245cf2ef1e36cf874d4491044ce9d2729f675"
+    },
+    {
+      "path": "pkg/emuella_viewer_bg.wasm",
+      "bytes": 11377122,
+      "sha256": "0e5731c51c930784490f7e2d73a3d996546d2918ef69eeb2773152d88161b774"
+    },
+    {
+      "path": "pkg/emuella_viewer_bg.wasm.d.ts",
+      "bytes": 5244,
+      "sha256": "5ea0a5aafbb637cd97f9223cf70ff163a67b60adcc50333d3735ad4b967dc544"
+    },
+    {
+      "path": "response.js",
+      "bytes": 183,
+      "sha256": "166cdf7228437c660033dc7a75fbc3d8ac07be75518f25431da75bfae5c229aa"
+    },
+    {
+      "path": "worker.js",
+      "bytes": 6094,
+      "sha256": "86b34fb72197d611d2acf7a2e54f20bd026f97df6c207b5507f4496da88aecbe"
+    }
+  ],
+  "chromium": {
+    "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+    "bytes": 290614600,
+    "sha256": "0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71"
+  },
+  "actual_browser_version": "151.0.7922.34",
+  "playwright_version": "1.62.1",
+  "playwright_package_sha256": "ca170ec143a88ed3043ac953eb3b2377b2b97304104f4e1e23316684ce2c35af",
+  "service": {
+    "source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+    "binary": {
+      "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+      "bytes": 1985328,
+      "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+    },
+    "receipt": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/service-receipt.json",
+      "bytes": 2068,
+      "sha256": "018bd2bfcf6e0e56a4b1e9e13b564a5600f025b94401b11b286793164529c38e"
+    },
+    "catalogue_bytes": 148937,
+    "catalogue_sha256": "49dfe454bdcce17dc2212e5de3ee1b130b9b7e92f02f2440dff80f419c67841d"
+  },
+  "native_evidence": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-results.json",
+    "bytes": 57353,
+    "sha256": "37463f135f58b90c8916274c700da32d24523b10480ce36357a3ad21dfc24bd2"
+  },
+  "capsule_sha256": "4541454c8c6b92b0088fb3555cf0abdcc9fc4bc44a63bd46a3ffe9a0912e8773",
+  "grant_sha256": "a4c41a93e2102b63bd5416f415135c1d2329700f17dd338a89ca49142351041d",
+  "plan_sha256": "45db6fd835feafebcb88aefc410a248943a32a2caf5893288c30f592b6d5def4",
+  "output_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02",
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution",
+  "budget_and_execution": {
+    "invocations_in_remaining_02": 1,
+    "browser_contexts": 9,
+    "workers": 9,
+    "jobs": 2309,
+    "catalogue_mask_comparisons": 1883,
+    "warmups": 0,
+    "runner_retries": 0,
+    "native_starts": 0,
+    "process_exit_code": 2,
+    "deadlines_seconds": {
+      "job": 60,
+      "context": 660,
+      "proof": 6000,
+      "process": 6100
+    }
+  },
+  "normal": {
+    "completed": 2212,
+    "failed": 0,
+    "comparison": {
+      "samples_checked": 23501248,
+      "validity_checked": 17037656,
+      "sample_differences": 0,
+      "false_valid": 0,
+      "false_invalid": 0,
+      "nonbinary": 0,
+      "nonbinary_expected": 0,
+      "valid_cells": 14704640,
+      "invalid_cells": 2333016
+    }
+  },
+  "contexts": [
+    {
+      "id": "scene-1",
+      "status": "complete-diagnostic",
+      "jobs": 252,
+      "completed": 252,
+      "failed": 0,
+      "comparison": {
+        "samples_checked": 1955684,
+        "validity_checked": 1955684,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 1955684,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 1019,
+        "body_bytes": 10293301,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 490,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 420,
+          "bytes": 2781284,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 840,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 70,
+          "bytes": 438452,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 140,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 252,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-1/result.json",
+        "bytes": 395299,
+        "sha256": "01da4733f269f23092a233010c2a0a0195f8a2d7f956ca5f40b09af10484484b"
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 36,
+        "cross_tile_cases": 56,
+        "clipped_source_edge_cases": 84,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      }
+    },
+    {
+      "id": "scene-2",
+      "status": "complete-diagnostic",
+      "jobs": 504,
+      "completed": 504,
+      "failed": 0,
+      "comparison": {
+        "samples_checked": 5867832,
+        "validity_checked": 3911888,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 3911888,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 1119,
+        "body_bytes": 18098390,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 84,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 42,
+          "bytes": 521826,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 252,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 42,
+          "bytes": 521826,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 252,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 504,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-2/result.json",
+        "bytes": 781864,
+        "sha256": "73d7f6fe53cde7abbeefa05d7a47f5ad8d8bd8cba09470ee052a163d3f43923c"
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 72,
+        "cross_tile_cases": 224,
+        "clipped_source_edge_cases": 224,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      }
+    },
+    {
+      "id": "scene-3",
+      "status": "complete-diagnostic",
+      "jobs": 280,
+      "completed": 280,
+      "failed": 0,
+      "comparison": {
+        "samples_checked": 2154788,
+        "validity_checked": 2154788,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 1474124,
+        "invalid_cells": 680664
+      },
+      "http": {
+        "requests": 1467,
+        "body_bytes": 14296035,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 875,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 770,
+          "bytes": 5851548,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 1033,
+          "plane_digest_comparisons": 1540,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 105,
+          "bytes": 790606,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 185,
+          "plane_digest_comparisons": 210,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 280,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-3/result.json",
+        "bytes": 441729,
+        "sha256": "2d757d84b2fab1774c6de38229f71e16750800ac687c624fec647354d7721601"
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 40,
+        "cross_tile_cases": 140,
+        "clipped_source_edge_cases": 84,
+        "source_boundaries": [
+          {
+            "component": 0,
+            "checked_native_cases": 8
+          }
+        ],
+        "missing_selections": [],
+        "source_boundary_applicability": "observed-native-transitions",
+        "proved": true
+      }
+    },
+    {
+      "id": "scene-4",
+      "status": "complete-diagnostic",
+      "jobs": 672,
+      "completed": 672,
+      "failed": 0,
+      "comparison": {
+        "samples_checked": 7655112,
+        "validity_checked": 5103408,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 3451056,
+        "invalid_cells": 1652352
+      },
+      "http": {
+        "requests": 1498,
+        "body_bytes": 23925711,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 119,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 63,
+          "bytes": 1097535,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 2832,
+          "plane_digest_comparisons": 378,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 56,
+          "bytes": 979035,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 2064,
+          "plane_digest_comparisons": 336,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 672,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-4/result.json",
+        "bytes": 1042149,
+        "sha256": "6bc63c553246d27ebdeaaa872c15c432414af45f0d67ee13fc4da25c499a4c39"
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 96,
+        "cross_tile_cases": 392,
+        "clipped_source_edge_cases": 168,
+        "source_boundaries": [
+          {
+            "component": 0,
+            "checked_native_cases": 12
+          },
+          {
+            "component": 1,
+            "checked_native_cases": 12
+          },
+          {
+            "component": 2,
+            "checked_native_cases": 12
+          }
+        ],
+        "missing_selections": [],
+        "source_boundary_applicability": "observed-native-transitions",
+        "proved": true
+      }
+    },
+    {
+      "id": "scene-5",
+      "status": "complete-diagnostic",
+      "jobs": 504,
+      "completed": 504,
+      "failed": 0,
+      "comparison": {
+        "samples_checked": 5867832,
+        "validity_checked": 3911888,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 3911888,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 1749,
+        "body_bytes": 30105473,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 693,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 588,
+          "bytes": 10528158,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 3528,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 105,
+          "bytes": 2091750,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 630,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 504,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-5/result.json",
+        "bytes": 787486,
+        "sha256": "eb978cec9d6f20160c00da1af5a8e53ea211ceb03da7c3f406846a4f704e74c0"
+      },
+      "coverage": {
+        "levels_checked": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "native_cases": 72,
+        "cross_tile_cases": 224,
+        "clipped_source_edge_cases": 168,
+        "source_boundaries": [],
+        "missing_selections": [],
+        "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+        "proved": true
+      }
+    },
+    {
+      "id": "required-mask-missing",
+      "status": "complete-diagnostic",
+      "jobs": 1,
+      "completed": 0,
+      "failed": 1,
+      "comparison": {
+        "samples_checked": 0,
+        "validity_checked": 0,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 0,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 8,
+        "body_bytes": 150113,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 0,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-missing/result.json",
+        "bytes": 3203,
+        "sha256": "241d6290bf2e5cf07bbd873dffffca3c48239903cc8dd7b0378f19395aed2721"
+      },
+      "fault": {
+        "kind": "missing",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 404,
+        "bytes": 25,
+        "forwarded_sha256": "b44c02d98cee9b93354122e7b64e68c3ae14991a87121bc68117b1f6f0eae04e",
+        "stale_identity_rejected": null,
+        "proved": true,
+        "worker_error": "Error: HTTP 404",
+        "decode_count": 0,
+        "completed_publications": 0
+      }
+    },
+    {
+      "id": "required-mask-corrupt",
+      "status": "complete-diagnostic",
+      "jobs": 1,
+      "completed": 0,
+      "failed": 1,
+      "comparison": {
+        "samples_checked": 0,
+        "validity_checked": 0,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 0,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 8,
+        "body_bytes": 248392,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 0,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-corrupt/result.json",
+        "bytes": 3204,
+        "sha256": "7db26cc2c773194be556834f90288b7e5122f0b5f5749de7535eef1c02489dcc"
+      },
+      "fault": {
+        "kind": "corrupt",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 200,
+        "bytes": 98304,
+        "forwarded_sha256": "c3b3ebf7d370557a7adefdf24a5680b1b253ff3965249259d1cb438a5710bbdd",
+        "stale_identity_rejected": null,
+        "proved": true,
+        "worker_error": "mask digest mismatch",
+        "decode_count": 0,
+        "completed_publications": 0
+      }
+    },
+    {
+      "id": "required-mask-stale",
+      "status": "complete-diagnostic",
+      "jobs": 1,
+      "completed": 0,
+      "failed": 1,
+      "comparison": {
+        "samples_checked": 0,
+        "validity_checked": 0,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 0,
+        "invalid_cells": 0
+      },
+      "http": {
+        "requests": 8,
+        "body_bytes": 150108,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 0,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 1,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-stale/result.json",
+        "bytes": 3199,
+        "sha256": "c4eb736607fcc4ad7730d2b32c53372a912ec49c152bae7a7eeb1529d6d8d5a1"
+      },
+      "fault": {
+        "kind": "stale",
+        "target": "106_10400100413CDF00-RGB16",
+        "discard": 0,
+        "tile": 3,
+        "status": 400,
+        "bytes": 20,
+        "forwarded_sha256": "6a10aa827f1c07a1c5cad5b821ecd2372fcf7a292d56e9a3c1fe9828420357b9",
+        "stale_identity_rejected": true,
+        "proved": true,
+        "worker_error": "Error: HTTP 400",
+        "decode_count": 0,
+        "completed_publications": 0
+      }
+    },
+    {
+      "id": "mask-pressure-revisit",
+      "status": "partial",
+      "jobs": 94,
+      "completed": 86,
+      "failed": 8,
+      "comparison": {
+        "samples_checked": 7127000,
+        "validity_checked": 3402596,
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "valid_cells": 2956860,
+        "invalid_cells": 445736
+      },
+      "http": {
+        "requests": 498,
+        "body_bytes": 36308156,
+        "maximum_inflight": 2,
+        "errors": 0,
+        "mask_comparisons": 116,
+        "mask_disagreements": 0
+      },
+      "mask_sources": {
+        "catalogue-fetch": {
+          "comparisons": 0,
+          "bytes": 0,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 0,
+          "plane_digest_disagreements": 0
+        },
+        "worker-fetch": {
+          "comparisons": 116,
+          "bytes": 6281846,
+          "byte_differences": 0,
+          "noncanonical_padding": 0,
+          "all_without_any": 0,
+          "partial_band_cells": 0,
+          "plane_digest_comparisons": 464,
+          "plane_digest_disagreements": 0
+        }
+      },
+      "worker": {
+        "unexpected": 0,
+        "terminal_events": 94,
+        "worker_errors": 0
+      },
+      "page_errors": 0,
+      "all_request_identities_and_bounds_agree": true,
+      "receipt": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/mask-pressure-revisit/result.json",
+        "bytes": 154493,
+        "sha256": "bbf657b2c18a3cc2475c274d7f0eeacd2c923ead68d58551d9582394f9ba509f"
+      }
+    }
+  ],
+  "pressure": {
+    "planned_forward": 47,
+    "planned_revisit": 47,
+    "forward_completed": 43,
+    "forward_failed": 4,
+    "revisit_completed": 43,
+    "revisit_failed": 4,
+    "completed": 86,
+    "failed": 8,
+    "comparison": {
+      "samples_checked": 7127000,
+      "validity_checked": 3402596,
+      "sample_differences": 0,
+      "false_valid": 0,
+      "false_invalid": 0,
+      "nonbinary": 0,
+      "nonbinary_expected": 0,
+      "valid_cells": 2956860,
+      "invalid_cells": 445736
+    },
+    "strict_predicate_passed": false,
+    "missing_proof": [
+      "actual-mask-eviction-and-revisit"
+    ],
+    "compressed_limit_bytes": 1048576,
+    "actual_mask_evictions": 114,
+    "refetched_previously_loaded_mask_keys": 51,
+    "mask_http_reads": 116,
+    "distinct_mask_keys": 51,
+    "mask_reads_beyond_first_per_key": 65,
+    "metrics_maximum_observed": {
+      "compressed_bytes": 1048539,
+      "peak_compressed_bytes": 1048539,
+      "descriptor_bytes": 325418,
+      "peak_descriptor_bytes": 336578,
+      "mask_bytes": 393216,
+      "peak_mask_bytes": 393216,
+      "mask_evictions": 114,
+      "received_mask_bytes": 6281846,
+      "decode_count": 86,
+      "retries": 22,
+      "received_jpp_bytes": 12155172,
+      "received_descriptor_bytes": 65502,
+      "peak_codec_workspace_bytes": 1953079,
+      "wasm_linear_bytes": 8454144
+    },
+    "worker_transport_retries": 22,
+    "runner_retries": 0,
+    "failure_windows": [
+      {
+        "asset": "94_104001000B823500-RGB16",
+        "scene_zero_based": 1,
+        "native_request_index_zero_based": 174,
+        "pressure_job_indices_zero_based": [
+          12,
+          59
+        ],
+        "combined_required_compressed_bins_and_masks_bytes": 1321074,
+        "limit_bytes": 1048576,
+        "error": "working-set admission: required compressed bins and masks need 1321074 bytes, limit 1048576",
+        "receipt_pointer": [
+          "/jobs/12",
+          "/jobs/59"
+        ]
+      },
+      {
+        "asset": "94_104001000B823500-RGB16",
+        "scene_zero_based": 1,
+        "native_request_index_zero_based": 286,
+        "pressure_job_indices_zero_based": [
+          14,
+          61
+        ],
+        "combined_required_compressed_bins_and_masks_bytes": 1321074,
+        "limit_bytes": 1048576,
+        "error": "working-set admission: required compressed bins and masks need 1321074 bytes, limit 1048576",
+        "receipt_pointer": [
+          "/jobs/14",
+          "/jobs/61"
+        ]
+      },
+      {
+        "asset": "106_10400100413CDF00-RGB16",
+        "scene_zero_based": 3,
+        "native_request_index_zero_based": 118,
+        "pressure_job_indices_zero_based": [
+          30,
+          77
+        ],
+        "combined_required_compressed_bins_and_masks_bytes": 1434422,
+        "limit_bytes": 1048576,
+        "error": "working-set admission: required compressed bins and masks need 1434422 bytes, limit 1048576",
+        "receipt_pointer": [
+          "/jobs/30",
+          "/jobs/77"
+        ]
+      },
+      {
+        "asset": "106_10400100413CDF00-RGB16",
+        "scene_zero_based": 3,
+        "native_request_index_zero_based": 286,
+        "pressure_job_indices_zero_based": [
+          33,
+          80
+        ],
+        "combined_required_compressed_bins_and_masks_bytes": 1180944,
+        "limit_bytes": 1048576,
+        "error": "working-set admission: required compressed bins and masks need 1180944 bytes, limit 1048576",
+        "receipt_pointer": [
+          "/jobs/33",
+          "/jobs/80"
+        ]
+      }
+    ],
+    "working_set_reservations_and_pin_metadata_current_peaks_release": null,
+    "reservation_observation_note": "These fields are absent from the retained browser metrics; no zero or release claim is inferred. Required combined bytes come from Failed envelopes."
+  },
+  "http_totals": {
+    "requests": 7374,
+    "body_bytes": 133575679,
+    "errors": 0,
+    "mask_comparisons": 2377,
+    "mask_disagreements": 0
+  },
+  "mask_comparisons": {
+    "catalogue-fetch": {
+      "comparisons": 1883,
+      "bytes": 20780351,
+      "byte_differences": 0,
+      "noncanonical_padding": 0,
+      "all_without_any": 0,
+      "partial_band_cells": 3865,
+      "plane_digest_comparisons": 6538,
+      "plane_digest_disagreements": 0
+    },
+    "worker-fetch": {
+      "comparisons": 494,
+      "bytes": 11103515,
+      "byte_differences": 0,
+      "noncanonical_padding": 0,
+      "all_without_any": 0,
+      "partial_band_cells": 2249,
+      "plane_digest_comparisons": 2032,
+      "plane_digest_disagreements": 0
+    }
+  },
+  "comparison_journal": {
+    "rows": 4695,
+    "kinds": {
+      "mask": 2377,
+      "Completed": 2298,
+      "context-summary": 9,
+      "Failed": 11
+    }
+  },
+  "temporary_alias": {
+    "pinned": {
+      "kind": "private-linux-tmp/1",
+      "path": "/tmp",
+      "backing": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/tmp",
+      "dev": "60",
+      "ino": "288115807",
+      "parent_mount_namespace": "mnt:[4026531832]"
+    },
+    "namespace": "mnt:[4026534680]",
+    "backing_mount_id": "669",
+    "alias_mount_id": "685",
+    "retained_context_provenance_count": 9
+  },
+  "immutable_rechecks": {
+    "runner_final_recheck_passed": true,
+    "runner_receipt_pointer": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/result.json#/immutable_inputs_rechecked",
+    "scope": "Runner rehashed static assets and Chromium, then reloaded pinned capsule/native metadata and regional reference bindings; no rerun.",
+    "report_checks": [
+      "All 2309 journal job records equal ordered context jobs and frozen plan indices",
+      "All 2377 mask comparisons reconciled by context/source; 8570 oracle plane digests agree",
+      "Capsule, grant, canonical plan and four committed/current protocol file SHA-256 bindings match",
+      "Build/native-evidence/service-receipt metadata identity bindings match",
+      "Remaining-02 execution lineage exactly matches grant; remaining-01 does not",
+      "Evidence receipt hashes rechecked unchanged before writing"
+    ],
+    "protected_raw_reopened_by_report": false
+  },
+  "prior_evidence": {
+    "initial_repaired_failure_report": "viewer-acceptance-browser-masks-repaired-results.md",
+    "initial_repaired_failure_json": "viewer-acceptance-browser-masks-repaired-results.json",
+    "corrected_results": "viewer-acceptance-browser-masks-corrected-results.md",
+    "native_results": "viewer-acceptance-native-repaired-cohort-results.md",
+    "remaining_01": {
+      "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution",
+      "status": "exact lineage preflight failed before browser launch",
+      "browser_launches": 0,
+      "output_group_created": false,
+      "exit_code": 2,
+      "diagnosis": "Execution lineage held source attribution metadata instead of the exact operation_owner/attribution/lineage object required by the grant; mismatch verified from retained JSON and protocol guard. Process log retains only generic preflight failure.",
+      "service_stop": {
+        "identity": {
+          "pid": 588244,
+          "start_time_ticks": 545850514,
+          "process_group": 588205
+        },
+        "exit_code": -15,
+        "pid_absent": true
+      }
+    }
+  },
+  "cleanup": {
+    "owned_service_stop": {
+      "identity": {
+        "pid": 647897,
+        "start_time_ticks": 545886189,
+        "process_group": 647863
+      },
+      "exit_code": -15,
+      "pid_absent": true
+    },
+    "retention": "All approved-store evidence remains in place."
+  },
+  "viewer_acceptance": false,
+  "accepted_configuration": null,
+  "selected_configuration": null,
+  "hardware_viewing": "unmeasured",
+  "normal_latency": "unmeasured",
+  "inherited_seven_event_recovery": "unmeasured",
+  "speed_claim": null,
+  "further_repair_or_retry": false,
+  "evidence": {
+    "viewer-acceptance-browser-masks-repaired-remaining-02/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/result.json",
+      "bytes": 8541,
+      "sha256": "2309c38977352ce93ec0bc9331089a3b2e1da22f019b4a521b64e7b24f780139"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/plan.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/plan.json",
+      "bytes": 153990,
+      "sha256": "d1945afdd899ed9740c3b1f01461dbc71a5ef9198d87e3cf2fd2de388cd626e6"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/inputs.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/inputs.json",
+      "bytes": 7401,
+      "sha256": "0d0b064778f38c728c65a780b7b1330eb1ef04b0f2e29555e9d96f33f337d053"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/lineage.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/lineage.json",
+      "bytes": 1468,
+      "sha256": "56b2f4b35de8199eb8de85db62e384f6e8b822bbac4cd9dcc8dfb1088fc51ae0"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/temporary-alias.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/temporary-alias.json",
+      "bytes": 1231,
+      "sha256": "5eff7355547e98f5a8ad63fb0952f5674bbaeeceda36ac6ba4f72d755ae747bc"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/comparisons.jsonl": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/comparisons.jsonl",
+      "bytes": 5426487,
+      "sha256": "0484b063221a21e21ffcd08bea38669f85b477e55169b9aed1cdde84d1bba1fe"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/mask-pressure-revisit/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/mask-pressure-revisit/result.json",
+      "bytes": 154493,
+      "sha256": "bbf657b2c18a3cc2475c274d7f0eeacd2c923ead68d58551d9582394f9ba509f"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-corrupt/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-corrupt/result.json",
+      "bytes": 3204,
+      "sha256": "7db26cc2c773194be556834f90288b7e5122f0b5f5749de7535eef1c02489dcc"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-missing/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-missing/result.json",
+      "bytes": 3203,
+      "sha256": "241d6290bf2e5cf07bbd873dffffca3c48239903cc8dd7b0378f19395aed2721"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-stale/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/required-mask-stale/result.json",
+      "bytes": 3199,
+      "sha256": "c4eb736607fcc4ad7730d2b32c53372a912ec49c152bae7a7eeb1529d6d8d5a1"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/scene-1/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-1/result.json",
+      "bytes": 395299,
+      "sha256": "01da4733f269f23092a233010c2a0a0195f8a2d7f956ca5f40b09af10484484b"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/scene-2/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-2/result.json",
+      "bytes": 781864,
+      "sha256": "73d7f6fe53cde7abbeefa05d7a47f5ad8d8bd8cba09470ee052a163d3f43923c"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/scene-3/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-3/result.json",
+      "bytes": 441729,
+      "sha256": "2d757d84b2fab1774c6de38229f71e16750800ac687c624fec647354d7721601"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/scene-4/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-4/result.json",
+      "bytes": 1042149,
+      "sha256": "6bc63c553246d27ebdeaaa872c15c432414af45f0d67ee13fc4da25c499a4c39"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02/scene-5/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02/scene-5/result.json",
+      "bytes": 787486,
+      "sha256": "eb978cec9d6f20160c00da1af5a8e53ea211ceb03da7c3f406846a4f704e74c0"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/invocation.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/invocation.json",
+      "bytes": 1931,
+      "sha256": "35f478b5c381a4cca6b7f1ce5af3a05b87b49daf39a32ec593d0252f316c0a37"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/exit.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/exit.json",
+      "bytes": 21,
+      "sha256": "4f74fddecad347279a92c2fd5f02e47ff4b672f90f12adc921ef942241c9ff06"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/service-stop.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/service-stop.json",
+      "bytes": 148,
+      "sha256": "0e5a3340e0d6a730333c97ec791fcd15ffb574c7b269371c900764cd90221d69"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/browser-masks-input.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/browser-masks-input.json",
+      "bytes": 4116,
+      "sha256": "4541454c8c6b92b0088fb3555cf0abdcc9fc4bc44a63bd46a3ffe9a0912e8773"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/browser-masks-grant.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/browser-masks-grant.json",
+      "bytes": 2487,
+      "sha256": "a4c41a93e2102b63bd5416f415135c1d2329700f17dd338a89ca49142351041d"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/service-receipt.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/service-receipt.json",
+      "bytes": 2068,
+      "sha256": "018bd2bfcf6e0e56a4b1e9e13b564a5600f025b94401b11b286793164529c38e"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/local-preflight.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/local-preflight.json",
+      "bytes": 363,
+      "sha256": "b100c5ed147084bab0b8e2122bc5895b6a3b744e275001d641b75d5c3f1de503"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/final-namespace-preflight.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/final-namespace-preflight.json",
+      "bytes": 1756,
+      "sha256": "c1bb466dd6a28dc80a693571ad469d88433b6e0bd1ad8687997c1df1500a7d3f"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/lineage.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/lineage.json",
+      "bytes": 1294,
+      "sha256": "a522abaf08e2240fb1974497d6dbf7299dcb304141f6ee1cf6e8b60d2e1eb449"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-02-execution/source-lineage.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-02-execution/source-lineage.json",
+      "bytes": 667,
+      "sha256": "22111503ed566594cbe38af6a2779b8edcb28c3399b8b099e6529fbf0741fe18"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/invocation.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/invocation.json",
+      "bytes": 1922,
+      "sha256": "5494d7a811fd055b79a6dd3164bf962677e5de4f47781ecfb515123c0c06560a"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/exit.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/exit.json",
+      "bytes": 21,
+      "sha256": "4f74fddecad347279a92c2fd5f02e47ff4b672f90f12adc921ef942241c9ff06"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/service-stop.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/service-stop.json",
+      "bytes": 148,
+      "sha256": "26aab23184ccb39e1803cf91fa2737b9d97b66cf2d6d1a417bb49b94b75a39d8"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/lineage.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/lineage.json",
+      "bytes": 667,
+      "sha256": "22111503ed566594cbe38af6a2779b8edcb28c3399b8b099e6529fbf0741fe18"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/browser-masks-grant.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/browser-masks-grant.json",
+      "bytes": 2487,
+      "sha256": "cd2b9baf1ec010e03477aa310741e2f70de3e202c74701f1440cbead76082bb4"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/final-namespace-preflight.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/final-namespace-preflight.json",
+      "bytes": 1756,
+      "sha256": "ae6bcf445d743c24a97aa1363f28fef1a4d4630525df104b72cf28a5851883ca"
+    },
+    "viewer-acceptance-browser-masks-repaired-remaining-01-execution/process.log": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-repaired-remaining-01-execution/process.log",
+      "bytes": 97,
+      "sha256": "bf9151279a58968359e584963f2af41d438cdf7f3f2108e958db959e7decef9f"
+    }
+  }
+}

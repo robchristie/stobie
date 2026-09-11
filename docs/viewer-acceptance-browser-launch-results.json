@@ -1,0 +1,252 @@
+{
+  "schema": "viewer-acceptance-browser-launch-results/1",
+  "status": "diagnostic complete; current socket-path startup failure proved; downstream acceptance missing-proof, nonterminal",
+  "protocol_commit": "a397f71d42a0d883f1db8f67548a4791e0298e9c",
+  "protocol_files": {
+    "tools/viewer-acceptance-browser-masks.mjs": "7629a529d2f977d3137b65fbb663c17c321598ba4f89bcf3bf0d1d2c3391f744",
+    "tools/viewer-acceptance-browser-launch.mjs": "6258e01714a377ea6b9102931f3a4445f12064eb706eea554690e3ac21c946ce",
+    "tools/tests/viewer-acceptance-browser-launch.test.mjs": "9616bc97b9d1e17fb2cbdb265149cfb2e3d1c78bb05e41744ec42f1ee1353999",
+    "docs/viewer-acceptance-browser-launch.md": "902b3c8cffa7369c0a03d33687a553e5f6b51400182efb895b6a998661c6d0dc"
+  },
+  "output_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z",
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution",
+  "budget": {
+    "invocations": 1,
+    "browser_launches": 1,
+    "workers": 0,
+    "jobs": 0,
+    "services": 0,
+    "retries": 0,
+    "launch_ms": 60000,
+    "outer_seconds": 90
+  },
+  "actual": {
+    "invocations": 1,
+    "browser_launches": 1,
+    "usable_contexts": 0,
+    "workers": 0,
+    "jobs": 0,
+    "services": 0,
+    "retries": 0
+  },
+  "native_stop_receipt": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-native-cohort-mansfield-01/operation-closeout.json#cleanup; sha256=f131baa4e8be5779866f24f8572ac7d0d10a05fc6ae3647557fa757a74159b4d",
+  "native_owner_stopped": true,
+  "no_native_hardware_overlap": true,
+  "identity_verification": {
+    "committed_files_match": true,
+    "chromium": {
+      "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+      "realpath": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+      "bytes": 290614600,
+      "sha256": "0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71"
+    },
+    "node": {
+      "path": "/home/rob/pixi/.pixi/envs/default/bin/node",
+      "realpath": "/home/rob/pixi/.pixi/envs/default/bin/node",
+      "bytes": 17416,
+      "sha256": "457ca44e096a73ee329b48e5018f16bdc3f5ef652eae64fca85124a4230687d1"
+    },
+    "playwright_version": "1.62.1",
+    "playwright_core_files": [
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/package.json",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/package.json",
+        "bytes": 876,
+        "sha256": "07c47543631fef9508760365dee9fbe958c562093ec8d122543949ed231f233f"
+      },
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/index.js",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/index.js",
+        "bytes": 697,
+        "sha256": "a58fb2cec4293e7dcf73c58a179898a4f3986666451a19da4e731fa3af63265b"
+      },
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/index.mjs",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/index.mjs",
+        "bytes": 1063,
+        "sha256": "3d36e2132d3c8b62397d23f0bb4177336aaee503203ae2a2c90fbeb5bf3317dd"
+      },
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/bootstrap.js",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/bootstrap.js",
+        "bytes": 3481,
+        "sha256": "4637f4dbfef9cfc01baeb5f5d2cb63fa0901522c96915ea2227290558d27123e"
+      },
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/coreBundle.js",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/coreBundle.js",
+        "bytes": 3425603,
+        "sha256": "9393fa79e1c67c74edc26b610d65a4f7ed73d345a762465cc88340a33a2454ac"
+      },
+      {
+        "path": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/utilsBundle.js",
+        "realpath": "/nvme/development/polyorama-viewer-acceptance/node_modules/playwright-core/lib/utilsBundle.js",
+        "bytes": 3239355,
+        "sha256": "580f571bf063e2256b51b3946a035bc452fc0e22808d5547b198baea39923a32"
+      }
+    ],
+    "resolved_library_count": 71,
+    "relevant_environment_variable_count": 16,
+    "capsule_sha256": "a99d9284efe49632fd559baa82ef48c3cd08282fce62e295a3936b1d319dc3a6",
+    "grant_sha256": "9253802a940cd80b7f4ea061dd0c4bced2eb7ed9d04f25555b9687cf2aca90e6",
+    "loader_exit": 0,
+    "loader_stderr_empty": true,
+    "preflight_repeated_in_runner": true,
+    "long_layout_and_original_flags_preserved": true
+  },
+  "cause": {
+    "scope": "This fresh diagnostic only; earlier nine failures are not retrospectively proved.",
+    "causal_excerpt": "- [pid=3799554][err] [3799554:3799554:0911/171628.074362:FATAL:chrome/browser/process_singleton_posix.cc:313] Socket path too long: /nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/tmp/org.chromium.Chromium.uC2RnJ/SingletonSocket.",
+    "socket_path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/tmp/org.chromium.Chromium.uC2RnJ/SingletonSocket",
+    "socket_path_utf8_bytes": 183,
+    "browser_pid": 3799554,
+    "browser_exit_code": null,
+    "browser_signal": "SIGABRT"
+  },
+  "bounded_error_evidence": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/result.json",
+    "header": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+    "original_characters": 11304,
+    "character_unit": "UTF-16 code units",
+    "sanitised_characters": 10945,
+    "sanitised_bytes": 10945,
+    "header_bytes": 84,
+    "tail_bytes": 4096,
+    "truncated": true,
+    "sanitised": true,
+    "exit_code": null,
+    "signal": "SIGABRT"
+  },
+  "process_closeout": {
+    "schema": "viewer-acceptance-browser-launch-process-closeout/1",
+    "operation_owner": "browser-launch-diagnostic-execution",
+    "recorded_utc": "2026-09-11T07:46:28.250Z",
+    "outer_pid": 3799531,
+    "exit_code": 2,
+    "signal": null,
+    "elapsed_ms": 606,
+    "outer_timeout_observed": false,
+    "observed_processes": [
+      {
+        "pid": 3799531,
+        "name": "timeout",
+        "start_time_ticks": "545314287",
+        "pgrp": 3799531,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799532,
+        "name": "node-MainThread",
+        "start_time_ticks": "545314288",
+        "pgrp": 3799531,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799554,
+        "name": "chrome",
+        "start_time_ticks": "545314326",
+        "pgrp": 3799554,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799556,
+        "name": "chrome_crashpad",
+        "start_time_ticks": "545314328",
+        "pgrp": 3799555,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799558,
+        "name": "chrome_crashpad",
+        "start_time_ticks": "545314328",
+        "pgrp": 3799557,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799561,
+        "name": "chrome",
+        "start_time_ticks": "545314328",
+        "pgrp": 3799554,
+        "last_state": "S"
+      },
+      {
+        "pid": 3799562,
+        "name": "chrome",
+        "start_time_ticks": "545314328",
+        "pgrp": 3799554,
+        "last_state": "S"
+      }
+    ],
+    "observed_unique_process_count": 7,
+    "observed_peak_live_process_count": 7,
+    "process_count_limitation": "50 ms /proc identity sampling can miss short-lived internal processes; ldd preflight processes are included when observed. No raw commands or event streams retained.",
+    "owned_stop_actions": [],
+    "remaining_owned_processes": [],
+    "cleanup_complete": true,
+    "remaining_owned_live_count": 0,
+    "invocations": 1,
+    "retries": 0
+  },
+  "supported_environment_repair_proposal": "Under a new identity and separate main grant, provide a short writable TMPDIR whose Chromium singleton socket path fits the platform limit, with all writes retained inside an explicitly approved attributed store. Do not reuse or alter this group. No repair implemented.",
+  "later_proof": "Main alone decides a separately granted finite functional proof and records its frozen criteria. No functional proof executed here.",
+  "limitations": [
+    "No mask, quality, viewer or hardware acceptance.",
+    "Only current startup cause is proved; historical complete environment and resolved library bytes were not recorded.",
+    "Library hashes cover startup ldd resolution, not future dlopen loads.",
+    "Process counts are sampled lower bounds; transient internal processes can be missed.",
+    "Runner cleanup_complete=false means no usable context existed to close; watcher separately confirms no owned processes remain.",
+    "Full verification and browser smoke excluded by exactly-one-launch instruction; only metadata, JSON, bounds, identities and whitespace checked."
+  ],
+  "evidence": {
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/capsule.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/capsule.json",
+      "bytes": 21705,
+      "sha256": "a99d9284efe49632fd559baa82ef48c3cd08282fce62e295a3936b1d319dc3a6"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/grant.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/grant.json",
+      "bytes": 2673,
+      "sha256": "9253802a940cd80b7f4ea061dd0c4bced2eb7ed9d04f25555b9687cf2aca90e6"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/validation.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/validation.json",
+      "bytes": 728,
+      "sha256": "494871a0f7194a0ec72fd5bc5b615b165bcf616188f0b6a4e20fb7d72da6deed"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/native-stop-verification.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/native-stop-verification.json",
+      "bytes": 1578,
+      "sha256": "f8c678a1b3f10ea069178de584cfcc832c6991e9543264afcb60fcb7e03de8b0"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/process.log": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/process.log",
+      "bytes": 167,
+      "sha256": "ca9450bd9b7016a51ff9144e9223d6f86fb9e1ab87cab1ae1c3fb4ac883c2392"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/stop-receipt.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/stop-receipt.json",
+      "bytes": 1805,
+      "sha256": "15dde26e054d01f80f739ed04212e8b612234e12084022ec9bf57b3d2ae730af"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z/identity.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/identity.json",
+      "bytes": 25699,
+      "sha256": "3a1b036497189cf98f79abab2427495b1317b9db687b301029fc8bd868ab2ce9"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z/attempt.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/attempt.json",
+      "bytes": 299,
+      "sha256": "e9e37ee14b70ff0588968ec81ed63feb96cab445bc70826bfda061af65c70b7a"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z/result.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z/result.json",
+      "bytes": 5083,
+      "sha256": "2c9f71154175ceabf08c9c444306b88c0655afb4c02f3049738538426bc436ff"
+    },
+    "viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/evidence-manifest.json": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t074537z-execution/evidence-manifest.json",
+      "bytes": 6315,
+      "sha256": "20fb52f61ae7cce3f3a0bb9915c8109137c6f644b9b6f421df84ab657e286afe"
+    }
+  }
+}

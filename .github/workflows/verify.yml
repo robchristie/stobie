@@ -52,7 +52,7 @@ jobs:
         if: steps.scope.outputs.mode != 'docs'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers python3-gdal python3-numpy xdotool xvfb
           npm ci
           npx playwright install --with-deps chromium
 

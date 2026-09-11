@@ -55,6 +55,7 @@ let browserDiagnostics = '';
 let xvfbProcess;
 let xvfbDiagnostics = '';
 let x11TemporaryDirectory;
+const retainTemporary = process.env.POLYORAMA_RETAIN_UI_TEMP === '1';
 
 async function launchBrowser() {
   if (process.platform !== 'linux') {
@@ -377,15 +378,20 @@ try {
       new Promise((resolve) => setTimeout(resolve, 2_000)),
     ]);
   }
-  if (x11TemporaryDirectory) {
+  if (x11TemporaryDirectory && !retainTemporary) {
     await rm(x11TemporaryDirectory, {
       recursive: true, force: true, maxRetries: 5, retryDelay: 200,
     });
-  } else if (browserProfile) {
+  } else if (browserProfile && !retainTemporary) {
     await rm(browserProfile, {
       recursive: true, force: true, maxRetries: 5, retryDelay: 200,
     });
   }
+  await writeFile(join(logs, 'temporary-lifecycle.json'), JSON.stringify({
+    retention_requested: retainTemporary,
+    retained: retainTemporary && Boolean(x11TemporaryDirectory ?? browserProfile),
+    directory: x11TemporaryDirectory ?? browserProfile ?? null,
+  }, null, 2) + '\n');
   await new Promise((resolve) => server.close(resolve));
 }
 

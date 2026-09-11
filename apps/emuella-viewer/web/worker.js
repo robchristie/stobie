@@ -33,7 +33,8 @@ function emit(value) {
     if (timing) timing.published_ms = pacingNow();
   }
   const buffer=value.Completed?.pixels.samples.buffer;
-  postMessage(value, buffer ? [buffer] : []);
+  const validity = value.Completed?.pixels.validity.buffer;
+  postMessage(value, buffer ? [buffer, validity] : []);
 }
 async function work(job) {
   const controller = new AbortController(); active = { job, controller };
@@ -54,6 +55,14 @@ async function work(job) {
       if (!client.missing(job).length) break;
     }
     if (client.missing(job).length) throw new Error('regional descriptors exceed admitted metadata budget');
+    stopped(); client.begin_request(job);
+    for (const tile of client.missing_masks(job)) {
+      stopped();
+      const discard = job.request.key.reduction;
+      const bytes = await bounded(await get(`/mask/${job.manifest.target}/${discard}/${tile}?tid=${job.manifest.tid}`), limit);
+      stopped(); client.mask(job.manifest.tid, tile, discard, bytes);
+    }
+    if (client.missing_masks(job).length) throw new Error('regional masks exceed admitted budget');
     let pixels;
     if (client.ready(job)) { pixels = client.decode(job); transport.cache_hits++; }
     for (let attempt = 0; !pixels && attempt < 64; attempt++) {
@@ -67,17 +76,20 @@ async function work(job) {
       client.finish(); stopped();
       if (client.ready(job)) pixels = client.decode(job);
     }
+    if (!pixels) throw new Error('regional continuation exhausted after 64 rounds');
     finished_ms = pacingNow();
     // Yield after synchronous WASM decoding so queued cancellation is seen before publishing.
     await new Promise(resolve => setTimeout(resolve, 0)); stopped();
     transport.elapsed_ms += performance.now() - started;
-    transport.transferred_sample_bytes += pixels.samples.byteLength;
+    transport.transferred_sample_bytes += pixels.samples.byteLength + pixels.validity.byteLength;
+    client.end_request();
     const m = timedMetrics();
     emit({ Completed: { request: job.request, pixels, metrics: m } });
   } catch (error) {
+    client.end_request();
     if (cancelled.has(key(job.request))) { transport.aborted++; emit({ Cancelled: { request: job.request, metrics: timedMetrics() } }); }
     else emit({ Failed: { request: job.request, error: String(error), metrics: timedMetrics() } });
-  } finally { client.abandon_response(); cancelled.delete(key(job.request)); active = undefined; }
+  } finally { client.end_request(); client.abandon_response(); cancelled.delete(key(job.request)); active = undefined; }
 }
 self.onmessage = async ({ data }) => {
   await ready;

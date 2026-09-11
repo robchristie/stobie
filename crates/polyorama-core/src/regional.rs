@@ -143,6 +143,48 @@ impl RegionalPixels {
     }
 }
 
+/// Additive binary-validity envelope. Existing `RegionalPixels` literals and
+/// unmasked runtime/renderer entry points remain source compatible.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RegionalFrame {
+    #[serde(flatten)]
+    pub pixels: RegionalPixels,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validity: Option<Vec<u8>>,
+}
+impl From<RegionalPixels> for RegionalFrame {
+    fn from(pixels: RegionalPixels) -> Self {
+        Self {
+            pixels,
+            validity: None,
+        }
+    }
+}
+impl std::ops::Deref for RegionalFrame {
+    type Target = RegionalPixels;
+    fn deref(&self) -> &Self::Target {
+        &self.pixels
+    }
+}
+impl RegionalFrame {
+    pub fn byte_len(&self) -> usize {
+        self.pixels
+            .byte_len()
+            .saturating_add(self.validity.as_ref().map_or(0, Vec::len))
+    }
+    pub fn allocation_bytes(&self) -> usize {
+        self.pixels
+            .allocation_bytes()
+            .saturating_add(self.validity.as_ref().map_or(0, Vec::capacity))
+    }
+    pub fn is_valid(&self) -> bool {
+        self.pixels.is_valid()
+            && self.validity.as_ref().is_none_or(|v| {
+                v.len() == self.width as usize * self.height as usize && v.iter().all(|&b| b <= 1)
+            })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

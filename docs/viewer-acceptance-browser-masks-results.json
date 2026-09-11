@@ -1,0 +1,368 @@
+{
+  "schema": "viewer-acceptance-browser-masks-results/1",
+  "execution_date": "2026-09-11",
+  "status": "partial",
+  "disposition": "quality-rejected-diagnostic-only",
+  "operation_owner": "browser-mask-execution",
+  "protocol_commit": "8c5d1e84176a43ad9cfccc857a0cf3a164e3367d",
+  "protocol_files": {
+    "tools/viewer-acceptance-browser-masks.mjs": "4e30783a66603e8a54003ce0cd0efe4f2a2127987c1847739cda94016680833f",
+    "tools/tests/viewer-acceptance-browser-masks.test.mjs": "06e62803ff47f9e21498a61718cf01315a31cbdcee1a9875830caf67f95bf2b3",
+    "docs/viewer-acceptance-browser-masks.md": "888e3d116caa7b65fa83fad85d58aed5af8db4443370b68d7d5b1fa73e1bd048"
+  },
+  "runtime_commit": "fe82f85984fba5c75d7a5a8f10b2d914b773a838",
+  "build_record": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-native-diagnostics-build.json",
+    "bytes": 17745,
+    "sha256": "758e93fe81b06e36650ad742a95b58c07cf18bff2648a3b6d06011e44c674eea"
+  },
+  "web_manifest": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/native-frozen-v1/web-manifest.json",
+    "bytes": 1964,
+    "sha256": "315798475c28253554d451c1b1c248fff03dbdbfd0cbd49eb1f4b7e08631d642"
+  },
+  "chromium": {
+    "path": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome",
+    "bytes": 290614600,
+    "sha256": "0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71"
+  },
+  "playwright_version": "1.62.1",
+  "service_source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "service_binary": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/full-scenes-build/cargo/release/emuella-viewer-tools",
+    "bytes": 1985328,
+    "sha256": "7ea60902498fbbfcac67f7d7785e42a38b4ce06741895ad916f8996c0f137102"
+  },
+  "source_coverage": {
+    "path": "/nvme/development/emuella/emuella-workspace-viewer-acceptance/docs/evidence/viewer-acceptance/source-coverage.json",
+    "bytes": 2813,
+    "sha256": "9bba0a0ae9064fa6450ceb2b56263a6715b562e7aa7a5ab5cd1adf138ea117e8"
+  },
+  "native_evidence": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-results.json",
+    "bytes": 57353,
+    "sha256": "37463f135f58b90c8916274c700da32d24523b10480ce36357a3ad21dfc24bd2"
+  },
+  "execution_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution",
+  "output_group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z",
+  "budget": {
+    "invocations": 1,
+    "serial_contexts": 9,
+    "worker_jobs": 2309,
+    "catalogue_mask_comparisons": 1883,
+    "pressure_forward_jobs": 47,
+    "pressure_revisit_jobs": 47,
+    "runner_retries": 0,
+    "job_seconds": 60,
+    "context_seconds": 660,
+    "invocation_seconds": 6000,
+    "process_timeout_seconds": 6100
+  },
+  "actual": {
+    "invocations": 1,
+    "runner_retries": 0,
+    "browser_launch_attempts": 9,
+    "usable_browser_contexts": 0,
+    "workers": 0,
+    "worker_jobs": 0,
+    "catalogue_mask_comparisons": 0,
+    "sample_values_compared": 0,
+    "validity_values_compared": 0,
+    "sample_agreement": null,
+    "validity_agreement": null,
+    "sample_disagreements": null,
+    "false_valid": null,
+    "false_invalid": null,
+    "required_faults_injected": 0,
+    "required_faults_proved": 0,
+    "mask_evictions": null,
+    "mask_refetches": null,
+    "pressure_revisits": 0,
+    "cache_bounds_proved": false,
+    "proof_http_requests": 0,
+    "proof_http_body_bytes": 0,
+    "proof_http_maximum_inflight": 0,
+    "service_preflight_catalogue_requests": 1,
+    "service_preflight_catalogue_body_bytes": 148937,
+    "exit_code": 2,
+    "elapsed_seconds": 2.668869093991816,
+    "process_timeout": false,
+    "deadline_failures": 0,
+    "same_realm_job_intervals": null,
+    "worker_intervals": null,
+    "cross_realm_intervals": null
+  },
+  "contexts": [
+    {
+      "id": "scene-1",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/scene-1/result.json",
+        "bytes": 1473,
+        "sha256": "bcbc18d4aab9f6ed15a886bdc74b2ac6543d8fb022bf8e43a2ed9704b3ec3085"
+      }
+    },
+    {
+      "id": "scene-2",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/scene-2/result.json",
+        "bytes": 1473,
+        "sha256": "b5a9125fb69058a3ca7937aa2b38f3f0bf36ddff04224260e1ab7f01e3a47cb5"
+      }
+    },
+    {
+      "id": "scene-3",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/scene-3/result.json",
+        "bytes": 1473,
+        "sha256": "ce0f24b5f8ca365b544615383799bd2f7fcec4d956977850159070bdd11517e8"
+      }
+    },
+    {
+      "id": "scene-4",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/scene-4/result.json",
+        "bytes": 1473,
+        "sha256": "0c89a5ba607aa6c8079f6296d583a4906253e4dc3753992f3492f0df32149d3d"
+      }
+    },
+    {
+      "id": "scene-5",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/scene-5/result.json",
+        "bytes": 1473,
+        "sha256": "27f523db3f8c1e8a1a50132ec16cf826485c9598f1cb116624d5c46b69b4d098"
+      }
+    },
+    {
+      "id": "required-mask-missing",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/required-mask-missing/result.json",
+        "bytes": 1485,
+        "sha256": "c63f947237b6a6423132e6d84d696a6187dea911963bcb9776b3fe620c6d7a1c"
+      }
+    },
+    {
+      "id": "required-mask-corrupt",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/required-mask-corrupt/result.json",
+        "bytes": 1485,
+        "sha256": "e76c5cc05da6232a3f01c54d454b7ff8403cfe15c711977872db68ddcd34499f"
+      }
+    },
+    {
+      "id": "required-mask-stale",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/required-mask-stale/result.json",
+        "bytes": 1481,
+        "sha256": "ba42bde2673df9f77b34cb28f5d97118438c434eb95dc6a5dd67efa3f9a4b6df"
+      }
+    },
+    {
+      "id": "mask-pressure-revisit",
+      "status": "partial",
+      "jobs": 0,
+      "workers": 0,
+      "browser_version": null,
+      "error_class": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+      "missing_proof": [
+        "context-operation-failed"
+      ],
+      "evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/mask-pressure-revisit/result.json",
+        "bytes": 1486,
+        "sha256": "b8f199c163bb4fd510f4ec3cbc07b2dd9ddc3d5aba4be0b8379b152bc0d67814"
+      }
+    }
+  ],
+  "missing_proof": [
+    "All nine persistent-context launches failed before Worker initialisation.",
+    "No regional sample/validity agreement, catalogue-mask comparisons, required faults, mask eviction/refetch or cache-bound evidence was obtained."
+  ],
+  "error_observation": "browserType.launchPersistentContext: Target page, context or browser has been closed",
+  "error_limit": "Frozen runner retains only the first 1024 characters of each context error; launch arguments occupy the remainder, so the underlying browser exit cause is unavailable. No additional browser probe was launched.",
+  "immutable_inputs_rechecked": true,
+  "rights_and_native_owner_pins_verified": true,
+  "owned_service_stopped": true,
+  "owned_browser_processes_remaining": 0,
+  "backend_observation": {
+    "browser_version": null,
+    "worker_backend": null,
+    "gpu_backend": null,
+    "hardware_adapter": null,
+    "gpu_limits_exercised": false
+  },
+  "viewer_acceptance": false,
+  "selected_configuration": null,
+  "normal_latency": "unmeasured",
+  "inherited_seven_event_recovery": "unmeasured",
+  "speed_claim": null,
+  "evidence": {
+    "result": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/result.json",
+      "bytes": 5146,
+      "sha256": "8ae77fbb49b1cf699e62fa57845d3e4795657bff7d7c2217bd5bd241126ab50a"
+    },
+    "comparisons": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/comparisons.jsonl",
+      "bytes": 2889,
+      "sha256": "bfcbb12d9ba8c1dc926439557f318214b3d65a3d34bd0fbc0b22e29fefede5f4"
+    },
+    "plan": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/plan.json",
+      "bytes": 153990,
+      "sha256": "d1945afdd899ed9740c3b1f01461dbc71a5ef9198d87e3cf2fd2de388cd626e6"
+    },
+    "inputs": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/inputs.json",
+      "bytes": 6514,
+      "sha256": "87ce08554581afb644ae8680c68979b23e607a8cbde37378c1a488ba21729128"
+    },
+    "lineage": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z/lineage.json",
+      "bytes": 1183,
+      "sha256": "31a5a8b13f667e484e6cf998082f291d2d9144df23cc2c8165df9ec3521ea7da"
+    },
+    "execution_lineage": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/lineage.json",
+      "bytes": 1479,
+      "sha256": "8f6d433a7fa052025f17bebe6e063238db0f06581ea579add04a1a4be15a4115"
+    },
+    "preflight": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/preflight.json",
+      "bytes": 5219,
+      "sha256": "bd59133dfdfaf20a7889f4e9a423823ddb42cdd026a3c60c98a6e5e4fcad3262"
+    },
+    "capsule": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/browser-masks-input.json",
+      "bytes": 3784,
+      "sha256": "9062781ea078709bf384ed8b421006f5c1a12217dae066d9696238d7b005a44a"
+    },
+    "grant": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/browser-masks-grant.json",
+      "bytes": 2075,
+      "sha256": "dc6973d6f307c4fa08218d8e58468340548136e631f4844cd298292251786bae"
+    },
+    "validation": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/validate.json",
+      "bytes": 330,
+      "sha256": "3ac32dd076d48a3fd50b53e99237290e48f020069a123896dfa01bb94bd50e8e"
+    },
+    "grant_validation": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/grant-validation.log",
+      "bytes": 18,
+      "sha256": "0f2c0196da079b94a7bb56be599ec9d0de2786ef3d781459813d1474f10a4cde"
+    },
+    "service": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/service-receipt.json",
+      "bytes": 3548,
+      "sha256": "0aa62763564e447611bfe4f2c19a12121b9e176e507c8b4759f27e421feb017f"
+    },
+    "catalogue": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/catalogue.json",
+      "bytes": 148937,
+      "sha256": "49dfe454bdcce17dc2212e5de3ee1b130b9b7e92f02f2440dff80f419c67841d"
+    },
+    "invocation": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/invocation-receipt.json",
+      "bytes": 1217,
+      "sha256": "e08b02d6a60493b7945e878e278c16f6c5eeacb6757305ddaca227eb23fc5990"
+    },
+    "execution": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/execution-receipt.json",
+      "bytes": 824,
+      "sha256": "7d9e54e7867fe665cf30c39cf03adb7d25866730af6c3514b63816566406a3b0"
+    },
+    "cleanup": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/cleanup-receipt.json",
+      "bytes": 496,
+      "sha256": "f3b67162dd230223a357c260099e2aafc5de8817595d85ee3f042424b0f45bdf"
+    },
+    "process_log": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/browser-masks-process.log",
+      "bytes": 167,
+      "sha256": "3e809e8efaff4d615eaf7337b12ffb5d5868c8aa7306680ac3013067fc800213"
+    },
+    "service_log": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/service.log",
+      "bytes": 120,
+      "sha256": "72fb8f06eb32860f96b01eab907e53369a3549a4053eca103941ae56b5139b98"
+    },
+    "lifecycle_script": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-browser-masks-fullscene-20260911t072423z-execution/execute.py",
+      "bytes": 8045,
+      "sha256": "a66f3388ed6ec959ca7cb195944cc3b3d6bef5dbf96a1d9bc030333b86ed5614"
+    }
+  },
+  "verification": "Committed protocol identity, rights and five native-owner pins, frozen web manifest, service binary/process identity, exact HTTP catalogue/native manifests, capsule counts and grant validated before invocation. Runner rechecked immutable inputs after all contexts. Report schema/counts and scope checked locally; canonical verification remains with main and was not launched within this single-invocation grant.",
+  "limitations": [
+    "Zero comparisons provide no agreement or disagreement conclusion.",
+    "Startup catalogue bytes are preflight metadata and are separate from proof HTTP bytes.",
+    "OS source cache state uncontrolled. An unrelated authored representation service at port 8123 was left untouched; no competing measurement was observed.",
+    "All profiles, logs and detailed evidence remain in the approved store. Existing quality-rejected diagnostic disposition remains unchanged.",
+    "No code, protocol, runtime or representation edits, preparation, additional invocations, retries, commits or pushes."
+  ]
+}

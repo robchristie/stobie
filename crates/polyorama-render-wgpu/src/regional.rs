@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use bytemuck::{Pod, Zeroable};
-use polyorama_core::{PaneId, RegionKey, RegionalPixels, SampleLayout};
-use polyorama_runtime::{RegionalCache, RegionalUpload, RequestToken};
+use polyorama_core::{PaneId, RegionKey, RegionalFrame, SampleLayout};
+use polyorama_runtime::{RegionalCache, RegionalFrameUpload, RegionalUpload, RequestToken};
 use wgpu::util::DeviceExt;
 
 use crate::PixelRect;
@@ -233,6 +233,25 @@ impl RegionalRenderer {
         queue: &wgpu::Queue,
         upload: RegionalUpload,
     ) -> Result<RegionalGpuAdmission, (Box<RegionalUpload>, RegionalGpuError)> {
+        self.upload_frame(device, queue, upload.into())
+            .map_err(|(u, e)| {
+                (
+                    Box::new(RegionalUpload {
+                        key: u.key,
+                        token: u.token,
+                        pixels: u.pixels.pixels,
+                    }),
+                    e,
+                )
+            })
+    }
+
+    pub fn upload_frame(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        upload: RegionalFrameUpload,
+    ) -> Result<RegionalGpuAdmission, (Box<RegionalFrameUpload>, RegionalGpuError)> {
         let validation = if self.preparing {
             Err(RegionalGpuError::FrameAlreadyPrepared)
         } else if !upload.key.is_valid()
@@ -274,7 +293,9 @@ impl RegionalRenderer {
             })
             .collect();
         let scalar = upload.pixels.layout == SampleLayout::Scalar;
-        let format = if scalar {
+        let format = if scalar && upload.pixels.validity.is_some() {
+            wgpu::TextureFormat::Rg16Uint
+        } else if scalar {
             wgpu::TextureFormat::R16Uint
         } else {
             wgpu::TextureFormat::Rgba16Uint
@@ -304,7 +325,7 @@ impl RegionalRenderer {
             &packed,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(upload.pixels.width * if scalar { 2 } else { 8 }),
+                bytes_per_row: Some((bytes / upload.pixels.height as usize) as u32),
                 rows_per_image: Some(upload.pixels.height),
             },
             texture.size(),
@@ -460,25 +481,30 @@ impl RegionalRenderer {
     }
 }
 
-fn regional_texture_bytes(pixels: &RegionalPixels) -> Option<usize> {
+fn regional_texture_bytes(pixels: &RegionalFrame) -> Option<usize> {
     (pixels.width as usize)
         .checked_mul(pixels.height as usize)?
         .checked_mul(if pixels.layout == SampleLayout::Scalar {
-            2
+            if pixels.validity.is_some() { 4 } else { 2 }
         } else {
             8
         })
 }
 
-fn pack_regional_samples(pixels: &RegionalPixels) -> Vec<u8> {
+fn pack_regional_samples(pixels: &RegionalFrame) -> Vec<u8> {
     let mut output =
         Vec::with_capacity(regional_texture_bytes(pixels).expect("validated texture size"));
-    for pixel in pixels.samples.chunks_exact(pixels.layout.channels()) {
+    for (i, pixel) in pixels
+        .samples
+        .chunks_exact(pixels.layout.channels())
+        .enumerate()
+    {
         for sample in pixel {
             output.extend_from_slice(&sample.to_le_bytes());
         }
-        if pixels.layout == SampleLayout::Rgb {
-            output.extend_from_slice(&0_u16.to_le_bytes());
+        if pixels.layout == SampleLayout::Rgb || pixels.validity.is_some() {
+            let invalid = u16::from(pixels.validity.as_ref().is_some_and(|v| v[i] == 0));
+            output.extend_from_slice(&invalid.to_le_bytes());
         }
     }
     output
@@ -500,7 +526,10 @@ struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2
 @fragment fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
     let size = textureDimensions(samples);
     let pixel = vec2<i32>(clamp(in.uv * vec2<f32>(size), vec2(0.0), vec2<f32>(size - vec2<u32>(1u))));
-    let raw = vec3<f32>(textureLoad(samples, pixel, 0).rgb);
+    let value = textureLoad(samples, pixel, 0);
+    let invalid = select(value.a, value.g, display.high_scalar.w > 0.5);
+    if invalid != 0u { return vec4(0.0, 0.0, 0.0, 1.0); }
+    let raw = vec3<f32>(value.rgb);
     let colour = select(raw, vec3(raw.r), display.high_scalar.w > 0.5);
     let mapped = clamp((colour - display.low_gamma.rgb) / (display.high_scalar.rgb - display.low_gamma.rgb), vec3(0.0), vec3(1.0));
     return vec4(pow(mapped, vec3(1.0 / display.low_gamma.w)), 1.0);
@@ -510,29 +539,65 @@ struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2
 #[cfg(test)]
 mod tests {
     use super::*;
+    use polyorama_core::RegionalPixels;
 
     #[test]
     fn native_scalar_and_rgb_precision_survive_texture_packing() {
-        let scalar = RegionalPixels {
+        let scalar: RegionalFrame = RegionalPixels {
             width: 2,
             height: 1,
             layout: SampleLayout::Scalar,
             precision: 11,
             samples: vec![1, 2047],
-        };
+        }
+        .into();
         assert_eq!(pack_regional_samples(&scalar), vec![1, 0, 255, 7]);
-        let rgb = RegionalPixels {
+        let rgb: RegionalFrame = RegionalPixels {
             width: 1,
             height: 1,
             layout: SampleLayout::Rgb,
             precision: 16,
             samples: vec![257, 32768, 65535],
-        };
+        }
+        .into();
         assert_eq!(
             pack_regional_samples(&rgb),
             vec![1, 1, 0, 128, 255, 255, 0, 0]
         );
         assert_eq!(regional_texture_bytes(&rgb), Some(8));
+    }
+
+    #[test]
+    fn binary_validity_is_separate_from_native_samples_and_counted_in_textures() {
+        for layout in [SampleLayout::Scalar, SampleLayout::Rgb] {
+            let mut pixels = RegionalFrame {
+                pixels: RegionalPixels {
+                    width: 2,
+                    height: 1,
+                    layout,
+                    precision: 16,
+                    samples: vec![65535; 2 * layout.channels()],
+                },
+                validity: Some(vec![1, 0]),
+            };
+            assert!(pixels.is_valid());
+            assert_eq!(pixels.byte_len(), 4 * layout.channels() + 2);
+            let packed = pack_regional_samples(&pixels);
+            assert_eq!(
+                packed.len(),
+                if layout == SampleLayout::Scalar {
+                    8
+                } else {
+                    16
+                }
+            );
+            assert_eq!(&packed[packed.len() - 2..], &[1, 0]);
+            assert!(pixels.samples.iter().all(|&s| s == 65535));
+            pixels.validity = Some(vec![2, 0]);
+            assert!(!pixels.is_valid());
+            pixels.validity = Some(vec![1]);
+            assert!(!pixels.is_valid());
+        }
     }
 
     #[test]
@@ -615,12 +680,26 @@ mod tests {
                 ],
             },
         ];
+        let cases: Vec<_> = cases
+            .iter()
+            .cloned()
+            .map(RegionalFrame::from)
+            .chain(cases.iter().cloned().map(|p| {
+                let mut p = RegionalFrame::from(p);
+                p.validity = Some(vec![1, 0, 1, 0, 1, 0, 1, 0]);
+                p
+            }))
+            .collect();
         for (case, pixels) in cases.into_iter().enumerate() {
             let maximum = ((1_u32 << pixels.precision) - 1) as f32;
             let expected: Vec<[u8; 4]> = pixels
                 .samples
                 .chunks_exact(pixels.layout.channels())
-                .map(|sample| {
+                .enumerate()
+                .map(|(i, sample)| {
+                    if pixels.validity.as_ref().is_some_and(|v| v[i] == 0) {
+                        return [0, 0, 0, 255];
+                    }
                     let channel =
                         |index: usize| ((sample[index] as f32 / maximum) * 255.0).round() as u8;
                     if pixels.layout == SampleLayout::Scalar {
@@ -649,17 +728,17 @@ mod tests {
             };
             renderer.begin_frame();
             let admission = renderer
-                .upload(
+                .upload_frame(
                     &device,
                     &queue,
-                    RegionalUpload {
+                    RegionalFrameUpload {
                         key: key.clone(),
                         token,
                         pixels,
                     },
                 )
                 .unwrap_or_else(|(_, error)| panic!("upload rejected: {error:?}"));
-            assert_eq!(admission.evicted.len(), case);
+            assert_eq!(admission.evicted.len(), usize::from(case > 0));
             assert!(renderer.metrics().texture_bytes <= 64);
             renderer
                 .prepare(
@@ -770,8 +849,8 @@ mod tests {
             drop(mapped);
             readback.unmap();
         }
-        assert_eq!(renderer.metrics().uploads, 2);
-        assert_eq!(renderer.metrics().evictions, 1);
+        assert_eq!(renderer.metrics().uploads, 4);
+        assert_eq!(renderer.metrics().evictions, 3);
         assert_eq!(renderer.metrics().upload_scratch_peak_bytes, 64);
     }
 }

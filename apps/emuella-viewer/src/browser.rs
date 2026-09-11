@@ -17,6 +17,8 @@ struct TransferPixels {
     precision: u8,
     #[serde(with = "serde_wasm_bindgen::preserve")]
     samples: js_sys::Uint16Array,
+    #[serde(with = "serde_wasm_bindgen::preserve")]
+    validity: js_sys::Uint8Array,
 }
 #[derive(Deserialize)]
 struct TransferCompletion {
@@ -30,7 +32,11 @@ fn decode_event(value: JsValue) -> Result<Event, JsValue> {
         return serde_wasm_bindgen::from_value(value).map_err(Into::into);
     }
     let c: TransferCompletion = serde_wasm_bindgen::from_value(completion)?;
-    if c.pixels.samples.length() as usize > c.request.max_decoded_bytes / 4 {
+    if (c.pixels.samples.length() as usize)
+        .saturating_mul(4)
+        .saturating_add((c.pixels.validity.length() as usize).saturating_mul(2))
+        > c.request.max_decoded_bytes
+    {
         return Ok(Event::Failed {
             request: Some(c.request),
             error: "transferred output exceeds reservation".into(),
@@ -38,12 +44,15 @@ fn decode_event(value: JsValue) -> Result<Event, JsValue> {
         });
     }
     // Typed transfer plus one exact-sized WASM copy stays within the reserved pair.
-    let pixels = polyorama_core::RegionalPixels {
-        width: c.pixels.width,
-        height: c.pixels.height,
-        layout: c.pixels.layout,
-        precision: c.pixels.precision,
-        samples: c.pixels.samples.to_vec(),
+    let pixels = polyorama_core::RegionalFrame {
+        validity: (c.pixels.validity.length() > 0).then(|| c.pixels.validity.to_vec()),
+        pixels: polyorama_core::RegionalPixels {
+            width: c.pixels.width,
+            height: c.pixels.height,
+            layout: c.pixels.layout,
+            precision: c.pixels.precision,
+            samples: c.pixels.samples.to_vec(),
+        },
     };
     Ok(Event::Completed {
         request: c.request,
@@ -59,6 +68,23 @@ pub struct Executor {
 }
 impl Executor {
     pub fn new(server: String, compressed: usize, context: egui::Context) -> Self {
+        Self::new_diagnostic(
+            server,
+            compressed,
+            context,
+            crate::DiagnosticOptions::default(),
+        )
+    }
+    pub fn new_diagnostic(
+        server: String,
+        compressed: usize,
+        context: egui::Context,
+        diagnostic: crate::DiagnosticOptions,
+    ) -> Self {
+        assert!(
+            !diagnostic.authored_immediate,
+            "authored immediate probe is native-only"
+        );
         let options = WorkerOptions::new();
         options.set_type(WorkerType::Module);
         options.set_name("emuella-shared-regional-decoder");
@@ -75,6 +101,7 @@ impl Executor {
             });
             if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
                 timing.received_ms = Some(received_ms);
+                timing.wakeup_requested_ms = Some(pacing_now_ms());
             }
             sink.borrow_mut().push_back(event);
             repaint.request_repaint();
@@ -166,6 +193,31 @@ impl WorkerClient {
         )
         .map_err(Into::into)
     }
+    pub fn begin_request(&mut self, value: JsValue) -> Result<(), JsValue> {
+        let job: Job = serde_wasm_bindgen::from_value(value)?;
+        self.engine.begin_request(&job).map_err(js)
+    }
+    pub fn end_request(&mut self) {
+        self.reader = None;
+        self.engine.end_request();
+    }
+    pub fn missing_masks(&mut self, value: JsValue) -> Result<JsValue, JsValue> {
+        let j: Job = serde_wasm_bindgen::from_value(value)?;
+        serde_wasm_bindgen::to_value(
+            &self
+                .engine
+                .client
+                .missing_masks(&j.manifest.tid, &j.region())
+                .map_err(js)?,
+        )
+        .map_err(Into::into)
+    }
+    pub fn mask(&mut self, tid: &str, tile: u16, discard: u8, bytes: &[u8]) -> Result<(), JsValue> {
+        self.engine
+            .client
+            .install_mask(tid, tile, discard, bytes)
+            .map_err(js)
+    }
     pub fn descriptor(&mut self, tid: &str, tile: u16, bytes: &[u8]) -> Result<(), JsValue> {
         self.engine
             .client
@@ -235,6 +287,7 @@ impl WorkerClient {
             layout: pixels.layout,
             precision: pixels.precision,
             samples: js_sys::Uint16Array::from(pixels.samples.as_slice()),
+            validity: js_sys::Uint8Array::from(pixels.validity.as_deref().unwrap_or(&[])),
         };
         serde_wasm_bindgen::to_value(&transfer).map_err(Into::into)
     }

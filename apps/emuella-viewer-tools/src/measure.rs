@@ -120,6 +120,18 @@ pub fn measure(
             requests += 1;
             client.install_descriptor(&manifest.tid, tile, &bytes)?;
         }
+        for tile in client.missing_masks(&manifest.tid, &region)? {
+            let (_, bytes) = wire.get(&format!(
+                "/mask/{}/{}/{tile}?tid={}",
+                manifest.target, region.discard, manifest.tid
+            ))?;
+            requests += 1;
+            client.install_mask(&manifest.tid, tile, region.discard, &bytes)?;
+        }
+        ensure!(
+            client.missing_masks(&manifest.tid, &region)?.is_empty(),
+            "regional masks exceed admitted budget"
+        );
         loop {
             if client.ready(&manifest.tid, &region)? {
                 break;

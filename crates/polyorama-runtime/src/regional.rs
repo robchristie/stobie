@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use polyorama_core::{RegionDemand, RegionKey, RegionalPixels};
+use polyorama_core::{RegionDemand, RegionKey, RegionalFrame, RegionalPixels};
 use serde::{Deserialize, Serialize};
 
 use crate::RequestToken;
@@ -43,6 +43,23 @@ pub struct RegionalUpload {
     pub pixels: RegionalPixels,
 }
 
+/// Opt-in upload carrying separately accounted binary validity.
+#[derive(Debug)]
+pub struct RegionalFrameUpload {
+    pub key: RegionKey,
+    pub token: RequestToken,
+    pub pixels: RegionalFrame,
+}
+impl From<RegionalUpload> for RegionalFrameUpload {
+    fn from(upload: RegionalUpload) -> Self {
+        Self {
+            key: upload.key,
+            token: upload.token,
+            pixels: upload.pixels.into(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RegionalReconcileError {
     StaleGeneration,
@@ -72,6 +89,21 @@ pub struct RegionalRuntimeMetrics {
     pub stale: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+pub struct RegionalAllocationDiagnostics {
+    pub entries: usize,
+    pub desired_entries: usize,
+    pub outstanding_reservations: usize,
+    pub upload_entries: usize,
+    pub worker_reserved_bytes: usize,
+    pub upload_bytes: usize,
+    pub decoded_payloads: usize,
+    pub sample_capacity_bytes: usize,
+    pub validity_capacity_bytes: usize,
+    pub resident_entries: usize,
+    pub failed_entries: usize,
+}
+
 impl RegionalRuntimeMetrics {
     pub fn accounted_decoded_bytes(self) -> usize {
         self.worker_reserved_bytes + self.decoded_bytes + self.upload_bytes
@@ -80,7 +112,7 @@ impl RegionalRuntimeMetrics {
 
 enum RegionState {
     InFlight,
-    Decoded(RegionalPixels),
+    Decoded(RegionalFrame),
     Uploading,
     Resident,
     Failed,
@@ -256,6 +288,14 @@ impl RegionalRuntime {
         request: &RegionalRequest,
         pixels: RegionalPixels,
     ) -> RegionalCompletion {
+        self.complete_frame(request, pixels.into())
+    }
+
+    pub fn complete_frame(
+        &mut self,
+        request: &RegionalRequest,
+        pixels: RegionalFrame,
+    ) -> RegionalCompletion {
         if self.flights.get(&request.token) != Some(request) {
             self.stale += 1;
             return RegionalCompletion::Stale;
@@ -326,13 +366,28 @@ impl RegionalRuntime {
     /// Transfer one visible decoded result to the renderer. Its bytes remain charged
     /// until `finish_upload`, including time spent waiting in a renderer queue.
     pub fn take_decoded(&mut self) -> Option<RegionalUpload> {
+        let upload = self.take_frame(false)?;
+        Some(RegionalUpload {
+            key: upload.key,
+            token: upload.token,
+            pixels: upload.pixels.pixels,
+        })
+    }
+
+    /// Includes binary validity. Legacy take_decoded leaves masked frames queued
+    /// rather than silently stripping their required display contract.
+    pub fn take_decoded_frame(&mut self) -> Option<RegionalFrameUpload> {
+        self.take_frame(true)
+    }
+
+    fn take_frame(&mut self, include_validity: bool) -> Option<RegionalFrameUpload> {
         let key = self
             .desired
             .values()
             .filter(|demand| {
                 self.entries
                     .get(&demand.key)
-                    .is_some_and(|entry| matches!(entry.state, RegionState::Decoded(_)))
+                    .is_some_and(|entry| matches!(&entry.state, RegionState::Decoded(p) if include_validity || p.validity.is_none()))
             })
             .max_by_key(|demand| (demand.priority, demand.key.reduction))?
             .key
@@ -345,7 +400,7 @@ impl RegionalRuntime {
         };
         self.uploads
             .insert(entry.token, (key.clone(), pixels.allocation_bytes()));
-        Some(RegionalUpload {
+        Some(RegionalFrameUpload {
             key,
             token: entry.token,
             pixels,
@@ -403,6 +458,35 @@ impl RegionalRuntime {
         self.entries
             .get(key)
             .is_some_and(|entry| matches!(entry.state, RegionState::Resident))
+    }
+
+    /// Current owned payload capacity, separately from reservations and transferred uploads.
+    /// Map node allocator overhead is unavailable; these values are not RSS.
+    pub fn allocation_diagnostics(&self) -> RegionalAllocationDiagnostics {
+        let m = self.metrics();
+        let mut d = RegionalAllocationDiagnostics {
+            entries: self.entries.len(),
+            desired_entries: self.desired.len(),
+            outstanding_reservations: self.flights.len(),
+            upload_entries: self.uploads.len(),
+            worker_reserved_bytes: m.worker_reserved_bytes,
+            upload_bytes: m.upload_bytes,
+            ..Default::default()
+        };
+        for entry in self.entries.values() {
+            match &entry.state {
+                RegionState::Decoded(frame) => {
+                    d.decoded_payloads += 1;
+                    d.sample_capacity_bytes +=
+                        frame.samples.capacity() * std::mem::size_of::<u16>();
+                    d.validity_capacity_bytes += frame.validity.as_ref().map_or(0, Vec::capacity);
+                }
+                RegionState::Resident => d.resident_entries += 1,
+                RegionState::Failed => d.failed_entries += 1,
+                _ => {}
+            }
+        }
+        d
     }
 
     pub fn metrics(&self) -> RegionalRuntimeMetrics {

@@ -23,6 +23,25 @@ def errors(original, decoded, mask):
     return None if not delta.size else {'samples': int(delta.size), 'rmse': float(np.sqrt(np.mean(delta**2))), 'mae': float(np.mean(abs(delta))), 'max_absolute': float(abs(delta).max()), 'p99_absolute': float(np.quantile(abs(delta), .99, method='higher'))}
 
 
+def display_populations(original, original_display, decoded_display, statistics, scale):
+    """Retain original validity, including partial reduced cells and valid-side error."""
+    bands, height, width = original.shape
+    result = {'all_pixels': [], 'any_valid': [], 'all_valid': [], 'partial_valid': []}
+    for c, stats in enumerate(statistics):
+        valid = np.ones((height, width), bool) if stats['nodata'] is None else original[c] != stats['nodata']
+        if scale == 1:
+            any_valid = all_valid = valid
+        else:
+            blocks = valid.reshape(height // scale, scale, width // scale, scale)
+            any_valid = blocks.any(axis=(1, 3))
+            all_valid = blocks.all(axis=(1, 3))
+        populations = {'all_pixels': np.ones(original_display.shape[:2], bool),
+                       'any_valid': any_valid, 'all_valid': all_valid, 'partial_valid': any_valid & ~all_valid}
+        for name, mask in populations.items():
+            result[name].append(errors(original_display[:, :, c], decoded_display[:, :, c], mask))
+    return result
+
+
 def evaluate(args):
     views = json.loads(args.views.read_text())
     a = next(a for a in views['assets'] if a['id'] == args.asset)
@@ -61,10 +80,12 @@ def evaluate(args):
             dec=decoded if scale==1 else decoded.reshape(len(a['bands']),h//scale,scale,w//scale,scale).mean(axis=(2,4))
             for name,ranges in a['stretches'].items():
                 orig8=source.stretch(orig,ranges);dec8=source.stretch(dec,ranges)
-                metrics=[errors(orig8[:,:,c],dec8[:,:,c],np.ones(orig8.shape[:2],bool)) for c in range(len(a['bands']))]
+                populations = display_populations(original, orig8, dec8, a['statistics'], scale)
+                valid_gate = getattr(args, 'source_valid_gate', False)
+                metrics = populations['any_valid' if valid_gate else 'all_pixels']
                 clipping=[{'source_below':int((orig[c]<lo).sum()),'source_above':int((orig[c]>hi).sum()),'decoded_below':int((dec[c]<lo).sum()),'decoded_above':int((dec[c]>hi).sum())} for c,(lo,hi) in enumerate(ranges)]
-                passed=all(m['rmse']<=3 and m['p99_absolute']<=12 for m in metrics)
-                displays.append({'scale':scale,'stretch':name,'bands':metrics,'clipping':clipping,'passed':passed})
+                passed=all(m is None or (m['rmse']<=3 and m['p99_absolute']<=12) for m in metrics)
+                displays.append({'scale':scale,'stretch':name,'bands':metrics,'historical_all_pixels':populations['all_pixels'],'source_any_valid':populations['any_valid'],'source_all_valid':populations['all_valid'],'source_partial_valid':populations['partial_valid'],'gate_population':'source_any_valid' if valid_gate else 'historical_all_pixels','clipping':clipping,'passed':passed})
                 source.save_image(output/f'view-{i}-scale{scale}-{name}-decoded.png',dec,ranges)
         records.append({'view':v,'source_errors':band_errors,'display':displays,'reference':reference,'raw_sha256':source.digest(raw)})
     source.write_json(output/'quality.json',{'status':'completed','passed':all(d['passed'] for r in records for d in r['display']),'numerical_only':True,'independent_decoding':'separate evidence required','agent_visual_inspection':'separate opened-image assessment required','human_acceptance':'not performed','asset':args.asset,'bpp':manifest['identity']['profile']['bits_per_pixel'],'records':records})
@@ -73,5 +94,6 @@ def evaluate(args):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['store','tool','views','representation']:parser.add_argument('--'+name,type=Path,required=True)
+    parser.add_argument('--source-valid-gate', action='store_true', help='Gate original-source ANY-valid cells; retain historical all-pixel metrics')
     parser.add_argument('--asset',required=True);parser.add_argument('--output-name',required=True)
     evaluate(parser.parse_args())

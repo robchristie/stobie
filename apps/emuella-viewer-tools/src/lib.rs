@@ -1,5 +1,6 @@
 //! Local preparation and stateless HTTP assembly for the Emuella viewer.
 use anyhow::{Context, Result, anyhow, ensure};
+use emuella_viewer_source::validity;
 use emuella_viewer_source::{codec::ht_indexed::IndexedLossyHt, *};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -20,6 +21,8 @@ pub struct IoMetrics {
     pub logical_read_bytes: u64,
     pub logical_read_operations: u64,
     pub descriptor_bytes: u64,
+    pub mask_bytes: u64,
+    pub mask_read_operations: u64,
     pub jpp_bytes: u64,
     pub elapsed_ms: f64,
     pub peak_rss_kib: Option<u64>,
@@ -91,10 +94,26 @@ pub fn prepare(
 pub fn prepare_with_retention(
     output: &Path,
     target: &str,
+    identity: Identity,
+    read_tile: impl FnMut(codec::TileRect, &mut [Vec<u8>]) -> Result<()>,
+    retain_incomplete: bool,
+) -> Result<(Manifest, IoMetrics)> {
+    prepare_with_validity(output, target, identity, read_tile, retain_incomplete, None)
+}
+pub type MaskReader<'a> = &'a mut dyn FnMut(codec::TileRect) -> Result<Vec<Vec<u8>>>;
+/// The mask identity and original-source reader must be supplied together.
+pub fn prepare_with_validity(
+    output: &Path,
+    target: &str,
     mut identity: Identity,
     mut read_tile: impl FnMut(codec::TileRect, &mut [Vec<u8>]) -> Result<()>,
     retain_incomplete: bool,
+    mut read_masks: Option<MaskReader<'_>>,
 ) -> Result<(Manifest, IoMetrics)> {
+    ensure!(
+        identity.validity.is_some() == read_masks.is_some(),
+        "mask identity/reader required together"
+    );
     ensure!(
         !output.exists(),
         "output exists; representations are immutable"
@@ -121,12 +140,53 @@ pub fn prepare_with_retention(
         let mut metrics = IoMetrics::default();
         fs::create_dir(temporary.join("descriptors"))?;
         let mut hashes = Vec::new();
+        let mut mask_hashes =
+            vec![Vec::new(); usize::from(identity.profile.decomposition_levels) + 1];
+        if read_masks.is_some() {
+            for d in 0..=identity.profile.decomposition_levels {
+                fs::create_dir_all(temporary.join("masks").join(d.to_string()))?;
+            }
+        }
         let index = checked(codec::ht_indexed::encode_tiled_to_descriptors(
             identity.profile.codec(),
             |rect, planes| {
                 if let Err(e) = read_tile(rect, planes) {
                     source_error = Some(e);
                     return Err(codec::CodestreamError::SizeOverflow);
+                }
+                if let Some(reader) = read_masks.as_mut() {
+                    let result = (|| -> Result<()> {
+                        let native = reader(rect)?;
+                        ensure!(
+                            native.len() == usize::from(identity.profile.components),
+                            "mask component mismatch"
+                        );
+                        for (d, bytes) in validity::encode_tile(
+                            rect.width,
+                            rect.height,
+                            identity.profile.decomposition_levels,
+                            &native,
+                        )?
+                        .into_iter()
+                        .enumerate()
+                        {
+                            fs::write(
+                                temporary
+                                    .join("masks")
+                                    .join(d.to_string())
+                                    .join(format!("{}.bin", rect.tile_index)),
+                                &bytes,
+                            )?;
+                            metrics.mask_bytes += bytes.len() as u64;
+                            mask_hashes[d].push(sha256(&bytes));
+                        }
+                        metrics.mask_read_operations += native.len() as u64;
+                        Ok(())
+                    })();
+                    if let Err(e) = result {
+                        source_error = Some(e);
+                        return Err(codec::CodestreamError::SizeOverflow);
+                    }
                 }
                 metrics.logical_read_operations += planes.len() as u64;
                 metrics.logical_read_bytes += planes.iter().map(|p| p.len() as u64).sum::<u64>();
@@ -163,6 +223,9 @@ pub fn prepare_with_retention(
         }
         let index = index?;
         file.sync_all()?;
+        if let Some(v) = identity.validity.as_mut() {
+            v.tile_sha256 = mask_hashes;
+        }
         identity.payload_sha256 = format!("{:x}", hash.finalize());
         metrics.descriptor_bytes = index.descriptor_bytes;
         metrics.peak_tile_index_bytes = index.peak_tile_index_bytes;
@@ -234,6 +297,7 @@ pub fn fixture(
     revision: &str,
 ) -> Result<(Manifest, IoMetrics)> {
     let identity = Identity {
+        validity: None,
         source_sha256: sha256(
             format!(
                 "emuella-scientific-pattern-v1:{}:{}:{}:{}",
@@ -508,6 +572,42 @@ impl Service {
                 serde_json::to_vec(&rep.manifest)?,
             ));
         }
+        if let Some(path) = url.strip_prefix("/mask/") {
+            let (path, tid) = path.split_once("?tid=").context("mask identity required")?;
+            let parts: Vec<_> = path.split('/').collect();
+            ensure!(parts.len() == 3, "mask route");
+            let rep = self
+                .representations
+                .get(parts[0])
+                .context("unknown target")?;
+            ensure!(rep.manifest.tid == tid, "stale mask identity");
+            let discard: u8 = parts[1].parse()?;
+            let tile: u16 = parts[2].parse()?;
+            let v = rep
+                .manifest
+                .identity
+                .validity
+                .as_ref()
+                .context("mask not declared")?;
+            let (w, h) = validity::tile_size(&rep.manifest.identity.profile, tile, discard)?;
+            let expected = (w * h).div_ceil(8) as u64
+                * u64::from(rep.manifest.identity.profile.components)
+                * if discard == 0 { 1 } else { 2 };
+            let path = rep
+                .root
+                .join("masks")
+                .join(discard.to_string())
+                .join(format!("{tile}.bin"));
+            ensure!(
+                fs::metadata(&path)?.len() == expected,
+                "mask length mismatch"
+            );
+            let bytes = fs::read(path)?;
+            v.check(&rep.manifest.identity.profile, tile, discard, &bytes)?;
+            self.metrics.mask_bytes += bytes.len() as u64;
+            self.metrics.mask_read_operations += 1;
+            return Ok(HttpResponse::new(200, "application/octet-stream", bytes));
+        }
         if let Some(path) = url.strip_prefix("/descriptor/") {
             let (path, tid) = path
                 .split_once("?tid=")
@@ -666,6 +766,7 @@ mod retention_tests {
             let root = tempfile::tempdir().unwrap();
             let output = root.path().join("representation");
             let identity = Identity {
+                validity: None,
                 source_sha256: sha256(b"authored retention probe"),
                 bands: vec![1],
                 profile: Profile {

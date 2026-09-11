@@ -12,6 +12,11 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
 
+mod admission;
+use admission::ActiveRequest;
+pub use admission::RequestScope;
+pub mod validity;
+
 pub fn checked<T, E: std::fmt::Debug>(result: std::result::Result<T, E>) -> Result<T> {
     result.map_err(|e| anyhow!("{e:?}"))
 }
@@ -79,6 +84,8 @@ impl Profile {
 /// Every field participates in identity. Display stretch is deliberately external.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Identity {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validity: Option<validity::ValidityIdentity>,
     pub source_sha256: String,
     pub bands: Vec<u16>,
     pub profile: Profile,
@@ -123,6 +130,9 @@ impl Manifest {
         ensure!(self.tid == expected.tid, "manifest identity mismatch");
         let p = &self.identity.profile;
         let _ = self.sparse()?;
+        if let Some(v) = &self.identity.validity {
+            v.validate(p)?;
+        }
         ensure!(
             self.descriptor_sha256.len() == p.tiles() as usize,
             "descriptor count mismatch"
@@ -345,12 +355,16 @@ struct Resident {
     manifest: Manifest,
     cache: jpip::Cache,
     descriptors: BTreeMap<u16, Vec<u8>>,
+    masks: BTreeMap<(u8, u16), Vec<u8>>,
     index: IndexedLossyHt,
     used: u64,
 }
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct ClientMetrics {
     pub received_jpp_bytes: u64,
+    pub received_mask_bytes: u64,
+    pub peak_mask_bytes: usize,
+    pub mask_evictions: u64,
     pub received_descriptor_bytes: u64,
     pub decode_count: u64,
     pub decoded_pixels: u64,
@@ -374,10 +388,13 @@ pub struct SharedClient {
     entries: BTreeMap<String, Resident>,
     clock: u64,
     pub metrics: ClientMetrics,
+    active_request: Option<ActiveRequest>,
+    next_request: u64,
 }
 pub struct ResponseReader {
     tid: String,
     decoder: jpip::Decoder,
+    scope: Option<RequestScope>,
 }
 #[derive(Debug)]
 pub struct DecodedRegion {
@@ -386,6 +403,7 @@ pub struct DecodedRegion {
     pub bits_per_sample: u8,
     pub components: Vec<u16>,
     pub planes: Vec<Vec<u8>>,
+    pub validity: Option<Vec<u8>>,
 }
 impl SharedClient {
     pub fn new(limits: ClientLimits) -> Self {
@@ -394,9 +412,14 @@ impl SharedClient {
             entries: BTreeMap::new(),
             clock: 0,
             metrics: ClientMetrics::default(),
+            active_request: None,
+            next_request: 0,
         }
     }
     pub fn register(&mut self, manifest: Manifest) -> Result<()> {
+        if let Some(a) = &self.active_request {
+            ensure!(a.tid == manifest.tid, "registration outside active request");
+        }
         manifest.validate()?;
         ensure!(
             self.limits.representations > 0,
@@ -414,9 +437,9 @@ impl SharedClient {
         }
         let mut cache = jpip::Cache::new(jpip::CacheLimits {
             bytes: self.limits.compressed_bytes,
-            bins: 100_000,
+            bins: admission::BIN_LIMIT,
             ranges_per_bin: 16,
-            max_bin_length: 32 << 20,
+            max_bin_length: admission::MAX_BIN_LENGTH,
         });
         checked(cache.bind_identity(&manifest.tid))?;
         let index = manifest.sparse()?;
@@ -426,6 +449,7 @@ impl SharedClient {
                 manifest,
                 cache,
                 descriptors: BTreeMap::new(),
+                masks: BTreeMap::new(),
                 index,
                 used: self.clock,
             },
@@ -455,7 +479,10 @@ impl SharedClient {
     }
     pub fn resident_bytes(&self) -> (usize, usize) {
         (
-            self.entries.values().map(|r| r.cache.bytes()).sum(),
+            self.entries
+                .values()
+                .map(|r| r.cache.bytes() + r.masks.values().map(Vec::len).sum::<usize>())
+                .sum(),
             self.entries
                 .values()
                 .map(|r| {
@@ -468,9 +495,96 @@ impl SharedClient {
     // Admitted cache high-water marks; codec admission scratch and transport
     // buffers have separate limits and remain part of process memory evidence.
     fn observe_resident(&mut self) {
+        let mask_bytes = self.mask_bytes();
+        self.metrics.peak_mask_bytes = self.metrics.peak_mask_bytes.max(mask_bytes);
         let (compressed, descriptors) = self.resident_bytes();
         self.metrics.peak_compressed_bytes = self.metrics.peak_compressed_bytes.max(compressed);
         self.metrics.peak_descriptor_bytes = self.metrics.peak_descriptor_bytes.max(descriptors);
+    }
+    pub fn mask_bytes(&self) -> usize {
+        self.entries
+            .values()
+            .flat_map(|r| r.masks.values())
+            .map(Vec::len)
+            .sum()
+    }
+    pub fn missing_masks(&mut self, tid: &str, region: &Region) -> Result<Vec<u16>> {
+        let limit = self.limits.compressed_bytes;
+        let r = self.touch(tid)?;
+        let tiles = region.tiles(&r.manifest.identity.profile)?;
+        if r.manifest.identity.validity.is_none() {
+            return Ok(Vec::new());
+        }
+        ensure!(tiles.len() <= 64, "mask regional tile limit");
+        let mut bytes = 0usize;
+        for &t in &tiles {
+            let (w, h) = validity::tile_size(&r.manifest.identity.profile, t, region.discard)?;
+            bytes += (w * h).div_ceil(8) as usize
+                * usize::from(r.manifest.identity.profile.components)
+                * if region.discard == 0 { 1 } else { 2 };
+        }
+        ensure!(bytes <= limit, "regional masks exceed global budget");
+        Ok(tiles
+            .into_iter()
+            .filter(|t| !r.masks.contains_key(&(region.discard, *t)))
+            .collect())
+    }
+    pub fn install_mask(&mut self, tid: &str, tile: u16, discard: u8, bytes: &[u8]) -> Result<()> {
+        if let Some(a) = &self.active_request {
+            ensure!(
+                a.tid == tid && a.masks.contains(&(discard, tile)),
+                "mask outside active request"
+            );
+        }
+        self.metrics.received_mask_bytes += bytes.len() as u64;
+        let r = self.touch(tid)?;
+        r.manifest
+            .identity
+            .validity
+            .as_ref()
+            .ok_or_else(|| anyhow!("mask not declared"))?
+            .check(&r.manifest.identity.profile, tile, discard, bytes)?;
+        ensure!(
+            bytes.len() <= self.limits.compressed_bytes,
+            "mask exceeds global budget"
+        );
+        if self.touch(tid)?.masks.contains_key(&(discard, tile)) {
+            return Ok(());
+        }
+        if self.active_request.is_some() {
+            ensure!(
+                self.resident_bytes().0.saturating_add(bytes.len()) <= self.limits.compressed_bytes,
+                "working-set admission: mask reservation exceeded"
+            );
+        }
+        // Legacy unscoped eviction policy.
+        // Reclaim mask entries first, including the active representation. A region
+        // whose complete mask working set cannot fit fails before publication.
+        while self.resident_bytes().0.saturating_add(bytes.len()) > self.limits.compressed_bytes {
+            let victim = self
+                .entries
+                .iter()
+                .filter(|(_, r)| !r.masks.is_empty())
+                .min_by_key(|(_, r)| r.used)
+                .map(|(k, r)| (k.clone(), *r.masks.keys().next().unwrap()));
+            if let Some((key, mask)) = victim {
+                self.entries.get_mut(&key).unwrap().masks.remove(&mask);
+                self.metrics.mask_evictions += 1;
+            } else {
+                let r = self.touch(tid)?;
+                if let Some((key, _)) = r.cache.model().into_iter().next() {
+                    r.cache.evict(key);
+                    self.metrics.compressed_bin_evictions += 1;
+                } else {
+                    self.evict_other(tid)?;
+                }
+            }
+        }
+        self.touch(tid)?
+            .masks
+            .insert((discard, tile), bytes.to_vec());
+        self.observe_resident();
+        Ok(())
     }
     pub fn missing_tiles(&mut self, tid: &str, region: &Region) -> Result<Vec<u16>> {
         let r = self.touch(tid)?;
@@ -481,6 +595,10 @@ impl SharedClient {
             .collect())
     }
     pub fn install_descriptor(&mut self, tid: &str, tile: u16, bytes: &[u8]) -> Result<()> {
+        ensure!(
+            self.active_request.is_none(),
+            "descriptor admission during active request"
+        );
         self.metrics.received_descriptor_bytes += bytes.len() as u64;
         let r = self.touch(tid)?;
         ensure!(
@@ -533,6 +651,7 @@ impl SharedClient {
         region: &Region,
         max_length: u64,
     ) -> Result<jpip::Request> {
+        self.check_request(tid, region)?;
         let r = self.touch(tid)?;
         let p = &r.manifest.identity.profile;
         region.validate(p)?;
@@ -584,17 +703,48 @@ impl SharedClient {
             fields.tid == tid,
             "response identity changed; reload manifest"
         );
+        if let Some(a) = &self.active_request {
+            ensure!(a.tid == tid, "response outside active request");
+        }
         self.touch(tid)?;
         Ok(ResponseReader {
             tid: tid.into(),
             decoder: jpip::Decoder::new(8 << 20),
+            scope: self.active_request.as_ref().map(|a| a.scope),
         })
     }
     pub fn receive(&mut self, reader: &mut ResponseReader, bytes: &[u8]) -> Result<()> {
+        ensure!(
+            reader.scope == self.active_request.as_ref().map(|a| a.scope),
+            "stale request response"
+        );
         self.metrics.received_jpp_bytes += bytes.len() as u64;
+        let mut admission_error = None;
         let tid = reader.tid.clone();
         let result = reader.decoder.push(bytes, |event| {
             if let jpip::Event::Data(message) = event {
+                if let Some(a) = &self.active_request {
+                    let length = a.bin_length(message.key);
+                    let end = message.offset.checked_add(message.bytes.len() as u64);
+                    if !length.zip(end).is_some_and(|(length, end)| end <= length && (!message.final_bin || end == length)) {
+                        admission_error = Some("working-set admission: response bin outside authenticated demand lengths");
+                        return Err(jpip::Error::Limit);
+                    }
+                    let r = self.entries.get_mut(&tid).ok_or(jpip::Error::Identity)?;
+                    // Full payload and bin-count space were reserved at admission.
+                    // The owner still validates overlap, final lengths and range count.
+                    let before = r.cache.eviction_count();
+                    let result = r.cache.insert(message);
+                    let evicted = r.cache.eviction_count() - before;
+                    self.metrics.compressed_bin_evictions += evicted;
+                    result?;
+                    if evicted != 0 {
+                        admission_error = Some("working-set admission: reserved dependencies were evicted");
+                        return Err(jpip::Error::Limit);
+                    }
+                    self.observe_resident();
+                    return Ok(());
+                }
                 // Reserve only actual emitted payload. Headers and EOR bodies
                 // consume transport space, not compressed-cache occupancy.
                 while self.entries.len() > 1
@@ -602,6 +752,22 @@ impl SharedClient {
                         > self.limits.compressed_bytes
                 {
                     self.evict_other(&tid).map_err(|_| jpip::Error::Limit)?;
+                }
+                if self.mask_bytes() > 0 {
+                    while self.resident_bytes().0.saturating_add(message.bytes.len())
+                        > self.limits.compressed_bytes
+                    {
+                        let r = self.touch(&tid).map_err(|_| jpip::Error::Identity)?;
+                        let key = r
+                            .cache
+                            .model()
+                            .into_iter()
+                            .find(|(key, _)| *key != message.key)
+                            .map(|(key, _)| key)
+                            .ok_or(jpip::Error::Limit)?;
+                        r.cache.evict(key);
+                        self.metrics.compressed_bin_evictions += 1;
+                    }
                 }
                 let r = self.touch(&tid).map_err(|_| jpip::Error::Identity)?;
                 let before = r.cache.eviction_count();
@@ -613,6 +779,9 @@ impl SharedClient {
             }
             Ok(())
         });
+        if let Some(error) = admission_error {
+            return Err(anyhow!(error));
+        }
         checked(result)?;
         ensure!(
             self.resident_bytes().0 <= self.limits.compressed_bytes,
@@ -621,13 +790,20 @@ impl SharedClient {
         Ok(())
     }
     pub fn finish(&self, reader: ResponseReader) -> Result<()> {
+        ensure!(
+            reader.scope == self.active_request.as_ref().map(|a| a.scope),
+            "stale request response"
+        );
         checked(reader.decoder.finish())
     }
     /// True only when all selected descriptors and mandatory bins are complete.
     /// This performs no entropy decode. A subsequent decode error is permanent for
     /// that representation/region and should not trigger empty transport retries.
     pub fn ready(&mut self, tid: &str, region: &Region) -> Result<bool> {
-        if !self.missing_tiles(tid, region)?.is_empty() {
+        self.check_request(tid, region)?;
+        if !self.missing_tiles(tid, region)?.is_empty()
+            || !self.missing_masks(tid, region)?.is_empty()
+        {
             return Ok(false);
         }
         let r = self.touch(tid)?;
@@ -636,7 +812,12 @@ impl SharedClient {
             .all(|d| r.cache.is_complete(d.key)))
     }
     pub fn decode(&mut self, tid: &str, region: &Region) -> Result<DecodedRegion> {
+        self.check_request(tid, region)?;
         let workspace_limit = self.limits.decode_workspace_bytes;
+        ensure!(
+            self.missing_masks(tid, region)?.is_empty(),
+            "required masks incomplete"
+        );
         let r = self.touch(tid)?;
         let plan = checked(
             r.index
@@ -688,6 +869,20 @@ impl SharedClient {
         let coefficients = plan.selected_block_coefficients();
         let workspace_bytes = plan.required_workspace_bytes();
         let bits = r.manifest.identity.profile.bits_per_sample;
+        let validity = if r.manifest.identity.validity.is_some() {
+            Some(validity::combine_region(
+                &r.manifest.identity.profile,
+                region,
+                |tile, discard| {
+                    r.masks
+                        .get(&(discard, tile))
+                        .map(Vec::as_slice)
+                        .ok_or_else(|| anyhow!("required mask absent"))
+                },
+            )?)
+        } else {
+            None
+        };
         self.metrics.synthesis_coefficients_loaded += report.work.coefficients_loaded;
         self.metrics.synthesis_horizontal_values += report.work.horizontal_values;
         self.metrics.synthesis_vertical_values += report.work.vertical_values;
@@ -706,6 +901,10 @@ impl SharedClient {
             bits_per_sample: bits,
             components: region.components.clone(),
             planes,
+            validity,
         })
     }
 }
+
+#[cfg(test)]
+mod admission_tests;

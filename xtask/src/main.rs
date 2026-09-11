@@ -90,6 +90,17 @@ fn verify() -> Result<()> {
         run("bash", &["tools/bootstrap-linux-ui.sh"])?;
     }
     run("npm", &["ci"])?;
+    run_with_environment(
+        "node",
+        &[
+            "--test",
+            "tools/tests/viewer-acceptance-browser-masks.test.mjs",
+            "tools/tests/viewer-acceptance-browser-launch.test.mjs",
+            "tools/tests/viewer-merged-qualification-preload.test.mjs",
+            "apps/emuella-viewer/web/tests/worker.test.mjs",
+        ],
+        &evidence_environment,
+    )?;
     run("npx", &["playwright", "install", "chromium"])?;
     run_with_environment("npm", &["run", "browser-smoke"], &evidence_environment)?;
     run_with_environment(

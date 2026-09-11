@@ -1,3 +1,13 @@
+#[cfg(not(target_arch = "wasm32"))]
+pub mod memory;
+
+/// Instrument identity is separate from production and never implies acceptance.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct DiagnosticOptions {
+    pub enabled: bool,
+    pub authored_immediate: bool,
+}
+
 mod app;
 mod engine;
 #[cfg(not(target_arch = "wasm32"))]

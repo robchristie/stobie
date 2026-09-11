@@ -16,7 +16,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['store','tool','gdal-library','views','timing-grant']:parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--asset',required=True);parser.add_argument('--output-name',required=True)
-    parser.add_argument('--bpp',type=int,choices=[1,2,4],required=True)
+    parser.add_argument('--bpp',type=int,choices=[1,2,4,8,12],required=True)
     parser.add_argument('--codec-revision',required=True)
     args=parser.parse_args()
     if not args.timing_grant.is_file():raise ValueError('coordinator timing grant is absent')

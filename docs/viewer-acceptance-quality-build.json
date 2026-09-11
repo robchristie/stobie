@@ -1,0 +1,32 @@
+{
+  "source_revision": "f9e37ef133ed69c656c1f4acc36883b0aa7443f4",
+  "source_tree": "e81756987b4c53f516c45405d4415d5a1b76e2f4",
+  "source_method": "git archive of exact original revision into registered build root, before invoking cargo; no mutable worktree build",
+  "linked_codec_revision": "6586e3d50f95429b242cb2e3535742b002784f2d",
+  "cargo_lock_sha256": "dba540a51c6231c72c5f0cb63beb6860659147cbaee6c7632bcd1e1810a929d0",
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "--release",
+    "-p",
+    "emuella-viewer-tools",
+    "--manifest-path",
+    "/nvme/development/emuella/.build-targets/viewer-acceptance/quality-build/source/Cargo.toml"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "/nvme/development/emuella/.build-targets/viewer-acceptance/quality-build/cargo"
+  },
+  "build_exit": 0,
+  "build_log_sha256": "5fc07568252f365361011b5774b30daa192cf9d78bbc26be23bc6cda5345ed84",
+  "tool": {
+    "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/quality-build/cargo/release/emuella-viewer-tools",
+    "sha256": "4a3be40247528516a8468115e2185d717a1d8994f375ceb0915aecc468776663"
+  },
+  "gdal": {
+    "path": "/home/rob/pixi/.pixi/envs/default/lib/libgdal.so.39.3.13.0",
+    "sha256": "275f9bda748f461c06e8aca79f9b3ebfa42b66d6a6c5864d77190d244495ea9a"
+  },
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)\nbinary: rustc\ncommit-hash: 8bab26f4f68e0e26f0bb7960be334d5b520ea452\ncommit-date: 2026-07-14\nhost: x86_64-unknown-linux-gnu\nrelease: 1.97.1\nLLVM version: 22.1.6\n",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)\n"
+}

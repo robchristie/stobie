@@ -1,0 +1,1654 @@
+{
+  "schema": "viewer-acceptance-full-scenes-results/1",
+  "execution_date": "2026-09-11",
+  "status": "five_frozen_diagnostic_runs_completed",
+  "disposition": "quality-rejected-diagnostic-only",
+  "protocol_commit": "4184189763c5fb844fb199b1fb616a2c35b6fa92",
+  "native_source_revision": "4a1594b0840eadae26a4d6005d50d9201734a1a7",
+  "linked_codec_revision": "6586e3d50f95429b242cb2e3535742b002784f2d",
+  "operation_owner": "full-scenes-execution-cli",
+  "serial": true,
+  "run_invocations": 5,
+  "preparations": 5,
+  "retries": 0,
+  "runner_exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "selected_configuration": false,
+  "viewer_acceptance": false,
+  "historical_screen_outcomes_preserved": true,
+  "build_record": {
+    "path": "/nvme/development/polyorama-viewer-acceptance/docs/viewer-acceptance-full-scenes-build.json",
+    "bytes": 27339,
+    "sha256": "481a873d2a7cf341a47d5a522933dcd7b43feccf78c935ff72221546dfbc864e"
+  },
+  "source_coverage": {
+    "path": "/nvme/development/emuella/emuella-workspace-viewer-acceptance/docs/evidence/viewer-acceptance/source-coverage.json",
+    "bytes": 2813,
+    "sha256": "9bba0a0ae9064fa6450ceb2b56263a6715b562e7aa7a5ab5cd1adf138ea117e8"
+  },
+  "environment": {
+    "LD_LIBRARY_PATH": "/home/rob/pixi/.pixi/envs/default/lib",
+    "GDAL_DRIVER_PATH": "disable",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "results": [
+    {
+      "order": 1,
+      "name": "mansfield-pan16-4",
+      "asset": "94_104001000B823500-PAN16",
+      "output_name": "viewer-acceptance-full-scenes-mansfield-pan16-4-01",
+      "status": "completed_diagnostic",
+      "result": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/result.json",
+        "bytes": 271949,
+        "sha256": "2f0b6f8dac6aa0551a03cd60c664ba748dbc93a6c7b514090e5ee907e0328d16"
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/protocol.json",
+          "bytes": 32975,
+          "sha256": "1317d104b2aa06c28350fecc792a6d9925ff50f07ac4ed7a4f46e8dd56127790"
+        },
+        "grant": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/contexts/full-scenes-grant-mansfield-pan16-4.json",
+          "bytes": 1158,
+          "sha256": "38febc1d5336f042f512c0615335b680a20cfac8b2e288ac74db63c617f7a936"
+        },
+        "native": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/native.json",
+          "bytes": 261313,
+          "sha256": "5ecf62a0d83893b097e71baffbbdecc87e543add6388c75bb57f3fdb68a22df5"
+        },
+        "requests": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/requests.json",
+          "bytes": 31643,
+          "sha256": "5fb8946c9a4a56e48fc6969da24435a40b66110e4d23aafe0edad974d4492c6b"
+        },
+        "frozen_quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01-views/quality.json",
+          "bytes": 31966,
+          "sha256": "f0502a0c680d356ae94d8971b88a3c3f9cc2cce0cfb937304083a774ae67d086"
+        },
+        "full_coverage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/full-coverage.json",
+          "bytes": 88736,
+          "sha256": "07264eb9807d558f8e17b193a18ddc7bf260f74e3d5faf21e2e83716d23c8922"
+        },
+        "masks": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/masks.json",
+          "bytes": 308375,
+          "sha256": "dec6774e7db7db196e51e9c188a0f2df7b10ed6ea9767d32083058ccb3619ac6"
+        },
+        "regional_agreement": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-pan16-4-01/regional-agreement.json",
+          "bytes": 273584,
+          "sha256": "4bbae424dfd91966a50036427bbfde658095f7bf639ddb7d3feeb70e35428a40"
+        }
+      },
+      "source": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/real/train/PAN/94_104001000B823500.tif",
+        "bytes": 26717542,
+        "sha256": "328ec70ec0227effb92f25605b64df9bcf42fdd2ab142555a3e70ec543881aa3"
+      },
+      "source_before_after_identical": true,
+      "grid": {
+        "components": 1,
+        "height": 2752,
+        "precision": 16,
+        "signed": false,
+        "width": 4851
+      },
+      "bands": [
+        1
+      ],
+      "bpp": 4,
+      "mask_coverage": {
+        "complete_source_geometry": true,
+        "tiles": 60,
+        "levels": 7,
+        "native_checked_mask_files": 420,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "comparison_records": 840,
+        "all_any_comparison_samples": 35600216,
+        "source_counts": [
+          {
+            "band": 1,
+            "samples": 13349952,
+            "valid": 13349952,
+            "invalid": 0
+          }
+        ],
+        "bands_with_observed_transitions": 0,
+        "quality_population_gdal_equality": true
+      },
+      "regional_agreement": {
+        "requests": 252,
+        "repeated_selections_checked": 126,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "cached_samples_and_validity_match_complete_tile_reference": true,
+        "single_combined_sample_agreement": true
+      },
+      "quality": {
+        "thresholds": {
+          "rmse_u8_max": 3,
+          "p99_absolute_u8_max": 12
+        },
+        "frozen": {
+          "passed": true,
+          "views": 4,
+          "populated_cells": 16,
+          "max_rmse": 2.747601937371933,
+          "max_p99_absolute": 7.0
+        },
+        "full": {
+          "passed": true,
+          "complete_source_geometry": true,
+          "tiles": 60,
+          "populated_cells": 4,
+          "max_rmse": 2.486875826245853,
+          "max_p99_absolute": 7
+        },
+        "full_population_metrics": [
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 13349952,
+              "rmse": 2.486875826245853,
+              "p99_absolute": 7
+            },
+            "all_valid": {
+              "samples": 13349952,
+              "rmse": 2.486875826245853,
+              "p99_absolute": 7
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 13349952,
+              "rmse": 0.20424594163217857,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 13349952,
+              "rmse": 0.20424594163217857,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 2.035987080116773,
+              "p99_absolute": 5
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 2.035987080116773,
+              "p99_absolute": 5
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 0.18533240159684483,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 0.18533240159684483,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          }
+        ]
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 6677852,
+          "descriptors": 25166,
+          "manifest": 38368,
+          "masks": 2781284
+        },
+        "total_bytes": 9522670,
+        "payload_bound": 6682770,
+        "tile_budget_sum": 6682656,
+        "shared_framing_bytes": 114,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": true,
+        "packet_bytes": 6674318,
+        "codestream_framing_bytes": 3534,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file logical reference reads recorded separately; no application/network delivery measured.",
+        "manifest_sha256": "e16dc9670e50b3187e74c9b2bfa4cfd0aa320a1f93a2e633b9b4b336402d1621",
+        "mask_bound": 15070272,
+        "persistent_bound": 85716178,
+        "ancillary_preparation_bytes": 635,
+        "total_eligible": true
+      },
+      "direct_file_accounting": {
+        "direct_file_bytes": 17018080,
+        "direct_file_operations": 11902,
+        "descriptor_bytes": 205324,
+        "descriptor_operations": 487,
+        "native_mask_validation_bytes": 2781284,
+        "regional_mask_read_bytes": 2845968,
+        "boundary": "Instrumented native reference logical file reads only; excludes integrity hashing, Python/GDAL reads and OS cache effects; no network delivery."
+      }
+    },
+    {
+      "order": 2,
+      "name": "mansfield-rgb16-12",
+      "asset": "94_104001000B823500-RGB16",
+      "output_name": "viewer-acceptance-full-scenes-mansfield-rgb16-12-01",
+      "status": "completed_diagnostic",
+      "result": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/result.json",
+        "bytes": 32366,
+        "sha256": "57920ddc29571fdec486ed686b1365fc53dc1aa51b6a2874363a97be9754996c"
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/protocol.json",
+          "bytes": 33640,
+          "sha256": "cdefbabbf2db010b2d4c06ad06a233d05724f1334534051afa1efb099853abfd"
+        },
+        "grant": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/contexts/full-scenes-grant-mansfield-rgb16-12.json",
+          "bytes": 1159,
+          "sha256": "18e9679970e9db86296a261921363ec8440e55b404c9cbd8baa6e62ff380b285"
+        },
+        "native": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/native.json",
+          "bytes": 525257,
+          "sha256": "e23d408d6cdf9816b32b04e7a3d4fabf8edc01f6c4932f713820e44fbb026bc0"
+        },
+        "requests": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/requests.json",
+          "bytes": 65047,
+          "sha256": "83bb3c105c1d08297f6b595c4941121c2eb460e14a62895d0c85d78d46e674d5"
+        },
+        "frozen_quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01-views/quality.json",
+          "bytes": 69708,
+          "sha256": "361857791a1ef36551458ddfe4f6669728698e641d377bb28bd9b4a9e98e09d6"
+        },
+        "full_coverage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/full-coverage.json",
+          "bytes": 13682,
+          "sha256": "d22e2ad9f410cbfe322ae6054e9e75a9edef7027ba9816f019f7bc59b169c01b"
+        },
+        "masks": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/masks.json",
+          "bytes": 92274,
+          "sha256": "fad19e70312351cf51be8f55ab78c93fe138be4c196db7a4c3f9709281cb8abb"
+        },
+        "regional_agreement": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-mansfield-rgb16-12-01/regional-agreement.json",
+          "bytes": 551074,
+          "sha256": "fd66dc769d47a590a4486b156a745aec45d9bd9a8c03e22b855481f31899674f"
+        }
+      },
+      "source": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/real/train/MS/94_104001000B823500.tif",
+        "bytes": 13358016,
+        "sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e"
+      },
+      "source_before_after_identical": true,
+      "grid": {
+        "components": 3,
+        "height": 688,
+        "precision": 16,
+        "signed": false,
+        "width": 1213
+      },
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "bpp": 12,
+      "mask_coverage": {
+        "complete_source_geometry": true,
+        "tiles": 6,
+        "levels": 7,
+        "native_checked_mask_files": 42,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "comparison_records": 252,
+        "all_any_comparison_samples": 6678150,
+        "source_counts": [
+          {
+            "band": 5,
+            "samples": 834544,
+            "valid": 834544,
+            "invalid": 0
+          },
+          {
+            "band": 3,
+            "samples": 834544,
+            "valid": 834544,
+            "invalid": 0
+          },
+          {
+            "band": 2,
+            "samples": 834544,
+            "valid": 834544,
+            "invalid": 0
+          }
+        ],
+        "bands_with_observed_transitions": 0,
+        "quality_population_gdal_equality": true
+      },
+      "regional_agreement": {
+        "requests": 504,
+        "repeated_selections_checked": 252,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "cached_samples_and_validity_match_complete_tile_reference": true,
+        "single_combined_sample_agreement": true
+      },
+      "quality": {
+        "thresholds": {
+          "rmse_u8_max": 3,
+          "p99_absolute_u8_max": 12
+        },
+        "frozen": {
+          "passed": false,
+          "views": 4,
+          "populated_cells": 48,
+          "max_rmse": 3.5316086308486074,
+          "max_p99_absolute": 9.0
+        },
+        "full": {
+          "passed": false,
+          "complete_source_geometry": true,
+          "tiles": 6,
+          "populated_cells": 12,
+          "max_rmse": 3.548153903836353,
+          "max_p99_absolute": 9
+        },
+        "full_population_metrics": [
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 2.018225756424633,
+              "p99_absolute": 5
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 2.018225756424633,
+              "p99_absolute": 5
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 2.983307342822545,
+              "p99_absolute": 8
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 2.983307342822545,
+              "p99_absolute": 8
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 3.548153903836353,
+              "p99_absolute": 9
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 3.548153903836353,
+              "p99_absolute": 9
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 0.19396325201330905,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 0.19396325201330905,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 0.18855012937521326,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 0.18855012937521326,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 834544,
+              "rmse": 0.208127530524464,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 834544,
+              "rmse": 0.208127530524464,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 1.6766746136617918,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 1.6766746136617918,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 2.4746187100436137,
+              "p99_absolute": 7
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 2.4746187100436137,
+              "p99_absolute": 7
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 2.9156628948283903,
+              "p99_absolute": 8
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 2.9156628948283903,
+              "p99_absolute": 8
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 0.17650602189442116,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 0.17650602189442116,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 0.1628685445096679,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 0.1628685445096679,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 52288,
+              "rmse": 0.18559054245624804,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 52288,
+              "rmse": 0.18559054245624804,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          }
+        ]
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 1252060,
+          "descriptors": 5042,
+          "manifest": 5036,
+          "masks": 521826
+        },
+        "total_bytes": 1783964,
+        "payload_bound": 1252704,
+        "tile_budget_sum": 1252584,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": true,
+        "packet_bytes": 1251598,
+        "codestream_framing_bytes": 462,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file logical reference reads recorded separately; no application/network delivery measured.",
+        "manifest_sha256": "a96824638b4be9889d7580ccc2c574e68fe0d5d981b1e9500d134c4ebb8eb49d",
+        "mask_bound": 2675664,
+        "persistent_bound": 11268400,
+        "ancillary_preparation_bytes": 620,
+        "total_eligible": true
+      },
+      "direct_file_accounting": {
+        "direct_file_bytes": 31102009,
+        "direct_file_operations": 26592,
+        "descriptor_bytes": 903615,
+        "descriptor_operations": 967,
+        "native_mask_validation_bytes": 521826,
+        "regional_mask_read_bytes": 16011072,
+        "boundary": "Instrumented native reference logical file reads only; excludes integrity hashing, Python/GDAL reads and OS cache effects; no network delivery."
+      }
+    },
+    {
+      "order": 3,
+      "name": "boca-pan16-4",
+      "asset": "106_10400100413CDF00-PAN16",
+      "output_name": "viewer-acceptance-full-scenes-boca-pan16-4-01",
+      "status": "completed_diagnostic",
+      "result": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/result.json",
+        "bytes": 488794,
+        "sha256": "64dfdc9e022c05f74b8edddef1cc5828cb9979ad81746e9f172d040a18fe7dbc"
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/protocol.json",
+          "bytes": 32959,
+          "sha256": "8259a154e545db19e31973ddb88cce4ab8f8e0e5b01a1716119dcc31209fb0dd"
+        },
+        "grant": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/contexts/full-scenes-grant-boca-pan16-4.json",
+          "bytes": 1154,
+          "sha256": "cda00bcd1bbb3c980a55e7d6f8c5d24e8947de9bf283a2e1da04eb57f364468b"
+        },
+        "native": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/native.json",
+          "bytes": 290589,
+          "sha256": "ed7d0495f9e39e3cddd00875d7cebb7cde41595f8da2f2e2b187392911ac1338"
+        },
+        "requests": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/requests.json",
+          "bytes": 35283,
+          "sha256": "ab081c500df0b14f31d37e241c35a08e1fa907f50c1ae7d7be843dda13558f47"
+        },
+        "frozen_quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01-views/quality.json",
+          "bytes": 32573,
+          "sha256": "028d1cb0805dfc97f8a3dcb1794410a864473e415261aa8f68935c13546a6a41"
+        },
+        "full_coverage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/full-coverage.json",
+          "bytes": 161073,
+          "sha256": "1d5ac5fa46b337c2a7f1d0d4242690a17c7a45594642e612f0e0448527791035"
+        },
+        "masks": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/masks.json",
+          "bytes": 563720,
+          "sha256": "c3a52d91ca861ddf313d340ab1f21e3139dcb1f2091807fc2f2d68c51ed76db0"
+        },
+        "regional_agreement": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-pan16-4-01/regional-agreement.json",
+          "bytes": 301122,
+          "sha256": "47fd3f827ebaad569d09ad8f9b9ebad5425a3940893db2661db16237917563f2"
+        }
+      },
+      "source": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/real/train/PAN/106_10400100413CDF00.tif",
+        "bytes": 56202886,
+        "sha256": "56cb43dfd8b2d76fe13e3033392d6b53bc1341cbc8b4c0b25db1e517671e93e9"
+      },
+      "source_before_after_identical": true,
+      "grid": {
+        "components": 1,
+        "height": 5036,
+        "precision": 16,
+        "signed": false,
+        "width": 5577
+      },
+      "bands": [
+        1
+      ],
+      "bpp": 4,
+      "mask_coverage": {
+        "complete_source_geometry": true,
+        "tiles": 110,
+        "levels": 7,
+        "native_checked_mask_files": 770,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "comparison_records": 1540,
+        "all_any_comparison_samples": 74898112,
+        "source_counts": [
+          {
+            "band": 1,
+            "samples": 28085772,
+            "valid": 14337500,
+            "invalid": 13748272
+          }
+        ],
+        "bands_with_observed_transitions": 1,
+        "quality_population_gdal_equality": true
+      },
+      "regional_agreement": {
+        "requests": 280,
+        "repeated_selections_checked": 140,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "cached_samples_and_validity_match_complete_tile_reference": true,
+        "single_combined_sample_agreement": true
+      },
+      "quality": {
+        "thresholds": {
+          "rmse_u8_max": 3,
+          "p99_absolute_u8_max": 12
+        },
+        "frozen": {
+          "passed": true,
+          "views": 4,
+          "populated_cells": 16,
+          "max_rmse": 1.5239732631630836,
+          "max_p99_absolute": 4.0
+        },
+        "full": {
+          "passed": true,
+          "complete_source_geometry": true,
+          "tiles": 110,
+          "populated_cells": 4,
+          "max_rmse": 1.2555447728167703,
+          "max_p99_absolute": 4
+        },
+        "full_population_metrics": [
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 14337500,
+              "rmse": 1.2555447728167703,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 14337500,
+              "rmse": 1.2555447728167703,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 14337500,
+              "rmse": 0.26938348677455676,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 14337500,
+              "rmse": 0.26938348677455676,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 896605,
+              "rmse": 1.0445692194926777,
+              "p99_absolute": 3
+            },
+            "all_valid": {
+              "samples": 896558,
+              "rmse": 1.0445965987084747,
+              "p99_absolute": 3
+            },
+            "partial_valid": {
+              "samples": 47,
+              "rmse": 0.0,
+              "p99_absolute": 0
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 896605,
+              "rmse": 0.24080389490469745,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 896558,
+              "rmse": 0.24081020661834968,
+              "p99_absolute": 1
+            },
+            "partial_valid": {
+              "samples": 47,
+              "rmse": 0.0,
+              "p99_absolute": 0
+            },
+            "passed": true
+          }
+        ]
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 7738315,
+          "descriptors": 37086,
+          "manifest": 69269,
+          "masks": 5851548
+        },
+        "total_bytes": 13696218,
+        "payload_bound": 14057080,
+        "tile_budget_sum": 14056966,
+        "shared_framing_bytes": 114,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": true,
+        "packet_bytes": 7731931,
+        "codestream_framing_bytes": 6384,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file logical reference reads recorded separately; no application/network delivery measured.",
+        "manifest_sha256": "514d4cd7a208dd9cf4cda89eb0fe2aa49f951fe8ab205b4b780ed9eb079fe22d",
+        "mask_bound": 31239692,
+        "persistent_bound": 161688708,
+        "ancillary_preparation_bytes": 646,
+        "total_eligible": true
+      },
+      "direct_file_accounting": {
+        "direct_file_bytes": 16848442,
+        "direct_file_operations": 12401,
+        "descriptor_bytes": 249706,
+        "descriptor_operations": 707,
+        "native_mask_validation_bytes": 5851548,
+        "regional_mask_read_bytes": 4473016,
+        "boundary": "Instrumented native reference logical file reads only; excludes integrity hashing, Python/GDAL reads and OS cache effects; no network delivery."
+      }
+    },
+    {
+      "order": 4,
+      "name": "boca-rgb16-12",
+      "asset": "106_10400100413CDF00-RGB16",
+      "output_name": "viewer-acceptance-full-scenes-boca-rgb16-12-01",
+      "status": "completed_diagnostic",
+      "result": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/result.json",
+        "bytes": 46027,
+        "sha256": "247f417acfd8a15cc6bd03855130fd739db0e7c01b468ed57cfbf676642fc06f"
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/protocol.json",
+          "bytes": 33647,
+          "sha256": "3c2b95e2d59cab4bd7fe03205f548e95c52f14872ab436738493caa61e67d5d3"
+        },
+        "grant": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/contexts/full-scenes-grant-boca-rgb16-12.json",
+          "bytes": 1155,
+          "sha256": "28cf9eb41358cdb810fca785a48d15abe2cfd3d8a9bd3b849dafcbf7dc331db5"
+        },
+        "native": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/native.json",
+          "bytes": 701089,
+          "sha256": "4f9aa8eff07933d65df380a7556df80d278c473b30ab39807fe03f466946e479"
+        },
+        "requests": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/requests.json",
+          "bytes": 87251,
+          "sha256": "a97e7bff1156636a4c852982447ab64ab5093dba569aabb902c009ddb70b0ab1"
+        },
+        "frozen_quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01-views/quality.json",
+          "bytes": 73292,
+          "sha256": "34a9ff67ea04916dd23a6da16f111944b191724442a63a2708e29ab67b09cef6"
+        },
+        "full_coverage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/full-coverage.json",
+          "bytes": 18661,
+          "sha256": "e3821067995683ec9abe6ca4a9068051258bef212d505646943b5815a77b4bb6"
+        },
+        "masks": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/masks.json",
+          "bytes": 138245,
+          "sha256": "19846d5ec275776d887dfa06cdcb0fd5cbbbaf4d787140a00d28af4c4cc05604"
+        },
+        "regional_agreement": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-boca-rgb16-12-01/regional-agreement.json",
+          "bytes": 728246,
+          "sha256": "6bfeffa1a3d6973ab63e4b0ccfa8d21ee6731f914991b9816d3539a88f67b601"
+        }
+      },
+      "source": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/real/train/MS/106_10400100413CDF00.tif",
+        "bytes": 28089474,
+        "sha256": "9eba58b792268823475f0c35fa2e1ad3512a274d6aebe5434e8a7a7fc175c356"
+      },
+      "source_before_after_identical": true,
+      "grid": {
+        "components": 3,
+        "height": 1259,
+        "precision": 16,
+        "signed": false,
+        "width": 1394
+      },
+      "bands": [
+        5,
+        3,
+        2
+      ],
+      "bpp": 12,
+      "mask_coverage": {
+        "complete_source_geometry": true,
+        "tiles": 9,
+        "levels": 7,
+        "native_checked_mask_files": 63,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "comparison_records": 378,
+        "all_any_comparison_samples": 14045358,
+        "source_counts": [
+          {
+            "band": 5,
+            "samples": 1755046,
+            "valid": 894545,
+            "invalid": 860501
+          },
+          {
+            "band": 3,
+            "samples": 1755046,
+            "valid": 894545,
+            "invalid": 860501
+          },
+          {
+            "band": 2,
+            "samples": 1755046,
+            "valid": 894545,
+            "invalid": 860501
+          }
+        ],
+        "bands_with_observed_transitions": 3,
+        "quality_population_gdal_equality": true
+      },
+      "regional_agreement": {
+        "requests": 672,
+        "repeated_selections_checked": 336,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "cached_samples_and_validity_match_complete_tile_reference": true,
+        "single_combined_sample_agreement": true
+      },
+      "quality": {
+        "thresholds": {
+          "rmse_u8_max": 3,
+          "p99_absolute_u8_max": 12
+        },
+        "frozen": {
+          "passed": true,
+          "views": 4,
+          "populated_cells": 48,
+          "max_rmse": 1.254319927867413,
+          "max_p99_absolute": 4.0
+        },
+        "full": {
+          "passed": true,
+          "complete_source_geometry": true,
+          "tiles": 9,
+          "populated_cells": 12,
+          "max_rmse": 1.4722609209255892,
+          "max_p99_absolute": 4
+        },
+        "full_population_metrics": [
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 1.2739988942129759,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 1.2739988942129759,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 1.4555292178960328,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 1.4555292178960328,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 1.4722609209255892,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 1.4722609209255892,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 0.2722361799225257,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 0.2722361799225257,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 0.2745586585837005,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 0.2745586585837005,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 894545,
+              "rmse": 0.2832029352648616,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 894545,
+              "rmse": 0.2832029352648616,
+              "p99_absolute": 1
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 1.068122257632807,
+              "p99_absolute": 3
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 1.0697482062701102,
+              "p99_absolute": 3
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.6546536707079771,
+              "p99_absolute": 2
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 1.2110518181864542,
+              "p99_absolute": 3
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 1.2128025449548645,
+              "p99_absolute": 3
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.7727027870207257,
+              "p99_absolute": 2
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 1.2275521011724624,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 1.2292864893372193,
+              "p99_absolute": 4
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.7960525319975018,
+              "p99_absolute": 2
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 0.2430183520920516,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 0.243427080397874,
+              "p99_absolute": 1
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.1353329904901917,
+              "p99_absolute": 1
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 0.24780235149754554,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 0.24793806748512862,
+              "p99_absolute": 1
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.21821789023599236,
+              "p99_absolute": 1
+            },
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 56216,
+              "rmse": 0.2564106213029189,
+              "p99_absolute": 1
+            },
+            "all_valid": {
+              "samples": 55943,
+              "rmse": 0.25651338553442504,
+              "p99_absolute": 1
+            },
+            "partial_valid": {
+              "samples": 273,
+              "rmse": 0.2344036154692477,
+              "p99_absolute": 1
+            },
+            "passed": true
+          }
+        ]
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 1563932,
+          "descriptors": 6329,
+          "manifest": 6892,
+          "masks": 1097535
+        },
+        "total_bytes": 2674688,
+        "payload_bound": 2633841,
+        "tile_budget_sum": 2633721,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": true,
+        "packet_bytes": 1563299,
+        "codestream_framing_bytes": 633,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file logical reference reads recorded separately; no application/network delivery measured.",
+        "manifest_sha256": "f85199a367dde209f833c7c55a303096f8b593fe52f383a97d313a6ef7911399",
+        "mask_bound": 5523186,
+        "persistent_bound": 18642787,
+        "ancillary_preparation_bytes": 634,
+        "total_eligible": true
+      },
+      "direct_file_accounting": {
+        "direct_file_bytes": 41431268,
+        "direct_file_operations": 31650,
+        "descriptor_bytes": 1147294,
+        "descriptor_operations": 1306,
+        "native_mask_validation_bytes": 1097535,
+        "regional_mask_read_bytes": 26783448,
+        "boundary": "Instrumented native reference logical file reads only; excludes integrity hashing, Python/GDAL reads and OS cache effects; no network delivery."
+      }
+    },
+    {
+      "order": 5,
+      "name": "tok-rgb8-4",
+      "asset": "105_104001002F92BB00-RGB8",
+      "output_name": "viewer-acceptance-full-scenes-tok-rgb8-4-01",
+      "status": "completed_diagnostic",
+      "result": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/result.json",
+        "bytes": 395621,
+        "sha256": "6c03c2e664964263c84295e91f2bfa1d5f202a487cb40587aef5badcc30bbce9"
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/protocol.json",
+          "bytes": 33638,
+          "sha256": "c0f3b79b5bec3c979cdf44e4d95263c12b3a739500d56fcff5d5356e3ce9b0bb"
+        },
+        "grant": {
+          "path": "/nvme/development/emuella/.build-targets/viewer-acceptance/contexts/full-scenes-grant-tok-rgb8-4.json",
+          "bytes": 1151,
+          "sha256": "3b1714afd392797616826637f11c3a4735b1b4dde05ef13e58582d8e1095fb0b"
+        },
+        "native": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/native.json",
+          "bytes": 526372,
+          "sha256": "5f238d13ef042e93319b1b15a283bc3dd133388990290c901121426cbde732f7"
+        },
+        "requests": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/requests.json",
+          "bytes": 65663,
+          "sha256": "c22859bce34caca60e3393b988f980f5c7cffb55e048c1c10982ccce4257d530"
+        },
+        "frozen_quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01-views/quality.json",
+          "bytes": 69612,
+          "sha256": "1e1841ccd840793ead2f1fbeda2f7835a992cd56a4491ef6c7e107d26804fd7d"
+        },
+        "full_coverage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/full-coverage.json",
+          "bytes": 129187,
+          "sha256": "a8223e4c36a7fa9158492a1d817338e2ddee91776b3dbf79a2ecedceeb76bab3"
+        },
+        "masks": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/masks.json",
+          "bytes": 1293511,
+          "sha256": "181a4169e54c05898009dce2c910ca4e7efdbfde0f6a3a4bdf6cda4f765b35a2"
+        },
+        "regional_agreement": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-full-scenes-tok-rgb8-4-01/regional-agreement.json",
+          "bytes": 543626,
+          "sha256": "4040bbbc005957317a17cbec90251cf2b266fc63e7a558854eba78422e646bde"
+        }
+      },
+      "source": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/source/real/train/PS-RGB/105_104001002F92BB00.tif",
+        "bytes": 50531479,
+        "sha256": "8337c700fa45605a8c6074b4dfae6d311a7d42644726a35921373cecee6c2f69"
+      },
+      "source_before_after_identical": true,
+      "grid": {
+        "components": 3,
+        "height": 1581,
+        "precision": 8,
+        "signed": false,
+        "width": 10651
+      },
+      "bands": [
+        1,
+        2,
+        3
+      ],
+      "bpp": 4,
+      "mask_coverage": {
+        "complete_source_geometry": true,
+        "tiles": 84,
+        "levels": 7,
+        "native_checked_mask_files": 588,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "comparison_records": 3528,
+        "all_any_comparison_samples": 134742840,
+        "source_counts": [
+          {
+            "band": 1,
+            "samples": 16839231,
+            "valid": 16839231,
+            "invalid": 0
+          },
+          {
+            "band": 2,
+            "samples": 16839231,
+            "valid": 16839231,
+            "invalid": 0
+          },
+          {
+            "band": 3,
+            "samples": 16839231,
+            "valid": 16839231,
+            "invalid": 0
+          }
+        ],
+        "bands_with_observed_transitions": 0,
+        "quality_population_gdal_equality": true
+      },
+      "regional_agreement": {
+        "requests": 504,
+        "repeated_selections_checked": 252,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "cached_samples_and_validity_match_complete_tile_reference": true,
+        "single_combined_sample_agreement": true
+      },
+      "quality": {
+        "thresholds": {
+          "rmse_u8_max": 3,
+          "p99_absolute_u8_max": 12
+        },
+        "frozen": {
+          "passed": false,
+          "views": 4,
+          "populated_cells": 48,
+          "max_rmse": 9.63651290568561,
+          "max_p99_absolute": 25.0
+        },
+        "full": {
+          "passed": false,
+          "complete_source_geometry": true,
+          "tiles": 84,
+          "populated_cells": 12,
+          "max_rmse": 7.150763254264593,
+          "max_p99_absolute": 20
+        },
+        "full_population_metrics": [
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 4.873290454561546,
+              "p99_absolute": 14
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 4.873290454561546,
+              "p99_absolute": 14
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 6.139717938274639,
+              "p99_absolute": 18
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 6.139717938274639,
+              "p99_absolute": 18
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 7.150763254264593,
+              "p99_absolute": 20
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 7.150763254264593,
+              "p99_absolute": 20
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 1.744373836025766,
+              "p99_absolute": 5
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 1.744373836025766,
+              "p99_absolute": 5
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 1.753681214393516,
+              "p99_absolute": 5
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 1.753681214393516,
+              "p99_absolute": 5
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 16839231,
+              "rmse": 1.7774875451197,
+              "p99_absolute": 5
+            },
+            "all_valid": {
+              "samples": 16839231,
+              "rmse": 1.7774875451197,
+              "p99_absolute": 5
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 1,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 3.9640728577669155,
+              "p99_absolute": 11
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 3.9640728577669155,
+              "p99_absolute": 11
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 5.0059880808606,
+              "p99_absolute": 14
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 5.0059880808606,
+              "p99_absolute": 14
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 5.891347821437278,
+              "p99_absolute": 16
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 5.891347821437278,
+              "p99_absolute": 16
+            },
+            "partial_valid": null,
+            "passed": false
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 1,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 1.4598663532987053,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 1.4598663532987053,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 1.472723353191288,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 1.472723353191288,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          },
+          {
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "metrics": {
+              "samples": 1054548,
+              "rmse": 1.506532970273236,
+              "p99_absolute": 4
+            },
+            "all_valid": {
+              "samples": 1054548,
+              "rmse": 1.506532970273236,
+              "p99_absolute": 4
+            },
+            "partial_valid": null,
+            "passed": true
+          }
+        ]
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 8422520,
+          "descriptors": 69416,
+          "manifest": 53240,
+          "masks": 10528158
+        },
+        "total_bytes": 19073334,
+        "payload_bound": 8430487,
+        "tile_budget_sum": 8430367,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": true,
+        "packet_bytes": 8417612,
+        "codestream_framing_bytes": 4908,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file logical reference reads recorded separately; no application/network delivery measured.",
+        "manifest_sha256": "af5fdb442f1d443dc31c838bcb6d6908b3804f731a2ab4d285954c68e9669abc",
+        "mask_bound": 52926141,
+        "persistent_bound": 150485588,
+        "ancillary_preparation_bytes": 639,
+        "total_eligible": true
+      },
+      "direct_file_accounting": {
+        "direct_file_bytes": 21564679,
+        "direct_file_operations": 43183,
+        "descriptor_bytes": 905995,
+        "descriptor_operations": 1043,
+        "native_mask_validation_bytes": 10528158,
+        "regional_mask_read_bytes": 19355184,
+        "boundary": "Instrumented native reference logical file reads only; excludes integrity hashing, Python/GDAL reads and OS cache effects; no network delivery."
+      }
+    }
+  ],
+  "limitations": [
+    "Every outcome remains quality-rejected-diagnostic-only, including numerical passes; historical screen outcomes remain intact.",
+    "No selected-configuration receipt, browser agreement, opened-image assessment, human acceptance or analytical/ML claim.",
+    "Preparation, native regional decoding and complete-tile references use the same pinned codec; independent decoder evidence is absent.",
+    "Direct-file counters are logical reference payload and descriptor reads plus separately reported mask reads; they exclude integrity hashing, Python/GDAL reads and OS cache effects. Native service/client metrics remain in the approved native.json receipts.",
+    "Application-delivered and network bytes remain unmeasured. Timing is descriptive only; caches are uncontrolled and concurrent authored build/source work was permitted.",
+    "All protected pixels, masks, payloads, captures and process logs remain in the granted approved-store groups; this document contains aggregate metrics and evidence identities only.",
+    "Canonical application verification remains with the coordinator; this execution task performed no new probes, source edits, commits or pushes."
+  ],
+  "next_safe_action": "Use the retained request, native sample and mask identities for the separately owned browser/app comparison and coordinator verification; do not re-prepare a consumed representation or reuse these grants."
+}

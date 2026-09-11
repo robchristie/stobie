@@ -1,0 +1,1600 @@
+{
+  "schema": "viewer-acceptance-independent-results/1",
+  "status": "completed-bounded-hypothesis-not-supported",
+  "measured_source_revision": "78150c8a07feafd19222db6c4ad54ff2f8f90557",
+  "protocol_sha256": "a8360c584704bac48e13fabb4660876da20cf958f9c01211cd2d6cbe10e9e2bd",
+  "grant_sha256": "233a5a9fd73365e602954a4b2303b58a1c168a072d8d9dca8b95c67c7bbed2ea",
+  "measurement_owner": "independent-execution-cli",
+  "watchers": 1,
+  "cohort_executions": 1,
+  "encoder_invocations": 16,
+  "decoder_invocations": 2,
+  "process_failures": 0,
+  "retries": 0,
+  "operation_complete": true,
+  "cohort_consumed": true,
+  "pre_dispatch": {
+    "protocol_bearing_files_equal_supplied_revision": true,
+    "verified_file_identities": 79,
+    "fresh_output_group": true
+  },
+  "environment": {
+    "GDAL_DRIVER_PATH": "disable",
+    "GDAL_PAM_ENABLED": "NO",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "committed_file_sha256": {
+    "tools/viewer-acceptance-independent.py": "1167a9752c7ddf5fb22476ee3bf2e82c693ae0c71eaf7b587a9399971fc47831",
+    "tools/tests/test_viewer_acceptance_independent.py": "57f3c477102d0a70631aeead8ccb768c3b98abdc2c95ca230f83e7f5098a27d2",
+    "docs/viewer-acceptance-independent.md": "970e1647d5009aa58b666d4a35790001b3bf7c4cf2e8672a28ad7da3de9d72a9",
+    "docs/viewer-acceptance-independent.json": "a8360c584704bac48e13fabb4660876da20cf958f9c01211cd2d6cbe10e9e2bd",
+    "tools/viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+    "tools/viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97",
+    "docs/real-scene-viewing-source-views.json": "9ab71669f6e182e0883bc3a9bb29608dde5f4c5d3a575e9a27eaaf6c1af1b3ce",
+    "docs/viewer-acceptance-quality-build.json": "c51133a04eab1b1acb7d345653cb5f9b38753e06bcc51e2295740f1c48d6d06b",
+    "docs/viewer-acceptance-quality-results.json": "a7c119c579e602fea0602889254cff9d0cdb2ba6a8a2d39ba9f3421277f0b6fa"
+  },
+  "evidence": {
+    "cohort": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/cohort.json",
+      "sha256": "a64612f193f1834f260c92a52a49b65f054814f90ac9e3599ab5398be9979d23",
+      "bytes": 188731
+    },
+    "protocol": {
+      "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/protocol.json",
+      "sha256": "0528e7cd11a2f54dcbc26db8496e81096ad76683a00456ee802b2c48e0c42804",
+      "bytes": 30010
+    }
+  },
+  "records": [
+    {
+      "key": "rgb16-12",
+      "asset": "94_104001000B823500-RGB16",
+      "status": "matched",
+      "target_bytes": 1056940,
+      "baseline_failed_cells": 6,
+      "input": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/selected.tif",
+        "sha256": "ffae9d39031b6e3887e070cdd32fcfaaa7327fa8e25d353ab10b4da6805f22d0",
+        "bytes": 4231370,
+        "bands": [
+          5,
+          3,
+          2
+        ],
+        "precision": 16,
+        "exact_samples_verified": true,
+        "stretch_applied": false
+      },
+      "input_identities_unchanged": true,
+      "encoder_invocations": 8,
+      "trials": [
+        {
+          "ordinal": 1,
+          "qstep": "2.2360679774997897E-3",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-01.j2c",
+            "sha256": "f026f760509a84cd3cf65aba263ec22189c73d97e4f48d4f8a7056ac3bfce533",
+            "bytes": 183525
+          },
+          "byte_delta": -873415,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 2,
+          "qstep": "1.4953487812212205E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-02.j2c",
+            "sha256": "f4fa96e043f721b02c0e2d9acc880f3cc043c277976fcf677c81202fd8f2ce91",
+            "bytes": 1283953
+          },
+          "byte_delta": 227013,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 3,
+          "qstep": "5.7824748377162092E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-03.j2c",
+            "sha256": "e5db98b9662170e041ce1e50756856f3048d769b77d2354aa1e545b3d7d07caf",
+            "bytes": 638111
+          },
+          "byte_delta": -418829,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 4,
+          "qstep": "2.9405470071096140E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-04.j2c",
+            "sha256": "d01fe3857d091ff2096a089a0148b687d7a419db388e8cdd5ee23159c2e7dd15",
+            "bytes": 959307
+          },
+          "byte_delta": -97633,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 5,
+          "qstep": "2.0969366664744715E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-05.j2c",
+            "sha256": "ea3610b9c904f2230146d71c9117eacfc7d6f3374ff2ee8aef244f4a6ceb2ac4",
+            "bytes": 1123642
+          },
+          "byte_delta": 66702,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 6,
+          "qstep": "2.4831715282476799E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-06.j2c",
+            "sha256": "c1f952c99873b2de9ac1e40738c1980d24f359bb63eef962def604b797719ce5",
+            "bytes": 1041666
+          },
+          "byte_delta": -15274,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 7,
+          "qstep": "2.2818968922210330E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-07.j2c",
+            "sha256": "390a8d39aeb4027bc3c34442fd0fd6588ff51ef61e286954f3f354446a3c899f",
+            "bytes": 1082894
+          },
+          "byte_delta": 25954,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 8,
+          "qstep": "2.3804078207652011E-4",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/trial-08.j2c",
+            "sha256": "e724ec6cd0010b0e3f6bd0f14389ba6b0d677a9bcbb51f740f1168c257991aa5",
+            "bytes": 1062356
+          },
+          "byte_delta": 5416,
+          "format_contract_verified": true,
+          "process_exit": 0
+        }
+      ],
+      "selected_trial": 8,
+      "encoding_comparison_eligible": true,
+      "quality": {
+        "gate_population": "source_any_valid",
+        "rmse_limit": 3,
+        "p99_absolute_limit": 12,
+        "cells_count": 48,
+        "failed_cells": 0,
+        "passed": true,
+        "improved_rmse_cells": 48,
+        "cells": [
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.0390111007023999,
+              "mae": 0.7445526123046875,
+              "max_absolute": 5.0,
+              "p99_absolute": 3.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 1.977531105308065,
+              "mae": 1.5202484130859375,
+              "max_absolute": 9.0,
+              "p99_absolute": 5.0
+            },
+            "rmse_delta": -0.9385200046056652,
+            "p99_delta": -2.0
+          },
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.459333385715568,
+              "mae": 1.0782012939453125,
+              "max_absolute": 7.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 2.838518969710481,
+              "mae": 2.164459228515625,
+              "max_absolute": 13.0,
+              "p99_absolute": 8.0
+            },
+            "rmse_delta": -1.379185583994913,
+            "p99_delta": -4.0
+          },
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.6858444570016313,
+              "mae": 1.25518798828125,
+              "max_absolute": 7.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.3713381646621885,
+              "mae": 2.5817718505859375,
+              "max_absolute": 15.0,
+              "p99_absolute": 9.0
+            },
+            "rmse_delta": -1.6854937076605572,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.14631500625256283,
+              "mae": 0.0214080810546875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.2064038252128579,
+              "mae": 0.0426025390625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.06008881896029508,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.12272092244066413,
+              "mae": 0.0150604248046875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.17205246519957218,
+              "mae": 0.02960205078125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.049331542758908054,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 0,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.11886815667736671,
+              "mae": 0.014129638671875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.17333365415885774,
+              "mae": 0.0300445556640625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.05446549748149103,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.4310348195041788,
+              "mae": 0.185791015625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 1.6081609498507916,
+              "mae": 1.222412109375,
+              "max_absolute": 6.0,
+              "p99_absolute": 4.0
+            },
+            "rmse_delta": -1.1771261303466127,
+            "p99_delta": -3.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5060667106469264,
+              "mae": 0.255126953125,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.283870498326251,
+              "mae": 1.740966796875,
+              "max_absolute": 10.0,
+              "p99_absolute": 6.0
+            },
+            "rmse_delta": -1.777803787679325,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5625,
+              "mae": 0.310546875,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.730756534369185,
+              "mae": 2.109375,
+              "max_absolute": 10.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.168256534369185,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.08118988160479113,
+              "mae": 0.006591796875,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.1926379375927805,
+              "mae": 0.037109375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.11144805598798938,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.05633673867912483,
+              "mae": 0.003173828125,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.13621559198564606,
+              "mae": 0.0185546875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.07987885330652122,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 0,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.06442352540027595,
+              "mae": 0.004150390625,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.14986973510352247,
+              "mae": 0.0224609375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.08544620970324653,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.0395469970060878,
+              "mae": 0.75018310546875,
+              "max_absolute": 5.0,
+              "p99_absolute": 3.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 2.0309607666673886,
+              "mae": 1.5623016357421875,
+              "max_absolute": 9.0,
+              "p99_absolute": 5.0
+            },
+            "rmse_delta": -0.9914137696613008,
+            "p99_delta": -2.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.460509211954216,
+              "mae": 1.097991943359375,
+              "max_absolute": 6.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.1045153803887513,
+              "mae": 2.4140167236328125,
+              "max_absolute": 15.0,
+              "p99_absolute": 8.0
+            },
+            "rmse_delta": -1.6440061684345353,
+            "p99_delta": -4.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.7332309007944526,
+              "mae": 1.32257080078125,
+              "max_absolute": 7.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.30601932752144,
+              "mae": 2.5832366943359375,
+              "max_absolute": 16.0,
+              "p99_absolute": 9.0
+            },
+            "rmse_delta": -1.5727884267269872,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.13206360550294505,
+              "mae": 0.0174407958984375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.18819046047571725,
+              "mae": 0.0354156494140625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.0561268549727722,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.12027190873703635,
+              "mae": 0.01446533203125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.17870826927652927,
+              "mae": 0.0319366455078125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.05843636053949293,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 1,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.14046214528410314,
+              "mae": 0.0197296142578125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.19228116365998388,
+              "mae": 0.0369720458984375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.05181901837588074,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.44551804466822664,
+              "mae": 0.198486328125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 1.7104201558023688,
+              "mae": 1.321044921875,
+              "max_absolute": 7.0,
+              "p99_absolute": 4.0
+            },
+            "rmse_delta": -1.264902111134142,
+            "p99_delta": -3.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5205728515299276,
+              "mae": 0.27001953125,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.6361370886203925,
+              "mae": 2.04443359375,
+              "max_absolute": 10.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.115564237090465,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5779138127783415,
+              "mae": 0.32861328125,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.6463510402297348,
+              "mae": 2.069091796875,
+              "max_absolute": 10.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.068437227451393,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.07493486755176124,
+              "mae": 0.005615234375,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.184877493221863,
+              "mae": 0.0341796875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.10994262567010177,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.04133986423538423,
+              "mae": 0.001708984375,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.15546678704790937,
+              "mae": 0.024169921875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.11412692281252514,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 1,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.06810779599282303,
+              "mae": 0.004638671875,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.16682934768798924,
+              "mae": 0.02783203125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.09872155169516621,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.0525368698077457,
+              "mae": 0.7557830810546875,
+              "max_absolute": 5.0,
+              "p99_absolute": 3.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 1.9400932431180176,
+              "mae": 1.4760894775390625,
+              "max_absolute": 9.0,
+              "p99_absolute": 5.0
+            },
+            "rmse_delta": -0.8875563733102718,
+            "p99_delta": -2.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.4809942998576793,
+              "mae": 1.1033477783203125,
+              "max_absolute": 6.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 2.805111823751417,
+              "mae": 2.148345947265625,
+              "max_absolute": 13.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -1.3241175238937377,
+            "p99_delta": -3.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.7245728779405425,
+              "mae": 1.30169677734375,
+              "max_absolute": 8.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.334661092166545,
+              "mae": 2.57843017578125,
+              "max_absolute": 16.0,
+              "p99_absolute": 9.0
+            },
+            "rmse_delta": -1.6100882142260027,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.12849128283905098,
+              "mae": 0.016510009765625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.18083026561097978,
+              "mae": 0.0326995849609375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.052338982771928805,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.11554843326366437,
+              "mae": 0.0133514404296875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.15741751312195224,
+              "mae": 0.0247802734375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.04186907985828786,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 2,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.1372756514906686,
+              "mae": 0.0188446044921875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.19156562242561295,
+              "mae": 0.0366973876953125,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.054289970934944365,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.4444207079164966,
+              "mae": 0.197509765625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 1.5876107244850672,
+              "mae": 1.19677734375,
+              "max_absolute": 6.0,
+              "p99_absolute": 4.0
+            },
+            "rmse_delta": -1.1431900165685707,
+            "p99_delta": -3.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5231459075869752,
+              "mae": 0.272705078125,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.274766042228299,
+              "mae": 1.737548828125,
+              "max_absolute": 9.0,
+              "p99_absolute": 6.0
+            },
+            "rmse_delta": -1.7516201346413238,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5670389784882517,
+              "mae": 0.316650390625,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.704524565427351,
+              "mae": 2.1123046875,
+              "max_absolute": 10.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.137485586939099,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.06629126073623882,
+              "mae": 0.00439453125,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.171875,
+              "mae": 0.029541015625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.10558373926376118,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.046875,
+              "mae": 0.002197265625,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.13621559198564606,
+              "mae": 0.0185546875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.08934059198564606,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 2,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.05633673867912483,
+              "mae": 0.003173828125,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.1660960283239789,
+              "mae": 0.027587890625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.10975928964485407,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.024793352835402,
+              "mae": 0.735748291015625,
+              "max_absolute": 5.0,
+              "p99_absolute": 3.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 2.0550105199985444,
+              "mae": 1.5719757080078125,
+              "max_absolute": 12.0,
+              "p99_absolute": 5.0
+            },
+            "rmse_delta": -1.0302171671631424,
+            "p99_delta": -2.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.4153406257555325,
+              "mae": 1.0604705810546875,
+              "max_absolute": 7.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.084525487875171,
+              "mae": 2.3976287841796875,
+              "max_absolute": 15.0,
+              "p99_absolute": 8.0
+            },
+            "rmse_delta": -1.6691848621196386,
+            "p99_delta": -4.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 1.7146390823194213,
+              "mae": 1.3020477294921875,
+              "max_absolute": 8.0,
+              "p99_absolute": 4.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 3.5316086308486074,
+              "mae": 2.7652587890625,
+              "max_absolute": 15.0,
+              "p99_absolute": 9.0
+            },
+            "rmse_delta": -1.8169695485291861,
+            "p99_delta": -5.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.13683031162607026,
+              "mae": 0.0187225341796875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.19760374796783967,
+              "mae": 0.0390472412109375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.060773436341769405,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.12699818911725672,
+              "mae": 0.0161285400390625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.19354670534121085,
+              "mae": 0.0374603271484375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.06654851622395414,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 3,
+            "scale": 1,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 65536,
+              "rmse": 0.13571056848468913,
+              "mae": 0.0184173583984375,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 65536,
+              "rmse": 0.19879704140624177,
+              "mae": 0.039520263671875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.06308647292155264,
+            "p99_delta": 0.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.44138896536954797,
+              "mae": 0.19482421875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 1.7278169933473857,
+              "mae": 1.32080078125,
+              "max_absolute": 8.0,
+              "p99_absolute": 4.0
+            },
+            "rmse_delta": -1.2864280279778377,
+            "p99_delta": -3.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5160982676535545,
+              "mae": 0.265869140625,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.6186213423049542,
+              "mae": 2.041748046875,
+              "max_absolute": 10.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.1025230746514,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "percentile_2_98",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.5685439187081329,
+              "mae": 0.32080078125,
+              "max_absolute": 2.0,
+              "p99_absolute": 1.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 2.9154340773502323,
+              "mae": 2.311279296875,
+              "max_absolute": 11.0,
+              "p99_absolute": 7.0
+            },
+            "rmse_delta": -2.3468901586420996,
+            "p99_delta": -6.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 5,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.07328774624724109,
+              "mae": 0.00537109375,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.18288593610499415,
+              "mae": 0.033447265625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.10959818985775306,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 3,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.05182226234930312,
+              "mae": 0.002685546875,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.1616262567623219,
+              "mae": 0.026123046875,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.10980399441301877,
+            "p99_delta": -1.0
+          },
+          {
+            "view": 3,
+            "scale": 4,
+            "stretch": "full_storage",
+            "source_band": 2,
+            "passed": true,
+            "source_any_valid": {
+              "samples": 4096,
+              "rmse": 0.06629126073623882,
+              "mae": 0.00439453125,
+              "max_absolute": 1.0,
+              "p99_absolute": 0.0
+            },
+            "baseline": {
+              "samples": 4096,
+              "rmse": 0.15388840315306412,
+              "mae": 0.023681640625,
+              "max_absolute": 1.0,
+              "p99_absolute": 1.0
+            },
+            "rmse_delta": -0.0875971424168253,
+            "p99_delta": -1.0
+          }
+        ],
+        "other_populations": "ANY/ALL-valid and historical all-pixel metrics retained in result evidence; PARTIAL-valid is null in all 48 cells."
+      },
+      "reconstruction_agreement": {
+        "claim": "OpenJPH versus retained Emuella reconstruction of the existing Emuella stream, frozen views only",
+        "exact_agreement": false,
+        "views": [
+          {
+            "equal_samples": false,
+            "bands": [
+              {
+                "samples": 65536,
+                "rmse": 0.1254873312828829,
+                "mae": 0.0157470703125,
+                "max_absolute": 1.0,
+                "p99_absolute": 1.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 0.12518297155439115,
+                "mae": 0.0156707763671875,
+                "max_absolute": 1.0,
+                "p99_absolute": 1.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 0.12184745281626735,
+                "mae": 0.0148468017578125,
+                "max_absolute": 1.0,
+                "p99_absolute": 1.0
+              }
+            ]
+          },
+          {
+            "equal_samples": false,
+            "bands": [
+              {
+                "samples": 65536,
+                "rmse": 10475.38366971469,
+                "mae": 7406.675521850586,
+                "max_absolute": 15213.0,
+                "p99_absolute": 15109.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 10543.501427011814,
+                "mae": 7455.1644287109375,
+                "max_absolute": 15198.0,
+                "p99_absolute": 15101.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 10602.574667856075,
+                "mae": 7496.975006103516,
+                "max_absolute": 15225.0,
+                "p99_absolute": 15150.0
+              }
+            ]
+          },
+          {
+            "equal_samples": false,
+            "bands": [
+              {
+                "samples": 65536,
+                "rmse": 12868.846060632874,
+                "mae": 11143.561782836914,
+                "max_absolute": 15246.0,
+                "p99_absolute": 15113.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 12926.527547924476,
+                "mae": 11193.829635620117,
+                "max_absolute": 15246.0,
+                "p99_absolute": 15121.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 12986.876374006775,
+                "mae": 11246.158752441406,
+                "max_absolute": 15247.0,
+                "p99_absolute": 15156.0
+              }
+            ]
+          },
+          {
+            "equal_samples": false,
+            "bands": [
+              {
+                "samples": 65536,
+                "rmse": 9794.475813855517,
+                "mae": 7140.800140380859,
+                "max_absolute": 16026.0,
+                "p99_absolute": 15877.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 9843.147697497843,
+                "mae": 7173.919464111328,
+                "max_absolute": 16034.0,
+                "p99_absolute": 15875.0
+              },
+              {
+                "samples": 65536,
+                "rmse": 9893.829118568106,
+                "mae": 7210.471481323242,
+                "max_absolute": 16004.0,
+                "p99_absolute": 15927.0
+              }
+            ]
+          }
+        ]
+      },
+      "result_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/result.json",
+        "sha256": "8ccb22d5d91af3fca59908728c14419399ed3f691314e02ef484cf2fea9347a5",
+        "bytes": 108862
+      },
+      "byte_delta": 5416,
+      "byte_delta_percent": 0.5124226540768634,
+      "decoder_invocations": 2,
+      "decoded_files": {
+        "independent_decoded": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/independent.tif",
+          "sha256": "4f4cc30c7eee9fa62f87989957b8802ecd15903e4b80522baa6cb87c6f027404",
+          "bytes": 4227224
+        },
+        "emuella_decoded": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/emuella.tif",
+          "sha256": "36ccff9b10cd313e2dc4e689e5fbf6079291fa9184bcbb88b05ab38babfa8f91",
+          "bytes": 4227224
+        }
+      },
+      "diagnostics": {
+        "process_failures": 0,
+        "stderr_bytes": 0,
+        "emuella_decode_stdout_warning_lines": 4,
+        "warning_topics": [
+          "quantisation",
+          "tile"
+        ],
+        "log_evidence": [
+          {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/emuella-decode.stdout",
+            "sha256": "aa98a2f36d9f9298e4b3f22d8b9346135bf2fd9465a068545168deccf948aa05",
+            "bytes": 456
+          },
+          {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/rgb16-12/emuella-decode.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          }
+        ],
+        "interpretation": "Successful expansion is separate from exact reconstructed-sample agreement. No cause inferred from diagnostics."
+      }
+    },
+    {
+      "key": "tok-rgb8-4",
+      "asset": "105_104001002F92BB00-RGB8",
+      "status": "unmatched",
+      "target_bytes": 1573332,
+      "baseline_failed_cells": 24,
+      "input": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/selected.tif",
+        "sha256": "550e047ce42af3908622cd46f9741142ab1e81e883af6d3718b77cc1f09c0662",
+        "bytes": 9443486,
+        "bands": [
+          1,
+          2,
+          3
+        ],
+        "precision": 8,
+        "exact_samples_verified": true,
+        "stretch_applied": false
+      },
+      "input_identities_unchanged": true,
+      "encoder_invocations": 8,
+      "trials": [
+        {
+          "ordinal": 1,
+          "qstep": "2.2360679774997897E-3",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-01.j2c",
+            "sha256": "761eb4119a06d14c28ab5f59fa2b9ac2d950f4004956054cbdd8eb758a3a0d69",
+            "bytes": 4058381
+          },
+          "byte_delta": 2485049,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 2,
+          "qstep": "3.3437015248821101E-2",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-02.j2c",
+            "sha256": "a1b8f03597a9477e50201ee6e51c185dcf99f8d022936cc104cb847c68b46a52",
+            "bytes": 449401
+          },
+          "byte_delta": -1123931,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 3,
+          "qstep": "8.6468167010213086E-3",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-03.j2c",
+            "sha256": "38426ebfc565e411ca0ee424f3d75b36c66f38e9310a464e3217f1519fd8777a",
+            "bytes": 1711271
+          },
+          "byte_delta": 137939,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 4,
+          "qstep": "1.7003639077733050E-2",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-04.j2c",
+            "sha256": "3d4e849d7c5b7e97fe157fcea98a12fc8287dff0a6b454d71443f0a2dff42cb6",
+            "bytes": 940373
+          },
+          "byte_delta": -632959,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 5,
+          "qstep": "1.2125483510173139E-2",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-05.j2c",
+            "sha256": "e8c5838b62c82012018f55782cff1277b4c46edcc422ac4dbb9ac425b17e8827",
+            "bytes": 1297198
+          },
+          "byte_delta": -276134,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 6,
+          "qstep": "1.0239474269889230E-2",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-06.j2c",
+            "sha256": "692855b74f029f10e6973aa30104be67a5bcbb2c86e66773902cc2443ed32aa1",
+            "bytes": 1497080
+          },
+          "byte_delta": -76252,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 7,
+          "qstep": "9.4095088674465983E-3",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-07.j2c",
+            "sha256": "8e8539a5cd775012ed9e7aa8f27e6d06021402f875092a9ad8b3baeecd469023",
+            "bytes": 1602342
+          },
+          "byte_delta": 29010,
+          "format_contract_verified": true,
+          "process_exit": 0
+        },
+        {
+          "ordinal": 8,
+          "qstep": "9.8157233019535546E-3",
+          "status": "completed",
+          "payload": {
+            "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/trial-08.j2c",
+            "sha256": "5352f0841208ee48c8f622c28a3252a0ea563dbcd9cceac505fca7c9f2390ca3",
+            "bytes": 1549494
+          },
+          "byte_delta": -23838,
+          "format_contract_verified": true,
+          "process_exit": 0
+        }
+      ],
+      "selected_trial": null,
+      "encoding_comparison_eligible": false,
+      "quality": null,
+      "reconstruction_agreement": null,
+      "result_evidence": {
+        "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-independent-cohort-01/tok-rgb8-4/result.json",
+        "sha256": "2d496189922be82753cf617c82764aca662ec4731b5a8d6b578089cbab6e6e98",
+        "bytes": 56702
+      },
+      "decoder_invocations": 0,
+      "quality_not_scored_reason": "Eight format-conforming byte-only trials exhausted without a match. No trial selected or decoded; no efficiency conclusion."
+    }
+  ],
+  "hypothesis": "Current Emuella per-tile quantiser/rate allocation leaves recoverable display distortion at this aggregate payload.",
+  "hypothesis_disposition": "not supported by this bounded cohort",
+  "bounded_interpretation": "Mansfield RGB16 demonstrates better source-valid display quality at the first payload within 1%: all 48 cells pass and all 48 RMSE values improve. Tok is unmatched and supplies no quality or encoding-efficiency result. The required two-product support condition is unmet. RGB16 exact reconstruction of the existing Emuella stream disagrees separately; this does not invalidate the eligible source-quality comparison.",
+  "minimal_codec_change_justified": false,
+  "minimal_policy_hypothesis": "RGB16 alone supports investigating recoverable distortion at this payload, but does not identify per-tile allocation or any minimal policy repair. The full two-product hypothesis is not supported by this cohort.",
+  "protocol_prose_note": "Frozen prose retains an older exact-agreement eligibility condition. Execution and this report follow the supplied committed harness, which separates source-quality efficiency from exact reconstruction as explicitly instructed; frozen protocol text was not repaired.",
+  "timing_claim": false,
+  "product_acceptance": false,
+  "fullscenes_run": false,
+  "limitations": "Black-box comparison cannot isolate quantisation, allocation, transform or entropy implementation causes. Exact reconstruction agreement is a separate frozen-view claim. No second sweep, timing claim, full-scene acceptance, visual acceptance or automatic codec change."
+}

@@ -1,0 +1,277 @@
+[
+  {
+    "label": "warm-compressed",
+    "intent": {
+      "kind": "clear_display_cache"
+    }
+  },
+  {
+    "label": "warm-gpu-revisit",
+    "intent": {
+      "kind": "action",
+      "action": "fit"
+    }
+  },
+  {
+    "label": "bookmark-large",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "zoom",
+    "intent": {
+      "kind": "zoom",
+      "factor": 0.25
+    }
+  },
+  {
+    "label": "pan",
+    "intent": {
+      "kind": "pan",
+      "dx": 0.3,
+      "dy": 0.2
+    }
+  },
+  {
+    "label": "clustered-gallery",
+    "intent": {
+      "kind": "gallery",
+      "row": 1200
+    }
+  },
+  {
+    "label": "clustered-detail",
+    "intent": {
+      "kind": "open_detection",
+      "index": 2400
+    }
+  },
+  {
+    "label": "scattered-detail",
+    "intent": {
+      "kind": "open_detection",
+      "index": 2401
+    }
+  },
+  {
+    "label": "scattered-gallery",
+    "intent": {
+      "kind": "gallery",
+      "row": 4000
+    }
+  },
+  {
+    "label": "scattered-detail-far",
+    "intent": {
+      "kind": "open_detection",
+      "index": 8001
+    }
+  },
+  {
+    "label": "stretch",
+    "intent": {
+      "kind": "stretch",
+      "low": 30,
+      "high": 1700,
+      "gamma": 1.4
+    }
+  },
+  {
+    "label": "image-1",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "bookmark-1",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-2",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "bookmark-2",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-3",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "bookmark-3",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-4",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "bookmark-4",
+    "intent": {
+      "kind": "action",
+      "action": "bookmark"
+    }
+  },
+  {
+    "label": "image-5",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "image-6",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "image-7",
+    "intent": {
+      "kind": "select_image",
+      "index": 1
+    }
+  },
+  {
+    "label": "image-8",
+    "intent": {
+      "kind": "select_image",
+      "index": 0
+    }
+  },
+  {
+    "label": "recall-0",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-1",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-2",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-3",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "recall-4",
+    "intent": {
+      "kind": "action",
+      "action": "recall"
+    }
+  },
+  {
+    "label": "simultaneous-images",
+    "intent": {
+      "kind": "action",
+      "action": "compare_image"
+    }
+  },
+  {
+    "label": "cycle-01",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 1
+  },
+  {
+    "label": "cycle-02",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 2
+  },
+  {
+    "label": "cycle-03",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 3
+  },
+  {
+    "label": "cycle-04",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 4
+  },
+  {
+    "label": "cycle-05",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 5
+  },
+  {
+    "label": "cycle-06",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 6
+  },
+  {
+    "label": "cycle-07",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 7
+  },
+  {
+    "label": "cycle-08",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 8
+  },
+  {
+    "label": "cycle-09",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 9
+  },
+  {
+    "label": "cycle-10",
+    "intent": {
+      "kind": "clear_display_cache"
+    },
+    "diagnostic_cycle": 10
+  }
+]

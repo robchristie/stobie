@@ -1,0 +1,1309 @@
+{
+  "schema": "viewer-acceptance-quality-results/1",
+  "status": "Declared unchanged-encoder rate screen rejected: no RGB16 rate passes all frozen development cells; PAN16 control passes; Tok RGB8 regression fails. Full-scene selection and reserved validation not performed.",
+  "protocol_checkpoint": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+  "frozen_views_sha256": "9ab71669f6e182e0883bc3a9bb29608dde5f4c5d3a575e9a27eaaf6c1af1b3ce",
+  "build_identity": {
+    "path": "docs/viewer-acceptance-quality-build.json",
+    "sha256": "c51133a04eab1b1acb7d345653cb5f9b38753e06bcc51e2295740f1c48d6d06b"
+  },
+  "attempts": 5,
+  "process_failures": 0,
+  "retries": 0,
+  "measurement_owner": "quality_probe",
+  "watchers": 1,
+  "operation_complete": true,
+  "warnings": "All five GDAL crop operations emitted missing PROJ database diagnostics while preserving original raster coordinates. No reprojection was requested; derivative creation and exact selected-band tile-array equality passed for every crop. CRS interpretation is not a quality claim.",
+  "records": [
+    {
+      "asset": "94_104001000B823500-RGB16",
+      "bpp": 4,
+      "phase": "screen",
+      "script_revision": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+      "script_sha256": {
+        "viewer-acceptance-quality.py": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e",
+        "viewer-real-scene-prepare.py": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e",
+        "viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+        "viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+      },
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "source_after_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "crop_sha256": "c4aea2cf214ae558eda36c5f58020252d5f92ef3c587072a8300d8495d6e9c0e",
+      "crop_rect": [
+        0,
+        0,
+        1024,
+        688
+      ],
+      "tile_count": 4,
+      "tile_supports": [
+        [
+          0,
+          0,
+          512,
+          512
+        ],
+        [
+          512,
+          0,
+          512,
+          512
+        ],
+        [
+          0,
+          512,
+          512,
+          176
+        ],
+        [
+          512,
+          512,
+          512,
+          176
+        ]
+      ],
+      "exact_selected_samples_verified": true,
+      "frozen_views_passed": false,
+      "cells": 48,
+      "failed_cells": 24,
+      "worst_rmse_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 18.697317345098476,
+        "mae": 14.695724487304688,
+        "max_absolute": 85.0,
+        "p99_absolute": 50.0,
+        "passed": false
+      },
+      "worst_p99_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 18.697317345098476,
+        "mae": 14.695724487304688,
+        "max_absolute": 85.0,
+        "p99_absolute": 50.0,
+        "passed": false
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 352530,
+          "descriptors": 3299,
+          "manifest": 1234,
+          "masks": 0
+        },
+        "total_bytes": 357063,
+        "payload_bound": 352888,
+        "tile_budget_sum": 352768,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": "Not evaluated; this quality-only representation has no validity sidecars.",
+        "packet_bytes": 352182,
+        "codestream_framing_bytes": 348,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file reference export; application delivery requires separate evidence.",
+        "manifest_sha256": "9348322e958faaab10aa13767f1394933fad7da9fce94c98f895122a0437d19c"
+      },
+      "component_packets": [
+        {
+          "source_band": 5,
+          "packet_header_bytes": 711,
+          "packet_body_bytes": 144813
+        },
+        {
+          "source_band": 3,
+          "packet_header_bytes": 685,
+          "packet_body_bytes": 110814
+        },
+        {
+          "source_band": 2,
+          "packet_header_bytes": 671,
+          "packet_body_bytes": 94488
+        }
+      ],
+      "final_tile_qcd_base": [
+        {
+          "tile": 0,
+          "exponent": 10,
+          "mantissa": 247
+        },
+        {
+          "tile": 1,
+          "exponent": 10,
+          "mantissa": 48
+        },
+        {
+          "tile": 2,
+          "exponent": 10,
+          "mantissa": 186
+        },
+        {
+          "tile": 3,
+          "exponent": 10,
+          "mantissa": 352
+        }
+      ],
+      "preparation_wall_seconds": 0.41459700278937817,
+      "preparation_metrics": {
+        "logical_read_bytes": 4227072,
+        "logical_read_operations": 12,
+        "descriptor_bytes": 3299,
+        "jpp_bytes": 0,
+        "elapsed_ms": 356.21304599999996,
+        "peak_rss_kib": 68232,
+        "process_read_bytes": 0,
+        "source_hash_read_bytes": 16778561,
+        "source_hash_ms": 9.630335,
+        "peak_tile_index_bytes": 34400,
+        "descriptor_read_bytes": 0,
+        "descriptor_read_operations": 0,
+        "source_outer_driver": "GTiff",
+        "source_nitf_ic": null,
+        "source_index_required": false,
+        "source_decoder_policy": "native GTiff; PAM disabled",
+        "process_rchar": 33616543,
+        "process_syscr": 127
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-4-01/protocol.json",
+          "sha256": "56d7c5c17e1f5012dc166bb39545b3443f7e3123d9d9f2b23b476e73a02501ad"
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-4-01/result.json",
+          "sha256": "b7bb9437af418a939f7500fcf3fc7a36d365e3b4ef422af75e7904f3533df726"
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-4-01/crop-lineage.json",
+          "sha256": "c6dc8b3029b1b36317c56a94369008382e9c1b9e14b3393c1a21b9c60bada6f8"
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-4-01-views/quality.json",
+          "sha256": "4069c6e6b769a3409527ac7a787af85f540583c3db07efd87d40c8ffaa67d09b"
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-4-01-encode/preparation-result.json",
+          "sha256": "dc0f6d4cc5ada02e1ee3db8f09a77951e564ee044f611a379b9697e003a35bc8"
+        }
+      }
+    },
+    {
+      "asset": "94_104001000B823500-RGB16",
+      "bpp": 8,
+      "phase": "screen",
+      "script_revision": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+      "script_sha256": {
+        "viewer-acceptance-quality.py": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e",
+        "viewer-real-scene-prepare.py": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e",
+        "viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+        "viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+      },
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "source_after_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "crop_sha256": "c4aea2cf214ae558eda36c5f58020252d5f92ef3c587072a8300d8495d6e9c0e",
+      "crop_rect": [
+        0,
+        0,
+        1024,
+        688
+      ],
+      "tile_count": 4,
+      "tile_supports": [
+        [
+          0,
+          0,
+          512,
+          512
+        ],
+        [
+          512,
+          0,
+          512,
+          512
+        ],
+        [
+          0,
+          512,
+          512,
+          176
+        ],
+        [
+          512,
+          512,
+          512,
+          176
+        ]
+      ],
+      "exact_selected_samples_verified": true,
+      "frozen_views_passed": false,
+      "cells": 48,
+      "failed_cells": 24,
+      "worst_rmse_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 8.304536834240064,
+        "mae": 6.5477294921875,
+        "max_absolute": 38.0,
+        "p99_absolute": 22.0,
+        "passed": false
+      },
+      "worst_p99_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 8.304536834240064,
+        "mae": 6.5477294921875,
+        "max_absolute": 38.0,
+        "p99_absolute": 22.0,
+        "passed": false
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 704788,
+          "descriptors": 3530,
+          "manifest": 1234,
+          "masks": 0
+        },
+        "total_bytes": 709552,
+        "payload_bound": 705144,
+        "tile_budget_sum": 705024,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": "Not evaluated; this quality-only representation has no validity sidecars.",
+        "packet_bytes": 704440,
+        "codestream_framing_bytes": 348,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file reference export; application delivery requires separate evidence.",
+        "manifest_sha256": "ae48931ed6bd29af9bf2956e0a34db71b7f09722bd8ee4a519173a59371e7908"
+      },
+      "component_packets": [
+        {
+          "source_band": 5,
+          "packet_header_bytes": 777,
+          "packet_body_bytes": 266762
+        },
+        {
+          "source_band": 3,
+          "packet_header_bytes": 763,
+          "packet_body_bytes": 227094
+        },
+        {
+          "source_band": 2,
+          "packet_header_bytes": 758,
+          "packet_body_bytes": 208286
+        }
+      ],
+      "final_tile_qcd_base": [
+        {
+          "tile": 0,
+          "exponent": 11,
+          "mantissa": 57
+        },
+        {
+          "tile": 1,
+          "exponent": 12,
+          "mantissa": 1891
+        },
+        {
+          "tile": 2,
+          "exponent": 11,
+          "mantissa": 31
+        },
+        {
+          "tile": 3,
+          "exponent": 11,
+          "mantissa": 187
+        }
+      ],
+      "preparation_wall_seconds": 0.4641150552779436,
+      "preparation_metrics": {
+        "logical_read_bytes": 4227072,
+        "logical_read_operations": 12,
+        "descriptor_bytes": 3530,
+        "jpp_bytes": 0,
+        "elapsed_ms": 441.44831,
+        "peak_rss_kib": 68508,
+        "process_read_bytes": 0,
+        "source_hash_read_bytes": 16778561,
+        "source_hash_ms": 7.787267,
+        "peak_tile_index_bytes": 35424,
+        "descriptor_read_bytes": 0,
+        "descriptor_read_operations": 0,
+        "source_outer_driver": "GTiff",
+        "source_nitf_ic": null,
+        "source_index_required": false,
+        "source_decoder_policy": "native GTiff; PAM disabled",
+        "process_rchar": 33616543,
+        "process_syscr": 127
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-8-01/protocol.json",
+          "sha256": "406667f490b89074b018df86cd457c2035fd0f1847217d91f55132ab655a3ea8"
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-8-01/result.json",
+          "sha256": "5b950f615b1562053f8d6b8c1ed8b35ddaf34068ee54c262673274deccddc374"
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-8-01/crop-lineage.json",
+          "sha256": "c6dc8b3029b1b36317c56a94369008382e9c1b9e14b3393c1a21b9c60bada6f8"
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-8-01-views/quality.json",
+          "sha256": "71b8b43358226d19b3737fc450bf2a1e000ceaaaf5293e5162638e51d095f182"
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-8-01-encode/preparation-result.json",
+          "sha256": "5e83b6e9111fa51fd50ef307681abe5d5c674fa17b516bc739501bb17d5b1fd0"
+        }
+      }
+    },
+    {
+      "asset": "94_104001000B823500-RGB16",
+      "bpp": 12,
+      "phase": "screen",
+      "script_revision": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+      "script_sha256": {
+        "viewer-acceptance-quality.py": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e",
+        "viewer-real-scene-prepare.py": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e",
+        "viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+        "viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+      },
+      "source_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "source_after_sha256": "f26c61bcb3e6c750619993bcd77ba3cbe4f1fd13ee53e50c137896c5ed46391e",
+      "crop_sha256": "c4aea2cf214ae558eda36c5f58020252d5f92ef3c587072a8300d8495d6e9c0e",
+      "crop_rect": [
+        0,
+        0,
+        1024,
+        688
+      ],
+      "tile_count": 4,
+      "tile_supports": [
+        [
+          0,
+          0,
+          512,
+          512
+        ],
+        [
+          512,
+          0,
+          512,
+          512
+        ],
+        [
+          0,
+          512,
+          512,
+          176
+        ],
+        [
+          512,
+          512,
+          512,
+          176
+        ]
+      ],
+      "exact_selected_samples_verified": true,
+      "frozen_views_passed": false,
+      "cells": 48,
+      "failed_cells": 6,
+      "worst_rmse_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 432,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 3.5316086308486074,
+        "mae": 2.7652587890625,
+        "max_absolute": 15.0,
+        "p99_absolute": 9.0,
+        "passed": false
+      },
+      "worst_p99_cell": {
+        "view": 0,
+        "source_view": {
+          "x": 256,
+          "y": 0,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects on apron"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 2,
+        "samples": 65536,
+        "rmse": 3.3713381646621885,
+        "mae": 2.5817718505859375,
+        "max_absolute": 15.0,
+        "p99_absolute": 9.0,
+        "passed": false
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 1056940,
+          "descriptors": 3665,
+          "manifest": 1237,
+          "masks": 0
+        },
+        "total_bytes": 1061842,
+        "payload_bound": 1057400,
+        "tile_budget_sum": 1057280,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": "Not evaluated; this quality-only representation has no validity sidecars.",
+        "packet_bytes": 1056592,
+        "codestream_framing_bytes": 348,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file reference export; application delivery requires separate evidence.",
+        "manifest_sha256": "e3cf572ea32e80fd01638af49f9ed803b871459753364f6faf8695d5093fc4c2"
+      },
+      "component_packets": [
+        {
+          "source_band": 5,
+          "packet_header_bytes": 816,
+          "packet_body_bytes": 382520
+        },
+        {
+          "source_band": 3,
+          "packet_header_bytes": 812,
+          "packet_body_bytes": 344335
+        },
+        {
+          "source_band": 2,
+          "packet_header_bytes": 805,
+          "packet_body_bytes": 327304
+        }
+      ],
+      "final_tile_qcd_base": [
+        {
+          "tile": 0,
+          "exponent": 12,
+          "mantissa": 24
+        },
+        {
+          "tile": 1,
+          "exponent": 13,
+          "mantissa": 1827
+        },
+        {
+          "tile": 2,
+          "exponent": 13,
+          "mantissa": 2010
+        },
+        {
+          "tile": 3,
+          "exponent": 12,
+          "mantissa": 151
+        }
+      ],
+      "preparation_wall_seconds": 0.5141926007345319,
+      "preparation_metrics": {
+        "logical_read_bytes": 4227072,
+        "logical_read_operations": 12,
+        "descriptor_bytes": 3665,
+        "jpp_bytes": 0,
+        "elapsed_ms": 469.738781,
+        "peak_rss_kib": 68688,
+        "process_read_bytes": 0,
+        "source_hash_read_bytes": 16778561,
+        "source_hash_ms": 7.36869,
+        "peak_tile_index_bytes": 35424,
+        "descriptor_read_bytes": 0,
+        "descriptor_read_operations": 0,
+        "source_outer_driver": "GTiff",
+        "source_nitf_ic": null,
+        "source_index_required": false,
+        "source_decoder_policy": "native GTiff; PAM disabled",
+        "process_rchar": 33616545,
+        "process_syscr": 127
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/protocol.json",
+          "sha256": "f480236094df1aea83d9f88cf3a8c7378748c02971f380621d6142f73caab059"
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/result.json",
+          "sha256": "1a4421724f4ac5aa02eb42fc3ae8832d11a3bee78198fe1bb7931347008671cd"
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01/crop-lineage.json",
+          "sha256": "c6dc8b3029b1b36317c56a94369008382e9c1b9e14b3393c1a21b9c60bada6f8"
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-views/quality.json",
+          "sha256": "bcf3802c19c6c3a527747a0e9662b910eddcfd3483b053219d8b5d2d8377a1e4"
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-rgb16-12-01-encode/preparation-result.json",
+          "sha256": "546578ef52811f52d10b86a88f00b82993d8917d59113157a7bc5700a9bbde6f"
+        }
+      },
+      "failing_cells": [
+        {
+          "view": 0,
+          "source_view": {
+            "x": 256,
+            "y": 0,
+            "width": 256,
+            "height": 256,
+            "feature": "small objects on apron"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 2,
+          "samples": 65536,
+          "rmse": 3.3713381646621885,
+          "mae": 2.5817718505859375,
+          "max_absolute": 15.0,
+          "p99_absolute": 9.0,
+          "passed": false
+        },
+        {
+          "view": 1,
+          "source_view": {
+            "x": 384,
+            "y": 256,
+            "width": 256,
+            "height": 256,
+            "feature": "low-contrast grass/runway"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 3,
+          "samples": 65536,
+          "rmse": 3.1045153803887513,
+          "mae": 2.4140167236328125,
+          "max_absolute": 15.0,
+          "p99_absolute": 8.0,
+          "passed": false
+        },
+        {
+          "view": 1,
+          "source_view": {
+            "x": 384,
+            "y": 256,
+            "width": 256,
+            "height": 256,
+            "feature": "low-contrast grass/runway"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 2,
+          "samples": 65536,
+          "rmse": 3.30601932752144,
+          "mae": 2.5832366943359375,
+          "max_absolute": 16.0,
+          "p99_absolute": 9.0,
+          "passed": false
+        },
+        {
+          "view": 2,
+          "source_view": {
+            "x": 448,
+            "y": 64,
+            "width": 256,
+            "height": 256,
+            "feature": "hangar edges"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 2,
+          "samples": 65536,
+          "rmse": 3.334661092166545,
+          "mae": 2.57843017578125,
+          "max_absolute": 16.0,
+          "p99_absolute": 9.0,
+          "passed": false
+        },
+        {
+          "view": 3,
+          "source_view": {
+            "x": 448,
+            "y": 432,
+            "width": 256,
+            "height": 256,
+            "feature": "tile crossing"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 3,
+          "samples": 65536,
+          "rmse": 3.084525487875171,
+          "mae": 2.3976287841796875,
+          "max_absolute": 15.0,
+          "p99_absolute": 8.0,
+          "passed": false
+        },
+        {
+          "view": 3,
+          "source_view": {
+            "x": 448,
+            "y": 432,
+            "width": 256,
+            "height": 256,
+            "feature": "tile crossing"
+          },
+          "scale": 1,
+          "stretch": "percentile_2_98",
+          "source_band": 2,
+          "samples": 65536,
+          "rmse": 3.5316086308486074,
+          "mae": 2.7652587890625,
+          "max_absolute": 15.0,
+          "p99_absolute": 9.0,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "asset": "94_104001000B823500-PAN16",
+      "bpp": 4,
+      "phase": "screen",
+      "script_revision": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+      "script_sha256": {
+        "viewer-acceptance-quality.py": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e",
+        "viewer-real-scene-prepare.py": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e",
+        "viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+        "viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+      },
+      "source_sha256": "328ec70ec0227effb92f25605b64df9bcf42fdd2ab142555a3e70ec543881aa3",
+      "source_after_sha256": "328ec70ec0227effb92f25605b64df9bcf42fdd2ab142555a3e70ec543881aa3",
+      "crop_sha256": "80ede4d1aaef6408fb89fb856091ae7da1ed48d051baa626b7a278041fbf0e2b",
+      "crop_rect": [
+        0,
+        0,
+        2560,
+        1536
+      ],
+      "tile_count": 15,
+      "tile_supports": [
+        [
+          0,
+          0,
+          512,
+          512
+        ],
+        [
+          512,
+          0,
+          512,
+          512
+        ],
+        [
+          1024,
+          0,
+          512,
+          512
+        ],
+        [
+          1536,
+          0,
+          512,
+          512
+        ],
+        [
+          2048,
+          0,
+          512,
+          512
+        ],
+        [
+          0,
+          512,
+          512,
+          512
+        ],
+        [
+          512,
+          512,
+          512,
+          512
+        ],
+        [
+          1024,
+          512,
+          512,
+          512
+        ],
+        [
+          1536,
+          512,
+          512,
+          512
+        ],
+        [
+          2048,
+          512,
+          512,
+          512
+        ],
+        [
+          0,
+          1024,
+          512,
+          512
+        ],
+        [
+          512,
+          1024,
+          512,
+          512
+        ],
+        [
+          1024,
+          1024,
+          512,
+          512
+        ],
+        [
+          1536,
+          1024,
+          512,
+          512
+        ],
+        [
+          2048,
+          1024,
+          512,
+          512
+        ]
+      ],
+      "exact_selected_samples_verified": true,
+      "frozen_views_passed": true,
+      "cells": 16,
+      "failed_cells": 0,
+      "worst_rmse_cell": {
+        "view": 3,
+        "source_view": {
+          "x": 448,
+          "y": 448,
+          "width": 256,
+          "height": 256,
+          "feature": "tile crossing"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 1,
+        "samples": 65536,
+        "rmse": 2.747601937371933,
+        "mae": 2.151641845703125,
+        "max_absolute": 11.0,
+        "p99_absolute": 7.0,
+        "passed": true
+      },
+      "worst_p99_cell": {
+        "view": 0,
+        "source_view": {
+          "x": 1152,
+          "y": 256,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects on apron"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 1,
+        "samples": 65536,
+        "rmse": 2.632482128752848,
+        "mae": 1.991241455078125,
+        "max_absolute": 12.0,
+        "p99_absolute": 7.0,
+        "passed": true
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 1966903,
+          "descriptors": 6680,
+          "manifest": 2010,
+          "masks": 0
+        },
+        "total_bytes": 1975593,
+        "payload_bound": 1968114,
+        "tile_budget_sum": 1968000,
+        "shared_framing_bytes": 114,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": "Not evaluated; this quality-only representation has no validity sidecars.",
+        "packet_bytes": 1965934,
+        "codestream_framing_bytes": 969,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file reference export; application delivery requires separate evidence.",
+        "manifest_sha256": "2c7abcc7baff9537c738c93598abd773d9ad0f24b8dead8e2a7fb5325c420aa0"
+      },
+      "component_packets": [
+        {
+          "source_band": 1,
+          "packet_header_bytes": 3830,
+          "packet_body_bytes": 1962104
+        }
+      ],
+      "final_tile_qcd_base": [
+        {
+          "tile": 0,
+          "exponent": 12,
+          "mantissa": 266
+        },
+        {
+          "tile": 1,
+          "exponent": 12,
+          "mantissa": 244
+        },
+        {
+          "tile": 2,
+          "exponent": 12,
+          "mantissa": 286
+        },
+        {
+          "tile": 3,
+          "exponent": 13,
+          "mantissa": 1503
+        },
+        {
+          "tile": 4,
+          "exponent": 13,
+          "mantissa": 995
+        },
+        {
+          "tile": 5,
+          "exponent": 12,
+          "mantissa": 219
+        },
+        {
+          "tile": 6,
+          "exponent": 12,
+          "mantissa": 138
+        },
+        {
+          "tile": 7,
+          "exponent": 13,
+          "mantissa": 1947
+        },
+        {
+          "tile": 8,
+          "exponent": 13,
+          "mantissa": 932
+        },
+        {
+          "tile": 9,
+          "exponent": 13,
+          "mantissa": 1658
+        },
+        {
+          "tile": 10,
+          "exponent": 12,
+          "mantissa": 170
+        },
+        {
+          "tile": 11,
+          "exponent": 13,
+          "mantissa": 1915
+        },
+        {
+          "tile": 12,
+          "exponent": 13,
+          "mantissa": 1130
+        },
+        {
+          "tile": 13,
+          "exponent": 13,
+          "mantissa": 1634
+        },
+        {
+          "tile": 14,
+          "exponent": 13,
+          "mantissa": 1482
+        }
+      ],
+      "preparation_wall_seconds": 0.8646946456283331,
+      "preparation_metrics": {
+        "logical_read_bytes": 7864320,
+        "logical_read_operations": 15,
+        "descriptor_bytes": 6680,
+        "jpp_bytes": 0,
+        "elapsed_ms": 852.350627,
+        "peak_rss_kib": 51488,
+        "process_read_bytes": 0,
+        "source_hash_read_bytes": 7865695,
+        "source_hash_ms": 3.672155,
+        "peak_tile_index_bytes": 16544,
+        "descriptor_read_bytes": 0,
+        "descriptor_read_operations": 0,
+        "source_outer_driver": "GTiff",
+        "source_nitf_ic": null,
+        "source_index_required": false,
+        "source_decoder_policy": "native GTiff; PAM disabled",
+        "process_rchar": 15790813,
+        "process_syscr": 128
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-pan16-4-01/protocol.json",
+          "sha256": "811396bcf4e4a3461b04c2835697a3116f3c6d15c3e70effe40215874d50ac0e"
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-pan16-4-01/result.json",
+          "sha256": "a9ced3d20f1a1f85537784dfbde87f632607d28664ab6a73441c713f0d9cab5d"
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-pan16-4-01/crop-lineage.json",
+          "sha256": "d2b7042527f93b2cf377ae57cff3c32b52221a5028c59ff040e1b2ef578558ea"
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-pan16-4-01-views/quality.json",
+          "sha256": "87e5ce566bf33bd057b3395777a2ebfcd2e45004bced0046b3f2a9b481e76993"
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-pan16-4-01-encode/preparation-result.json",
+          "sha256": "c559f2c99489bdce2e21cad7438eaa0767406b15a3a7a3123295a20b7aaf7c5b"
+        }
+      }
+    },
+    {
+      "asset": "105_104001002F92BB00-RGB8",
+      "bpp": 4,
+      "phase": "screen",
+      "script_revision": "1a1580b1a4e3557737ae3d0adcdfe1a8c48942f9",
+      "script_sha256": {
+        "viewer-acceptance-quality.py": "6f6b54099c342aa7371162c76a823822ab9bd7b2a26d0fe9dc1603ab4f2ca68e",
+        "viewer-real-scene-prepare.py": "78afeebf28de90a12af3ccee1fc8a33df143329d77519c025bf845a53a0c8c4e",
+        "viewer-real-scene-source.py": "b0791532ab1cc55895d9219c61b4a45d88fee6f7815825c991272de643638f2b",
+        "viewer-real-scene-quality.py": "ef08af4200e10c08cbb4a1ce4f71a24afe936d0ef4975b8aefdb22a8c4e06d97"
+      },
+      "source_sha256": "8337c700fa45605a8c6074b4dfae6d311a7d42644726a35921373cecee6c2f69",
+      "source_after_sha256": "8337c700fa45605a8c6074b4dfae6d311a7d42644726a35921373cecee6c2f69",
+      "crop_sha256": "a95c26891091fbd82cba4bd26bc52846bf2e91dae64d2aa51e2ed3e95fba9d66",
+      "crop_rect": [
+        4608,
+        0,
+        3072,
+        1024
+      ],
+      "tile_count": 12,
+      "tile_supports": [
+        [
+          4608,
+          0,
+          512,
+          512
+        ],
+        [
+          5120,
+          0,
+          512,
+          512
+        ],
+        [
+          5632,
+          0,
+          512,
+          512
+        ],
+        [
+          6144,
+          0,
+          512,
+          512
+        ],
+        [
+          6656,
+          0,
+          512,
+          512
+        ],
+        [
+          7168,
+          0,
+          512,
+          512
+        ],
+        [
+          4608,
+          512,
+          512,
+          512
+        ],
+        [
+          5120,
+          512,
+          512,
+          512
+        ],
+        [
+          5632,
+          512,
+          512,
+          512
+        ],
+        [
+          6144,
+          512,
+          512,
+          512
+        ],
+        [
+          6656,
+          512,
+          512,
+          512
+        ],
+        [
+          7168,
+          512,
+          512,
+          512
+        ]
+      ],
+      "exact_selected_samples_verified": true,
+      "frozen_views_passed": false,
+      "cells": 48,
+      "failed_cells": 24,
+      "worst_rmse_cell": {
+        "view": 0,
+        "source_view": {
+          "x": 4736,
+          "y": 128,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects near apron"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 3,
+        "samples": 65536,
+        "rmse": 9.63651290568561,
+        "mae": 7.2522125244140625,
+        "max_absolute": 41.0,
+        "p99_absolute": 25.0,
+        "passed": false
+      },
+      "worst_p99_cell": {
+        "view": 0,
+        "source_view": {
+          "x": 4736,
+          "y": 128,
+          "width": 256,
+          "height": 256,
+          "feature": "small objects near apron"
+        },
+        "scale": 1,
+        "stretch": "percentile_2_98",
+        "source_band": 3,
+        "samples": 65536,
+        "rmse": 9.63651290568561,
+        "mae": 7.2522125244140625,
+        "max_absolute": 41.0,
+        "p99_absolute": 25.0,
+        "passed": false
+      },
+      "storage": {
+        "actual_bytes": {
+          "payload": 1573332,
+          "descriptors": 11042,
+          "manifest": 1811,
+          "masks": 0
+        },
+        "total_bytes": 1586185,
+        "payload_bound": 1574520,
+        "tile_budget_sum": 1574400,
+        "shared_framing_bytes": 120,
+        "payload_eligible": true,
+        "descriptors_eligible": true,
+        "manifest_eligible": true,
+        "mask_eligibility": "Not evaluated; this quality-only representation has no validity sidecars.",
+        "packet_bytes": 1572528,
+        "codestream_framing_bytes": 804,
+        "delivered_bytes": null,
+        "delivery_boundary": "Direct-file reference export; application delivery requires separate evidence.",
+        "manifest_sha256": "72382950b233bd3efddf2b82b99b6d1701ecb2bd9dae416005dea33fd6a743a2"
+      },
+      "component_packets": [
+        {
+          "source_band": 1,
+          "packet_header_bytes": 2516,
+          "packet_body_bytes": 605541
+        },
+        {
+          "source_band": 2,
+          "packet_header_bytes": 2472,
+          "packet_body_bytes": 546199
+        },
+        {
+          "source_band": 3,
+          "packet_header_bytes": 2358,
+          "packet_body_bytes": 413442
+        }
+      ],
+      "final_tile_qcd_base": [
+        {
+          "tile": 0,
+          "exponent": 7,
+          "mantissa": 834
+        },
+        {
+          "tile": 1,
+          "exponent": 7,
+          "mantissa": 768
+        },
+        {
+          "tile": 2,
+          "exponent": 8,
+          "mantissa": 1595
+        },
+        {
+          "tile": 3,
+          "exponent": 7,
+          "mantissa": 182
+        },
+        {
+          "tile": 4,
+          "exponent": 7,
+          "mantissa": 460
+        },
+        {
+          "tile": 5,
+          "exponent": 7,
+          "mantissa": 383
+        },
+        {
+          "tile": 6,
+          "exponent": 8,
+          "mantissa": 1131
+        },
+        {
+          "tile": 7,
+          "exponent": 8,
+          "mantissa": 1570
+        },
+        {
+          "tile": 8,
+          "exponent": 8,
+          "mantissa": 1320
+        },
+        {
+          "tile": 9,
+          "exponent": 8,
+          "mantissa": 1872
+        },
+        {
+          "tile": 10,
+          "exponent": 8,
+          "mantissa": 1609
+        },
+        {
+          "tile": 11,
+          "exponent": 8,
+          "mantissa": 1779
+        }
+      ],
+      "preparation_wall_seconds": 1.6156767690554261,
+      "preparation_metrics": {
+        "logical_read_bytes": 9437184,
+        "logical_read_operations": 36,
+        "descriptor_bytes": 11042,
+        "jpp_bytes": 0,
+        "elapsed_ms": 1585.0241210000002,
+        "peak_rss_kib": 59524,
+        "process_read_bytes": 0,
+        "source_hash_read_bytes": 9438547,
+        "source_hash_ms": 4.449088000000001,
+        "peak_tile_index_bytes": 34400,
+        "descriptor_read_bytes": 0,
+        "descriptor_read_operations": 0,
+        "source_outer_driver": "GTiff",
+        "source_nitf_ic": null,
+        "source_index_required": false,
+        "source_decoder_policy": "native GTiff; PAM disabled",
+        "process_rchar": 18936518,
+        "process_syscr": 127
+      },
+      "evidence": {
+        "protocol": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/protocol.json",
+          "sha256": "31e5f1f938f368ee8f15eb0f31d11ca772b8d48097b41327bef71a6983037d60"
+        },
+        "result": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/result.json",
+          "sha256": "e1a936b918cbda1d03c1a5c34bcc499e97c15214175a5112edaefa51cb2570f2"
+        },
+        "lineage": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01/crop-lineage.json",
+          "sha256": "d06b429e391e44ec77ef88306477b6afca931b468e05d66222be1b419e78fa1b"
+        },
+        "quality": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-views/quality.json",
+          "sha256": "550440fe8e8abf0fd0b67e6bb7715651bb2e8ed034c8b8a58cf4914a991505c1"
+        },
+        "preparation": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/viewer-acceptance-quality-screen-tok-rgb8-4-01-encode/preparation-result.json",
+          "sha256": "ab83d6f2af63d8745f3543deced31294d7c165f161cd1e329c5700408054bad2"
+        }
+      }
+    }
+  ],
+  "boundaries": {
+    "full_scene_quality": "Not run; all RGB16 screen candidates have a failed required view predicate. No selected complete configuration.",
+    "visual_acceptance": "Not assessed",
+    "independent_reconstruction": "Not assessed",
+    "human_acceptance": "Not assessed",
+    "analytical_ml_suitability": "Not assessed",
+    "mask_delivery": "Separate workstream; quality used original validity, not reconstructed zeros.",
+    "rate_efficiency": "Only the unchanged encoder bracket; component/QCD observations do not establish an alternative policy benefit.",
+    "next_decision": "Coordinator decides bounded quality rejection or a separate explicitly selected remaining authorised comparison/policy probe. No second rate sweep."
+  }
+}

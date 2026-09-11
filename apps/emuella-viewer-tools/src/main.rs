@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, ensure};
 use emuella_viewer_source::{Identity, Profile, sha256};
-use emuella_viewer_tools::{Service, fixture, gdal::Raster, hash_file, prepare_with_retention};
+use emuella_viewer_tools::{Service, fixture, gdal::Raster, hash_file, prepare_with_validity};
 use std::{collections::BTreeMap, net::TcpListener, path::PathBuf};
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
@@ -77,7 +77,45 @@ fn main() -> Result<()> {
             let source_sha256 = hash_file(&input)?;
             let hash_ms = hash_start.elapsed().as_secs_f64() * 1000.;
             let source_bytes = std::fs::metadata(&input)?.len();
+            let mut mask_raster = if let Some(input) = options.get("--mask-input") {
+                let selected: Vec<u16> = options
+                    .get("--mask-bands")
+                    .context("--mask-bands required")?
+                    .split(',')
+                    .map(str::parse)
+                    .collect::<std::result::Result<_, _>>()?;
+                let original_bits = get("--mask-bits", &bits.to_string()).parse()?;
+                let source = Raster::open(
+                    &library,
+                    &PathBuf::from(input),
+                    selected.clone(),
+                    original_bits,
+                    64 << 20,
+                )?;
+                ensure!(
+                    source.width == raster.width
+                        && source.height == raster.height
+                        && source.components == raster.components,
+                    "mask/source grid mismatch"
+                );
+                Some((
+                    source,
+                    emuella_viewer_source::validity::ValidityIdentity {
+                        source_sha256: hash_file(&PathBuf::from(input))?,
+                        bands: selected,
+                        policy: emuella_viewer_source::validity::POLICY.into(),
+                        tile_sha256: Vec::new(),
+                    },
+                ))
+            } else {
+                ensure!(
+                    !options.contains_key("--mask-bands") && !options.contains_key("--mask-bits"),
+                    "--mask-input required"
+                );
+                None
+            };
             let identity = Identity {
+                validity: mask_raster.as_ref().map(|(_, v)| v.clone()),
                 source_sha256,
                 bands,
                 profile,
@@ -92,12 +130,25 @@ fn main() -> Result<()> {
                 descriptor_format: "EHTIDX01".into(),
             };
             let output = PathBuf::from(options.get("--output").context("--output required")?);
-            let (manifest, mut metrics) = prepare_with_retention(
+            let mut mask_reader = |rect| {
+                mask_raster
+                    .as_mut()
+                    .context("mask source absent")?
+                    .0
+                    .read_masks(rect)
+            };
+            let masks_enabled = identity.validity.is_some();
+            let (manifest, mut metrics) = prepare_with_validity(
                 &output,
                 &get("--target", "image"),
                 identity,
                 |rect, planes| raster.read_tile(rect, planes),
                 get("--retain-incomplete", "false").parse()?,
+                if masks_enabled {
+                    Some(&mut mask_reader)
+                } else {
+                    None
+                },
             )?;
             metrics.source_outer_driver = Some(raster.driver.clone());
             metrics.source_nitf_ic = raster.nitf_ic.clone();
