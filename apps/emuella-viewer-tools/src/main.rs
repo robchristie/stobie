@@ -103,7 +103,7 @@ fn main() -> Result<()> {
                     emuella_viewer_source::validity::ValidityIdentity {
                         source_sha256: hash_file(&PathBuf::from(input))?,
                         bands: selected,
-                        policy: emuella_viewer_source::validity::POLICY.into(),
+                        policy: emuella_viewer_source::validity::COMPACT_POLICY.into(),
                         tile_sha256: Vec::new(),
                     },
                 ))
@@ -247,6 +247,12 @@ fn main() -> Result<()> {
                 report.mismatched_records == 0,
                 "reference comparison failed"
             );
+        }
+        "compact-validity" => {
+            let input = PathBuf::from(options.get("--input").context("--input required")?);
+            let output = PathBuf::from(options.get("--output").context("--output required")?);
+            let result = emuella_viewer_tools::compact::convert(&input, &output)?;
+            println!("{}", serde_json::to_string_pretty(&result)?);
         }
         "serve" => {
             ensure!(

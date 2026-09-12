@@ -1,6 +1,9 @@
 # Exact representation validity
 
-The optional `identity.validity` contract is `source-validity-v1`. Existing
+The legacy optional `identity.validity` contract is `source-validity-v1`.
+New preparation uses the additive `source-validity-v2` representation encoding
+described in [compact validity](representation-efficiency-masks.md); the exact
+source-grid policy below is unchanged. Existing
 representations without it remain unmasked and retain their existing identity.
 It binds the original source SHA-256, original selected band numbers (in output
 component order), source-grid geometry from the representation profile, policy

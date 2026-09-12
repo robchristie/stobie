@@ -12,6 +12,7 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+pub mod compact;
 pub mod gdal;
 pub mod measure;
 pub mod reference;
@@ -161,7 +162,17 @@ pub fn prepare_with_validity(
                             native.len() == usize::from(identity.profile.components),
                             "mask component mismatch"
                         );
-                        for (d, bytes) in validity::encode_tile(
+                        let policy = &identity
+                            .validity
+                            .as_ref()
+                            .context("mask identity absent")?
+                            .policy;
+                        let encode = if policy == validity::COMPACT_POLICY {
+                            validity::encode_compact_tile
+                        } else {
+                            validity::encode_tile
+                        };
+                        for (d, bytes) in encode(
                             rect.width,
                             rect.height,
                             identity.profile.decomposition_levels,
@@ -178,7 +189,7 @@ pub fn prepare_with_validity(
                                 &bytes,
                             )?;
                             metrics.mask_bytes += bytes.len() as u64;
-                            mask_hashes[d].push(sha256(&bytes));
+                            mask_hashes[d].push(validity::catalogue_entry(policy, &bytes)?);
                         }
                         metrics.mask_read_operations += native.len() as u64;
                         Ok(())
@@ -589,10 +600,7 @@ impl Service {
                 .validity
                 .as_ref()
                 .context("mask not declared")?;
-            let (w, h) = validity::tile_size(&rep.manifest.identity.profile, tile, discard)?;
-            let expected = (w * h).div_ceil(8) as u64
-                * u64::from(rep.manifest.identity.profile.components)
-                * if discard == 0 { 1 } else { 2 };
+            let expected = v.byte_len(&rep.manifest.identity.profile, tile, discard)? as u64;
             let path = rep
                 .root
                 .join("masks")

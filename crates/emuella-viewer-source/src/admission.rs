@@ -79,13 +79,11 @@ impl SharedClient {
         }
         bins.sort_unstable_by_key(|b| b.0);
         let mut masks = Vec::new();
-        if r.manifest.identity.validity.is_some() {
+        let image_bytes = bytes;
+        if let Some(validity) = &r.manifest.identity.validity {
             for tile in tiles {
-                let (w, h) =
-                    validity::tile_size(&r.manifest.identity.profile, tile, region.discard)?;
-                let length = (w * h).div_ceil(8) as usize
-                    * usize::from(r.manifest.identity.profile.components)
-                    * if region.discard == 0 { 1 } else { 2 };
+                let length =
+                    validity.byte_len(&r.manifest.identity.profile, tile, region.discard)?;
                 bytes = bytes
                     .checked_add(length)
                     .ok_or_else(|| anyhow!("working-set admission: size overflow"))?;
@@ -94,8 +92,9 @@ impl SharedClient {
         }
         ensure!(
             bytes <= self.limits.compressed_bytes,
-            "working-set admission: required compressed bins and masks need {bytes} bytes, limit {}",
-            self.limits.compressed_bytes
+            "working-set admission: required compressed bins and masks need {bytes} bytes, limit {} (image bins {image_bytes}, masks {})",
+            self.limits.compressed_bytes,
+            bytes - image_bytes
         );
         let scope = RequestScope(
             self.next_request
@@ -138,7 +137,7 @@ impl SharedClient {
             .masks
             .iter()
             .filter_map(|k| r.masks.get(k))
-            .map(Vec::len)
+            .map(<[u8]>::len)
             .sum::<usize>();
         let missing = bytes - retained;
         self.next_request = scope.0;
@@ -213,7 +212,7 @@ impl SharedClient {
                 r.masks
                     .keys()
                     .filter(move |k| tid != &active.tid || !active.masks.contains(k))
-                    .map(move |k| (r.used, tid.clone(), *k))
+                    .map(move |k| (r.used, tid.clone(), k))
             })
             .min();
         if let Some((_, tid, mask)) = mask {

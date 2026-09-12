@@ -1,0 +1,1212 @@
+{
+  "schema": "representation-efficiency-masks-results/1",
+  "status": "compact-validity-passed-with-pressure-exclusions",
+  "runtime_commit": "264c92d44546e5e08113709eb6aec79b60d01788",
+  "tree": "db33806a63d4f4d774b3c45be7761101bad854ef",
+  "disposition": "quality-rejected-diagnostic-only",
+  "assets": [
+    {
+      "name": "mansfield-pan16-4",
+      "tid": "c44ebb1b44a2c811e64a1fb3fc80c62a0c299dceeb108505af9e2cce2361f166",
+      "legacy_tid": "d906feb59d6605ed68dfc617ca71850da70ccf04f8466179826c33ee7ad251a6",
+      "storage": {
+        "payload_bytes": 6677852,
+        "descriptor_bytes": 25166,
+        "legacy_mask_bytes": 2781284,
+        "mask_bytes": 420,
+        "manifest_bytes": 39208,
+        "legacy_manifest_bytes": 38368,
+        "total_representation_bytes": 6742646,
+        "new_state_tag_serialised_bytes": 840,
+        "new_state_tag_retained_heap_bytes": 840,
+        "all_invalid_files": 0,
+        "all_valid_files": 420,
+        "bitmap_files": 0
+      },
+      "ancillary_bytes": 151447,
+      "ancillary_files": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/LICENSE.txt",
+          "bytes": 20605,
+          "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/conversion.json",
+          "bytes": 128757,
+          "sha256": "ec8ea9c2ef9adcf25e7a795da4b063f0e9b4476427b5ed546a02010f47d91881"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/conversion.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/lineage.json",
+          "bytes": 891,
+          "sha256": "318b72ffdfc084861bd97a212c616a53ff157a8ab4d20c875fab6aaf8153c7cf"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/oracle.json",
+          "bytes": 1194,
+          "sha256": "0f16ca68281d23b03bab9ea911c9a3f016ffa52b3903bea49d5623a1687d6c8c"
+        }
+      ],
+      "oracle": {
+        "cells": 35600216,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "working_peak_bytes": 557057,
+        "receipt": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-pan16-4-01/oracle.json",
+          "bytes": 1194,
+          "sha256": "0f16ca68281d23b03bab9ea911c9a3f016ffa52b3903bea49d5623a1687d6c8c"
+        }
+      },
+      "native": {
+        "regions": 14,
+        "samples": 93162,
+        "validity_values": 93162,
+        "all_terminal_reservations_released": true,
+        "peak_reserved_bytes": 131215,
+        "peak_pin_metadata_bytes": 430,
+        "peak_actual_compressed_bytes": 154592,
+        "peak_actual_descriptor_bytes": 22908,
+        "retained_compact_metadata_bytes": 840,
+        "received_mask_bytes": 14,
+        "received_jpp_bytes": 154726,
+        "received_descriptor_bytes": 738,
+        "peak_codec_workspace_bytes": 2221866,
+        "peak_mask_bytes": 14,
+        "metrics": {
+          "compressed_bin_evictions": 0,
+          "compressed_read_bytes": 184666,
+          "decode_count": 14,
+          "decoded_pixels": 93162,
+          "mask_evictions": 0,
+          "peak_codec_workspace_bytes": 2221866,
+          "peak_compressed_bytes": 154592,
+          "peak_descriptor_bytes": 22908,
+          "peak_mask_bytes": 14,
+          "received_descriptor_bytes": 738,
+          "received_jpp_bytes": 154726,
+          "received_mask_bytes": 14,
+          "representation_evictions": 0,
+          "selected_block_coefficients": 344212,
+          "selected_code_blocks": 194,
+          "synthesis_coefficients_loaded": 123154,
+          "synthesis_horizontal_values": 144328,
+          "synthesis_lifting_updates": 615968,
+          "synthesis_output_samples": 93162,
+          "synthesis_vertical_values": 133664
+        },
+        "peak_regional_validity_bytes": 65536,
+        "peak_interleaved_u16_frame_with_validity_bytes": 196608,
+        "gpu_packing_model_peak_bytes": 262144,
+        "gpu_packing_model_note": "Derived from unchanged regional renderer accounting, not a whole-scene GPU measurement; scalar validity uses 4 bytes/cell, RGB 8 bytes/cell; authored GPU readback verifies packing and eviction."
+      }
+    },
+    {
+      "name": "mansfield-rgb16-12",
+      "tid": "531382e54430ea6c0b3b61dce742382d406550ea9bdfd0e6c4050c25e690cb21",
+      "legacy_tid": "beb74c7666a585e9b19456a33158e8aa101e85636c5788844c22496f887534eb",
+      "storage": {
+        "payload_bytes": 1252060,
+        "descriptor_bytes": 5042,
+        "legacy_mask_bytes": 521826,
+        "mask_bytes": 42,
+        "manifest_bytes": 5120,
+        "legacy_manifest_bytes": 5036,
+        "total_representation_bytes": 1262264,
+        "new_state_tag_serialised_bytes": 84,
+        "new_state_tag_retained_heap_bytes": 84,
+        "all_invalid_files": 0,
+        "all_valid_files": 42,
+        "bitmap_files": 0
+      },
+      "ancillary_bytes": 36399,
+      "ancillary_files": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/LICENSE.txt",
+          "bytes": 20605,
+          "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/conversion.json",
+          "bytes": 13710,
+          "sha256": "67b1e7b294c101ac7997dd46c495edf7f5e9058a280b2dfe4400e58950d890fb"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/conversion.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/lineage.json",
+          "bytes": 892,
+          "sha256": "d08ed2366e38120a47d78984ad0a948d8b39c806915d783c009bec4879938c72"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/oracle.json",
+          "bytes": 1192,
+          "sha256": "68a3615249656564ac8ab246c2d9759e43c52ce4d4e4b469abadc73af03e7468"
+        }
+      ],
+      "oracle": {
+        "cells": 6678150,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "working_peak_bytes": 622593,
+        "receipt": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-mansfield-rgb16-12-01/oracle.json",
+          "bytes": 1192,
+          "sha256": "68a3615249656564ac8ab246c2d9759e43c52ce4d4e4b469abadc73af03e7468"
+        }
+      },
+      "native": {
+        "regions": 56,
+        "samples": 559068,
+        "validity_values": 372712,
+        "all_terminal_reservations_released": true,
+        "peak_reserved_bytes": 393286,
+        "peak_pin_metadata_bytes": 770,
+        "peak_actual_compressed_bytes": 443230,
+        "peak_actual_descriptor_bytes": 53694,
+        "retained_compact_metadata_bytes": 84,
+        "received_mask_bytes": 14,
+        "received_jpp_bytes": 443612,
+        "received_descriptor_bytes": 1677,
+        "peak_codec_workspace_bytes": 2205033,
+        "peak_mask_bytes": 14,
+        "metrics": {
+          "compressed_bin_evictions": 0,
+          "compressed_read_bytes": 993626,
+          "decode_count": 56,
+          "decoded_pixels": 372712,
+          "mask_evictions": 0,
+          "peak_codec_workspace_bytes": 2205033,
+          "peak_compressed_bytes": 443230,
+          "peak_descriptor_bytes": 53694,
+          "peak_mask_bytes": 14,
+          "received_descriptor_bytes": 1677,
+          "received_jpp_bytes": 443612,
+          "received_mask_bytes": 14,
+          "representation_evictions": 0,
+          "selected_block_coefficients": 1847574,
+          "selected_code_blocks": 1146,
+          "synthesis_coefficients_loaded": 692004,
+          "synthesis_horizontal_values": 847194,
+          "synthesis_lifting_updates": 3533340,
+          "synthesis_output_samples": 559068,
+          "synthesis_vertical_values": 786540
+        },
+        "peak_regional_validity_bytes": 65536,
+        "peak_interleaved_u16_frame_with_validity_bytes": 458752,
+        "gpu_packing_model_peak_bytes": 524288,
+        "gpu_packing_model_note": "Derived from unchanged regional renderer accounting, not a whole-scene GPU measurement; scalar validity uses 4 bytes/cell, RGB 8 bytes/cell; authored GPU readback verifies packing and eviction."
+      }
+    },
+    {
+      "name": "boca-pan16-4",
+      "tid": "e84896420c62200ce2a9854d5d72ecb6b3947afaa42d35c13e98e2dc69636e3e",
+      "legacy_tid": "7fd09e3bc783a62aace36a08e1b5fd42e00ad09fe3044d87f4cd10db03c728e2",
+      "storage": {
+        "payload_bytes": 7738315,
+        "descriptor_bytes": 37086,
+        "legacy_mask_bytes": 5851548,
+        "mask_bytes": 595670,
+        "manifest_bytes": 70809,
+        "legacy_manifest_bytes": 69269,
+        "total_representation_bytes": 8441880,
+        "new_state_tag_serialised_bytes": 1540,
+        "new_state_tag_retained_heap_bytes": 1540,
+        "all_invalid_files": 308,
+        "all_valid_files": 385,
+        "bitmap_files": 77
+      },
+      "ancillary_bytes": 258335,
+      "ancillary_files": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/LICENSE.txt",
+          "bytes": 20605,
+          "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/conversion.json",
+          "bytes": 235659,
+          "sha256": "08c4ea98b4b80bea50e0e63ff8ee6ad04c4a03e3dc515c7b2e0f4c6df0d049de"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/conversion.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/lineage.json",
+          "bytes": 886,
+          "sha256": "e090482407f6ccc355a1e04299f60bd7b1458f15572368aea8cf1f11ac300279"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/oracle.json",
+          "bytes": 1185,
+          "sha256": "2a0157c157007d4c1435573dab295d77ffd895340a5050c51d97e66d62111061"
+        }
+      ],
+      "oracle": {
+        "cells": 74898112,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "working_peak_bytes": 589825,
+        "receipt": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-pan16-4-01/oracle.json",
+          "bytes": 1185,
+          "sha256": "2a0157c157007d4c1435573dab295d77ffd895340a5050c51d97e66d62111061"
+        }
+      },
+      "native": {
+        "regions": 14,
+        "samples": 137054,
+        "validity_values": 137054,
+        "all_terminal_reservations_released": true,
+        "peak_reserved_bytes": 366796,
+        "peak_pin_metadata_bytes": 1018,
+        "peak_actual_compressed_bytes": 672703,
+        "peak_actual_descriptor_bytes": 79816,
+        "retained_compact_metadata_bytes": 1540,
+        "received_mask_bytes": 109258,
+        "received_jpp_bytes": 563896,
+        "received_descriptor_bytes": 2466,
+        "peak_codec_workspace_bytes": 1472510,
+        "peak_mask_bytes": 109258,
+        "metrics": {
+          "compressed_bin_evictions": 0,
+          "compressed_read_bytes": 337292,
+          "decode_count": 14,
+          "decoded_pixels": 137054,
+          "mask_evictions": 0,
+          "peak_codec_workspace_bytes": 1472510,
+          "peak_compressed_bytes": 672703,
+          "peak_descriptor_bytes": 79816,
+          "peak_mask_bytes": 109258,
+          "received_descriptor_bytes": 2466,
+          "received_jpp_bytes": 563896,
+          "received_mask_bytes": 109258,
+          "representation_evictions": 0,
+          "selected_block_coefficients": 720768,
+          "selected_code_blocks": 462,
+          "synthesis_coefficients_loaded": 199603,
+          "synthesis_horizontal_values": 224206,
+          "synthesis_lifting_updates": 974964,
+          "synthesis_output_samples": 137054,
+          "synthesis_vertical_values": 200727
+        },
+        "peak_regional_validity_bytes": 65536,
+        "peak_interleaved_u16_frame_with_validity_bytes": 196608,
+        "gpu_packing_model_peak_bytes": 262144,
+        "gpu_packing_model_note": "Derived from unchanged regional renderer accounting, not a whole-scene GPU measurement; scalar validity uses 4 bytes/cell, RGB 8 bytes/cell; authored GPU readback verifies packing and eviction."
+      }
+    },
+    {
+      "name": "boca-rgb16-12",
+      "tid": "f46b5cb8efce58dc92bfe7232bccb479681bf07188352de6335d6683365faad2",
+      "legacy_tid": "959ff7ed13488b9e7951d9a11a5c85e09863c1c27cc3fc9da58702bb6d48322b",
+      "storage": {
+        "payload_bytes": 1563932,
+        "descriptor_bytes": 6329,
+        "legacy_mask_bytes": 1097535,
+        "mask_bytes": 446211,
+        "manifest_bytes": 7018,
+        "legacy_manifest_bytes": 6892,
+        "total_representation_bytes": 2023490,
+        "new_state_tag_serialised_bytes": 126,
+        "new_state_tag_retained_heap_bytes": 126,
+        "all_invalid_files": 21,
+        "all_valid_files": 21,
+        "bitmap_files": 21
+      },
+      "ancillary_bytes": 42828,
+      "ancillary_files": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/LICENSE.txt",
+          "bytes": 20605,
+          "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/conversion.json",
+          "bytes": 20151,
+          "sha256": "d38f2b2d8241974f8892dfe10c5ce6a45686b7fdf7c8a70656bbacef4c379a29"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/conversion.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/lineage.json",
+          "bytes": 887,
+          "sha256": "0de831747e9aea29bce69d80aaf5c4800fea521c2271fb405ab3290a99767c13"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/oracle.json",
+          "bytes": 1185,
+          "sha256": "c13d76d739b8cd31cf2bc82bc2f34b36b722faf5dde2171f1cb61a0153038381"
+        }
+      ],
+      "oracle": {
+        "cells": 14045358,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "working_peak_bytes": 720897,
+        "receipt": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-boca-rgb16-12-01/oracle.json",
+          "bytes": 1185,
+          "sha256": "c13d76d739b8cd31cf2bc82bc2f34b36b722faf5dde2171f1cb61a0153038381"
+        }
+      },
+      "native": {
+        "regions": 56,
+        "samples": 822036,
+        "validity_values": 548024,
+        "all_terminal_reservations_released": true,
+        "peak_reserved_bytes": 983196,
+        "peak_pin_metadata_bytes": 1302,
+        "peak_actual_compressed_bytes": 1114248,
+        "peak_actual_descriptor_bytes": 71098,
+        "retained_compact_metadata_bytes": 126,
+        "received_mask_bytes": 327662,
+        "received_jpp_bytes": 787028,
+        "received_descriptor_bytes": 2110,
+        "peak_codec_workspace_bytes": 2230081,
+        "peak_mask_bytes": 327662,
+        "metrics": {
+          "compressed_bin_evictions": 0,
+          "compressed_read_bytes": 1590184,
+          "decode_count": 56,
+          "decoded_pixels": 548024,
+          "mask_evictions": 0,
+          "peak_codec_workspace_bytes": 2230081,
+          "peak_compressed_bytes": 1114248,
+          "peak_descriptor_bytes": 71098,
+          "peak_mask_bytes": 327662,
+          "received_descriptor_bytes": 2110,
+          "received_jpp_bytes": 787028,
+          "received_mask_bytes": 327662,
+          "representation_evictions": 0,
+          "selected_block_coefficients": 2973312,
+          "selected_code_blocks": 1584,
+          "synthesis_coefficients_loaded": 1144404,
+          "synthesis_horizontal_values": 1350108,
+          "synthesis_lifting_updates": 5733768,
+          "synthesis_output_samples": 822036,
+          "synthesis_vertical_values": 1194408
+        },
+        "peak_regional_validity_bytes": 65536,
+        "peak_interleaved_u16_frame_with_validity_bytes": 458752,
+        "gpu_packing_model_peak_bytes": 524288,
+        "gpu_packing_model_note": "Derived from unchanged regional renderer accounting, not a whole-scene GPU measurement; scalar validity uses 4 bytes/cell, RGB 8 bytes/cell; authored GPU readback verifies packing and eviction."
+      }
+    },
+    {
+      "name": "tok-rgb8-4",
+      "tid": "0879e9c71a951078802d1406f55087cd1460828408797cdb3b3c6131fd21b014",
+      "legacy_tid": "afb2f56fcc90336bb003a9c101e9466e12177241924e0e7f601781f4bb13ae1e",
+      "storage": {
+        "payload_bytes": 8422520,
+        "descriptor_bytes": 69416,
+        "legacy_mask_bytes": 10528158,
+        "mask_bytes": 588,
+        "manifest_bytes": 54416,
+        "legacy_manifest_bytes": 53240,
+        "total_representation_bytes": 8546940,
+        "new_state_tag_serialised_bytes": 1176,
+        "new_state_tag_retained_heap_bytes": 1176,
+        "all_invalid_files": 0,
+        "all_valid_files": 588,
+        "bitmap_files": 0
+      },
+      "ancillary_bytes": 202663,
+      "ancillary_files": [
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/LICENSE.txt",
+          "bytes": 20605,
+          "sha256": "f627ad059128fa5246a21e25759c1d33e35c4bb6287d636c4b970f7df57e7eba"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/conversion.json",
+          "bytes": 179988,
+          "sha256": "eb5693c5bfc07b231b0f84c2c139187e69b5f72992741ea86c7433fb46ac9011"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/conversion.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/lineage.json",
+          "bytes": 884,
+          "sha256": "2c9b512935056379e6079a74a1b7126ab2ef38486a427c2a86efb58c4db16c18"
+        },
+        {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/oracle.json",
+          "bytes": 1186,
+          "sha256": "c7334526f2893c20b4ed91e779753c59e2adc7728effc39fdc6b5d5fdf5ca8ef"
+        }
+      ],
+      "oracle": {
+        "cells": 134742840,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "working_peak_bytes": 622593,
+        "receipt": {
+          "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-tok-rgb8-4-01/oracle.json",
+          "bytes": 1186,
+          "sha256": "c7334526f2893c20b4ed91e779753c59e2adc7728effc39fdc6b5d5fdf5ca8ef"
+        }
+      },
+      "native": {
+        "regions": 56,
+        "samples": 559068,
+        "validity_values": 372712,
+        "all_terminal_reservations_released": true,
+        "peak_reserved_bytes": 131207,
+        "peak_pin_metadata_bytes": 1302,
+        "peak_actual_compressed_bytes": 245740,
+        "peak_actual_descriptor_bytes": 89656,
+        "retained_compact_metadata_bytes": 1176,
+        "received_mask_bytes": 21,
+        "received_jpp_bytes": 246251,
+        "received_descriptor_bytes": 2360,
+        "peak_codec_workspace_bytes": 2247991,
+        "peak_mask_bytes": 21,
+        "metrics": {
+          "compressed_bin_evictions": 0,
+          "compressed_read_bytes": 570028,
+          "decode_count": 56,
+          "decoded_pixels": 372712,
+          "mask_evictions": 0,
+          "peak_codec_workspace_bytes": 2247991,
+          "peak_compressed_bytes": 245740,
+          "peak_descriptor_bytes": 89656,
+          "peak_mask_bytes": 21,
+          "received_descriptor_bytes": 2360,
+          "received_jpp_bytes": 246251,
+          "received_mask_bytes": 21,
+          "representation_evictions": 0,
+          "selected_block_coefficients": 2609952,
+          "selected_code_blocks": 1632,
+          "synthesis_coefficients_loaded": 799812,
+          "synthesis_horizontal_values": 928956,
+          "synthesis_lifting_updates": 3981324,
+          "synthesis_output_samples": 559068,
+          "synthesis_vertical_values": 820962
+        },
+        "peak_regional_validity_bytes": 65536,
+        "peak_interleaved_u16_frame_with_validity_bytes": 458752,
+        "gpu_packing_model_peak_bytes": 524288,
+        "gpu_packing_model_note": "Derived from unchanged regional renderer accounting, not a whole-scene GPU measurement; scalar validity uses 4 bytes/cell, RGB 8 bytes/cell; authored GPU readback verifies packing and eviction."
+      }
+    }
+  ],
+  "canonical": {
+    "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/canonical-result.json",
+    "bytes": 1226,
+    "sha256": "37e68e5c916983d4f52da0317aad9b7ddfbb44e3d87894797542d0fe4a299c37",
+    "record": {
+      "command": [
+        "unshare",
+        "--user",
+        "--map-root-user",
+        "--mount",
+        "--net",
+        "sh",
+        "-c",
+        "mount --make-rprivate / && mount --bind /nvme/development/emuella/.build-targets/representation-efficiency/masks/tools /nvme/development/polyorama-representation-efficiency/.tools && mount --bind /nvme/development/emuella/.build-targets/representation-efficiency/masks/node_modules /nvme/development/polyorama-representation-efficiency/node_modules && ip link set lo up && exec cargo xtask verify"
+      ],
+      "head": "264c92d44546e5e08113709eb6aec79b60d01788",
+      "tree": "db33806a63d4f4d774b3c45be7761101bad854ef",
+      "environment": {
+        "CARGO_TARGET_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target",
+        "CARGO_BUILD_JOBS": "12",
+        "POLYORAMA_VIEWER_WEB_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/web",
+        "LD_LIBRARY_PATH": "/home/rob/pixi/.pixi/envs/default/lib:/nvme/development/emuella/.build-targets/representation-efficiency/masks/tools/sysroot/usr/lib",
+        "CARGO_NET_OFFLINE": "true",
+        "npm_config_offline": "true"
+      },
+      "start_unix": 1789199606.3630283,
+      "exit_code": 0,
+      "elapsed_seconds": 157.4931342601776
+    }
+  },
+  "native_result": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-native-01/result.json",
+    "bytes": 4939,
+    "sha256": "e2a8da705659456cb329fa56b3758fd83e93b865e84ce5f7234ed8f0babe4140"
+  },
+  "native_gpu": {
+    "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/gpu-readback.json",
+    "bytes": 684,
+    "sha256": "b5ccc2725c4735fc1e93f50ce79d8c601f7a2ba609c35401e332aea0ad845c15",
+    "record": {
+      "command": [
+        "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target/debug/deps/polyorama_render_wgpu-39fbc50bbc3f3cb2",
+        "regional_gpu_readback",
+        "--ignored",
+        "--nocapture"
+      ],
+      "head": "293e2c4351cc761dfffae797540eb71f34b4dbea",
+      "binary_sha256": "9c961e2311dd8a39b0ceedca1a1454aa227f9883afd5665f7117b90a2cbf96c7",
+      "exit_code": 0,
+      "environment": {
+        "LD_LIBRARY_PATH": "/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/emuella/.build-targets/representation-efficiency/masks/tools/sysroot/usr/lib",
+        "WGPU_BACKEND": "vulkan",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+      }
+    },
+    "adapter": "NVIDIA GeForce RTX3090; Vulkan; NVIDIA610.43.03; PCI0000:01:00.0",
+    "source_reuse": "Renderer/core/runtime source and build dependencies unchanged between293e2c4 GPU run and264c92 allocation repair; repair touches only viewer-source mask preparation."
+  },
+  "setup_failures": [
+    {
+      "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/canonical-01-result.json",
+      "bytes": 696,
+      "sha256": "74030e7230261e4f07f415c99a17fdd831d73707e4f9663ea5839b6faa271164",
+      "record": {
+        "command": [
+          "cargo",
+          "xtask",
+          "verify"
+        ],
+        "head": "293e2c4351cc761dfffae797540eb71f34b4dbea",
+        "tree": "c20276210784eed031db7850d770ca588dcbb8d9",
+        "environment": {
+          "CARGO_TARGET_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target",
+          "CARGO_BUILD_JOBS": "12",
+          "POLYORAMA_VIEWER_WEB_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/web",
+          "LD_LIBRARY_PATH": "/home/rob/pixi/.pixi/envs/default/lib:/nvme/development/emuella/.build-targets/representation-efficiency/masks/tools/sysroot/usr/lib"
+        },
+        "start_unix": 1789199115.0605752,
+        "exit_code": 1,
+        "elapsed_seconds": 108.19727730751038
+      }
+    },
+    {
+      "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/canonical-02-result.json",
+      "bytes": 957,
+      "sha256": "69dd96b44f056db7c8628f0e46df3e5a8ff56f310e329478fb6d7a42dba1e16d",
+      "record": {
+        "command": [
+          "unshare",
+          "--user",
+          "--map-root-user",
+          "--mount",
+          "sh",
+          "-c",
+          "mount --make-rprivate / && mount --bind /nvme/development/emuella/.build-targets/representation-efficiency/masks/tools /nvme/development/polyorama-representation-efficiency/.tools && exec cargo xtask verify"
+        ],
+        "head": "293e2c4351cc761dfffae797540eb71f34b4dbea",
+        "tree": "c20276210784eed031db7850d770ca588dcbb8d9",
+        "environment": {
+          "CARGO_TARGET_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target",
+          "CARGO_BUILD_JOBS": "12",
+          "POLYORAMA_VIEWER_WEB_DIR": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/web",
+          "LD_LIBRARY_PATH": "/home/rob/pixi/.pixi/envs/default/lib:/nvme/development/emuella/.build-targets/representation-efficiency/masks/tools/sysroot/usr/lib"
+        },
+        "start_unix": 1789199289.3778176,
+        "exit_code": 1,
+        "elapsed_seconds": 203.22071933746338
+      }
+    }
+  ],
+  "legacy_input_bindings": {
+    "path": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-native-01/legacy-input-bindings.json",
+    "bytes": 2697,
+    "sha256": "7a75abb0d6a97d06c8e8bfc744005b653e898e4ea79549e0763c240b9dcb45eb"
+  },
+  "browser_build_reuse": {
+    "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/build-record-browser-02.json",
+    "bytes": 4208,
+    "sha256": "f7d1c27ba6fb9de82bb447662e7d85eb0cd4af2b9192752af9e2e392aea8cffa",
+    "record": {
+      "schema": "representation-efficiency-build/1",
+      "runtime_commit": "cfb78b652f1b8338086a9d43c671eee417fd7242",
+      "tree": "ebb6533532e45a07ca7b4ad25f38ff1aff9a288c",
+      "source_lock": {
+        "path": "/nvme/development/polyorama-representation-efficiency/Cargo.lock",
+        "bytes": 128900,
+        "sha256": "8659266333ffacc69d40ab7f31336801acb800ff05cf1375c09a7bef6a3aeb75"
+      },
+      "native_viewer": {
+        "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target/release/emuella-viewer",
+        "bytes": 27282712,
+        "sha256": "4adc88a282296a9c2ab7fbcbfb018d04ba582d244a0ce626136ebc0a429f4e27"
+      },
+      "service_converter": {
+        "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target/release/emuella-viewer-tools",
+        "bytes": 2039640,
+        "sha256": "b1e2eb152045d500a1f527cda586ecbe8b815e3f8bdb36e165778a6baf18faaa"
+      },
+      "native_probe": {
+        "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/target/release/examples/compact-mask-probe",
+        "bytes": 1613752,
+        "sha256": "05ab029b02d12c03f4bdf22e2c3e82966644a727190ed074bf0373e7c4b179b5"
+      },
+      "static_root": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/web",
+      "static_assets": [
+        {
+          "path": "bootstrap.js",
+          "bytes": 548,
+          "sha256": "2d2ab31541bc4391d0d347977ecb1cae075fcbc655cbfa61aa2bd448d166a115"
+        },
+        {
+          "path": "index.html",
+          "bytes": 409,
+          "sha256": "b333a11ac87eb1910cef1cb5e5d129aaa02dd33b9fbdab46afeba3f3336429f0"
+        },
+        {
+          "path": "pkg/emuella_viewer.d.ts",
+          "bytes": 7332,
+          "sha256": "9d560a53752b10dc23622d3fd9ffa499c90b018931d14057bc48917b57f4f7b8"
+        },
+        {
+          "path": "pkg/emuella_viewer.js",
+          "bytes": 171350,
+          "sha256": "793b307f1cdbc111e354649ac51245cf2ef1e36cf874d4491044ce9d2729f675"
+        },
+        {
+          "path": "pkg/emuella_viewer_bg.wasm",
+          "bytes": 11381985,
+          "sha256": "537b9ebe520b1fde25ab76ea420ac6d60c212a3e4b1d1ac58d0544d335959e9e"
+        },
+        {
+          "path": "pkg/emuella_viewer_bg.wasm.d.ts",
+          "bytes": 5244,
+          "sha256": "5ea0a5aafbb637cd97f9223cf70ff163a67b60adcc50333d3735ad4b967dc544"
+        },
+        {
+          "path": "response.js",
+          "bytes": 183,
+          "sha256": "166cdf7228437c660033dc7a75fbc3d8ac07be75518f25431da75bfae5c229aa"
+        },
+        {
+          "path": "worker.js",
+          "bytes": 6094,
+          "sha256": "86b34fb72197d611d2acf7a2e54f20bd026f97df6c207b5507f4496da88aecbe"
+        }
+      ],
+      "canonical_start": {
+        "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/canonical-start.json",
+        "bytes": 1168,
+        "sha256": "1d16cd37fd50627a6296ac41a4340e29fe28b895395a036c1e2f2960146fffeb"
+      },
+      "probe_build_command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--release",
+        "-p",
+        "emuella-viewer-tools",
+        "--example",
+        "compact-mask-probe"
+      ],
+      "compiled_from_commit": "264c92d44546e5e08113709eb6aec79b60d01788",
+      "reused_build": {
+        "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/build-record.json",
+        "bytes": 2913,
+        "sha256": "bb40c3a0fae7d33e9ae26f22d277338fa3df1b88aac131fc7dc207529d158b5b"
+      },
+      "reuse_basis": {
+        "changed_paths": [
+          "docs/representation-efficiency-browser-masks.md",
+          "tools/representation-efficiency-browser-masks.mjs",
+          "tools/tests/representation-efficiency-browser-masks.test.mjs"
+        ],
+        "all_rust_cargo_codec_and_static_inputs_unchanged": true,
+        "canonical_receipt": {
+          "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/canonical-result.json",
+          "bytes": 1226,
+          "sha256": "37e68e5c916983d4f52da0317aad9b7ddfbb44e3d87894797542d0fe4a299c37"
+        },
+        "affected_browser_tests": {
+          "command": [
+            "node",
+            "--test",
+            "tools/tests/representation-efficiency-browser-masks.test.mjs"
+          ],
+          "exit_code": 0,
+          "log": {
+            "path": "/nvme/development/emuella/.build-targets/representation-efficiency/masks/browser-protocol-tests.log",
+            "bytes": 1066,
+            "sha256": "9c1063a005e3ec522ac3e1c264f76e6361333c8a1aa39e1ff17d1f73c923089b"
+          }
+        }
+      }
+    }
+  },
+  "aggregate": {
+    "legacy_masks": 20780351,
+    "compact_masks": 1042931,
+    "new_metadata": 3766,
+    "oracle_plane_cells": 265964676,
+    "native_samples": 2170388,
+    "native_validity": 1523664,
+    "mask_reduction_percent": 94.98116754620747,
+    "representation_bytes": 27017220,
+    "representation_group_ancillary_bytes": 691672,
+    "new_manifest_bytes": 176571,
+    "legacy_manifest_bytes": 172805
+  },
+  "limitations": [
+    "Quality-rejected diagnostic imagery; historical quality, normal latency, scheduling, RSS and complete-viewer failures remain unchanged.",
+    "Source-oracle method recomputes per-band ALL/ANY plane hashes covering 265,964,676 cells against retained original GDAL oracle; not per-cell hashes or new GDAL reads.",
+    "Logical native/browser bytes exclude source hashing, OS page cache and physical storage I/O; no latency or total-process RSS claim.",
+    "Real browser WebGPU adapter presence is separate from GPU rendering. The unchanged renderer has authored native binary-validity readback proof; no complete-scene GPU viewing acceptance.",
+    "All three remaining pressure exclusions exceed 1,048,576 bytes in unchanged image bins alone; no budget increase, request shrinkage or splitting."
+  ],
+  "codec_dependency": {
+    "pinned_source_commit": "6586e3d50f95429b242cb2e3535742b002784f2d",
+    "documentation_only_owner_merge": "08fd8dfc80c3475209680032ce2c097409716246",
+    "source_build_inputs_unchanged": true,
+    "consumer_pin_change": false
+  },
+  "browser": {
+    "report": {
+      "path": "/nvme/development/polyorama-representation-efficiency/docs/representation-efficiency-browser-masks-results.json",
+      "bytes": 25323,
+      "sha256": "af0ecdac81a63c3f740515cabbf1f989e29cd2b0c6b90d095022a1717520c05d"
+    },
+    "protocol_commit": "cfb78b652f1b8338086a9d43c671eee417fd7242",
+    "compiled_from_commit": "264c92d44546e5e08113709eb6aec79b60d01788",
+    "normal": [
+      {
+        "context": "scene-1",
+        "target": "94_104001000B823500-PAN16",
+        "completed": 252,
+        "coverage": {
+          "levels_checked": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "native_cases": 36,
+          "cross_tile_cases": 56,
+          "clipped_source_edge_cases": 84,
+          "source_boundaries": [],
+          "missing_selections": [],
+          "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+          "proved": true
+        },
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "samples_checked": 1955684,
+        "validity_checked": 1955684
+      },
+      {
+        "context": "scene-2",
+        "target": "94_104001000B823500-RGB16",
+        "completed": 504,
+        "coverage": {
+          "levels_checked": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "native_cases": 72,
+          "cross_tile_cases": 224,
+          "clipped_source_edge_cases": 224,
+          "source_boundaries": [],
+          "missing_selections": [],
+          "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+          "proved": true
+        },
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "samples_checked": 5867832,
+        "validity_checked": 3911888
+      },
+      {
+        "context": "scene-3",
+        "target": "106_10400100413CDF00-PAN16",
+        "completed": 280,
+        "coverage": {
+          "levels_checked": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "native_cases": 40,
+          "cross_tile_cases": 140,
+          "clipped_source_edge_cases": 84,
+          "source_boundaries": [
+            {
+              "component": 0,
+              "checked_native_cases": 8
+            }
+          ],
+          "missing_selections": [],
+          "source_boundary_applicability": "observed-native-transitions",
+          "proved": true
+        },
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "samples_checked": 2154788,
+        "validity_checked": 2154788
+      },
+      {
+        "context": "scene-4",
+        "target": "106_10400100413CDF00-RGB16",
+        "completed": 672,
+        "coverage": {
+          "levels_checked": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "native_cases": 96,
+          "cross_tile_cases": 392,
+          "clipped_source_edge_cases": 168,
+          "source_boundaries": [
+            {
+              "component": 0,
+              "checked_native_cases": 12
+            },
+            {
+              "component": 1,
+              "checked_native_cases": 12
+            },
+            {
+              "component": 2,
+              "checked_native_cases": 12
+            }
+          ],
+          "missing_selections": [],
+          "source_boundary_applicability": "observed-native-transitions",
+          "proved": true
+        },
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "samples_checked": 7655112,
+        "validity_checked": 5103408
+      },
+      {
+        "context": "scene-5",
+        "target": "105_104001002F92BB00-RGB8",
+        "completed": 504,
+        "coverage": {
+          "levels_checked": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "native_cases": 72,
+          "cross_tile_cases": 224,
+          "clipped_source_edge_cases": 168,
+          "source_boundaries": [],
+          "missing_selections": [],
+          "source_boundary_applicability": "no-transition-in-retained-source-oracle",
+          "proved": true
+        },
+        "sample_differences": 0,
+        "false_valid": 0,
+        "false_invalid": 0,
+        "nonbinary": 0,
+        "nonbinary_expected": 0,
+        "samples_checked": 5867832,
+        "validity_checked": 3911888
+      }
+    ],
+    "pressure": {
+      "forward_completed": 44,
+      "revisit_completed": 44,
+      "window_count_per_pass": 47,
+      "strict_completion": false,
+      "lifecycle_proved": true,
+      "actual_mask_evictions": 112,
+      "previously_loaded_keys_refetched": 52,
+      "exclusions": [
+        {
+          "pass_name": "forward",
+          "window_ordinal": 12,
+          "scene": 1,
+          "target": "94_104001000B823500-RGB16",
+          "request_index": 174,
+          "required_total_bytes": 1056886,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1056882,
+          "mask_bytes": 4,
+          "excluded": true,
+          "completed": false
+        },
+        {
+          "pass_name": "forward",
+          "window_ordinal": 14,
+          "scene": 1,
+          "target": "94_104001000B823500-RGB16",
+          "request_index": 286,
+          "required_total_bytes": 1056886,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1056882,
+          "mask_bytes": 4,
+          "excluded": true,
+          "completed": false
+        },
+        {
+          "pass_name": "forward",
+          "window_ordinal": 30,
+          "scene": 3,
+          "target": "106_10400100413CDF00-RGB16",
+          "request_index": 118,
+          "required_total_bytes": 1344186,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1147574,
+          "mask_bytes": 196612,
+          "excluded": true,
+          "completed": false
+        },
+        {
+          "pass_name": "revisit",
+          "window_ordinal": 12,
+          "scene": 1,
+          "target": "94_104001000B823500-RGB16",
+          "request_index": 174,
+          "required_total_bytes": 1056886,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1056882,
+          "mask_bytes": 4,
+          "excluded": true,
+          "completed": false
+        },
+        {
+          "pass_name": "revisit",
+          "window_ordinal": 14,
+          "scene": 1,
+          "target": "94_104001000B823500-RGB16",
+          "request_index": 286,
+          "required_total_bytes": 1056886,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1056882,
+          "mask_bytes": 4,
+          "excluded": true,
+          "completed": false
+        },
+        {
+          "pass_name": "revisit",
+          "window_ordinal": 30,
+          "scene": 3,
+          "target": "106_10400100413CDF00-RGB16",
+          "request_index": 118,
+          "required_total_bytes": 1344186,
+          "limit_bytes": 1048576,
+          "image_bin_bytes": 1147574,
+          "mask_bytes": 196612,
+          "excluded": true,
+          "completed": false
+        }
+      ]
+    },
+    "mask_delivery": [
+      {
+        "source": "catalogue-fetch",
+        "files": 1883,
+        "actual_compact_body_bytes": 1042931,
+        "equivalent_legacy_body_bytes": 20780351,
+        "oracle_planes": 6538,
+        "partial_band_cells": 3865,
+        "states": {
+          "1": 1456,
+          "0": 329,
+          "2": 98
+        }
+      },
+      {
+        "source": "worker-fetch",
+        "files": 493,
+        "actual_compact_body_bytes": 1584237,
+        "equivalent_legacy_body_bytes": 11267355,
+        "oracle_planes": 2042,
+        "partial_band_cells": 2249,
+        "states": {
+          "1": 376,
+          "2": 45,
+          "0": 72
+        }
+      }
+    ],
+    "worker_delivery": {
+      "totals": {
+        "received_jpp_bytes": 18494169,
+        "received_descriptor_bytes": 102445,
+        "received_mask_bytes": 1682542
+      },
+      "contexts": [
+        {
+          "context": "scene-1",
+          "received_jpp_bytes": 1053373,
+          "received_descriptor_bytes": 4100,
+          "received_mask_bytes": 70
+        },
+        {
+          "context": "scene-2",
+          "received_jpp_bytes": 1253104,
+          "received_descriptor_bytes": 5042,
+          "received_mask_bytes": 42
+        },
+        {
+          "context": "scene-3",
+          "received_jpp_bytes": 1035249,
+          "received_descriptor_bytes": 5228,
+          "received_mask_bytes": 109321
+        },
+        {
+          "context": "scene-4",
+          "received_jpp_bytes": 1281077,
+          "received_descriptor_bytes": 5392,
+          "received_mask_bytes": 327704
+        },
+        {
+          "context": "scene-5",
+          "received_jpp_bytes": 1675984,
+          "received_descriptor_bytes": 12989,
+          "received_mask_bytes": 105
+        },
+        {
+          "context": "required-mask-missing",
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "received_mask_bytes": 0
+        },
+        {
+          "context": "required-mask-corrupt",
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "received_mask_bytes": 98305
+        },
+        {
+          "context": "required-mask-stale",
+          "received_jpp_bytes": 0,
+          "received_descriptor_bytes": 1048,
+          "received_mask_bytes": 0
+        },
+        {
+          "context": "mask-pressure-revisit",
+          "received_jpp_bytes": 12059206,
+          "received_descriptor_bytes": 65502,
+          "received_mask_bytes": 1048690
+        },
+        {
+          "context": "cancel-and-recover",
+          "received_jpp_bytes": 136176,
+          "received_descriptor_bytes": 1048,
+          "received_mask_bytes": 98305
+        }
+      ],
+      "note": "End-of-context cumulative Worker counters; JPP transport bytes include framing and differ from required image-bin payload bytes."
+    },
+    "pressure_peak_accounting": {
+      "compressed_bytes": 1048532,
+      "peak_compressed_bytes": 1048532,
+      "descriptor_bytes": 326594,
+      "peak_descriptor_bytes": 338594,
+      "mask_bytes": 196613,
+      "peak_mask_bytes": 196613,
+      "peak_codec_workspace_bytes": 1953079,
+      "wasm_linear_bytes": 7536640,
+      "peak_request_working_set_bytes": 984340,
+      "peak_request_pin_metadata_bytes": 2318,
+      "compact_catalogue_metadata_bytes": 3766
+    },
+    "terminal_kinds": {
+      "Completed": 2301,
+      "Failed": 9,
+      "Cancelled": 1
+    },
+    "all_terminal_reservations_observed_zero": true,
+    "http": {
+      "requests": 7388,
+      "dynamic_body_bytes": 105265035,
+      "maximum_inflight": 2,
+      "errors": 0,
+      "static_asset_body_bytes": "not included in dynamic byte counter"
+    }
+  },
+  "resource_scope": {
+    "new_catalogue_string_capacities_charged_to_descriptor_budget": true,
+    "encoded_mask_vec_capacities_exact": true,
+    "regional_validity_and_gpu_packing_charged_to_existing_budgets": true,
+    "request_pin_metadata_observed": true,
+    "pre_existing_mask_btree_node_allocator_overhead_measured": false,
+    "total_process_rss_acceptance": false,
+    "explanation": "The pre-existing mask BTreeMap has no new fields. Its allocator/node overhead remains outside payload counters; compact masks may permit more retained entries. This is not claimed as measured or as complete process memory accounting."
+  },
+  "diagnostic_persistence": [
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-native-01",
+      "regular_files": 8,
+      "logical_file_bytes": 356417,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    },
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-masks-native-01-execution",
+      "regular_files": 5,
+      "logical_file_bytes": 22294,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    },
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-browser-masks-candidate-01",
+      "regular_files": 1441,
+      "logical_file_bytes": 27234504,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    },
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-browser-masks-candidate-01-execution",
+      "regular_files": 19,
+      "logical_file_bytes": 128909,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    },
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-browser-masks-candidate-02",
+      "regular_files": 1593,
+      "logical_file_bytes": 38156238,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    },
+    {
+      "group": "/nvme/development/emuella/emuella-testdata/artifacts/rareplanes-expanded-v1/representation-efficiency-browser-masks-candidate-02-execution",
+      "regular_files": 23,
+      "logical_file_bytes": 172706,
+      "classification": "Diagnostic receipts, browser profiles/cache and execution evidence; separate from representation persistence."
+    }
+  ],
+  "review_state": "Historical candidate1a6a925 rejected by independent review: per-entry mask-cache metadata uncharged. Retained exactness and delivery observations do not qualify repaired metadata accounting.",
+  "superseded_resource_qualification": "representation-efficiency-masks-metadata-results.json"
+}

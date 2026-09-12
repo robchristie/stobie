@@ -459,7 +459,12 @@ fn descriptor_eviction_requires_bounded_window_readiness_recheck() {
         index.import_tile_descriptor(&bytes).unwrap();
         raw_bytes += bytes.len();
     }
-    let budget = raw_bytes + index.retained_heap_bytes() as usize;
+    let mut probe = SharedClient::new(ClientLimits::default());
+    probe.register(manifest.clone()).unwrap();
+    // Preserve the three-descriptor pressure boundary while paying the fixed
+    // mask-cache container even for this representation without source masks.
+    let budget =
+        raw_bytes + index.retained_heap_bytes() as usize + probe.mask_cache_metadata_bytes();
     let mut client = SharedClient::new(ClientLimits {
         descriptor_bytes: budget,
         ..ClientLimits::default()
