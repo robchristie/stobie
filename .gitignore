@@ -10,3 +10,7 @@
 __pycache__/
 
 /apps/emuella-viewer/web/pkg/
+
+/apps/analytical-workspace-lab/web/browser-startup.js
+/apps/polyorama-gallery/web/browser-startup.js
+/apps/emuella-viewer/web/browser-startup.js

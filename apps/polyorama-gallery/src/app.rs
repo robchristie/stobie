@@ -410,6 +410,9 @@ impl eframe::App for GalleryApp {
             ui_snapshot,
         };
 
+        #[cfg(target_arch = "wasm32")]
+        crate::startup_frame(true);
+
         #[cfg(not(target_arch = "wasm32"))]
         if root_ui.input(|input| input.key_pressed(egui::Key::F12))
             && let Ok(path) = std::env::var("POLYORAMA_GALLERY_SNAPSHOT_PATH")

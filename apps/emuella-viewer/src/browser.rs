@@ -65,6 +65,7 @@ pub struct Executor {
     events: Rc<RefCell<VecDeque<Event>>>,
     _message: Closure<dyn FnMut(MessageEvent)>,
     _error: Closure<dyn FnMut(ErrorEvent)>,
+    _message_error: Closure<dyn FnMut(MessageEvent)>,
 }
 impl Executor {
     pub fn new(server: String, compressed: usize, context: egui::Context) -> Self {
@@ -88,16 +89,24 @@ impl Executor {
         let options = WorkerOptions::new();
         options.set_type(WorkerType::Module);
         options.set_name("emuella-shared-regional-decoder");
-        let worker = Worker::new_with_options("worker.js", &options).expect("browser Worker");
+        let worker = Worker::new_with_options(&crate::startup_worker_url(), &options)
+            .expect("browser Worker");
         let events = Rc::new(RefCell::new(VecDeque::new()));
         let sink = events.clone();
         let repaint = context.clone();
         let message = Closure::wrap(Box::new(move |event: MessageEvent| {
+            if crate::startup_worker_message(&event.data()) {
+                return;
+            }
             let received_ms = pacing_now_ms();
-            let mut event = decode_event(event.data()).unwrap_or_else(|e| Event::Failed {
-                request: None,
-                error: format!("{e:?}"),
-                metrics: WorkerMetrics::default(),
+            let mut event = decode_event(event.data()).unwrap_or_else(|e| {
+                let error = format!("{e:?}");
+                crate::startup_fail("worker_transport", &error);
+                Event::Failed {
+                    request: None,
+                    error,
+                    metrics: WorkerMetrics::default(),
+                }
             });
             if let Some(timing) = event.metrics_mut().and_then(|m| m.timing.as_mut()) {
                 timing.received_ms = Some(received_ms);
@@ -107,16 +116,35 @@ impl Executor {
             repaint.request_repaint();
         }) as Box<dyn FnMut(MessageEvent)>);
         let sink = events.clone();
+        let error_context = context.clone();
         let error = Closure::wrap(Box::new(move |event: ErrorEvent| {
+            // A failed worker-script fetch may supply a plain Event.
+            let message = js_sys::Reflect::get(event.as_ref(), &"message".into())
+                .ok()
+                .and_then(|value| value.as_string())
+                .unwrap_or_else(|| "Worker failed to load or execute".into());
+            crate::startup_fail("worker_transport", &message);
             sink.borrow_mut().push_back(Event::Failed {
                 request: None,
-                error: event.message(),
+                error: message,
+                metrics: WorkerMetrics::default(),
+            });
+            error_context.request_repaint();
+        }) as Box<dyn FnMut(ErrorEvent)>);
+        let sink = events.clone();
+        let message_error = Closure::wrap(Box::new(move |_event: MessageEvent| {
+            let error = "Worker message deserialisation failed";
+            crate::startup_fail("worker_transport", error);
+            sink.borrow_mut().push_back(Event::Failed {
+                request: None,
+                error: error.into(),
                 metrics: WorkerMetrics::default(),
             });
             context.request_repaint();
-        }) as Box<dyn FnMut(ErrorEvent)>);
+        }) as Box<dyn FnMut(MessageEvent)>);
         worker.set_onmessage(Some(message.as_ref().unchecked_ref()));
         worker.set_onerror(Some(error.as_ref().unchecked_ref()));
+        worker.set_onmessageerror(Some(message_error.as_ref().unchecked_ref()));
         worker
             .post_message(
                 &encode_message(
@@ -130,6 +158,7 @@ impl Executor {
             events,
             _message: message,
             _error: error,
+            _message_error: message_error,
         }
     }
     pub fn submit(&self, job: Job) -> Result<()> {
@@ -153,6 +182,7 @@ impl Drop for Executor {
     fn drop(&mut self) {
         self.worker.set_onmessage(None);
         self.worker.set_onerror(None);
+        self.worker.set_onmessageerror(None);
         self.worker.terminate();
     }
 }

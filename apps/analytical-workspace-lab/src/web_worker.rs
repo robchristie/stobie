@@ -18,34 +18,45 @@ impl BrowserWorker {
         let options = WorkerOptions::new();
         options.set_type(WorkerType::Module);
         options.set_name("polyorama-scalar-decoder");
-        let worker = Worker::new_with_options("worker.js", &options)?;
+        let worker = Worker::new_with_options(&crate::startup_worker_url(), &options)?;
         let events = Rc::new(RefCell::new(VecDeque::new()));
         let failures = Rc::new(RefCell::new(VecDeque::new()));
         let sink = events.clone();
         let malformed_sink = failures.clone();
         let message_context = context.clone();
         let on_message = Closure::wrap(Box::new(move |message: MessageEvent| {
+            if crate::startup_worker_message(&message.data()) {
+                return;
+            }
             match serde_wasm_bindgen::from_value(message.data()) {
                 Ok(event) => sink.borrow_mut().push_back(event),
-                Err(error) => malformed_sink.borrow_mut().push_back(format!(
-                    "browser worker returned an invalid message: {error}"
-                )),
+                Err(error) => {
+                    let failure = format!("browser worker returned an invalid message: {error}");
+                    crate::startup_fail("worker_transport", &failure);
+                    malformed_sink.borrow_mut().push_back(failure);
+                }
             }
             message_context.request_repaint();
         }) as Box<dyn FnMut(MessageEvent)>);
         let error_sink = failures.clone();
         let error_context = context.clone();
         let on_error = Closure::wrap(Box::new(move |error: ErrorEvent| {
-            error_sink.borrow_mut().push_back(format!(
-                "browser worker failed at {}:{}: {}",
-                error.filename(),
-                error.lineno(),
-                error.message()
-            ));
+            // Failed worker-script fetches can dispatch a plain Event, without
+            // ErrorEvent.message/filename. Read optional fields without coercing
+            // JavaScript undefined into a Rust String.
+            let message = js_sys::Reflect::get(error.as_ref(), &"message".into())
+                .ok()
+                .and_then(|value| value.as_string())
+                .unwrap_or_else(|| "Worker failed to load or execute".into());
+            crate::startup_fail("worker_transport", &message);
+            error_sink
+                .borrow_mut()
+                .push_back(format!("browser worker failed: {message}"));
             error_context.request_repaint();
         }) as Box<dyn FnMut(ErrorEvent)>);
         let transport_sink = failures.clone();
         let on_message_error = Closure::wrap(Box::new(move |_message: MessageEvent| {
+            crate::startup_fail("worker_transport", "Worker message deserialisation failed");
             transport_sink
                 .borrow_mut()
                 .push_back("browser worker message deserialisation failed".into());

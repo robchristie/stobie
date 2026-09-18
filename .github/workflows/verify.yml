@@ -60,6 +60,10 @@ jobs:
         if: steps.scope.outputs.mode != 'docs'
         run: command -v wasm-bindgen || cargo install --locked wasm-bindgen-cli --version 0.2.127
 
+      - name: Install pinned Binaryen
+        if: steps.scope.outputs.mode != 'docs'
+        run: bash tools/install-binaryen.sh
+
       - name: Verify
         if: steps.scope.outputs.mode != 'docs'
         run: |

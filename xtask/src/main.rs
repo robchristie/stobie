@@ -2,6 +2,7 @@ use std::{env, fs, path::Path, process::Command};
 
 use anyhow::{Context, Result, anyhow, bail};
 
+mod browser;
 mod plans;
 mod tokens;
 mod ui;
@@ -11,6 +12,7 @@ fn main() -> Result<()> {
     match command.as_str() {
         "verify" => verify(),
         "build-web" => build_web(),
+        "build-browser-production" => browser::build(env::args().skip(2).collect()),
         "build-viewer-web" => build_viewer_web(),
         "viewer-smoke" => run("node", &["tools/viewer-browser-smoke.mjs"]),
         "architecture" => architecture(),
@@ -27,6 +29,7 @@ fn main() -> Result<()> {
                 "cargo xtask verify      run the complete native/browser verification surface"
             );
             println!("cargo xtask build-web   build release WASM application and Worker packages");
+            println!("cargo xtask build-browser-production [--variant none|Oz|O3] [--output DIR]");
             println!("cargo xtask architecture check dependency boundaries");
             println!("cargo xtask plans      check documentation plan lifecycle");
             println!("cargo xtask tokens generate generate typed Rust from the token source");
@@ -99,6 +102,8 @@ fn verify() -> Result<()> {
             "tools/tests/viewer-acceptance-browser-launch.test.mjs",
             "tools/tests/viewer-merged-qualification-preload.test.mjs",
             "apps/emuella-viewer/web/tests/worker.test.mjs",
+            "tools/tests/browser-startup.test.mjs",
+            "tools/tests/browser-package.test.mjs",
         ],
         &evidence_environment,
     )?;
@@ -108,6 +113,30 @@ fn verify() -> Result<()> {
         "npm",
         &["run", "gallery-browser-smoke"],
         &evidence_environment,
+    )?;
+    browser::build(Vec::new())?;
+    run(
+        "node",
+        &[
+            "tools/browser-startup-smoke.mjs",
+            "target/browser-production",
+        ],
+    )?;
+    run(
+        "node",
+        &[
+            "tools/browser-startup-benchmark.mjs",
+            "--directory",
+            "target/browser-production",
+            "--output",
+            ".tools/runtime/verification-evidence/startup",
+            "--pairs",
+            "1",
+            "--profiles",
+            "local",
+            "--apps",
+            "lab,gallery",
+        ],
     )?;
     ui::verify(Path::new("."), &evidence_directory.join("ui-snapshots"))?;
     if cfg!(target_os = "linux") {
@@ -125,6 +154,12 @@ fn verify() -> Result<()> {
 }
 
 fn build_web() -> Result<()> {
+    for app in ["analytical-workspace-lab", "polyorama-gallery"] {
+        fs::copy(
+            "tools/browser-startup.js",
+            format!("apps/{app}/web/browser-startup.js"),
+        )?;
+    }
     ensure_wasm_bindgen_version("0.2.127")?;
     run(
         "cargo",
@@ -498,6 +533,10 @@ fn build_viewer_web() -> Result<()> {
             Path::new(&output).join(asset),
         )?;
     }
+    fs::copy(
+        "tools/browser-startup.js",
+        Path::new(&output).join("browser-startup.js"),
+    )?;
     let package = Path::new(&output).join("pkg");
     run(
         "wasm-bindgen",

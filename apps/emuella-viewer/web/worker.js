@@ -1,7 +1,13 @@
+import { installWorkerStartup } from './browser-startup.js';
 import { beginResponse } from './response.js';
 import init, { WorkerClient } from './pkg/emuella_viewer.js';
 let wasm;
-const ready = init().then(value => { wasm = value; });
+const startup = installWorkerStartup();
+startup.mark('wasm_init_begin');
+const ready = init().then(value => {
+  wasm = value; startup.setMemory(wasm.memory); startup.mark('wasm_init_end');
+}, error => { startup.fail('wasm_init', error); throw error; });
+ready.catch(() => {});
 let client, server, active, pending, running = false;
 const transport = { aborted: 0, retries: 0, cache_hits: 0, elapsed_ms: 0, transferred_sample_bytes: 0 };
 const cancelled = new Set();
@@ -26,7 +32,7 @@ async function bounded(response, maximum, consume) {
   for (const c of chunks) { result.set(c, offset); offset += c.length; }
   return result;
 }
-function metrics() { return {...(client?.metrics() ?? {}), ...transport, wasm_linear_bytes: wasm.memory.buffer.byteLength}; }
+function metrics() { return {...(client?.metrics() ?? {}), ...transport, wasm_linear_bytes: wasm?.memory.buffer.byteLength ?? 0}; }
 function emit(value) {
   for (const kind of ['Completed', 'Cancelled', 'Failed']) {
     const timing = value[kind]?.metrics.timing;
@@ -84,24 +90,26 @@ async function work(job) {
     transport.transferred_sample_bytes += pixels.samples.byteLength + pixels.validity.byteLength;
     client.end_request();
     const m = timedMetrics();
+    startup.mark('first_decode_complete');
     emit({ Completed: { request: job.request, pixels, metrics: m } });
   } catch (error) {
     client.end_request();
     if (cancelled.has(key(job.request))) { transport.aborted++; emit({ Cancelled: { request: job.request, metrics: timedMetrics() } }); }
-    else emit({ Failed: { request: job.request, error: String(error), metrics: timedMetrics() } });
+    else { startup.fail('first_decode', error); emit({ Failed: { request: job.request, error: String(error), metrics: timedMetrics() } }); }
   } finally { client.end_request(); client.abandon_response(); cancelled.delete(key(job.request)); active = undefined; }
 }
 self.onmessage = async ({ data }) => {
-  await ready;
+  try { await ready; } catch { return; }
   if (data.kind === 'init') {
-    server = data.server.replace(/\/$/, ''); client = new WorkerClient(data.compressed);
     try {
+      server = data.server.replace(/\/$/, ''); client = new WorkerClient(data.compressed);
+      startup.mark('worker_ready');
       const bytes = await bounded(await fetch(server + '/catalogue'), 16 << 20);
       const catalogue = JSON.parse(new TextDecoder().decode(bytes));
       if (catalogue.length > 32) throw new Error('catalogue capacity');
       for (const manifest of catalogue) client.register(manifest);
       emit({ Catalogue: catalogue });
-    } catch (error) { emit({ Failed: { request: null, error: String(error), metrics: metrics() } }); }
+    } catch (error) { startup.fail('catalogue', error); emit({ Failed: { request: null, error: String(error), metrics: metrics() } }); }
   } else if (data.kind === 'cancel') {
     // A completion already posted to the UI will release its reservation there.
     // Do not retain a cancellation tombstone for a job this worker has finished.

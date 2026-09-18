@@ -44,7 +44,8 @@ async function harness(options = {}) {
     if (options.onFetch) await options.onFetch({url, args, send: data => context.self.onmessage({data})});
     return new Response(new Uint8Array([0, 2, 0]), {headers: {'JPIP-tid': 'authored-exact-tid', 'JPIP-fsiz': '1,1', 'JPIP-roff': '0,0', 'JPIP-rsiz': '1,1'}});
   };
-  context = vm.createContext({WorkerClient, init: async () => ({memory: {buffer: new ArrayBuffer(64)}}),
+  // Startup envelopes are tested separately; keep these assertions on codec protocol events.
+  context = vm.createContext({installWorkerStartup: () => ({mark() {}, setMemory() {}, fail() {}}), WorkerClient, init: async () => ({memory: {buffer: new ArrayBuffer(64)}}),
     fetch, Headers, TextDecoder, Uint8Array, AbortController, self: {},
     performance: {timeOrigin: 0, now: () => 0},
     setTimeout: callback => Promise.resolve().then(async () => {

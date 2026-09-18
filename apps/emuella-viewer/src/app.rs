@@ -1291,6 +1291,8 @@ impl eframe::App for ViewerApp {
         if self.snapshot.rendered_regions > 0 && self.snapshot.first_useful_ms.is_none() {
             self.snapshot.first_useful_ms = Some(self.snapshot.elapsed_ms);
         }
+        #[cfg(target_arch = "wasm32")]
+        crate::startup_frame(self.snapshot.rendered_regions > 0);
         if self.script && !self.snapshot.script_complete {
             ctx.request_repaint_after(Duration::from_millis(50));
         }

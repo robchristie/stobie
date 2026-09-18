@@ -123,6 +123,9 @@ Open [Polyorama Gallery](http://localhost:8081). Serve the files over HTTP rathe
 than opening `index.html` directly. Browser rendering requires WebGPU; there is
 no WebGL fallback. Re-run `cargo xtask build-web` after changing Rust code.
 
+For measured production packaging, compression, immutable asset URLs and consumer
+workspace setup, use the [browser build and startup guide](docs/browser-startup.md).
+
 ## How the project fits together
 
 Polyorama separates application state, asynchronous work, GPU resources and UI

@@ -281,6 +281,7 @@ impl AnalyticalWorkspaceApp {
         let browser_worker = match crate::web_worker::BrowserWorker::new(cc.egui_ctx.clone()) {
             Ok(worker) => Some(worker),
             Err(error) => {
+                crate::startup_fail("worker_create", &format!("{error:?}"));
                 runtime.record_browser_worker_unavailable(format!(
                     "browser worker could not be created: {error:?}"
                 ));
@@ -625,6 +626,7 @@ impl AnalyticalWorkspaceApp {
         if let Some(worker) = &self.browser_worker {
             while let Some(request) = self.runtime.take_external_request() {
                 if worker.submit(&request).is_err() {
+                    crate::startup_fail("worker_transport", "Worker postMessage failed");
                     self.runtime.record_browser_transport_failure(
                         request,
                         "browser Worker postMessage failed",
@@ -1152,6 +1154,11 @@ impl eframe::App for AnalyticalWorkspaceApp {
         }
         #[cfg(target_arch = "wasm32")]
         self.publish_browser_diagnostics();
+        #[cfg(target_arch = "wasm32")]
+        crate::startup_frame(
+            self.diagnostics.render.draw_calls > 0
+                && self.diagnostics.render.resident_texture_bytes > 0,
+        );
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {

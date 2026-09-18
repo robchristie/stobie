@@ -35,7 +35,12 @@ impl WebHandle {
             .start(
                 canvas,
                 eframe::WebOptions::default(),
-                Box::new(|creation| Ok(Box::new(GalleryApp::new(creation)))),
+                Box::new(|creation| {
+                    startup_mark("application_construct_begin");
+                    let app = GalleryApp::new(creation);
+                    startup_mark("application_construct_end");
+                    Ok(Box::new(app))
+                }),
             )
             .await
     }
@@ -92,5 +97,23 @@ impl WebHandle {
 impl Default for WebHandle {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Browser startup boundaries are one-shot and add no repaint demand.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_name = __polyoramaStartupMark)]
+    pub(crate) fn startup_mark(name: &str);
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn startup_frame(useful_content: bool) {
+    static WORKSPACE: std::sync::Once = std::sync::Once::new();
+    static CONTENT: std::sync::Once = std::sync::Once::new();
+    WORKSPACE.call_once(|| startup_mark("workspace_ui_complete"));
+    if useful_content {
+        CONTENT.call_once(|| startup_mark("first_useful_content"));
     }
 }
