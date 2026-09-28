@@ -503,13 +503,43 @@ sleep 1
 xdo mouseup 1
 sleep 2
 capture native-rearranged-dock.png
+snapshot
+DIAGNOSTICS_STATE_BEFORE="$(jq -c '{annotations, selected_annotation, cameras}' "$SNAPSHOT")"
+move_target action 0 view_panels
+xdo click 1
+sleep 0.3
+snapshot
+jq -e 'any(.ui_snapshot.nodes[];
+  (.actions | index("toggle_diagnostics")) and .name == "Diagnostics"
+  and .role == "button" and .enabled and .checked == true)' "$SNAPSHOT" >/dev/null
+move_target action 0 toggle_diagnostics
+xdo click 1
+sleep 0.3
+snapshot
+jq -e '(.ui_geometry.tabs | length) == 7
+  and all(.ui_geometry.tabs[]; .pane != 8)
+  and (.ui_snapshot.semantic_audit | length) == 0' "$SNAPSHOT" >/dev/null
+test "$(jq -c '{annotations, selected_annotation, cameras}' "$SNAPSHOT")" = "$DIAGNOSTICS_STATE_BEFORE"
+CLOSED_DIAGNOSTICS_HASH="$(jq -r '.workspace_hash' "$SNAPSHOT")"
+capture native-diagnostics-closed.png
 move_target action 0 save_layout
 xdo click 1
 sleep 1
 
 owned_stop APP_PID
 launch_app
+snapshot
+jq -e '(.ui_geometry.tabs | length) == 7
+  and all(.ui_geometry.tabs[]; .pane != 8)' "$SNAPSHOT" >/dev/null
+test "$(jq -r '.workspace_hash' "$SNAPSHOT")" = "$CLOSED_DIAGNOSTICS_HASH"
+test "$(jq -c '{annotations, selected_annotation, cameras}' "$SNAPSHOT")" = "$DIAGNOSTICS_STATE_BEFORE"
 capture native-restored-layout.png
+xdo key ctrl+shift+d
+sleep 0.3
+snapshot
+jq -e '([.ui_geometry.tabs[] | select(.pane == 8)] | length) == 1
+  and (.ui_snapshot.semantic_audit | length) == 0' "$SNAPSHOT" >/dev/null
+capture native-diagnostics-reopened.png
 
 if grep -E "panicked|WGPU error|Exiting because of error" "$APP_LOG"; then
   echo "native smoke test observed an application failure" >&2

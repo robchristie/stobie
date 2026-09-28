@@ -91,6 +91,7 @@ impl ActionShortcut {
 pub enum ShortcutKey {
     Z,
     S,
+    D,
     F,
     L,
     One,
@@ -106,6 +107,7 @@ impl ShortcutKey {
         match self {
             Self::Z => Key::Z,
             Self::S => Key::S,
+            Self::D => Key::D,
             Self::F => Key::F,
             Self::L => Key::L,
             Self::One => Key::Num1,
@@ -121,6 +123,7 @@ impl ShortcutKey {
         match self {
             Self::Z => "Z",
             Self::S => "S",
+            Self::D => "D",
             Self::F => "F",
             Self::L => "L",
             Self::One => "1",

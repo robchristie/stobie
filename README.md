@@ -33,15 +33,22 @@ It requires no external datasets, private imagery or service credentials.
   gesture previews and undo/redo.
 - **Large collections:** one million logical result rows and 100,000 logical
   thumbnails, materialising only the visible ranges and overscan.
-- **A persistent workspace:** rearrange dock tabs, resize splits, save the layout
-  and restore workspace state. Appearance preferences include light/dark themes,
-  high contrast, density and font scaling.
+- **A persistent workspace:** rearrange dock tabs, resize splits, close or reopen
+  Diagnostics, save the layout and restore workspace state. Appearance
+  preferences include light/dark themes, high contrast, density and font scaling.
 - **Diagnostics:** inspect worker state, cache and upload budgets, render
   counters and CPU timings. Unavailable GPU timings are reported as unavailable.
 
 Start by panning the Primary View and observing Linked Detail, then try the
 Polygon and Edit tools. Open the Results, Thumbnails and Diagnostics tabs to
 explore virtualisation and progressive loading.
+
+Use **View/Panels → Diagnostics** to close or reopen Diagnostics. The menu item
+shows whether it is open; **Ctrl/Cmd+Shift+D** toggles it from the keyboard.
+Closing Diagnostics gives its dock space to the remaining panes. Reopening adds
+the same pane as a tab beside Inspector and selects it. Use **Save layout** to
+retain the open or closed state across restarts. Closing and reopening do not
+change annotations, selection or cameras.
 
 ### Polyorama Gallery
 
@@ -229,8 +236,10 @@ The exact qualification and remaining platform boundaries are recorded there.
 The synthetic source and decoder demonstrate the architecture; they are not
 production image codecs or remote data integrations. Production geospatial
 reprojection, arbitrary texture import and a general-purpose render graph are
-outside the current implementation. Optional pane creation and closing are
-also not implemented.
+outside the current implementation. Diagnostics is the only closeable pane in
+Analytical Workspace Lab. Reopening places it beside Inspector rather than
+recreating its exact former split or tab position; arbitrary pane creation and
+closing other panes remain unimplemented.
 
 Retained native runtime evidence uses Mesa llvmpipe under Xvfb, so it establishes
 functional behaviour rather than physical-GPU performance. GPU timestamps are

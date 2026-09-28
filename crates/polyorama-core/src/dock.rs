@@ -103,7 +103,11 @@ impl DockNode {
                     return false;
                 };
                 tabs.remove(index);
-                *active = (*active).min(tabs.len().saturating_sub(1));
+                if index < *active {
+                    *active -= 1;
+                } else {
+                    *active = (*active).min(tabs.len().saturating_sub(1));
+                }
                 true
             }
         }
@@ -244,6 +248,20 @@ impl DockNode {
         }
     }
 
+    fn tab_neighbour(&self, pane: PaneId) -> Option<PaneId> {
+        match self {
+            Self::Split { first, second, .. } => first
+                .tab_neighbour(pane)
+                .or_else(|| second.tab_neighbour(pane)),
+            Self::Tabs { tabs, .. } => {
+                let index = tabs.iter().position(|candidate| *candidate == pane)?;
+                tabs.get(index + 1)
+                    .or_else(|| index.checked_sub(1).and_then(|index| tabs.get(index)))
+                    .copied()
+            }
+        }
+    }
+
     fn node_ids(&self, output: &mut Vec<DockNodeId>) {
         output.push(self.id());
         if let Self::Split { first, second, .. } = self {
@@ -321,6 +339,12 @@ impl Workspace {
         if panes.len() != unique.len() {
             return Err("a pane occurs more than once".into());
         }
+        if panes
+            .iter()
+            .any(|pane| self.closed_optional_panes.contains(pane))
+        {
+            return Err("a closed pane is still docked".into());
+        }
         if !panes.contains(&self.active_pane) {
             return Err("active pane is absent".into());
         }
@@ -365,6 +389,55 @@ impl Workspace {
             self.next_node_id += 2;
         }
         self.root.normalise();
+        self.active_pane = pane;
+        true
+    }
+
+    /// Remove a pane selected as optional by the application. The caller owns
+    /// the optional-pane policy; the workspace keeps the dock and closed set in sync.
+    pub fn close_pane(&mut self, pane: PaneId) -> bool {
+        if self.closed_optional_panes.contains(&pane) || !self.root.contains_pane(pane) {
+            return false;
+        }
+        let mut panes = Vec::new();
+        self.root.pane_ids(&mut panes);
+        if panes.len() <= 1 {
+            return false;
+        }
+        let neighbour = self.root.tab_neighbour(pane);
+        self.root.remove_pane(pane);
+        self.root.prune_empty();
+        self.root.normalise();
+        if self.active_pane == pane {
+            let mut active = Vec::new();
+            self.root.active_panes(&mut active);
+            self.active_pane = neighbour
+                .or_else(|| active.last().copied())
+                .expect("a pane remains");
+        }
+        self.closed_optional_panes.insert(pane);
+        true
+    }
+
+    /// Reopen one closed pane as a tab beside an application-chosen open pane.
+    pub fn reopen_pane(&mut self, pane: PaneId, beside: PaneId) -> bool {
+        if pane == beside
+            || !self.closed_optional_panes.contains(&pane)
+            || self.root.contains_pane(pane)
+            || !self.root.contains_pane(beside)
+        {
+            return false;
+        }
+        if !self.root.insert_at(
+            beside,
+            pane,
+            DockDrop::Tab,
+            DockNodeId(self.next_node_id),
+            DockNodeId(self.next_node_id),
+        ) {
+            return false;
+        }
+        self.closed_optional_panes.remove(&pane);
         self.active_pane = pane;
         true
     }
@@ -469,5 +542,81 @@ mod tests {
         let before = workspace.clone();
         assert!(!workspace.move_pane(PaneId(2), PaneId(99), DockDrop::Tab));
         assert_eq!(workspace, before);
+    }
+
+    #[test]
+    fn close_and_reopen_preserve_a_valid_unique_dock() {
+        let mut workspace = Workspace::analytical_default();
+        workspace.activate(PaneId(8));
+        assert!(workspace.close_pane(PaneId(8)));
+        workspace.validate().unwrap();
+        assert_eq!(workspace.active_pane, PaneId(7));
+        assert!(workspace.closed_optional_panes.contains(&PaneId(8)));
+        assert!(!workspace.close_pane(PaneId(8)));
+        assert!(!workspace.reopen_pane(PaneId(8), PaneId(99)));
+        assert!(workspace.reopen_pane(PaneId(8), PaneId(7)));
+        workspace.validate().unwrap();
+        assert_eq!(workspace.active_pane, PaneId(8));
+        assert!(!workspace.reopen_pane(PaneId(8), PaneId(7)));
+        let mut panes = Vec::new();
+        workspace.root.pane_ids(&mut panes);
+        assert_eq!(panes.iter().filter(|pane| **pane == PaneId(8)).count(), 1);
+    }
+
+    #[test]
+    fn close_prunes_an_empty_branch_and_round_trips() {
+        let mut workspace = Workspace::analytical_default();
+        assert!(workspace.move_pane(PaneId(8), PaneId(7), DockDrop::Bottom));
+        let nodes_before = workspace.root.node_count();
+        assert!(workspace.close_pane(PaneId(8)));
+        assert!(workspace.root.node_count() < nodes_before);
+        workspace.validate().unwrap();
+        let restored: Workspace =
+            serde_json::from_slice(&serde_json::to_vec(&workspace).unwrap()).unwrap();
+        assert_eq!(restored, workspace);
+        assert!(workspace.reopen_pane(PaneId(8), PaneId(7)));
+        workspace.validate().unwrap();
+    }
+
+    #[test]
+    fn closing_an_inactive_earlier_tab_keeps_the_selected_pane_visible() {
+        let mut arranged = Workspace::analytical_default();
+        assert!(arranged.move_pane(PaneId(7), PaneId(8), DockDrop::Tab));
+        assert!(arranged.move_pane(PaneId(1), PaneId(7), DockDrop::Tab));
+        arranged.activate(PaneId(7));
+
+        for globally_active in [PaneId(7), PaneId(5)] {
+            let mut workspace = arranged.clone();
+            workspace.activate(globally_active);
+            assert!(workspace.close_pane(PaneId(8)));
+            workspace.validate().unwrap();
+            assert_eq!(workspace.active_pane, globally_active);
+            let mut visible = Vec::new();
+            workspace.root.active_panes(&mut visible);
+            assert!(visible.contains(&PaneId(7)));
+            assert!(!visible.contains(&PaneId(1)));
+        }
+    }
+
+    #[test]
+    fn close_rejects_the_last_pane_and_validation_rejects_overlap() {
+        let mut workspace = Workspace {
+            root: DockNode::Tabs {
+                id: DockNodeId(1),
+                tabs: vec![PaneId(1)],
+                active: 0,
+            },
+            active_pane: PaneId(1),
+            next_node_id: 2,
+            ..Workspace::analytical_default()
+        };
+        let before = workspace.clone();
+        assert!(!workspace.close_pane(PaneId(1)));
+        assert_eq!(workspace, before);
+        workspace.closed_optional_panes.insert(PaneId(1));
+        assert_eq!(
+            workspace.validate(),
+            Err("a closed pane is still docked".into())
+        );
     }
 }

@@ -13,6 +13,8 @@ pub enum LabAction {
     Redo,
     SaveLayout,
     ResetWorkspace,
+    ViewPanels,
+    ToggleDiagnostics,
     FitView,
     LinkViews,
     NavigateTool,
@@ -28,11 +30,13 @@ pub enum LabAction {
 
 impl LabAction {
     #[cfg(test)]
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 17] = [
         Self::Undo,
         Self::Redo,
         Self::SaveLayout,
         Self::ResetWorkspace,
+        Self::ViewPanels,
+        Self::ToggleDiagnostics,
         Self::AppearanceSettings,
         Self::DisplaySettings,
         Self::CopyDiagnostics,
@@ -54,6 +58,8 @@ impl ActionKey for LabAction {
             Self::Redo => "redo",
             Self::SaveLayout => "save_layout",
             Self::ResetWorkspace => "reset_workspace",
+            Self::ViewPanels => "view_panels",
+            Self::ToggleDiagnostics => "toggle_diagnostics",
             Self::AppearanceSettings => "appearance_settings",
             Self::DisplaySettings => "display_settings",
             Self::CopyDiagnostics => "copy_diagnostics",
@@ -96,6 +102,20 @@ impl ActionKey for LabAction {
                 "Restore the default workspace, cameras and tools",
                 Some("Reset"),
                 None,
+                ActionScope::Application,
+            ),
+            Self::ViewPanels => (
+                "View/Panels",
+                "Show or hide workspace panes",
+                Some("Panels"),
+                None,
+                ActionScope::Application,
+            ),
+            Self::ToggleDiagnostics => (
+                "Diagnostics",
+                "Show or hide the Diagnostics pane",
+                None,
+                Some(ActionShortcut::command_shift(ShortcutKey::D)),
                 ActionScope::Application,
             ),
             Self::AppearanceSettings => (
@@ -210,6 +230,8 @@ pub fn availability(id: LabAction, context: ActionContext) -> Availability {
         | LabAction::Redo
         | LabAction::SaveLayout
         | LabAction::ResetWorkspace
+        | LabAction::ViewPanels
+        | LabAction::ToggleDiagnostics
         | LabAction::AppearanceSettings => Availability::Enabled,
         LabAction::CopyDiagnostics if context.target_pane != Some(PaneId(8)) => {
             Availability::Disabled {

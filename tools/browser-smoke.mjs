@@ -932,6 +932,32 @@ try {
       ? 'recorded in diagnostics'
       : 'missing frame advance',
   };
+  const beforeDiagnosticsClose = await semanticSnapshot();
+  await clickTarget({ kind: 'action', action: 'view_panels' });
+  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+    .some((node) => node.actions.includes('toggle_diagnostics')));
+  const panelsOpen = await semanticSnapshot();
+  const diagnosticsToggle = panelsOpen.ui_snapshot.nodes
+    .find((node) => node.actions.includes('toggle_diagnostics'));
+  if (diagnosticsToggle?.role !== 'button' || diagnosticsToggle.name !== 'Diagnostics'
+      || diagnosticsToggle.checked !== true || !diagnosticsToggle.enabled
+      || panelsOpen.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error(`Diagnostics panel action lacks usable semantics: ${JSON.stringify(diagnosticsToggle)}`);
+  }
+  await clickTarget({ kind: 'action', action: 'toggle_diagnostics' });
+  await page.waitForFunction(() => !window.__POLYORAMA_HANDLE.test_snapshot()
+    .ui_geometry.tabs.some((tab) => tab.pane === 8));
+  const diagnosticsClosed = await semanticSnapshot();
+  if (diagnosticsClosed.ui_geometry.tabs.length !== 7
+      || diagnosticsClosed.ui_snapshot.nodes.some((node) => node.id === 'polyorama.dock.tab.8')
+      || diagnosticsClosed.workspace_hash === beforeDiagnosticsClose.workspace_hash
+      || JSON.stringify(diagnosticsClosed.annotations) !== JSON.stringify(beforeDiagnosticsClose.annotations)
+      || diagnosticsClosed.selected_annotation !== beforeDiagnosticsClose.selected_annotation
+      || JSON.stringify(diagnosticsClosed.cameras) !== JSON.stringify(beforeDiagnosticsClose.cameras)
+      || diagnosticsClosed.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error('Closing Diagnostics changed analytical state or left an invalid dock');
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-diagnostics-closed.png') });
   await clickTarget({ kind: 'action', action: 'save_layout' });
   await page.waitForTimeout(250);
   const persistedKeys = await page.evaluate(() => Object.keys(localStorage));
@@ -952,6 +978,33 @@ try {
   if (JSON.stringify(restoredSemantic.preferences) !== JSON.stringify(changedPreferences.preferences)) {
     throw new Error(`appearance preferences were not restored: ${JSON.stringify(restoredSemantic.preferences)}`);
   }
+  if (restoredSemantic.ui_geometry.tabs.length !== 7
+      || restoredSemantic.ui_geometry.tabs.some((tab) => tab.pane === 8)
+      || JSON.stringify(restoredSemantic.annotations) !== JSON.stringify(diagnosticsClosed.annotations)
+      || restoredSemantic.selected_annotation !== diagnosticsClosed.selected_annotation
+      || JSON.stringify(restoredSemantic.cameras) !== JSON.stringify(diagnosticsClosed.cameras)) {
+    throw new Error('Saved closed Diagnostics layout or analytical state did not restore');
+  }
+  await clickTarget({ kind: 'action', action: 'view_panels' });
+  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+    .some((node) => node.actions.includes('toggle_diagnostics') && node.checked === false));
+  await clickTarget({ kind: 'action', action: 'toggle_diagnostics' });
+  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+    .ui_geometry.tabs.some((tab) => tab.pane === 8));
+  const diagnosticsReopened = await semanticSnapshot();
+  if (diagnosticsReopened.ui_geometry.tabs.filter((tab) => tab.pane === 8).length !== 1
+      || diagnosticsReopened.ui_snapshot.semantic_audit.length !== 0) {
+    throw new Error('Reopening Diagnostics did not produce one valid pane');
+  }
+  await page.screenshot({ path: join(evidenceRoot, 'browser-diagnostics-reopened.png') });
+  semanticEvidence.diagnostics_visibility = {
+    action: diagnosticsToggle,
+    closed_tabs: diagnosticsClosed.ui_geometry.tabs.length,
+    restored_closed_tabs: restoredSemantic.ui_geometry.tabs.length,
+    reopened_tabs: diagnosticsReopened.ui_geometry.tabs.length,
+    analytical_state_preserved: true,
+  };
+  await clickTarget({ kind: 'action', action: 'save_layout' });
   semanticEvidence.preferences.restored = restoredSemantic.preferences;
   const restored = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS);
   observations.saved_workspace_restore = {
@@ -975,6 +1028,18 @@ try {
       return { width: element.width, height: element.height };
     });
     if (canvas.width <= 0 || canvas.height <= 0) throw new Error(`${viewport.label} canvas has zero dimensions`);
+    if (viewport.label === 'narrow') {
+      await clickTarget({ kind: 'action', action: 'view_panels' });
+      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+        .some((node) => node.actions.includes('toggle_diagnostics')));
+      await physicallyClickSemanticControl('action.toggle_diagnostics');
+      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_geometry.tabs.length === 7);
+      await clickTarget({ kind: 'action', action: 'view_panels' });
+      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+        .some((node) => node.actions.includes('toggle_diagnostics') && node.checked === false));
+      await physicallyClickSemanticControl('action.toggle_diagnostics');
+      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_geometry.tabs.length === 8);
+    }
     responsiveEvidence.push({ viewport: `${viewport.width}x${viewport.height}`, canvas });
     await page.screenshot({ path: join(evidenceRoot, `browser-${viewport.label}.png`) });
   }

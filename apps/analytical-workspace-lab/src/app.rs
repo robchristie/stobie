@@ -31,6 +31,16 @@ use crate::{
 };
 
 const STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
+const DIAGNOSTICS_PANE: PaneId = PaneId(8);
+const DIAGNOSTICS_ANCHOR: PaneId = PaneId(7);
+
+fn toggle_diagnostics(workspace: &mut Workspace) -> bool {
+    if workspace.closed_optional_panes.contains(&DIAGNOSTICS_PANE) {
+        workspace.reopen_pane(DIAGNOSTICS_PANE, DIAGNOSTICS_ANCHOR)
+    } else {
+        workspace.close_pane(DIAGNOSTICS_PANE)
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 struct PersistedState {
@@ -141,8 +151,16 @@ fn persisted_state_is_valid(state: &PersistedState) -> bool {
     let expected_panes: BTreeSet<_> = (1..=8).map(PaneId).collect();
     let mut panes = Vec::new();
     state.workspace.root.pane_ids(&mut panes);
-    if panes.into_iter().collect::<BTreeSet<_>>() != expected_panes
-        || !state.workspace.closed_optional_panes.is_empty()
+    let open_panes: BTreeSet<_> = panes.into_iter().collect();
+    if !state
+        .workspace
+        .closed_optional_panes
+        .is_subset(&BTreeSet::from([DIAGNOSTICS_PANE]))
+        || open_panes
+            .union(&state.workspace.closed_optional_panes)
+            .copied()
+            .collect::<BTreeSet<_>>()
+            != expected_panes
     {
         return false;
     }
@@ -774,6 +792,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
             .is_none_or(|theme| theme == egui::Theme::Dark);
         let tokens = self.preferences.tokens(system_dark);
         let mut save_now = false;
+        let mut toggle_diagnostics_now = false;
         let mut preferences_changed = false;
         let mut ui_geometry = UiGeometry::new(root_ui.max_rect(), ctx.pixels_per_point());
         let application_bar_id = SemanticUiId::new("application.bar");
@@ -925,6 +944,70 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         self.status = "Default workspace restored".into();
                         self.request_repaint(&ctx, RepaintReason::Command);
                     }
+                    let panels_availability = availability(LabAction::ViewPanels, action_context);
+                    let panels_target = ActionTarget::application(LabAction::ViewPanels);
+                    let panels = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target: panels_target,
+                            availability: panels_availability.clone(),
+                            state: ActionButtonState::Momentary,
+                            emphasis: ActionEmphasis::Quiet,
+                            compact: compact_bar,
+                        },
+                        &tokens,
+                        self.preferences.font_scale,
+                        &mut ui_geometry.text_layouts,
+                    );
+                    ui_geometry.action(
+                        application_bar_id.clone(),
+                        panels_target,
+                        &panels_availability,
+                        ActionButtonState::Momentary,
+                        &panels,
+                    );
+                    if let Some(popup) = egui::Popup::menu(&panels).show(|ui| {
+                        ui.set_width(tokens.geometry.minimum_hit_size.0 * 4.0);
+                        let target = ActionTarget::application(LabAction::ToggleDiagnostics);
+                        let enabled = availability(LabAction::ToggleDiagnostics, action_context);
+                        let state = ActionButtonState::Toggle {
+                            pressed: !self
+                                .workspace
+                                .closed_optional_panes
+                                .contains(&DIAGNOSTICS_PANE),
+                        };
+                        let response = action_button(
+                            ui,
+                            ActionButtonSpec {
+                                target,
+                                availability: enabled.clone(),
+                                state,
+                                emphasis: ActionEmphasis::Quiet,
+                                compact: false,
+                            },
+                            &tokens,
+                            self.preferences.font_scale,
+                            &mut ui_geometry.text_layouts,
+                        );
+                        ui_geometry.action(
+                            application_bar_id.clone(),
+                            target,
+                            &enabled,
+                            state,
+                            &response,
+                        );
+                        if response.clicked() {
+                            ui.close();
+                        }
+                        response.clicked()
+                    }) {
+                        toggle_diagnostics_now |= popup.inner;
+                    }
+                    toggle_diagnostics_now |=
+                        consume_action_shortcut(ui, LabAction::ToggleDiagnostics, true);
+                    if toggle_diagnostics_now {
+                        panels.request_focus();
+                    }
                     let appearance_availability =
                         availability(LabAction::AppearanceSettings, action_context);
                     let appearance_target =
@@ -1019,6 +1102,19 @@ impl eframe::App for AnalyticalWorkspaceApp {
                     }
                 });
             });
+        if toggle_diagnostics_now && toggle_diagnostics(&mut self.workspace) {
+            self.status = if self
+                .workspace
+                .closed_optional_panes
+                .contains(&DIAGNOSTICS_PANE)
+            {
+                "Diagnostics closed"
+            } else {
+                "Diagnostics reopened"
+            }
+            .into();
+            self.request_repaint(&ctx, RepaintReason::Command);
+        }
         if preferences_changed {
             self.preferences = self.preferences.validated();
             apply_design_system(&ctx, self.preferences);
@@ -1298,6 +1394,61 @@ mod tests {
         let restored: PersistedState = serde_json::from_value(value).unwrap();
         assert_eq!(restored.preferences, UiPreferences::default());
         assert!(persisted_state_is_valid(&restored));
+    }
+
+    #[test]
+    fn closed_diagnostics_restores_without_losing_analytical_state() {
+        let mut state = persisted(Workspace::analytical_default());
+        state.document.annotations.push(Polygon {
+            id: AnnotationId(7),
+            layer: LayerId(1),
+            vertices: vec![
+                WorldPoint::new(0.0, 0.0),
+                WorldPoint::new(1.0, 0.0),
+                WorldPoint::new(0.0, 1.0),
+            ],
+        });
+        state.session.selected_annotation = Some(AnnotationId(7));
+        state.session.selected_result = Some(ResultId(42));
+        state.session.cameras[0].camera.centre = ImagePoint::new(101.0, 202.0);
+        let original_document = state.document.clone();
+        let original_session = state.session.clone();
+        let original_display = serde_json::to_value(&state.display).unwrap();
+
+        assert!(persisted_state_is_valid(&state));
+        assert!(toggle_diagnostics(&mut state.workspace));
+        assert!(persisted_state_is_valid(&state));
+        let mut restored: PersistedState =
+            serde_json::from_slice(&serde_json::to_vec(&state).unwrap()).unwrap();
+        assert!(persisted_state_is_valid(&restored));
+        assert!(
+            restored
+                .workspace
+                .closed_optional_panes
+                .contains(&DIAGNOSTICS_PANE)
+        );
+        assert_eq!(restored.document, original_document);
+        assert_eq!(restored.session, original_session);
+        assert_eq!(
+            serde_json::to_value(&restored.display).unwrap(),
+            original_display
+        );
+
+        assert!(toggle_diagnostics(&mut restored.workspace));
+        assert!(persisted_state_is_valid(&restored));
+        assert!(
+            !restored
+                .workspace
+                .closed_optional_panes
+                .contains(&DIAGNOSTICS_PANE)
+        );
+    }
+
+    #[test]
+    fn restoration_rejects_unknown_closed_panes() {
+        let mut state = persisted(Workspace::analytical_default());
+        state.workspace.closed_optional_panes.insert(PaneId(99));
+        assert!(!persisted_state_is_valid(&state));
     }
 
     #[test]
