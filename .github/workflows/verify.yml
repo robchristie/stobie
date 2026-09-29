@@ -32,7 +32,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          cache-on-failure: true
+          # Only a successful full main run may publish dependency artifacts.
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs' }}
+          # The dedicated cache below owns the pinned wasm-bindgen executable.
+          cache-bin: false
 
       - uses: actions/setup-node@v5
         if: steps.scope.outputs.mode != 'docs'
@@ -42,8 +45,9 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Restore wasm-bindgen CLI
+        id: wasm_bindgen_cache
         if: steps.scope.outputs.mode != 'docs'
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cargo/bin/wasm-bindgen
           key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
@@ -58,7 +62,7 @@ jobs:
 
       - name: Install wasm-bindgen CLI
         if: steps.scope.outputs.mode != 'docs'
-        run: command -v wasm-bindgen || cargo install --locked wasm-bindgen-cli --version 0.2.127
+        run: bash tools/ensure-wasm-bindgen-cli.sh
 
       - name: Install pinned Binaryen
         if: steps.scope.outputs.mode != 'docs'
@@ -79,6 +83,17 @@ jobs:
       - name: Verify documentation
         if: steps.scope.outputs.mode == 'docs'
         run: python3 tools/verify.py
+
+      - name: Exclude generated browser output from Rust cache
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs'
+        run: rm -rf -- target/browser-staging target/browser-production
+
+      - name: Save wasm-bindgen CLI
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs' && steps.wasm_bindgen_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
 
       - name: Upload verification evidence
         if: ${{ failure() }}
