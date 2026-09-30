@@ -53,7 +53,9 @@ impl ThumbnailCache {
             ));
         }
         let pixels = scalar_u16_le
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|bytes| {
                 let value = u16::from_le_bytes([bytes[0], bytes[1]]) as f32 / u16::MAX as f32;
                 let blue = (42.0 + value * 186.0) as u8;

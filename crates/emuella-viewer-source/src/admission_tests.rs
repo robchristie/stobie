@@ -187,6 +187,69 @@ fn bins(c: &mut SharedClient, r: &Region) {
     }
 }
 #[test]
+fn reduced_query_matches_admitted_decode_window_at_tile_edge() {
+    let f = fixture();
+    let tid = &f.manifest.tid;
+    // A one-column intersection at x=255 contains no sample at discard 2.
+    // Include aligned, interior and image-edge windows around that boundary.
+    for (x, y, width, offset, size) in [
+        (256, 16, 32, [64, 4], [8, 8]),
+        (273, 17, 32, [69, 5], [8, 8]),
+        (255, 17, 32, [64, 5], [8, 8]),
+        (755, 17, 13, [189, 5], [3, 8]),
+    ] {
+        let r = Region {
+            x,
+            y,
+            width,
+            discard: 2,
+            ..region(x)
+        };
+        let mut c = client(64 << 20);
+        let scope = c.begin_request(tid, &r).unwrap();
+        masks(&mut c, &r);
+        let request = c.request(tid, &r, 64 << 10).unwrap();
+        let (served, fields) = effective_region(&f.manifest, &request).unwrap();
+        let ranges = bin_ranges(&f.index).unwrap();
+        let mut reader = c.begin_response(tid, &fields).unwrap();
+        // Exercise the real request/response boundary, including complete empty
+        // metadata and tile-header bins, under the unchanged admission guard.
+        for demand in demands(&f.index, &served).unwrap() {
+            let range = &ranges[&demand.key];
+            let bytes = &f.payload[range.start as usize..range.end as usize];
+            c.receive(&mut reader, &message(demand.key, 0, true, bytes))
+                .unwrap();
+        }
+        c.receive(&mut reader, &jpip::encode_end(2)).unwrap();
+        c.finish(reader).unwrap();
+        assert_eq!(request.offset, offset);
+        assert_eq!(request.size, size);
+        assert!(c.ready(tid, &r).unwrap());
+        let decoded = c.decode(tid, &r).unwrap();
+        assert_eq!((decoded.width, decoded.height), (size[0], size[1]));
+        // Populate a separate client directly from the original codec demand,
+        // independently of the transport window, to check pixels and masks.
+        let mut reference = client(64 << 20);
+        masks(&mut reference, &r);
+        bins(&mut reference, &r);
+        let expected = reference.decode(tid, &r).unwrap();
+        assert_eq!(decoded.planes, expected.planes);
+        assert_eq!(decoded.validity, expected.validity);
+        c.end_request(scope);
+        assert!(c.resident_bytes().0 <= c.limits.compressed_bytes);
+    }
+    let empty = Region {
+        x: 255,
+        width: 1,
+        discard: 2,
+        ..region(255)
+    };
+    let mut c = client(64 << 20);
+    assert!(c.begin_request(tid, &empty).is_err());
+    assert!(c.active_request.is_none());
+}
+
+#[test]
 fn masked_multitile_scope_survives_pressure_then_releases_for_eviction_and_exact_refetch() {
     let f = fixture();
     let tid = &f.manifest.tid;

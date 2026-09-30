@@ -27,8 +27,8 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
     super::ensure_wasm_bindgen_version("0.2.127")?;
     let rustc = Command::new("rustc").arg("--version").output()?;
     let rustc = String::from_utf8(rustc.stdout)?;
-    if !rustc.starts_with("rustc 1.97.1 ") {
-        bail!("production browser builds require repository Rust 1.97.1; observed {rustc:?}");
+    if !rustc.starts_with("rustc 1.98.1 ") {
+        bail!("production browser builds require repository Rust 1.98.1; observed {rustc:?}");
     }
     let staging = Path::new("target/browser-staging");
     if staging.exists() {

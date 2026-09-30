@@ -318,7 +318,7 @@ impl Raster {
                 ensure!(result == 0, "GDAL tile read failed");
                 // The codec requires little-endian unsigned words.
                 if cfg!(target_endian = "big") && self.bits > 8 {
-                    for word in plane.chunks_exact_mut(2) {
+                    for word in plane.as_chunks_mut::<2>().0 {
                         word.swap(0, 1);
                     }
                 }
@@ -432,7 +432,7 @@ pub fn write_fixture(library_path: &Path, output: &Path, profile: &Profile) -> R
                     crate::synthetic_tile(profile, rect, &mut planes)?;
                     for (band, plane) in planes.iter_mut().enumerate() {
                         if cfg!(target_endian = "big") && profile.bits_per_sample > 8 {
-                            for word in plane.chunks_exact_mut(2) {
+                            for word in plane.as_chunks_mut::<2>().0 {
                                 word.swap(0, 1);
                             }
                         }

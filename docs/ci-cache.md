@@ -27,7 +27,7 @@ Rust cache compatibility includes runner OS and architecture, installed Rust
 toolchain versions, selected Cargo/Rust/build environment, `Cargo.lock`, Cargo
 manifests and Cargo configuration. An Ubuntu image update can change a
 *non-selected* installed toolchain and cause a cache miss even while the pinned
-compiler remains 1.97.1; do not bypass the action's compatibility check to
+compiler remains 1.98.1; do not bypass the action's compatibility check to
 force a hit. Only a successful full `main` push writes the Rust archive. PRs
 restore from an accessible `main` cache and do not write a PR-scoped Rust entry.
 Documentation-only and failed jobs do not write incomplete Rust entries.

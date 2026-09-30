@@ -644,7 +644,7 @@ mod tests {
                 }));
                 for (row, observations) in rows
                     .into_iter()
-                    .zip(publication.text_layouts.chunks_exact(5))
+                    .zip(publication.text_layouts.as_chunks::<5>().0)
                 {
                     for (key, observation) in [
                         "title",

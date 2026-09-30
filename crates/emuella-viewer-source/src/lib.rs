@@ -764,7 +764,9 @@ impl SharedClient {
         let p = &r.manifest.identity.profile;
         region.validate(p)?;
         let scale = 1 << region.discard;
-        let offset = [region.x / scale, region.y / scale];
+        // Match the codec's half-open reduced sample grid. Rounding down
+        // would request edge-tile bins absent from the authenticated plan.
+        let offset = [region.x.div_ceil(scale), region.y.div_ceil(scale)];
         let size = [
             (region.x + region.width).div_ceil(scale) - offset[0],
             (region.y + region.height).div_ceil(scale) - offset[1],
