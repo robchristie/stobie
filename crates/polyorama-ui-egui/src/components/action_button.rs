@@ -57,11 +57,18 @@ impl ActionButtonIdentity {
     }
 }
 
+/// Presentation of a typed capability; callers own response handling and mutation.
+/// Hidden availability must be filtered before rendering this control.
 pub struct ActionButtonSpec<A: ActionKey> {
+    /// Typed capability and applicable pane identity.
     pub target: ActionTarget<A>,
+    /// Enabled, disabled with an observable reason, or filtered-out hidden state.
     pub availability: Availability,
+    /// Momentary action or current toggle state, also retained in semantics.
     pub state: ActionButtonState,
+    /// Token-defined visual prominence independent of capability identity.
     pub emphasis: ActionEmphasis,
+    /// Select the compact label when supplied by the action specification.
     pub compact: bool,
 }
 

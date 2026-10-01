@@ -1,4 +1,41 @@
-//! Desired-set reconciliation and bounded CPU-only worker scheduling.
+//! Reconcile desired tiles and own bounded CPU work and completion state.
+//!
+//! [`Runtime`] is independent of egui and wgpu. Submit the complete current set
+//! of [`TileDemand`]s to [`Runtime::reconcile`], including an empty set when no
+//! tiles are desired. Repeated/overlapping requests are desired state, not events.
+//! Use [`Runtime::generation`] in demands and retain each [`RequestToken`] across
+//! dispatch, completion, upload and residency acknowledgement.
+//!
+//! ```
+//! use polyorama_core::{DemandPriority, SourceId, TileDemand, TileKey};
+//! use polyorama_runtime::{Runtime, RuntimeConfig};
+//! let mut runtime = Runtime::try_new(RuntimeConfig::default())
+//!     .expect("native worker must start in this example");
+//! let key = TileKey { source: SourceId(1), level: 0, x: 0, y: 0 };
+//! let demand = TileDemand { key, priority: DemandPriority::Visible,
+//!                           generation: runtime.generation() };
+//! runtime.reconcile([demand, demand]);
+//! assert!(runtime.token(key).is_some());
+//! runtime.reconcile([]); // remove the tile from desired state
+//! runtime.invalidate(); // advance source identity and clear tracked work
+//! assert!(runtime.token(key).is_none());
+//! ```
+//!
+//! On native targets, [`Runtime::try_new`] starts the built-in synthetic worker;
+//! install [`Runtime::set_repaint_waker`] and call [`Runtime::poll`] on the owning
+//! application thread. The waker runs on the worker thread and must only wake
+//! the UI, not mutate its model. On WASM, construction starts no Web Worker:
+//! the application transports [`DecodeRequest`]s from
+//! [`Runtime::take_external_request`] and feeds [`DecodeEvent`]s back through
+//! [`Runtime::accept_event`]. Browser packaging and worker startup are application
+//! responsibilities; compilation alone does not establish them.
+//!
+//! Successful completion is decoded CPU data, not GPU residency. Transfer events
+//! using [`Runtime::take_decoded_for_renderer`]; retain a rejected renderer upload
+//! for retry or report its terminal failure with [`Runtime::mark_handoff_failed`].
+//! Call [`Runtime::mark_resident`] and [`Runtime::mark_evicted`] only with actual
+//! renderer acknowledgements. See the
+//! [application composition guide](https://github.com/robchristie/polyorama/blob/main/docs/application-composition.md).
 
 pub mod regional;
 pub use regional::*;
@@ -24,17 +61,27 @@ pub const DEFAULT_DECODED_CAPACITY_BYTES: usize = 8 * 1024 * 1024;
 pub const DEFAULT_BROWSER_CREDITS: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+/// Opaque-to-consumers request identity; preserve every field through each hand-off.
+/// A retained tile can keep its token across desired-set epochs. Comparing only
+/// the source generation is insufficient to identify a current completion.
 pub struct RequestToken {
+    /// Source identity captured at admission.
     pub source_generation: u64,
+    /// Desired-set epoch captured at admission, not necessarily the latest epoch.
     pub demand_epoch: u64,
+    /// Admission sequence distinguishing repeated work for the same key.
     pub sequence: u64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// Compact worker input; return its exact key/token with completion or failure.
 pub struct DecodeRequest {
     pub key: TileKey,
     pub token: RequestToken,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// Owned worker output. Scalar tile bytes are little-endian `u16` samples;
+/// failed events carry no pixel payload. Submit through [`Runtime::accept_event`]
+/// so stale, obsolete and duplicate completions are rejected before hand-off.
 pub enum DecodeEvent {
     Completed {
         key: TileKey,
@@ -134,16 +181,26 @@ pub fn prepare_and_decode(request: DecodeRequest) -> DecodeEvent {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// Construction failure when the native worker thread cannot be started.
 pub enum RuntimeInitError {
     NativeWorkerStart(String),
 }
 #[derive(Clone, Debug)]
+/// Bounded scheduler/transport capacities. Defaults support the built-in fixture
+/// worker; choose non-zero queue capacities for normal asynchronous operation.
+/// Construction does not validate or normalise arbitrary capacity combinations.
 pub struct RuntimeConfig {
+    /// Maximum tracked scheduler entries.
     pub scheduler_capacity: usize,
+    /// Maximum queued requests awaiting browser transport.
     pub external_capacity: usize,
+    /// Native worker request-channel capacity.
     pub native_queue_capacity: usize,
+    /// Native worker completion-channel capacity.
     pub native_event_capacity: usize,
+    /// Decoded hand-off byte cap; an oversized event can progress alone.
     pub decoded_capacity_bytes: usize,
+    /// Maximum browser requests queued or in flight together.
     pub browser_credits: usize,
 }
 impl Default for RuntimeConfig {
@@ -218,6 +275,8 @@ impl NativeWorker {
     }
 }
 
+/// Application-thread owner of desired state, token validation and CPU hand-off.
+/// Native workers only exchange requests/events; they do not access the UI/model.
 pub struct Runtime {
     config: RuntimeConfig,
     source_generation: u64,
@@ -251,6 +310,9 @@ impl Default for Runtime {
     }
 }
 impl Runtime {
+    /// Start the native synthetic worker or initialise WASM external transport.
+    /// WASM callers must create and drive their own Web Worker. Unlike `Default`,
+    /// this returns native startup failure instead of retaining an unavailable worker.
     pub fn try_new(config: RuntimeConfig) -> Result<Self, RuntimeInitError> {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -311,6 +373,7 @@ impl Runtime {
             },
         }
     }
+    /// Current source identity to place in desired demands and render requests.
     pub fn generation(&self) -> u64 {
         self.source_generation
     }
@@ -318,6 +381,8 @@ impl Runtime {
         self.demand_epoch
     }
     #[cfg(not(target_arch = "wasm32"))]
+    /// Install a worker-thread wake notification. The `Send + Sync` callback
+    /// should request an owning-thread UI repaint, not mutate model/UI state.
     pub fn set_repaint_waker(&mut self, waker: RepaintWaker) {
         if let Some(native) = &self.native {
             *native.waker.lock() = Some(waker);
@@ -340,6 +405,9 @@ impl Runtime {
             message: message.into(),
         });
     }
+    /// Advance source identity and clear tracked desired/resources/decoded work.
+    /// In-flight native work may still finish; its old token is rejected on arrival.
+    /// Pass the new generation to the renderer so its resources are invalidated too.
     pub fn invalidate(&mut self) {
         self.source_generation += 1;
         self.demand_epoch += 1;
@@ -364,7 +432,10 @@ impl Runtime {
     pub fn token(&self, key: TileKey) -> Option<RequestToken> {
         self.resources.get(&key).map(|entry| entry.token)
     }
-    /// Atomically replaces desired state. Existing tokens survive only for retained keys.
+    /// Atomically replace the complete desired set, deduplicating keys and admitting
+    /// bounded work. Pass an empty set to withdraw demand. Only demands matching
+    /// [`Runtime::generation`] are retained. Existing tokens survive for retained
+    /// keys; callers must not regenerate tokens each frame.
     pub fn reconcile(&mut self, demands: impl IntoIterator<Item = TileDemand>) {
         let _span = info_span!("demand_reconciliation").entered();
         self.demand_epoch += 1;
@@ -658,6 +729,9 @@ impl Runtime {
         self.update_metrics();
         Some(request)
     }
+    /// Accept an owned external completion on the application thread, validating
+    /// its full key/token and desired state. Unknown, superseded, obsolete and
+    /// duplicate events are discarded; decoded admission is capacity-bounded.
     pub fn accept_event(&mut self, event: DecodeEvent) {
         if self.metrics.worker_health == WorkerHealth::Starting {
             self.metrics.worker_health = WorkerHealth::Running;
@@ -733,6 +807,9 @@ impl Runtime {
         self.dispatch_ready();
         self.update_metrics();
     }
+    /// Drain native worker events without blocking; returns events received,
+    /// including any discarded as stale. On WASM this returns zero; use
+    /// [`Runtime::accept_event`] for externally transported worker results.
     pub fn poll(&mut self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -773,6 +850,9 @@ impl Runtime {
             0
         }
     }
+    /// Transfer one owned decoded event and mark it handed to the renderer.
+    /// A rejecting consumer must retain it for retry or call
+    /// [`Runtime::mark_handoff_failed`]; taking it alone does not establish residency.
     pub fn take_decoded_for_renderer(&mut self) -> Option<DecodeEvent> {
         let event = self.decoded.pop_front()?;
         self.decoded_bytes -= event.bytes();
@@ -785,6 +865,8 @@ impl Runtime {
         self.update_metrics();
         Some(event)
     }
+    /// Record actual renderer residency with the original hand-off token.
+    /// Decoding or upload admission alone must not trigger this acknowledgement.
     pub fn mark_resident(&mut self, key: TileKey, token: RequestToken) {
         if let Some(entry) = self.resources.get_mut(&key) {
             if entry.token == token
@@ -804,6 +886,9 @@ impl Runtime {
         self.dispatch_ready();
         self.update_metrics();
     }
+    /// End a handed-off event that cannot be uploaded; report the retained
+    /// event's exact key/token. A temporary bridge-capacity rejection can instead
+    /// be retried without changing runtime state.
     pub fn mark_handoff_failed(
         &mut self,
         key: TileKey,
@@ -831,6 +916,8 @@ impl Runtime {
         self.dispatch_ready();
         self.update_metrics();
     }
+    /// Record actual renderer eviction with its residency token; desired work
+    /// can then be readmitted. A stale token cannot evict a replacement resource.
     pub fn mark_evicted(&mut self, key: TileKey, token: RequestToken) {
         let mut remove = false;
         if let Some(entry) = self.resources.get_mut(&key) {

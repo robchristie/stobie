@@ -27,9 +27,14 @@ pub enum DemandPriority {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// One member of the complete current desired tile set.
+/// Duplicate keys are reconciled; use the runtime's current source generation.
 pub struct TileDemand {
+    /// Stable decoded-data identity, independent of display settings.
     pub key: TileKey,
+    /// Visible work takes precedence over prefetch work.
     pub priority: DemandPriority,
+    /// Source identity, rather than a UI frame number or request counter.
     pub generation: u64,
 }
 
@@ -57,8 +62,11 @@ pub struct Polygon {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// Durable annotation state. UI focus, selection and gesture previews do not belong here.
 pub struct Document {
+    /// Committed polygons, changed through validated commands in normal application use.
     pub annotations: Vec<Polygon>,
+    /// The next identity reserved by polygon-intent validation; undo does not rewind it.
     pub next_annotation_id: u64,
 }
 
@@ -84,12 +92,20 @@ pub enum GesturePreview {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+/// Transient selection, per-pane view/tool state and in-progress gesture preview.
+/// Serialisation is supported, but this is distinct from durable [`Document`] data.
+/// The default camera/tool mappings are the Lab's panes 1–4, not a generic registry.
 pub struct Session {
+    /// Selection persists across virtualised visible ranges without materialising rows.
     pub selected_result: Option<ResultId>,
+    /// Selected durable annotation identity.
     pub selected_annotation: Option<AnnotationId>,
+    /// Application-owned mappings between image pane IDs and cameras/link groups.
     pub cameras: Vec<CameraState>,
+    /// The selected tool for each image pane.
     pub active_tools: BTreeMap<PaneId, ActiveTool>,
     #[serde(skip)]
+    /// In-progress preview, deliberately omitted from serialisation.
     pub gesture: Option<GesturePreview>,
 }
 

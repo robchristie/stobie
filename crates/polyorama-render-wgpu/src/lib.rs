@@ -1,4 +1,42 @@
-//! Typed renderer requests and renderer-owned wgpu resources.
+//! Typed image requests and persistent renderer-owned GPU resources.
+//!
+//! [`ScalarRenderer`] owns pipelines, textures, residency and per-pane draw data.
+//! The host (for example eframe) owns the device and queue; construct one renderer
+//! in its callback resources and share it across panes. A pane describes work
+//! with [`ImageRenderRequest`] and must not create a device, queue or tile cache.
+//! [`PhysicalViewport`] uses physical pixels while its [`Camera`] uses typed
+//! image coordinates. [`DisplaySettings`] changes presentation independently
+//! of decoded tile identity.
+//!
+//! ```
+//! use polyorama_core::{Camera, PaneId, PhysicalPoint, SourceId};
+//! use polyorama_render_wgpu::{DisplaySettings, ImageRenderRequest,
+//!     PhysicalViewport, RenderPlan};
+//! let mut plan = RenderPlan::default();
+//! plan.submit(ImageRenderRequest {
+//!     pane: PaneId(1), source: SourceId(1), source_generation: 1,
+//!     viewport: PhysicalViewport {
+//!         origin: PhysicalPoint::new(0.0, 0.0),
+//!         size: PhysicalPoint::new(640.0, 480.0), scale_factor: 1.0,
+//!     },
+//!     camera: Camera::default(), display: DisplaySettings::default(),
+//!     desired_tiles: vec![],
+//! });
+//! assert_eq!(plan.images.len(), 1);
+//! ```
+//!
+//! Move decoded events into [`RenderBridge::push`] and handle
+//! [`UploadAdmission::Rejected`] without losing the returned event. The bridge
+//! connects application/runtime state to render callbacks; admission is not
+//! residency. Forward [`RenderBridge::take_resident`] and
+//! [`RenderBridge::take_evicted`] acknowledgements to the runtime using their
+//! original tokens. Run [`ScalarRenderer::maintain_frame`] once per application
+//! frame even if no image is visible, before preparing pane callbacks.
+//!
+//! `polyorama-ui-egui` stages those callbacks and publishes a validated complete
+//! plan before GPU preparation. See the
+//! [application composition guide](https://github.com/robchristie/polyorama/blob/main/docs/application-composition.md)
+//! for ordering, ownership and the native-only minimal vector consumer.
 
 pub mod regional;
 pub use regional::*;
@@ -31,9 +69,13 @@ pub enum DisplayMap {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+/// Scalar presentation only; changing this does not require re-decoding tile data.
 pub struct DisplaySettings {
+    /// Low normalised scalar window bound.
     pub window_low: f32,
+    /// High normalised scalar window bound; choose it above the low bound.
     pub window_high: f32,
+    /// Colour mapping applied by the renderer.
     pub map: DisplayMap,
 }
 
@@ -48,24 +90,40 @@ impl Default for DisplaySettings {
 }
 
 #[derive(Clone, Copy, Debug)]
+/// Physical-pixel viewport corresponding to one logical egui content rectangle.
 pub struct PhysicalViewport {
+    /// Absolute physical-pixel origin in the host surface.
     pub origin: PhysicalPoint,
+    /// Physical-pixel width and height.
     pub size: PhysicalPoint,
+    /// Physical pixels per logical screen point; use the host's current scale.
     pub scale_factor: f32,
 }
 
 #[derive(Clone, Debug)]
+/// Complete per-pane scalar image input for the current frame.
+/// Keep pane/source/generation consistent with staged callbacks and runtime work.
+/// Requests describe presentation; they neither schedule decoding nor own GPU resources.
 pub struct ImageRenderRequest {
+    /// Stable pane identity, unique within a complete submitted plan.
     pub pane: PaneId,
+    /// Image source corresponding to the desired tile keys.
     pub source: SourceId,
+    /// Current runtime source generation, used to reject/reset stale renderer data.
     pub source_generation: u64,
+    /// Physical surface geometry; the camera remains expressed in image coordinates.
     pub viewport: PhysicalViewport,
+    /// Current image-to-viewport camera.
     pub camera: Camera,
+    /// Presentation independent of decoded-data identity.
     pub display: DisplaySettings,
+    /// Visible/prefetch tile identities to consider drawing; submit their demands separately.
     pub desired_tiles: Vec<TileKey>,
 }
 
 #[derive(Default)]
+/// Application-owned complete frame image plan, ordered with its UI callback targets.
+/// `submit` appends; validation belongs to the UI integration's `submit_render_plan`.
 pub struct RenderPlan {
     pub images: Vec<ImageRenderRequest>,
 }
@@ -123,6 +181,8 @@ impl UploadAdmission {
 }
 
 #[derive(Clone)]
+/// Cloneable, synchronised CPU hand-off to the renderer; clones share one bounded
+/// queue and acknowledgement stream. Admission does not imply GPU residency.
 pub struct RenderBridge(Arc<Mutex<RenderBridgeState>>);
 
 struct RenderBridgeState {
@@ -173,9 +233,13 @@ impl RenderBridge {
         UploadAdmission::Accepted
     }
 
+    /// Drain actual upload/residency transitions once and forward each original
+    /// key/token to runtime `mark_resident` on the application thread.
     pub fn take_resident(&self) -> Vec<TileResidencyAck> {
         std::mem::take(&mut self.0.lock().became_resident)
     }
+    /// Drain actual cache eviction transitions once and forward each original
+    /// key/token to runtime `mark_evicted` on the application thread.
     pub fn take_evicted(&self) -> Vec<TileResidencyAck> {
         std::mem::take(&mut self.0.lock().evicted)
     }
@@ -225,6 +289,8 @@ struct PaneDraw {
     tiles: Vec<TileDraw>,
 }
 
+/// Persistent scalar GPU owner shared by image panes in one host renderer.
+/// Install it in egui-wgpu callback resources; panes provide typed requests.
 pub struct ScalarRenderer {
     pipeline: wgpu::RenderPipeline,
     tile_vertices: wgpu::Buffer,
@@ -238,6 +304,9 @@ pub struct ScalarRenderer {
 }
 
 impl ScalarRenderer {
+    /// Create resources using the host's device and render-target format.
+    /// Share the matching bridge with the application; do not create a renderer
+    /// or a new device/queue per pane.
     pub fn new(
         device: &wgpu::Device,
         target_format: wgpu::TextureFormat,

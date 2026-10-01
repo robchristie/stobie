@@ -17,6 +17,7 @@ fn main() -> Result<()> {
         "viewer-smoke" => run("node", &["tools/viewer-browser-smoke.mjs"]),
         "architecture" => architecture(),
         "plans" => plans::check(Path::new(".")),
+        "docs" => run("python3", &["tools/check-api-docs.py"]),
         "tokens" => match env::args().nth(2).as_deref() {
             Some("generate") => tokens::generate(Path::new(".")),
             Some("check") => tokens::check(Path::new(".")),
@@ -32,6 +33,9 @@ fn main() -> Result<()> {
             println!("cargo xtask build-browser-production [--variant none|Oz|O3] [--output DIR]");
             println!("cargo xtask architecture check dependency boundaries");
             println!("cargo xtask plans      check documentation plan lifecycle");
+            println!(
+                "cargo xtask docs       generate/check selected API docs and consumer examples"
+            );
             println!("cargo xtask tokens generate generate typed Rust from the token source");
             println!("cargo xtask tokens check    validate tokens and check generated drift");
             println!("cargo xtask ui list|render|inspect|audit-text|verify --output-dir <path>");
@@ -86,8 +90,20 @@ fn verify() -> Result<()> {
         ],
     )?;
     run("cargo", &["test", "--workspace"])?;
+    run("python3", &["tools/check-api-docs.py"])?;
     architecture()?;
     run("cargo", &["build", "--workspace", "--release"])?;
+    run(
+        "cargo",
+        &[
+            "build",
+            "--release",
+            "-p",
+            "analytical-workspace-lab",
+            "--example",
+            "minimal-workspace",
+        ],
+    )?;
     build_web()?;
     if cfg!(target_os = "linux") {
         run("bash", &["tools/bootstrap-linux-ui.sh"])?;
@@ -144,6 +160,11 @@ fn verify() -> Result<()> {
         run_with_environment(
             "bash",
             &["tools/gallery-native-smoke.sh"],
+            &evidence_environment,
+        )?;
+        run_with_environment(
+            "bash",
+            &["tools/minimal-native-smoke.sh"],
             &evidence_environment,
         )?;
     }

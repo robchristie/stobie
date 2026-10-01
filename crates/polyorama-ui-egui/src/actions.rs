@@ -12,7 +12,10 @@ use serde::{Deserialize, Serialize};
 /// the application's intent and command system; they are not a second mutation
 /// architecture.
 pub trait ActionKey: Copy + Eq + Hash + Ord + Serialize {
+    /// Stable external capability identity shared by semantics and automation.
+    /// Keep it independent of translated/compact labels and collection positions.
     fn stable_id(self) -> &'static str;
+    /// Presentation and routing metadata for this application-owned capability.
     fn specification(self) -> ActionSpec<Self>;
 }
 
@@ -138,11 +141,17 @@ impl ShortcutKey {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub struct ActionSpec<A: ActionKey> {
+    /// The typed capability described by these fields.
     pub id: A,
+    /// Full visible and accessible label.
     pub label: &'static str,
+    /// User-facing purpose, also used by observable control semantics.
     pub description: &'static str,
+    /// Optional short display label; the full label remains available to semantics.
     pub compact_label: Option<&'static str>,
+    /// Optional application-routed shortcut; declaring it alone does not dispatch it.
     pub shortcut: Option<ActionShortcut>,
+    /// Application, active-pane or explicit-pane routing scope.
     pub scope: ActionScope,
 }
 
@@ -173,7 +182,9 @@ impl Availability {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ActionTarget<A: ActionKey> {
+    /// Application-owned capability to route through intents/commands.
     pub action: A,
+    /// Stable pane identity for pane scopes; absent for application scope.
     pub pane: Option<PaneId>,
 }
 

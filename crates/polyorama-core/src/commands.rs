@@ -7,6 +7,8 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq)]
+/// Feature requests emitted by UI code and resolved by [`validate_intent`].
+/// An intent is not yet an undoable mutation; validation uses current application state.
 pub enum ImageIntent {
     SetCamera {
         pane: PaneId,
@@ -95,12 +97,17 @@ impl Command {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// Application-owned undo/redo history for already validated commands.
+/// History applies snapshots without revalidating them; do not execute fabricated
+/// or stale commands that violate current annotation, camera or dock mappings.
 pub struct CommandHistory {
     undo: Vec<Command>,
     redo: Vec<Command>,
 }
 
 impl CommandHistory {
+    /// Apply a validated command, append one undo entry and clear redo history.
+    /// Empty/unchanged camera commands and unchanged split resizes are skipped.
     pub fn execute(
         &mut self,
         command: Command,
@@ -160,6 +167,15 @@ impl CommandHistory {
     }
 }
 
+/// Resolve a feature intent against current state into an undoable command.
+///
+/// Successful polygon validation reserves an ID by advancing
+/// [`Document::next_annotation_id`] before execution; discarding the returned
+/// command leaves that ID unused. Other supported intents snapshot relevant
+/// current state. Execute a returned command before unrelated mutations can
+/// invalidate those snapshots. Validation is specific to each variant, not a
+/// general geometry/layer/result-ID validator. Errors are human-readable strings;
+/// callers should not depend on wording or infer universal validation precedence.
 pub fn validate_intent(
     intent: ImageIntent,
     document: &mut Document,

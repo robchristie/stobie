@@ -1,4 +1,37 @@
-//! Immediate-mode presentation and semantic pane interfaces.
+//! egui composition, dock presentation and application-owned pane extension.
+//!
+//! Start with [`dock_workspace`] and [`PanePresenter`]: the core `Workspace`
+//! remains the only dock tree, while the presenter borrows a narrow read model
+//! and emits intents for the application to validate and execute. Keep hover,
+//! focus and [`DockBehaviour`] here; durable data and transient session state
+//! remain in core. Panes own content/layout and local scrolling, not GPU devices
+//! or the complete mutable application/runtime.
+//!
+//! [`PresentationContext`] adds stable identity, measured recipes and observations
+//! to application-owned egui layout. Construct it inside each UI pass, use
+//! [`PresentationScope`] keys derived from stable pane/domain IDs, and finish it
+//! before that pass ends. Replace repeated-pass observations per viewport rather
+//! than accumulating them. [`ActionKey`] and [`ActionTarget`] identify application
+//! capabilities; a clicked action still needs the application's intent route.
+//!
+//! ```
+//! use polyorama_core::PaneId;
+//! use polyorama_ui_egui::PresentationScope;
+//! let pane = PaneId(1);
+//! let scope = PresentationScope::new(("consumer", pane));
+//! let title = scope.instance("title");
+//! assert_eq!(title, PresentationScope::new(("consumer", pane)).instance("title"));
+//! assert_ne!(title, scope.instance("add-triangle"));
+//! ```
+//!
+//! For scalar GPU images, allocate with [`allocate_viewport`], stage
+//! [`stage_renderer_maintenance`] before panes, collect targets with
+//! [`stage_render_callback`] and publish the complete ordered plan using
+//! [`submit_render_plan`] before callback preparation. Repaint after applied
+//! commands, active interactions, worker completion or pending uploads; avoid an
+//! unconditional frame loop. See the
+//! [application composition guide](https://github.com/robchristie/polyorama/blob/main/docs/application-composition.md)
+//! and its small native consumer and presenter variation.
 
 mod actions;
 mod application_theme;
@@ -47,12 +80,15 @@ const TAB_VISUAL_HEIGHT: f32 = 24.0;
 const SPLITTER_KEY_STEP: f32 = 0.05;
 
 #[derive(Clone, Copy)]
+/// Resolved appearance used for dock chrome; share it with pane presentation.
 pub struct DockTextContext {
     pub tokens: DesignTokens,
     pub font_scale: f32,
 }
 
 #[derive(Default)]
+/// UI-only dock interaction state retained across frames for drag/split previews.
+/// The authoritative layout remains in core [`Workspace`].
 pub struct DockBehaviour {
     pub dragging: Option<PaneId>,
     pending: Option<DockAction>,
@@ -96,11 +132,28 @@ enum DockAction {
     },
 }
 
+/// Application extension seam for content inside the canonical core dock tree.
+///
+/// Borrow narrow read models and output sinks rather than the whole mutable app
+/// or runtime. The dock owns layout/tab/split interactions; panes own their
+/// content, local scrolling and responsive layout. GPU resources remain with
+/// the renderer. Stable [`PaneId`] and domain IDs must drive widget identity.
+/// Callbacks run synchronously during the current egui UI pass; collect intents
+/// and apply validated commands after presentation, then request repaint for
+/// that recorded state change. A repeated layout pass can call presentation
+/// again; do not retain pass-local [`PresentationContext`]s or append stale
+/// observations. See the public composition guide's minimal presenter variation.
 pub trait PanePresenter {
+    /// Stable tab title for this pane identity.
     fn title(&self, pane: PaneId) -> &'static str;
+    /// Present local content within the allocated/clipped pane rectangle.
+    /// Emit intents to the caller; this callback does not execute commands for you.
     fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, pane_rect: Rect);
+    /// Optional current-pass geometry observation for a tab.
     fn record_tab_rect(&mut self, _pane: PaneId, _rect: Rect, _selected: bool, _focused: bool) {}
+    /// Optional current-pass measured tab text observation.
     fn record_text_layout(&mut self, _observation: TextLayoutObservation) {}
+    /// Optional current-pass splitter geometry/keyboard-focus observation.
     fn record_splitter_rect(
         &mut self,
         _node: DockNodeId,
@@ -111,6 +164,12 @@ pub trait PanePresenter {
     }
 }
 
+/// Present and update the canonical workspace using an application presenter.
+/// Tab activation and pane movement update the supplied workspace directly;
+/// a completed split resize returns one [`Command::ResizeSplit`] for the caller
+/// to execute through history. Keep [`DockBehaviour`] between frames for UI-only
+/// drag previews. Pane callbacks run before this function returns; deliver their
+/// emitted intents afterwards and repaint for applied changes/active interaction.
 pub fn dock_workspace(
     ui: &mut Ui,
     workspace: &mut Workspace,
@@ -771,6 +830,8 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
 }
 
 #[derive(Clone)]
+/// Opaque staged callback target. Collect one per image request, in identical
+/// pane order, and publish with [`submit_render_plan`] before callback preparation.
 pub struct ImagePlanTarget {
     pane: PaneId,
     request: Arc<RwLock<Option<ImageRenderRequest>>>,
@@ -796,16 +857,18 @@ pub fn stage_render_callback(
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+/// Structural publication failure. Every staged image target is disabled on
+/// failure; repair the complete plan/target pairing before rendering again.
 pub enum RenderPlanSubmissionError {
-    CountMismatch {
-        requests: usize,
-        targets: usize,
-    },
+    /// The complete plan and staged-target lists have different lengths.
+    CountMismatch { requests: usize, targets: usize },
+    /// The request and target at this position name different panes.
     PaneMismatch {
         index: usize,
         request: PaneId,
         target: PaneId,
     },
+    /// A pane occurs more than once in the complete plan/target pairing.
     DuplicatePane(PaneId),
 }
 

@@ -272,6 +272,9 @@ impl DockNode {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+/// The sole authoritative serialisable dock tree and its stable pane/node identities.
+/// A UI presenter borrows this tree; do not maintain a second stateful dock model.
+/// Use [`Workspace::validate`] after constructing or restoring application layouts.
 pub struct Workspace {
     pub schema_version: u32,
     pub root: DockNode,

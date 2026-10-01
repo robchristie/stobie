@@ -14,6 +14,13 @@ They run natively and in the browser from Rust application code.
 The project is under active development. Its APIs remain concrete and driven
 by the example applications; it is not yet a stable general-purpose framework.
 
+For a first application, use the [small public-API consumer and composition
+guide](docs/application-composition.md). It builds one native dock pane, displays
+project-authored triangles and routes an action through validated commands.
+The guide explains the four framework owners, shows a presenter variation and
+links local rustdoc generation. The minimal consumer compiles for WASM but
+supplies no browser launcher.
+
 ![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/design-agent-loop-evidence/increment-8-browser-dark.png)
 
 *Browser capture from the [design-system verification evidence](docs/design-agent-loop-evidence/README.md).*
@@ -146,6 +153,7 @@ presentation so each has a clear owner.
 | [`polyorama-render-wgpu`](crates/polyorama-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
 | [`polyorama-ui-egui`](crates/polyorama-ui-egui) | The framework's egui integration: dock presentation, measured components, typed design tokens and semantic UI observations. |
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
+| [`minimal-workspace` example](apps/analytical-workspace-lab/examples/minimal-workspace.rs) | A small native consumer using public framework APIs and existing package dependencies, independent of Lab implementation. |
 | [`polyorama-gallery`](apps/polyorama-gallery) | The component catalogue and deterministic UI stories. |
 | [`polyorama-tile-worker`](apps/tile-worker) | The browser Web Worker entry point for tile preparation and decoding. |
 | [`xtask`](xtask) | Builds, architecture checks, token generation and verification tooling. |
@@ -202,6 +210,8 @@ does not update them automatically.
 ## Documentation
 
 - [Working rules](AGENTS.md): architectural boundaries and contribution expectations.
+- [Application composition](docs/application-composition.md): four-crate lifecycle,
+  local rustdoc, a minimal native consumer and a public presenter variation.
 - [UI guides](docs/ui-guides/README.md): entry point for component, pane,
   interaction, accessibility and UI review work.
 - [Design language](docs/design-language.md): visual and semantic contracts,
