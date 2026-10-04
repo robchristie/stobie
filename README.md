@@ -140,6 +140,8 @@ no WebGL fallback. Re-run `cargo xtask build-web` after changing Rust code.
 
 For measured production packaging, compression, immutable asset URLs and consumer
 workspace setup, use the [browser build and startup guide](docs/browser-startup.md).
+For a managed private HTTPS preview of the Lab from a development worktree, use
+the [private development preview guide](docs/private-preview.md).
 
 ## How the project fits together
 

@@ -41,6 +41,10 @@ exports therefore remain, as do Gallery's useful catalogue/configuration/snapsho
 APIs. Runtime diagnostics, persistence, keyboard handling and accessibility are
 unchanged.
 
+The Lab's [managed private development preview](private-preview.md) serves that
+development output through an inherited gateway socket with `no-store` and
+browser reloads. It does not alter production packaging or its cache policies.
+
 Production starts with clean bindgen staging, optionally post-processes WASM, compresses
 assets and validates the **final** viewer WASM response adapter. Output contains:
 

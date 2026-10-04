@@ -1,0 +1,8 @@
+schema_version = 1
+project = "polyorama-lab"
+command = ["python3", "tools/dev-preview.py"]
+cwd = "."
+
+[readiness]
+path = "/_dev_preview/ready"
+timeout_seconds = 10
