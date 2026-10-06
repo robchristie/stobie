@@ -12,6 +12,7 @@ members = [
     "apps/emuella-viewer-tools",
     "xtask",
 ]
+exclude = ["consumers/record-desk"]
 resolver = "2"
 
 [workspace.package]

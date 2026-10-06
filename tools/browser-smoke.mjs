@@ -6,6 +6,7 @@ import { basename, dirname, extname, join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { observeWarmedIdle } from './browser-idle.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
 const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
@@ -963,11 +964,10 @@ try {
   const persistedKeys = await page.evaluate(() => Object.keys(localStorage));
   if (persistedKeys.length === 0) throw new Error('Save layout did not create browser persistence');
 
-  const idleFrame = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number);
-  await page.waitForTimeout(700);
-  const idleFrameAfter = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number);
-  if (idleFrameAfter !== idleFrame) throw new Error(`idle workspace repainted continuously (${idleFrame} -> ${idleFrameAfter})`);
-  observations.warmed_idle = { frame_before: idleFrame, frame_after: idleFrameAfter, deliberate_continuous_repaint: false };
+  observations.warmed_idle = await observeWarmedIdle(
+    () => page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number),
+    (ms) => page.waitForTimeout(ms),
+  );
   semanticEvidence.warmed_idle = observations.warmed_idle;
 
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -1087,6 +1087,9 @@ try {
   console.log(JSON.stringify({ status: 'passed', ...evidence }, null, 2));
 } catch (error) {
   await page.screenshot({ path: join(evidenceRoot, 'browser-failure.png') });
+  const diagnostics = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS ?? null)
+    .catch(() => null);
+  await writeFile(join(evidenceRoot, 'browser-failure-diagnostics.json'), JSON.stringify(diagnostics, null, 2));
   const loading = await page.locator('#loading').textContent().catch(() => '<missing>');
   throw new Error(`${error.stack ?? error}\nloading: ${loading}\n${errors.join('\n')}`);
 } finally {

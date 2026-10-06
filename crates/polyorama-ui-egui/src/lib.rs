@@ -71,9 +71,11 @@ pub use virtual_grid::*;
 use egui::{Pos2, Rect, Ui};
 use polyorama_core::{
     Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,
-    ViewportPoint, Workspace,
+    ViewportPoint, Workspace, WorkspaceResize,
 };
+#[cfg(feature = "image-rendering")]
 use polyorama_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
+#[cfg(feature = "image-rendering")]
 use std::sync::{Arc, RwLock};
 
 const TAB_VISUAL_HEIGHT: f32 = 24.0;
@@ -177,6 +179,27 @@ pub fn dock_workspace(
     presenter: &mut impl PanePresenter,
     text_context: DockTextContext,
 ) -> Option<Command> {
+    dock_workspace_layout(ui, workspace, behaviour, presenter, text_context).map(|resize| {
+        Command::ResizeSplit {
+            node: resize.node,
+            before: resize.before,
+            after: resize.after,
+        }
+    })
+}
+
+/// Present the canonical layout without requiring an image document or session.
+/// Tab activation and moves update `workspace`; a completed resize is an output
+/// to validate/apply with [`WorkspaceResize::apply`] after presentation. Application
+/// domain commands and history remain with the consumer. The legacy
+/// [`dock_workspace`] maps this output to its compatible image-command variant.
+pub fn dock_workspace_layout(
+    ui: &mut Ui,
+    workspace: &mut Workspace,
+    behaviour: &mut DockBehaviour,
+    presenter: &mut impl PanePresenter,
+    text_context: DockTextContext,
+) -> Option<WorkspaceResize> {
     behaviour.interaction_active = false;
     let rect = ui.available_rect_before_wrap();
     render_node(
@@ -201,7 +224,7 @@ pub fn dock_workspace(
                 before,
                 after,
             } => {
-                return Some(Command::ResizeSplit {
+                return Some(WorkspaceResize {
                     node,
                     before,
                     after,
@@ -247,6 +270,9 @@ fn render_node(
                 egui::Id::new(("polyorama.dock.splitter", node.0)),
                 egui::Sense::click_and_drag(),
             );
+            if response.clicked() || response.drag_started() {
+                response.request_focus();
+            }
             response.widget_info(|| egui::WidgetInfo::new(egui::WidgetType::ResizeHandle));
             let splitter_author_id = node.0;
             ui.ctx().accesskit_node_builder(response.id, |node| {
@@ -767,11 +793,13 @@ pub fn logical(point: Pos2) -> LogicalPoint {
 }
 
 #[derive(Clone)]
+#[cfg(feature = "image-rendering")]
 pub struct ScalarPaintCallback {
     pub frame_number: u64,
     request: Arc<RwLock<Option<ImageRenderRequest>>>,
 }
 
+#[cfg(feature = "image-rendering")]
 impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
     fn prepare(
         &self,
@@ -832,12 +860,14 @@ impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
 #[derive(Clone)]
 /// Opaque staged callback target. Collect one per image request, in identical
 /// pane order, and publish with [`submit_render_plan`] before callback preparation.
+#[cfg(feature = "image-rendering")]
 pub struct ImagePlanTarget {
     pane: PaneId,
     request: Arc<RwLock<Option<ImageRenderRequest>>>,
 }
 
 /// Stage an opaque callback in egui's correct paint list; its request is finalised later.
+#[cfg(feature = "image-rendering")]
 pub fn stage_render_callback(
     ui: &Ui,
     rect: Rect,
@@ -859,6 +889,7 @@ pub fn stage_render_callback(
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// Structural publication failure. Every staged image target is disabled on
 /// failure; repair the complete plan/target pairing before rendering again.
+#[cfg(feature = "image-rendering")]
 pub enum RenderPlanSubmissionError {
     /// The complete plan and staged-target lists have different lengths.
     CountMismatch { requests: usize, targets: usize },
@@ -872,6 +903,7 @@ pub enum RenderPlanSubmissionError {
     DuplicatePane(PaneId),
 }
 
+#[cfg(feature = "image-rendering")]
 impl std::fmt::Display for RenderPlanSubmissionError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -899,8 +931,10 @@ impl std::fmt::Display for RenderPlanSubmissionError {
     }
 }
 
+#[cfg(feature = "image-rendering")]
 impl std::error::Error for RenderPlanSubmissionError {}
 
+#[cfg(feature = "image-rendering")]
 fn validate_plan_target_panes(
     requests: &[PaneId],
     targets: &[PaneId],
@@ -930,6 +964,7 @@ fn validate_plan_target_panes(
 /// Publish the complete typed frame plan before callback preparation begins.
 /// Validation occurs before any target is changed. On failure, every staged image callback is
 /// disabled so a release build cannot silently paint stale or mismatched data.
+#[cfg(feature = "image-rendering")]
 pub fn submit_render_plan(
     plan: &RenderPlan,
     targets: &[ImagePlanTarget],
@@ -955,11 +990,13 @@ pub fn submit_render_plan(
 }
 
 #[derive(Clone, Copy)]
+#[cfg(feature = "image-rendering")]
 struct RendererMaintenanceCallback {
     frame_number: u64,
     source_generation: u64,
 }
 
+#[cfg(feature = "image-rendering")]
 impl egui_wgpu::CallbackTrait for RendererMaintenanceCallback {
     fn prepare(
         &self,
@@ -986,6 +1023,7 @@ impl egui_wgpu::CallbackTrait for RendererMaintenanceCallback {
 
 /// Stage renderer maintenance before pane presentation so uploads and per-frame metrics progress
 /// even when the canonical workspace currently exposes no image callback.
+#[cfg(feature = "image-rendering")]
 pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source_generation: u64) {
     ui.painter().add(egui_wgpu::Callback::new_paint_callback(
         rect,
@@ -1233,6 +1271,7 @@ mod tests {
             .collect()
     }
 
+    #[cfg(feature = "image-rendering")]
     #[test]
     fn render_plan_correspondence_rejects_count_order_and_duplicates() {
         assert_eq!(
@@ -1686,6 +1725,45 @@ mod tests {
         assert!((before - 0.77).abs() < 1.0e-6);
         assert!((after - 0.82).abs() < 1.0e-6);
         assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
+    }
+
+    #[test]
+    fn pointer_click_focuses_splitter_before_keyboard_adjustment() {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        let mut workspace = Workspace::analytical_default();
+        let mut behaviour = DockBehaviour::default();
+        let (_, geometry) = dock_frame(&context, &mut workspace, &mut behaviour, vec![]);
+        let point = geometry.splitter(DockNodeId(1)).center();
+        dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![
+                egui::Event::PointerMoved(point),
+                pointer_button(point, true),
+            ],
+        );
+        let (released, _) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![pointer_button(point, false)],
+        );
+        assert!(released.is_none(), "a click alone is not a resize");
+        assert_eq!(
+            context.memory(|memory| memory.focused()),
+            Some(egui::Id::new(("polyorama.dock.splitter", 1_u64)))
+        );
+        let (adjusted, _) = dock_frame(
+            &context,
+            &mut workspace,
+            &mut behaviour,
+            vec![key(egui::Key::ArrowRight)],
+        );
+        assert!(
+            matches!(adjusted, Some(Command::ResizeSplit { node: DockNodeId(1), before: 0.72, after }) if (after - 0.77).abs() < 1e-6)
+        );
     }
 
     #[test]

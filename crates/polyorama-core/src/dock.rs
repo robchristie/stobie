@@ -6,6 +6,38 @@ use crate::{DockNodeId, PaneId};
 
 pub const LAYOUT_SCHEMA_VERSION: u32 = 2;
 
+/// A completed dock resize, independent of any application document or session.
+/// Apply immediately after presentation; stale or invalid outputs leave the tree
+/// unchanged. Consumers can retain this value in their own layout history.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WorkspaceResize {
+    pub node: DockNodeId,
+    pub before: f32,
+    pub after: f32,
+}
+
+impl WorkspaceResize {
+    /// Validate the current split and apply one change. An unchanged output
+    /// returns `Ok(false)`; errors never mutate the workspace.
+    pub fn apply(self, workspace: &mut Workspace) -> Result<bool, String> {
+        if !self.before.is_finite()
+            || !self.after.is_finite()
+            || !(0.1..=0.9).contains(&self.before)
+            || !(0.1..=0.9).contains(&self.after)
+        {
+            return Err("invalid split resize fraction".into());
+        }
+        if workspace.root.split_fraction(self.node) != Some(self.before) {
+            return Err("split resize no longer matches the current layout".into());
+        }
+        if self.before == self.after {
+            return Ok(false);
+        }
+        workspace.root.set_split_fraction(self.node, self.after);
+        Ok(true)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SplitAxis {
     Horizontal,
@@ -38,6 +70,28 @@ pub enum DockNode {
 }
 
 impl DockNode {
+    fn validate_structure(&self) -> Result<(), String> {
+        match self {
+            Self::Split {
+                fraction,
+                first,
+                second,
+                ..
+            } => {
+                if !fraction.is_finite() || !(0.1..=0.9).contains(fraction) {
+                    return Err("split fraction must be finite and between 0.1 and 0.9".into());
+                }
+                first.validate_structure()?;
+                second.validate_structure()
+            }
+            Self::Tabs { tabs, active, .. } => {
+                if tabs.is_empty() || *active >= tabs.len() {
+                    return Err("tab group must have a valid active tab".into());
+                }
+                Ok(())
+            }
+        }
+    }
     pub fn id(&self) -> DockNodeId {
         match self {
             Self::Split { id, .. } | Self::Tabs { id, .. } => *id,
@@ -333,6 +387,7 @@ impl Workspace {
         if self.schema_version != LAYOUT_SCHEMA_VERSION {
             return Err(format!("unsupported layout schema {}", self.schema_version));
         }
+        self.root.validate_structure()?;
         let mut panes = Vec::new();
         self.root.pane_ids(&mut panes);
         if panes.is_empty() {
@@ -469,6 +524,83 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn layout_only_resize_rejects_stale_invalid_and_missing_outputs_without_mutation() {
+        let mut workspace = Workspace::analytical_default();
+        let before = workspace.clone();
+        for output in [
+            WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.5,
+                after: 0.6,
+            },
+            WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: f32::NAN,
+            },
+            WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: 1.0,
+            },
+            WorkspaceResize {
+                node: DockNodeId(99),
+                before: 0.72,
+                after: 0.6,
+            },
+        ] {
+            assert!(output.apply(&mut workspace).is_err());
+            assert_eq!(workspace, before);
+        }
+        assert!(
+            !WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: 0.72
+            }
+            .apply(&mut workspace)
+            .unwrap()
+        );
+        assert!(
+            WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: 0.6
+            }
+            .apply(&mut workspace)
+            .unwrap()
+        );
+        assert_eq!(workspace.root.split_fraction(DockNodeId(1)), Some(0.6));
+        workspace.validate().unwrap();
+    }
+
+    #[test]
+    fn restored_layout_rejects_invalid_split_and_tab_structure() {
+        for fraction in [f32::NAN, f32::INFINITY, -0.1, 1.1] {
+            let mut workspace = Workspace::analytical_default();
+            if let DockNode::Split {
+                fraction: value, ..
+            } = &mut workspace.root
+            {
+                *value = fraction;
+            }
+            assert!(workspace.validate().is_err());
+        }
+        for (tabs, active) in [(vec![], 0), (vec![PaneId(1)], 1)] {
+            let workspace = Workspace {
+                root: DockNode::Tabs {
+                    id: DockNodeId(1),
+                    tabs,
+                    active,
+                },
+                active_pane: PaneId(1),
+                next_node_id: 2,
+                ..Workspace::analytical_default()
+            };
+            assert!(workspace.validate().is_err());
+        }
+    }
     use super::*;
 
     #[test]

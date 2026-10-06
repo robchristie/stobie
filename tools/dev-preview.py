@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve only the built Lab through the gateway's inherited listening socket."""
+"""Serve the built Lab and independent Record Desk through the gateway's inherited listening socket."""
 
 import json
 import os
@@ -14,6 +14,13 @@ from urllib.parse import unquote, urlsplit
 
 
 PROJECT = "polyorama-lab"
+WEB_PARTS = ("apps", "analytical-workspace-lab", "web")
+RECORD_DESK_ASSETS = {
+    "index.html": "text/html; charset=utf-8",
+    "bootstrap.js": "text/javascript; charset=utf-8",
+    "pkg/record_desk.js": "text/javascript; charset=utf-8",
+    "pkg/record_desk_bg.wasm": "application/wasm",
+}
 READINESS_PATH = "/_dev_preview/ready"
 ASSETS = {
     "index.html": "text/html; charset=utf-8",
@@ -29,11 +36,11 @@ ASSETS = {
 DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 
 
-def open_web_root(worktree):
+def open_web_root(worktree, parts=WEB_PARTS):
     """Pin the Lab directory, rejecting symlinks in every worktree-relative part."""
     descriptor = os.open(worktree, DIRECTORY_FLAGS)
     try:
-        for part in ("apps", "analytical-workspace-lab", "web"):
+        for part in parts:
             child = os.open(part, DIRECTORY_FLAGS, dir_fd=descriptor)
             os.close(descriptor)
             descriptor = child
@@ -43,9 +50,9 @@ def open_web_root(worktree):
         raise
 
 
-def open_asset(root, name, read_content=True):
+def open_asset(root, name, read_content=True, assets=ASSETS):
     """Open an allowlisted regular file without following directory/file symlinks."""
-    if name not in ASSETS:
+    if name not in assets:
         raise FileNotFoundError("asset is not published")
     descriptor = os.dup(root)
     try:
@@ -120,6 +127,19 @@ class PreviewHandler(BaseHTTPRequestHandler):
             body = json.dumps(self.server.identity).encode("utf-8")
             self.respond(200, body, "application/json")
             return
+        if path.startswith("/record-desk/"):
+            name = path.removeprefix("/record-desk/") or "index.html"
+            try:
+                root = open_web_root(self.server.identity["worktree"], ("consumers", "record-desk", "web"))
+                try:
+                    body = open_asset(root, name, assets=RECORD_DESK_ASSETS)
+                finally:
+                    os.close(root)
+            except (OSError, ValueError):
+                self.respond(404, b"not found\n", "text/plain; charset=utf-8")
+                return
+            self.respond(200, body, RECORD_DESK_ASSETS[name])
+            return
         name = "index.html" if path == "/" else path[1:]
         try:
             body = open_asset(self.server.web_root, name)
@@ -143,12 +163,14 @@ class PreviewServer(ThreadingHTTPServer):
 
 def main():
     worktree = Path(__file__).resolve().parent.parent
+    if sys.argv[1:]:
+        raise ValueError("this preview adapter accepts no arguments")
     identity = {
         key: os.environ[f"DEV_PREVIEW_{key.upper()}"]
         for key in ("project", "worktree", "run_id", "origin")
     }
     if identity["project"] != PROJECT or identity["worktree"] != str(worktree):
-        raise ValueError("preview project/worktree does not match this Lab checkout")
+        raise ValueError("preview project/worktree does not match this application checkout")
     if not re.fullmatch(r"[0-9a-f]{32}", identity["run_id"]):
         raise ValueError("preview run ID must be the launcher's 128-bit hex nonce")
     origin = urlsplit(identity["origin"])
@@ -165,7 +187,7 @@ def main():
                     or listener.getsockname() != ("127.0.0.1", int(os.environ["DEV_PREVIEW_PORT"]))):
                 raise ValueError("preview descriptor must be the launcher's listening loopback TCP socket")
             with PreviewServer(listener, web_root, identity) as server:
-                print("Analytical Workspace Lab private preview ready", flush=True)
+                print(f"{PROJECT} private preview ready", flush=True)
                 server.serve_forever()
     finally:
         os.close(web_root)

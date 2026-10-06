@@ -5,12 +5,16 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = ["image-rendering"]
+image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:polyorama-render-wgpu"]
+
 [dependencies]
 egui.workspace = true
-egui-wgpu.workspace = true
-wgpu.workspace = true
+egui-wgpu = { workspace = true, optional = true }
+wgpu = { workspace = true, optional = true }
 polyorama-core = { path = "../polyorama-core" }
-polyorama-render-wgpu = { path = "../polyorama-render-wgpu" }
+polyorama-render-wgpu = { path = "../polyorama-render-wgpu", optional = true }
 serde.workspace = true
 
 [dev-dependencies]

@@ -32,6 +32,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          workspaces: |
+            . -> target
+            consumers/record-desk -> target
           # Only a successful full main run may publish dependency artifacts.
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs' }}
           # The dedicated cache below owns the pinned wasm-bindgen executable.
@@ -101,4 +104,13 @@ jobs:
         with:
           name: verification-evidence
           path: .tools/runtime/verification-evidence
+          if-no-files-found: warn
+
+      - name: Retain Record Desk qualification evidence
+        if: ${{ always() && steps.scope.outputs.mode != 'docs' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: record-desk-evidence
+          path: .tools/runtime/verification-evidence/record-desk
+          retention-days: 14
           if-no-files-found: warn

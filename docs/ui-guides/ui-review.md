@@ -92,6 +92,12 @@ exercise.
   the same current semantic target?
 - Does the warmed UI remain event-driven, with no unconditional repaint?
 
+Idle observations must establish bounded quiescence after the preceding
+interaction before measuring their declared unchanged-frame window. A single
+deferred frame is not evidence of continuous painting. Sustained or periodic
+painting must fail the settling budget or the final observation; retain frame
+counters and failure diagnostics rather than silently retrying a failed check.
+
 Use the catalogue's fixed story IDs and recommended viewports. Review at the
 changed story's documented theme/density/font-scale state, and add a focused
 story when the defect cannot be represented by an existing frozen fixture.

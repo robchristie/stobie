@@ -11,7 +11,7 @@ pub use action_button::{
     ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis, action_button,
     action_button_with_identity, action_semantic_node, action_semantic_node_with_identity,
 };
-pub use choice::choice_control;
+pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub use property::property_row;
 pub use range::range_control;
 pub use result_row::{ResultRowSpec, result_row, result_row_height};

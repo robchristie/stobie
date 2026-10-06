@@ -92,6 +92,11 @@ fn verify() -> Result<()> {
     run("cargo", &["test", "--workspace"])?;
     run("python3", &["tools/check-api-docs.py"])?;
     architecture()?;
+    run("python3", &["tools/check-record-desk.py"])?;
+    run(
+        "cargo",
+        &["test", "-p", "polyorama-ui-egui", "--no-default-features"],
+    )?;
     run("cargo", &["build", "--workspace", "--release"])?;
     run(
         "cargo",
@@ -119,6 +124,8 @@ fn verify() -> Result<()> {
             "tools/tests/viewer-merged-qualification-preload.test.mjs",
             "apps/emuella-viewer/web/tests/worker.test.mjs",
             "tools/tests/browser-startup.test.mjs",
+            "tools/tests/browser-idle.test.mjs",
+            "tools/tests/record-desk-target.test.mjs",
             "tools/tests/browser-package.test.mjs",
         ],
         &evidence_environment,
@@ -155,6 +162,11 @@ fn verify() -> Result<()> {
         ],
     )?;
     ui::verify(Path::new("."), &evidence_directory.join("ui-snapshots"))?;
+    run_with_environment(
+        "bash",
+        &["tools/record-desk-browser-smoke.sh"],
+        &evidence_environment,
+    )?;
     if cfg!(target_os = "linux") {
         run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
         run_with_environment(
@@ -165,6 +177,11 @@ fn verify() -> Result<()> {
         run_with_environment(
             "bash",
             &["tools/minimal-native-smoke.sh"],
+            &evidence_environment,
+        )?;
+        run_with_environment(
+            "bash",
+            &["tools/record-desk-native-smoke.sh"],
             &evidence_environment,
         )?;
     }
@@ -392,7 +409,7 @@ fn architecture() -> Result<()> {
     .map(fs::read_to_string)
     .collect::<std::io::Result<Vec<_>>>()?
     .iter()
-    .map(|source| source.matches("pub struct Workspace").count())
+    .map(|source| workspace_definition_count(source))
     .sum::<usize>();
     if canonical_definitions != 1 {
         bail!("expected exactly one canonical Workspace definition, found {canonical_definitions}");
@@ -445,6 +462,19 @@ fn architecture() -> Result<()> {
         "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
+}
+
+fn workspace_definition_count(source: &str) -> usize {
+    const DECLARATION: &str = "pub struct Workspace";
+    source
+        .match_indices(DECLARATION)
+        .filter(|(offset, _)| {
+            source[offset + DECLARATION.len()..]
+                .chars()
+                .next()
+                .is_none_or(|character| !character.is_alphanumeric() && character != '_')
+        })
+        .count()
 }
 
 fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) -> Result<()> {
@@ -572,4 +602,23 @@ fn build_viewer_web() -> Result<()> {
     run("node", &["tools/viewer-response-headers.mjs", &output])?;
     println!("Serve the viewer's complete static root: {output}");
     Ok(())
+}
+
+#[cfg(test)]
+mod architecture_tests {
+    use super::workspace_definition_count;
+
+    #[test]
+    fn workspace_guard_counts_complete_identifiers_and_detects_duplicates() {
+        let source = "pub struct WorkspaceResize { }\npub struct Workspace { }\npub struct Workspace_state { }";
+        assert_eq!(workspace_definition_count(source), 1);
+        assert_eq!(
+            workspace_definition_count("pub struct WorkspaceResize { }"),
+            0
+        );
+        assert_eq!(
+            workspace_definition_count(&format!("{source}\npub struct Workspace {{ }}")),
+            2
+        );
+    }
 }

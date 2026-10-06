@@ -150,6 +150,15 @@ pub fn action_button_with_identity<A: ActionKey>(
         node.set_role(Role::Button);
         node.set_label(action.label);
         node.set_author_id(identity.semantic_id.0.clone());
+        // Match the current pointer target when a scroll area clips the control.
+        if response.interact_rect.is_positive() {
+            node.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(response.interact_rect.min.x),
+                y0: f64::from(response.interact_rect.min.y),
+                x1: f64::from(response.interact_rect.max.x),
+                y1: f64::from(response.interact_rect.max.y),
+            });
+        }
         let description = spec.availability.disabled_reason().map_or_else(
             || action.description.to_owned(),
             |reason| format!("{}; unavailable: {reason}", action.description),
@@ -290,7 +299,7 @@ pub fn action_semantic_node_with_identity<A: ActionKey>(
         role: UiRole::Button,
         name: action.label.to_owned(),
         description: Some(action.description.to_owned()),
-        rect: response.rect.into(),
+        rect: response.interact_rect.into(),
         enabled: availability.enabled(),
         focused: response.has_focus(),
         selected: false,
@@ -432,6 +441,69 @@ mod tests {
                     "{theme:?}, {emphasis:?}, disabled={disabled}, pressed={pointer_down}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn clipped_action_targets_match_accesskit_bounds() {
+        for availability in [
+            Availability::Enabled,
+            Availability::Disabled {
+                reason: "History is empty".into(),
+            },
+        ] {
+            let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
+            context.enable_accesskit();
+            let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+            let root_rect = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(360.0, 120.0));
+            let clip = Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(360.0, 16.0));
+            let target = ActionTarget::application(TestAction::Undo);
+            let mut semantic = None;
+            let mut output = context.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(root_rect),
+                    ..Default::default()
+                },
+                |ui| {
+                    ui.set_clip_rect(clip);
+                    let response = action_button(
+                        ui,
+                        ActionButtonSpec {
+                            target,
+                            availability: availability.clone(),
+                            state: ActionButtonState::Momentary,
+                            emphasis: ActionEmphasis::Normal,
+                            compact: false,
+                        },
+                        &tokens,
+                        1.0,
+                        &mut Vec::new(),
+                    );
+                    assert!(response.rect.height() > response.interact_rect.height());
+                    assert_eq!(response.interact_rect.height(), 16.0);
+                    semantic = Some(action_semantic_node(
+                        &response,
+                        target,
+                        &availability,
+                        ActionButtonState::Momentary,
+                        SemanticUiId::root(),
+                    ));
+                },
+            );
+            let root = SemanticUiId::root();
+            let snapshot = UiSnapshot {
+                root: root.clone(),
+                nodes: vec![
+                    UiNode::container(root, None, UiRole::Application, root_rect.into()),
+                    semantic.unwrap(),
+                ],
+                ..Default::default()
+            };
+            output.textures_delta.clear();
+            let update = output.platform_output.accesskit_update.unwrap();
+            assert!(snapshot.audit().is_empty());
+            assert!(audit_accesskit(&snapshot, &update).is_empty());
         }
     }
 

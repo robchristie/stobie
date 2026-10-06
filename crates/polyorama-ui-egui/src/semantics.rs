@@ -113,6 +113,8 @@ pub enum UiRole {
     Button,
     RadioButton,
     ComboBox,
+    TextInput,
+    MultilineTextInput,
     Slider,
     Tab,
     Splitter,
@@ -355,6 +357,8 @@ pub fn audit_accesskit(
             UiRole::Button
                 | UiRole::RadioButton
                 | UiRole::ComboBox
+                | UiRole::TextInput
+                | UiRole::MultilineTextInput
                 | UiRole::Slider
                 | UiRole::Tab
                 | UiRole::Splitter
@@ -380,6 +384,8 @@ pub fn audit_accesskit(
             UiRole::Button => egui::accesskit::Role::Button,
             UiRole::RadioButton => egui::accesskit::Role::RadioButton,
             UiRole::ComboBox => egui::accesskit::Role::ComboBox,
+            UiRole::TextInput => egui::accesskit::Role::TextInput,
+            UiRole::MultilineTextInput => egui::accesskit::Role::MultilineTextInput,
             UiRole::Slider => egui::accesskit::Role::Slider,
             UiRole::Tab => egui::accesskit::Role::Tab,
             UiRole::Splitter => egui::accesskit::Role::Splitter,

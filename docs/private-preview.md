@@ -26,11 +26,16 @@ the expected WASM header. Startup refuses missing assets and identity mismatch.
 Readiness proves the adapter and assets are available; browser rendering and
 interaction still need direct qualification.
 
-The adapter serves only the fixed Lab HTML, CSS, bootstrap, startup helper,
+The adapter serves the fixed Lab HTML, CSS, bootstrap, startup helper,
 worker and generated JS/WASM files from `apps/analytical-workspace-lab/web`.
 It rejects symlinks in asset paths, traversal, directory listings and other
-files. It publishes no repository root, evidence directory, Gallery, viewer or
-data service. Every response uses `Cache-Control: no-store`; WASM responses use
+files. It additionally serves Record Desk’s fixed HTML/bootstrap/bindgen
+allowlist at `/record-desk/` after `bash consumers/record-desk/build-web.sh`. Use the root
+manifest: the gateway accepts only the canonical Git worktree root. Append
+`/record-desk/` to the returned URL. Lab readiness remains scoped to Lab assets;
+consumer readiness and workflow need their own browser observation. It publishes
+no repository root, evidence directory, Gallery, viewer or data service. Every
+response uses `Cache-Control: no-store`; WASM responses use
 `application/wasm`. Existing relative imports keep the worker and its package
 on the same preview origin.
 

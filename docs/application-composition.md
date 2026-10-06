@@ -1,10 +1,54 @@
 # Compose a small Polyorama application
 
-Polyorama is experimental: its current public APIs are concrete and shaped by
-the maintained applications. Start with this small native consumer before the
-larger analytical workflows. It uses project-authored vector content, needs no
-dataset or service and imports only public framework APIs. Its Cargo target
-uses the Lab package's existing dependencies; it imports no Lab implementation.
+Polyorama is experimental: its public APIs are concrete and shaped by maintained
+applications. Start with [Record Desk](../consumers/record-desk/README.md), a useful
+independent Cargo workspace with native and browser entry points, local record
+editing/history and versioned persistence. It declares its own dependencies,
+profiles and lockfile and imports no existing application package or private API.
+The smaller triangle example below remains a focused image-command/presenter
+demonstration within the Lab package.
+
+## Compose a non-image domain
+
+Record Desk needs only `polyorama-core` and `polyorama-ui-egui`. It disables UI's
+default-enabled `image-rendering` feature, removing Polyorama's scalar renderer
+and worker runtime from the resolved graph. Eframe's host GPU backend remains
+an ordinary consumer dependency. Existing image applications retain the feature
+and its public APIs by default.
+
+The consumer owns its `Record`, stable IDs, validation, selected identity,
+transient editing draft and transaction history. These are its own domain
+document/session equivalents. Framework `Document`, `Session`, `ImageIntent`
+and `CommandHistory` describe the analytical image domain and are not mandatory
+containers for unrelated records. Do not encode records as annotations.
+
+`dock_workspace_layout` presents the single core `Workspace` and emits a
+`WorkspaceResize` for a completed resize. Apply it after presentation; its public
+`apply` rejects stale/missing splits and invalid fractions without mutation.
+Record history remains application-owned. The existing `dock_workspace` wrapper
+returns its compatible `Command::ResizeSplit` for image-history consumers. Tab
+activation and movement mutate the canonical workspace directly in both routes;
+dirty tracking/persistence must observe the complete tree. `Workspace::validate`
+checks structural tab/split invariants as well as stable identities and schema;
+applications also validate their allowed pane set when restoring layouts.
+
+Read Record Desk's `model.rs`, `panes.rs`, `app.rs`, then `store.rs`: pane views
+emit intents; the application handles current-pass draft/filter outputs before
+actions; Apply validates one record transaction; Save persists only committed
+records and layout. Its README gives exact standalone commands, keyboard routes,
+field/action extension steps and protected malformed-state recovery. Its
+[qualification evidence](record-desk-evidence.md) distinguishes direct tests,
+physical native/browser input and a bounded fresh-context authoring probe.
+
+`choice_control_with_options` adds current popup option observations to the
+compatible `choice_control` recipe. Merge its option nodes into the viewport
+snapshot; their floating layer can extend beyond the pane. Option IDs derive
+from a stable value representation rather than labels or positions, so physical
+inspection can find the currently offered choice without guessing coordinates.
+Native text editors use the public `TextInput`/`MultilineTextInput` semantic roles
+and `NativeTextControlKind::TextEdit`; coverage explicitly excludes egui's internal
+editable text layout. These observations do not supply a browser accessibility
+adapter or application command injection.
 
 ## Choose the owners
 
@@ -21,6 +65,8 @@ session/workspace serialisation is supported, those owners remain distinct.
 The defaults are the analytical demo's starting state. A vector-only pane can
 use an empty camera/tool mapping; `Session::validate_image_cameras` specifically
 checks the Lab's image panes 1–4 and is not a generic pane-registry validator.
+Record Desk avoids these image-specific types entirely; compatibility defaults
+and the image camera contract remain unchanged.
 
 Use the core `Workspace` as the sole dock tree. `DockBehaviour` retains only
 drag/split previews, not a second layout. The host owns its GPU device/queue;

@@ -16,6 +16,7 @@ pub enum TextExclusion {
     NativeRadioButtonText,
     NativeSliderText,
     NativeSelectableText,
+    NativeTextEditText,
 }
 
 /// The denominator for one viewport's current UI pass, not a visible-string census.
@@ -60,6 +61,8 @@ pub enum NativeTextControlKind {
     RadioButton,
     Slider,
     Selectable,
+    /// Editable text has native cursor/selection layout, outside the measured audit.
+    TextEdit,
 }
 
 impl NativeTextControlKind {
@@ -70,6 +73,7 @@ impl NativeTextControlKind {
             Self::RadioButton => TextExclusion::NativeRadioButtonText,
             Self::Slider => TextExclusion::NativeSliderText,
             Self::Selectable => TextExclusion::NativeSelectableText,
+            Self::TextEdit => TextExclusion::NativeTextEditText,
         }
     }
 }

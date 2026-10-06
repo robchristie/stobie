@@ -5,7 +5,8 @@ analytical workspaces on native desktop and WebGPU-capable browsers. It brings
 together dockable panes, large tiled images, linked views, annotations and
 virtualised collections above **egui**, **eframe** and **wgpu**.
 
-The repository contains reusable framework crates and three runnable applications:
+The repository contains reusable framework crates, an independent consumer and
+three runnable applications:
 **Analytical Workspace Lab** exercises an analytical workflow, **Polyorama
 Gallery** demonstrates the UI components, and **Emuella Image Viewer** composes
 indexed JPEG 2000 regional delivery with multiple views and detection browsing.
@@ -14,12 +15,13 @@ They run natively and in the browser from Rust application code.
 The project is under active development. Its APIs remain concrete and driven
 by the example applications; it is not yet a stable general-purpose framework.
 
-For a first application, use the [small public-API consumer and composition
-guide](docs/application-composition.md). It builds one native dock pane, displays
-project-authored triangles and routes an action through validated commands.
-The guide explains the four framework owners, shows a presenter variation and
-links local rustdoc generation. The minimal consumer compiles for WASM but
-supplies no browser launcher.
+For a first application, use [Record Desk](consumers/record-desk/README.md) and
+the [public composition guide](docs/application-composition.md). Record Desk is
+its own Cargo workspace: find/edit/review synthetic records, Apply one validated
+transaction, undo/redo and save committed records/layout across native restarts
+and browser reloads. It imports only public core/UI APIs and owns its domain
+rules. The guide also explains the four framework owners, retains a minimal
+triangle example and links local rustdoc generation.
 
 ![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/design-agent-loop-evidence/increment-8-browser-dark.png)
 
@@ -154,6 +156,7 @@ presentation so each has a clear owner.
 | [`polyorama-runtime`](crates/polyorama-runtime) | Demand reconciliation, bounded worker scheduling and completion state. Independent of egui and wgpu. |
 | [`polyorama-render-wgpu`](crates/polyorama-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
 | [`polyorama-ui-egui`](crates/polyorama-ui-egui) | The framework's egui integration: dock presentation, measured components, typed design tokens and semantic UI observations. |
+| [`record-desk`](consumers/record-desk) | Independent native/browser record workflow with its own manifest, dependencies and lockfile; no image renderer/runtime or application-package dependency. |
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
 | [`minimal-workspace` example](apps/analytical-workspace-lab/examples/minimal-workspace.rs) | A small native consumer using public framework APIs and existing package dependencies, independent of Lab implementation. |
 | [`polyorama-gallery`](apps/polyorama-gallery) | The component catalogue and deterministic UI stories. |
@@ -181,6 +184,8 @@ cargo xtask verify
 It checks generated-token drift, formatting, native and WASM Clippy, workspace
 tests and architecture boundaries; builds release native and browser artefacts;
 and runs application/gallery browser smokes and deterministic UI snapshots.
+Explicit Record Desk checks cover its excluded Cargo workspace, dependency
+independence, tests, native/WASM lint/build and physical native/browser workflows.
 On Linux it also runs native interaction smokes. Generated evidence goes to
 the ignored `.tools/runtime/verification-evidence/` directory.
 

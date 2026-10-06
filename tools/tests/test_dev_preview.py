@@ -51,7 +51,7 @@ class PreviewTests(unittest.TestCase):
             "origin": "https://p-example.preview.invalid",
         }
 
-    def start(self, overrides=None):
+    def start(self, overrides=None, arguments=()):
         environment = os.environ.copy()
         environment.update({f"DEV_PREVIEW_{key.upper()}": value
                             for key, value in self.identity.items()})
@@ -59,7 +59,7 @@ class PreviewTests(unittest.TestCase):
                             "DEV_PREVIEW_PORT": str(self.port)})
         environment.update(overrides or {})
         process = subprocess.Popen(
-            [sys.executable, str(self.script)], cwd=self.worktree,
+            [sys.executable, str(self.script), *arguments], cwd=self.worktree,
             env=environment, pass_fds=(self.listener.fileno(),),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
@@ -71,6 +71,24 @@ class PreviewTests(unittest.TestCase):
 
         self.addCleanup(stop)
         return process
+
+    def test_record_desk_route_adopts_listener_and_only_serves_consumer_assets(self):
+        consumer = self.worktree / "consumers/record-desk"
+        web = consumer / "web"
+        (web / "pkg").mkdir(parents=True)
+        for name in ["index.html", "bootstrap.js", "pkg/record_desk.js", "pkg/record_desk_bg.wasm"]:
+            (web / name).write_bytes(b"\x00asm\x01\x00\x00\x00" if name.endswith(".wasm") else b"consumer fixture")
+        process = self.start()
+        status, _, body = self.wait_ready(process)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), self.identity)
+        self.assertEqual(self.request("/record-desk/pkg/record_desk_bg.wasm")[0], 200)
+        for path in ["/record-desk/Cargo.toml", "/record-desk/../../Cargo.toml", "/record-desk/pkg/analytical_workspace_lab.js"]:
+            self.assertEqual(self.request(path)[0], 404)
+        (web / "bootstrap.js").unlink()
+        (web / "bootstrap.js").symlink_to(self.web / "bootstrap.js")
+        self.assertEqual(self.request("/record-desk/bootstrap.js")[0], 404)
+        self.assertEqual(self.request(ADAPTER.READINESS_PATH)[0], 200)
 
     def request(self, path, method="GET"):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=0.2)

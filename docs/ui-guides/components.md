@@ -57,6 +57,11 @@ For dense chrome, preserve a token minimum hit target even when compact visual
 geometry is smaller. Do not add decorative cards: spacing, aligned text and
 the surface hierarchy should communicate grouping first.
 
+Action buttons retain their full token allocation while semantic and AccessKit
+bounds use `Response::interact_rect`: a partly scrolled control advertises its
+current visible target. Custom controls must keep both observations consistent
+when clipping, and omit fully hidden nodes from current visible snapshots.
+
 ## Existing recipe families
 
 The current component layer covers action buttons, dock tabs and overflow,
