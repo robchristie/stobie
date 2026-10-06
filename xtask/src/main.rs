@@ -127,6 +127,7 @@ fn verify() -> Result<()> {
             "tools/tests/browser-idle.test.mjs",
             "tools/tests/record-desk-target.test.mjs",
             "tools/tests/application-client.test.mjs",
+            "tools/tests/lab-result-selection.test.mjs",
             "tools/tests/browser-package.test.mjs",
         ],
         &evidence_environment,

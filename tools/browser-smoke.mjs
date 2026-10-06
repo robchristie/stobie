@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
+import { resultSelectionConfirmed } from './lab-result-selection.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
 const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
@@ -165,6 +166,7 @@ try {
     const semanticRoot = semantic.nodes.find((node) => node.id === semantic.root)?.rect;
     const root = semanticRoot ?? geometry.root;
     let rect;
+    let result;
     if (target.kind === 'action') {
       rect = semantic.nodes.find((node) => node.actions.includes(target.action)
         && (target.pane == null || node.pane === target.pane))?.rect;
@@ -184,10 +186,12 @@ try {
       );
     } else if (target.kind === 'first_result_row') {
       const scroll = geometry.results_scroll;
-      rect = geometry.result_rows.find((item) => {
+      const row = geometry.result_rows.find((item) => {
         const centreY = (item.rect.min_y + item.rect.max_y) * 0.5;
         return !scroll || (centreY >= scroll.min_y && centreY <= scroll.max_y);
-      })?.rect;
+      });
+      rect = row?.rect;
+      result = row?.result;
     } else {
       rect = geometry[target.kind].find((item) => item.pane === target.pane)?.rect;
     }
@@ -208,7 +212,7 @@ try {
       || point.y < canvas.y || point.y > canvas.y + canvas.height) {
       throw new Error(`Rust UI target fell outside canvas: ${JSON.stringify({ target, point, canvas })}`);
     }
-    return point;
+    return { ...point, ...(result !== undefined ? { result } : {}) };
   };
   const clickTarget = async (target, options = {}) => {
     if (target.kind === 'action') {
@@ -222,6 +226,7 @@ try {
     }
     const point = await targetPoint(target);
     await page.mouse.click(point.x, point.y, options);
+    return point;
   };
   const preferenceNodeId = (field, value) => `application.bar.preferences.${field}.${value}`;
   const physicallyClickSemanticControl = async (id) => {
@@ -690,22 +695,13 @@ try {
     const point = await targetPoint({ kind: 'results_scroll' });
     await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, 1800);
   });
-  await clickTarget({ kind: 'first_result_row' });
-  await page.waitForFunction(() => {
-    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
-    const selected = snapshot.ui_snapshot.nodes
-      .find((node) => node.role === 'result_row' && node.selected);
-    return selected
-      && snapshot.ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
-        && node.description?.includes(
-          `selected result: result ${selected.domain_reference.value}`,
-        ));
-  });
+  const clickedResult = await clickTarget({ kind: 'first_result_row' });
+  // Selection can add an action bar and move the clicked row outside the clip.
+  // Observe its stable identity in the Inspector and the primary view instead.
+  await page.waitForFunction(resultSelectionConfirmed, clickedResult.result);
   const resultSelectionSemantic = await semanticSnapshot();
-  const selectedResultNode = resultSelectionSemantic.ui_snapshot.nodes
-    .find((node) => node.role === 'result_row' && node.selected);
   semanticEvidence.physical_result_selection = {
-    result: selectedResultNode.domain_reference.value,
+    result: clickedResult.result,
     viewport_description: resultSelectionSemantic.ui_snapshot.nodes
       .find((node) => node.id === 'pane.1.viewport').description,
   };
