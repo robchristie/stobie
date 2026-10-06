@@ -114,3 +114,12 @@ jobs:
           path: .tools/runtime/verification-evidence/record-desk
           retention-days: 14
           if-no-files-found: warn
+
+      - name: Retain shared interface qualification evidence
+        if: ${{ always() && steps.scope.outputs.mode != 'docs' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-interface-evidence
+          path: .tools/runtime/verification-evidence/application-interface
+          retention-days: 14
+          if-no-files-found: warn

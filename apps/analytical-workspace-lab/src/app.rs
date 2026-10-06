@@ -19,6 +19,9 @@ use serde::{Deserialize, Serialize};
 use tracing::info_span;
 use web_time::Instant;
 
+#[path = "inspection.rs"]
+pub(crate) mod inspection;
+
 use crate::{
     APPLICATION_NAME,
     actions::{ActionContext, LabAction, availability},
@@ -225,6 +228,9 @@ pub struct AnalyticalWorkspaceApp {
     last_ui_snapshot: UiSnapshot,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
+    inspection: Option<polyorama_ui_egui::Inspection>,
+    #[cfg(not(target_arch = "wasm32"))]
+    _inspection_host: Option<polyorama_ui_egui::NativeInspectionHost>,
 }
 
 impl AnalyticalWorkspaceApp {
@@ -311,7 +317,8 @@ impl AnalyticalWorkspaceApp {
             let context = cc.egui_ctx.clone();
             move || context.request_repaint()
         }));
-        Self {
+        #[allow(unused_mut)] // Native hosts install the optional local transport.
+        let mut app = Self {
             workspace,
             document,
             session,
@@ -335,7 +342,13 @@ impl AnalyticalWorkspaceApp {
             last_ui_snapshot: UiSnapshot::default(),
             #[cfg(target_arch = "wasm32")]
             browser_worker,
-        }
+            inspection: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            _inspection_host: None,
+        };
+        #[cfg(not(target_arch = "wasm32"))]
+        app.start_inspection(&cc.egui_ctx);
+        app
     }
 
     fn persisted(&self) -> PersistedState {
@@ -677,16 +690,8 @@ impl AnalyticalWorkspaceApp {
             applied_commands += 1;
         }
         for intent in outputs.intents {
-            match validate_intent(intent, &mut self.document, &self.session) {
-                Ok(command) => {
-                    self.history.execute(
-                        command,
-                        &mut self.document,
-                        &mut self.session,
-                        &mut self.workspace,
-                    );
-                    applied_commands += 1;
-                }
+            match self.execute_image_intent(intent) {
+                Ok(()) => applied_commands += 1,
                 Err(error) => self.status = error,
             }
         }
@@ -711,6 +716,17 @@ impl AnalyticalWorkspaceApp {
         if let Some(duration) = outputs.repaint_after {
             self.request_repaint_after(ctx, duration, RepaintReason::Scheduled);
         }
+    }
+
+    fn execute_image_intent(&mut self, intent: ImageIntent) -> Result<(), String> {
+        let command = validate_intent(intent, &mut self.document, &self.session)?;
+        self.history.execute(
+            command,
+            &mut self.document,
+            &mut self.session,
+            &mut self.workspace,
+        );
+        Ok(())
     }
 
     fn update_diagnostics(&mut self) {
@@ -766,6 +782,7 @@ impl AnalyticalWorkspaceApp {
 impl eframe::App for AnalyticalWorkspaceApp {
     fn ui(&mut self, root_ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = root_ui.ctx().clone();
+        self.drain_inspection(&ctx);
         let _span = info_span!(
             "frame_processing",
             frame = self.diagnostics.frame.frame_number
@@ -1226,6 +1243,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         ));
         self.last_ui_snapshot = outputs.ui_geometry.snapshot(frame_number);
         self.last_ui_geometry = outputs.ui_geometry.clone();
+        self.publish_inspection(&ctx);
         self.apply_outputs(&ctx, outputs);
         self.update_diagnostics();
         #[cfg(not(target_arch = "wasm32"))]

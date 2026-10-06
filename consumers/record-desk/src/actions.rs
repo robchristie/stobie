@@ -18,6 +18,24 @@ pub enum Action {
     EditCategory,
 }
 
+impl Action {
+    pub const ALL: [Self; 13] = [
+        Self::Apply,
+        Self::Cancel,
+        Self::Undo,
+        Self::Redo,
+        Self::Save,
+        Self::Restore,
+        Self::Search,
+        Self::ResetFilters,
+        Self::Arrange,
+        Self::ToggleReviewed,
+        Self::FilterCategory,
+        Self::FilterReview,
+        Self::EditCategory,
+    ];
+}
+
 impl ActionKey for Action {
     fn stable_id(self) -> &'static str {
         match self {

@@ -121,14 +121,21 @@ pub fn show(
                         .ui_geometry
                         .root
                         .is_some_and(|root| root.contains(selection.rect.into(), 1.0));
-                    if selection.rect.intersects(ui.clip_rect()) && inside_root {
+                    let completely_clipped = selection.rect.is_finite()
+                        && selection.rect.is_positive()
+                        && selection.interact_rect.is_finite()
+                        && !selection.interact_rect.is_positive();
+                    if selection.rect.intersects(ui.clip_rect())
+                        && inside_root
+                        && !completely_clipped
+                    {
                         outputs.ui_geometry.text_layouts.extend(row_observations);
                         outputs
                             .ui_geometry
                             .result_rows
                             .push(crate::ui_geometry::ResultUiRect {
                                 result: result.id,
-                                rect: selection.rect.into(),
+                                rect: selection.interact_rect.into(),
                             });
                         outputs.ui_geometry.record_node(UiNode {
                             id: SemanticUiId::new(format!("polyorama.result-row.{}", result.id.0)),
@@ -136,7 +143,7 @@ pub fn show(
                             role: UiRole::ResultRow,
                             name: semantic_name,
                             description: None,
-                            rect: selection.rect.into(),
+                            rect: selection.interact_rect.into(),
                             enabled: true,
                             focused: selection.has_focus(),
                             selected,
@@ -249,5 +256,53 @@ mod tests {
         assert!(findings.is_empty(), "{findings:#?}");
         assert!(virtualisation.materialised_rows < 64);
         assert_eq!(virtualisation.row_overscan, 8);
+    }
+
+    #[test]
+    fn physical_row_geometry_uses_the_visible_scroll_clip() {
+        let context = egui::Context::default();
+        polyorama_ui_egui::apply_design_system(&context, Default::default());
+        let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 720.0));
+        let pane = egui::Rect::from_min_size(root.min, egui::vec2(720.0, 355.0));
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let mut outputs = FrameOutput {
+            ui_geometry: UiGeometry::new(root, 1.0),
+            ..Default::default()
+        };
+        let mut virtualisation = VirtualisationMetrics::default();
+        let mut frame = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(root),
+                ..Default::default()
+            },
+            |ui| {
+                ui.scope_builder(egui::UiBuilder::new().max_rect(pane), |ui| {
+                    ui.set_clip_rect(pane);
+                    show(
+                        ui,
+                        None,
+                        &mut virtualisation,
+                        &tokens,
+                        1.0,
+                        PaneId(5),
+                        &mut outputs,
+                    );
+                });
+            },
+        );
+        frame.textures_delta.clear();
+        let clip = outputs.ui_geometry.results_scroll.unwrap();
+        let rows: Vec<_> = outputs
+            .ui_geometry
+            .semantic_nodes
+            .iter()
+            .filter(|node| node.role == UiRole::ResultRow)
+            .collect();
+        assert!(!rows.is_empty());
+        assert!(
+            rows.iter()
+                .all(|node| node.rect.is_positive() && clip.contains(node.rect, 1.0))
+        );
+        assert!(virtualisation.materialised_rows < 64);
     }
 }

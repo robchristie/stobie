@@ -2312,6 +2312,7 @@ dependencies = [
  "egui",
  "polyorama-core",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

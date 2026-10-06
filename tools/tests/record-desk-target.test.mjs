@@ -49,3 +49,7 @@ test('invalid geometry fails visibly instead of supplying a physical target', as
     await assert.rejects(probe(() => state([target({ rect: invalid })])), /Invalid target geometry/);
   }
 });
+
+test('action fallback rejects ambiguity instead of choosing the first control', async () => {
+  await assert.rejects(probe(() => state([target({ id: 'one' }), target({ id: 'two' })]), 'choice'), { code: 'ambiguous' });
+});

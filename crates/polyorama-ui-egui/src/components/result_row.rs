@@ -61,6 +61,16 @@ pub fn result_row(
         node.clear_toggled();
         node.set_selected(spec.selected);
         node.add_action(Action::Click);
+        // Share the actual visible hit bounds with semantic physical targeting.
+        let bounds = response.interact_rect;
+        if bounds.is_positive() && bounds.is_finite() {
+            node.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(bounds.min.x),
+                y0: f64::from(bounds.min.y),
+                x1: f64::from(bounds.max.x),
+                y1: f64::from(bounds.max.y),
+            });
+        }
     });
     if spec.selected {
         ui.painter()

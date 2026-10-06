@@ -74,6 +74,24 @@ impl WebHandle {
             .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
         serde_wasm_bindgen::to_value(&app.test_snapshot()).map_err(Into::into)
     }
+    pub fn enable_automation(&self, instance: &str) -> Result<(), JsValue> {
+        let mut app = self
+            .runner
+            .app_mut::<AnalyticalWorkspaceApp>()
+            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+        app.enable_inspection(instance)
+            .map_err(|error| JsValue::from_str(&error))?;
+        Ok(())
+    }
+    /// Fixed, versioned automation dispatcher. Test fixtures remain separate.
+    pub fn automation_request(&self, request: &str) -> Result<String, JsValue> {
+        let mut app = self
+            .runner
+            .app_mut::<AnalyticalWorkspaceApp>()
+            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+        app.inspection_request(request)
+            .map_err(|error| JsValue::from_str(&error))
+    }
 }
 
 #[cfg(target_arch = "wasm32")]

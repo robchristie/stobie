@@ -187,10 +187,7 @@ impl PaneSurface<'_> {
             .unwrap_or(ActiveTool::Navigate);
         let mut active_tool = before_tool;
         let toolbar_id = SemanticUiId::new(format!("pane.{}.toolbar", pane.0));
-        let polygon_vertices = match self.annotation_ui.get() {
-            Some(GesturePreview::Polygon { vertices, .. }) => vertices.len(),
-            _ => 0,
-        };
+        let polygon_vertices = crate::actions::polygon_vertex_count(self.annotation_ui.get());
         let action_context = ActionContext {
             active_pane: self.active_pane,
             target_pane: Some(pane),
@@ -419,10 +416,9 @@ impl PaneSurface<'_> {
             });
         }
         if fit {
-            self.outputs.intents.push(ImageIntent::SetCamera {
-                pane,
-                camera: Camera::fit(rect.width() as f64, rect.height() as f64),
-            });
+            self.outputs
+                .intents
+                .push(crate::actions::fit_view_intent(pane, rect.into()));
         }
         if toggle_link {
             self.outputs.intents.push(ImageIntent::SetCameraLink {
@@ -814,6 +810,60 @@ mod tests {
                 },
                 ImagePaneFixture::default(),
             )
+    }
+
+    #[test]
+    fn polygon_discovery_matches_rendered_availability_after_the_third_vertex() {
+        use polyorama_ui_egui::{
+            CollectionMetadata, Inspection, InspectionOperation, InspectionRequest,
+            InspectionResult, InspectionSelector,
+        };
+        let mut harness = image_pane_harness(1_000.0);
+        for count in [2, 3] {
+            harness.state_mut().session.gesture = Some(GesturePreview::Polygon {
+                layer: LayerId(1),
+                vertices: (0..count).map(|i| WorldPoint::new(i as f64, 0.0)).collect(),
+            });
+            harness.run_steps(2);
+            let state = harness.state();
+            let snapshot = state.output.ui_geometry.snapshot(count as u64);
+            let rendered = snapshot
+                .node(&SemanticUiId::new("action.commit_polygon.pane.1"))
+                .unwrap();
+            let bindings = crate::app::inspection::inspection_bindings_for_state(
+                &state.session,
+                &CommandHistory::default(),
+                &Workspace::analytical_default(),
+            );
+            let service = Inspection::new("polygon-availability-test");
+            service
+                .publish(
+                    snapshot.clone(),
+                    &bindings,
+                    CollectionMetadata::default(),
+                    Default::default(),
+                )
+                .unwrap();
+            let reply = service.handle(InspectionRequest {
+                version: 1,
+                request_id: "discover".into(),
+                instance: Some(service.instance()),
+                operation: InspectionOperation::Discover {
+                    selector: InspectionSelector {
+                        capability: Some("commit_polygon".into()),
+                        pane: Some(PaneId(1)),
+                        ..Default::default()
+                    },
+                    limit: 1,
+                    cursor: None,
+                },
+            });
+            let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+                panic!("discovery");
+            };
+            assert_eq!(capabilities[0].availability.enabled(), rendered.enabled);
+            assert_eq!(rendered.enabled, count == 3);
+        }
     }
 
     fn request_viewport_action(harness: &Harness<'_, ImagePaneFixture>, action: LabAction) {

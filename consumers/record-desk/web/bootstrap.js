@@ -8,6 +8,12 @@ try {
   handle = new WebHandle();
   await handle.start(document.getElementById('record-desk-canvas'));
   window.__RECORD_DESK = handle;
+  if (new URL(location.href).searchParams.get('automation') === '1') {
+    handle.enable_automation(crypto.randomUUID());
+    window.__POLYORAMA_AUTOMATION = Object.freeze({
+      request: json => handle.automation_request(json),
+    });
+  }
   const canvas = document.getElementById('record-desk-canvas');
   // eframe forwards keys, but browser Find/Location/Reload defaults can steal
   // focus before egui consumes application shortcuts. Reserve only our chords

@@ -5,6 +5,9 @@ use serde::Serialize;
 
 use crate::{actions::Action, model::*, panes::*, store::Store};
 
+#[path = "inspection.rs"]
+mod inspection;
+
 pub struct RecordDeskApp {
     pub(crate) desk: Desk,
     pub(crate) workspace: Workspace,
@@ -19,6 +22,12 @@ pub struct RecordDeskApp {
     focus_search: bool,
     frame: u64,
     snapshot: Snapshot,
+    inspection: Option<Inspection>,
+    desk_epoch: u64,
+    #[cfg(not(target_arch = "wasm32"))]
+    _inspection_host: Option<NativeInspectionHost>,
+    #[cfg(target_arch = "wasm32")]
+    inspection_context: egui::Context,
 }
 
 #[derive(Clone, Default, Serialize)]
@@ -68,8 +77,16 @@ impl RecordDeskApp {
             focus_search: false,
             frame: 0,
             snapshot: Snapshot::default(),
+            inspection: None,
+            desk_epoch: 0,
+            #[cfg(not(target_arch = "wasm32"))]
+            _inspection_host: None,
+            #[cfg(target_arch = "wasm32")]
+            inspection_context: context.clone(),
         };
         app.load();
+        #[cfg(not(target_arch = "wasm32"))]
+        app.start_inspection(context);
         app
     }
 
@@ -90,6 +107,7 @@ impl RecordDeskApp {
             Ok(Some(saved)) => match Desk::new(saved.records.clone()) {
                 Ok(desk) => {
                     self.desk = desk;
+                    self.desk_epoch += 1;
                     self.workspace = saved.workspace.clone();
                     self.persisted = Some(saved);
                     self.load_error = false;
@@ -101,6 +119,7 @@ impl RecordDeskApp {
             },
             Ok(None) => {
                 self.desk = Desk::default();
+                self.desk_epoch += 1;
                 self.workspace = default_workspace();
                 self.persisted = None;
                 self.load_error = false;
@@ -120,6 +139,11 @@ impl RecordDeskApp {
     }
 
     pub(crate) fn availability(&self, action: Action) -> Availability {
+        if matches!(action, Action::ToggleReviewed | Action::EditCategory)
+            && self.desk.draft().is_none()
+        {
+            return Availability::Hidden;
+        }
         let reason = match action {
             Action::Apply | Action::Cancel if !self.desk.is_dirty() => {
                 Some("There are no draft changes")
@@ -232,6 +256,7 @@ impl RecordDeskApp {
         {
             *axis = SplitAxis::Vertical;
         }
+        self.drain_inspection(root.ctx());
         let mut output = PaneOutput::default();
         let mut nodes = vec![UiNode::container(
             SemanticUiId::root(),
@@ -414,6 +439,7 @@ impl RecordDeskApp {
             semantic_audit: vec![],
         };
         ui_snapshot.semantic_audit = ui_snapshot.audit();
+        self.publish_inspection(root.ctx(), &ui_snapshot);
         let mut changed = false;
         if let Some(resize) = resize {
             match resize.apply(&mut self.workspace) {

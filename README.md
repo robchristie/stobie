@@ -219,6 +219,9 @@ does not update them automatically.
 - [Working rules](AGENTS.md): architectural boundaries and contribution expectations.
 - [Application composition](docs/application-composition.md): four-crate lifecycle,
   local rustdoc, a minimal native consumer and a public presenter variation.
+- [Application inspection and exercise](docs/application-interface.md): shared
+  native/browser client, typed discovery and invocation, bounded queries and
+  waits, physical targeting and capture provenance.
 - [UI guides](docs/ui-guides/README.md): entry point for component, pane,
   interaction, accessibility and UI review work.
 - [Design language](docs/design-language.md): visual and semantic contracts,

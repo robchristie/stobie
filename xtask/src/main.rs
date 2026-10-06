@@ -126,6 +126,7 @@ fn verify() -> Result<()> {
             "tools/tests/browser-startup.test.mjs",
             "tools/tests/browser-idle.test.mjs",
             "tools/tests/record-desk-target.test.mjs",
+            "tools/tests/application-client.test.mjs",
             "tools/tests/browser-package.test.mjs",
         ],
         &evidence_environment,
@@ -168,6 +169,11 @@ fn verify() -> Result<()> {
         &evidence_environment,
     )?;
     if cfg!(target_os = "linux") {
+        run_with_environment(
+            "bash",
+            &["tools/application-interface-smoke.sh"],
+            &evidence_environment,
+        )?;
         run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
         run_with_environment(
             "bash",

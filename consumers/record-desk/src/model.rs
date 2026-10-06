@@ -86,6 +86,9 @@ pub struct Desk {
     filters: Filters,
     undo: VecDeque<Edit>,
     redo: Vec<Edit>,
+    draft_revision: u64,
+    history_revision: u64,
+    filter_revision: u64,
 }
 
 impl Desk {
@@ -99,6 +102,9 @@ impl Desk {
             filters: Filters::default(),
             undo: VecDeque::new(),
             redo: Vec::new(),
+            draft_revision: 0,
+            history_revision: 0,
+            filter_revision: 0,
         })
     }
 
@@ -116,6 +122,16 @@ impl Desk {
 
     pub fn filters(&self) -> &Filters {
         &self.filters
+    }
+
+    pub fn draft_revision(&self) -> u64 {
+        self.draft_revision
+    }
+    pub fn history_revision(&self) -> u64 {
+        self.history_revision
+    }
+    pub fn filter_revision(&self) -> u64 {
+        self.filter_revision
     }
 
     pub fn visible(&self) -> Vec<&Record> {
@@ -151,6 +167,9 @@ impl Desk {
     }
 
     pub fn set_filters(&mut self, filters: Filters) {
+        if self.filters != filters {
+            self.filter_revision += 1;
+        }
         self.filters = filters;
     }
 
@@ -168,6 +187,7 @@ impl Desk {
             .ok_or_else(|| "The selected record does not exist.".to_owned())?;
         self.selected = Some(id);
         self.draft = Some(record.clone());
+        self.draft_revision += 1;
         Ok(())
     }
 
@@ -176,6 +196,9 @@ impl Desk {
     pub fn edit_draft(&mut self, record: Record) -> Result<(), String> {
         if self.selected != Some(record.id) {
             return Err("The draft must retain the selected record ID.".into());
+        }
+        if self.draft.as_ref() != Some(&record) {
+            self.draft_revision += 1;
         }
         self.draft = Some(record);
         Ok(())
@@ -195,6 +218,9 @@ impl Desk {
             .position(|record| Some(record.id) == self.selected)
             .ok_or_else(|| "The selected record does not exist.".to_owned())?;
         if self.records[index] == after {
+            if self.draft.as_ref() != Some(&after) {
+                self.draft_revision += 1;
+            }
             self.draft = Some(after);
             return Ok(false);
         }
@@ -208,11 +234,16 @@ impl Desk {
         }
         self.redo.clear();
         self.draft = Some(after);
+        self.history_revision += 1;
         Ok(true)
     }
 
     pub fn cancel(&mut self) {
-        self.draft = self.selected_record().cloned();
+        let draft = self.selected_record().cloned();
+        if self.draft != draft {
+            self.draft_revision += 1;
+        }
+        self.draft = draft;
     }
 
     pub fn undo(&mut self) -> Result<bool, String> {
@@ -224,6 +255,7 @@ impl Desk {
         let edit = self.undo.pop_back().expect("the undo entry was inspected");
         self.records[index] = edit.before.clone();
         self.redo.push(edit);
+        self.history_revision += 1;
         self.cancel();
         Ok(true)
     }
@@ -237,6 +269,7 @@ impl Desk {
         let edit = self.redo.pop().expect("the redo entry was inspected");
         self.records[index] = edit.after.clone();
         self.undo.push_back(edit);
+        self.history_revision += 1;
         self.cancel();
         Ok(true)
     }

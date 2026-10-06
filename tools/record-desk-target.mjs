@@ -1,29 +1,32 @@
-// Read-only synchronisation for the physical Record Desk browser journey.
-// Popup submission and placement may span several presentation passes.
+import { performance } from 'node:perf_hooks';
+import { ApplicationClient } from './application-client.mjs';
+
+// Compatibility adapter for the retained read-only Record Desk physical journey.
+// Exact identities remain preferred; action-only fallback requires uniqueness.
 export async function waitForClickTarget(readSnapshot, wait, id) {
-  let previous;
-  let confirmations = 0;
-  for (let elapsed = 0; elapsed <= 15000; elapsed += 50) {
-    const state = await readSnapshot();
-    const nodes = state.ui.nodes;
-    const node = nodes.find(n => n.id === id) ?? nodes.find(n => n.actions.includes(id));
-    if (node?.enabled) {
-      const root = nodes.find(n => n.id === state.ui.root);
-      for (const [name, rect] of [['target', node.rect], ['root', root?.rect]]) {
-        if (!rect || !['min_x', 'min_y', 'max_x', 'max_y'].every(k => Number.isFinite(rect[k]))
-          || rect.max_x <= rect.min_x || rect.max_y <= rect.min_y) {
-          throw new Error(`Invalid ${name} geometry for ${id}`);
-        }
-      }
-      const current = JSON.stringify([node.id, node.rect, root.rect]);
-      confirmations = current === previous ? confirmations + 1 : 1;
-      if (confirmations === 3) return { state, node, root, observed_ms: elapsed };
-      previous = current;
-    } else {
-      previous = undefined;
-      confirmations = 0;
-    }
-    if (elapsed < 15000) await wait(50);
+  const started = performance.now();
+  let elapsed = 0;
+  let state;
+  const selected = {};
+  const scheduler = { now: () => Math.max(elapsed, Math.floor(performance.now() - started)),
+    sleep: async ms => { await wait(ms); elapsed += ms; } };
+  const client = new ApplicationClient(null, { scheduler });
+  client.observe = async () => {
+    state = await readSnapshot();
+    delete selected.id;
+    delete selected.capability;
+    if (state.ui.nodes.some(node => node.id === id) || !state.ui.nodes.some(node => node.actions.includes(id))) selected.id = id;
+    else selected.capability = id;
+    // Legacy unit fixtures predate viewport scale; real application snapshots
+    // publish it. The compatibility adapter alone supplies their 1× default.
+    return { id: state.ui.frame ?? 0, snapshot: { pixels_per_point: 1, ...state.ui } };
+  };
+  try {
+    const result = await client.target(selected);
+    return { state, node: result.node, root: result.root, observed_ms: result.observed_ms };
+  } catch (error) {
+    if (error.code === 'timeout') throw new Error(`Click target ${id} did not become enabled with stable geometry within 15000 ms`, { cause: error });
+    if (error.code === 'invalid_geometry') throw new Error(`Invalid target geometry for ${id}: ${error.message}`, { cause: error });
+    throw error;
   }
-  throw new Error(`Click target ${id} did not become enabled with stable geometry within 15000 ms`);
 }

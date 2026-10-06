@@ -4,6 +4,27 @@ use polyorama_ui_egui::{
 };
 use serde::{Deserialize, Serialize};
 
+pub(crate) fn polygon_vertex_count(gesture: Option<&polyorama_core::GesturePreview>) -> usize {
+    match gesture {
+        Some(polyorama_core::GesturePreview::Polygon { vertices, .. }) => vertices.len(),
+        _ => 0,
+    }
+}
+
+/// The same fit intent is used by physical controls and semantic invocation.
+pub(crate) fn fit_view_intent(
+    pane: PaneId,
+    rect: polyorama_ui_egui::UiRect,
+) -> polyorama_core::ImageIntent {
+    polyorama_core::ImageIntent::SetCamera {
+        pane,
+        camera: polyorama_core::Camera::fit(
+            f64::from(rect.max_x - rect.min_x),
+            f64::from(rect.max_y - rect.min_y),
+        ),
+    }
+}
+
 /// Stable identities and presentation metadata owned by Analytical Workspace
 /// Lab rather than by the egui framework crate.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -29,7 +50,6 @@ pub enum LabAction {
 }
 
 impl LabAction {
-    #[cfg(test)]
     pub const ALL: [Self; 17] = [
         Self::Undo,
         Self::Redo,
