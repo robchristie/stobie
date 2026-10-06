@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "icons/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 64,
+        "max_x": 1002,
+        "max_y": 464
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.9f9c4867650796ab",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Export the selected annotations and their complete supporting evidence",
+      "description": "Export the selected annotations and their supporting evidence to a local file",
+      "rect": {
+        "min_x": 690,
+        "min_y": 230,
+        "max_x": 798,
+        "max_y": 266
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "export_selection"
+      ]
+    },
+    {
+      "id": "presentation.c32075d371f42fac",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Export the selected annotations and their complete supporting evidence",
+      "description": "Export the selected annotations and their supporting evidence to a local file",
+      "rect": {
+        "min_x": 690,
+        "min_y": 191,
+        "max_x": 994,
+        "max_y": 227
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "export_selection"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

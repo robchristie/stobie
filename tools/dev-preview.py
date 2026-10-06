@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve the built Lab and independent Record Desk through the gateway's inherited listening socket."""
+"""Serve built applications through the gateway's inherited listening socket."""
 
 import json
 import os
@@ -20,6 +20,14 @@ RECORD_DESK_ASSETS = {
     "bootstrap.js": "text/javascript; charset=utf-8",
     "pkg/record_desk.js": "text/javascript; charset=utf-8",
     "pkg/record_desk_bg.wasm": "application/wasm",
+}
+GALLERY_ASSETS = {
+    "index.html": "text/html; charset=utf-8",
+    "styles.css": "text/css; charset=utf-8",
+    "bootstrap.js": "text/javascript; charset=utf-8",
+    "browser-startup.js": "text/javascript; charset=utf-8",
+    "pkg/polyorama_gallery.js": "text/javascript; charset=utf-8",
+    "pkg/polyorama_gallery_bg.wasm": "application/wasm",
 }
 READINESS_PATH = "/_dev_preview/ready"
 ASSETS = {
@@ -139,6 +147,19 @@ class PreviewHandler(BaseHTTPRequestHandler):
                 self.respond(404, b"not found\n", "text/plain; charset=utf-8")
                 return
             self.respond(200, body, RECORD_DESK_ASSETS[name])
+            return
+        if path.startswith("/gallery/"):
+            name = path.removeprefix("/gallery/") or "index.html"
+            try:
+                root = open_web_root(self.server.identity["worktree"], ("apps", "polyorama-gallery", "web"))
+                try:
+                    body = open_asset(root, name, assets=GALLERY_ASSETS)
+                finally:
+                    os.close(root)
+            except (OSError, ValueError):
+                self.respond(404, b"not found\n", "text/plain; charset=utf-8")
+                return
+            self.respond(200, body, GALLERY_ASSETS[name])
             return
         name = "index.html" if path == "/" else path[1:]
         try:

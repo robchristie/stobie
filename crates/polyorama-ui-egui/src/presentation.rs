@@ -5,10 +5,11 @@ use std::hash::Hash;
 use egui::{Response, Ui};
 
 use crate::{
-    ActionButtonIdentity, ActionButtonSpec, ActionKey, DesignTokens, DomainReference,
-    NativeTextControlKind, SemanticUiId, TextAuditCoverage, TextInteraction, TextLayoutObservation,
-    TextOverflow, TextRole, UiNode, action_button_with_identity,
-    action_semantic_node_with_identity, record_native_text_control, text_audit_coverage,
+    ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey, DesignTokens,
+    DomainReference, IconId, NativeTextControlKind, SemanticUiId, TextAuditCoverage,
+    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, UiNode,
+    action_button_with_identity_and_content, action_semantic_node_with_identity,
+    record_native_text_control, text_audit_coverage,
 };
 
 /// Logical hierarchy, independent of egui's layout hierarchy. Keys must describe
@@ -214,15 +215,86 @@ impl PresentationContext {
         key: impl Hash + std::fmt::Debug,
         spec: ActionButtonSpec<A>,
     ) -> Response {
+        self.action_with_content(ui, key, spec, ActionButtonContent::Text)
+    }
+
+    /// Icon-only action with its full action name, description and tooltip.
+    /// Records semantics without inventing measured text for decorative artwork.
+    ///
+    /// ```
+    /// use polyorama_ui_egui::{
+    ///     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionTarget,
+    ///     Availability, DesignTokens, IconId, PresentationContext, PresentationObservations,
+    ///     PresentationScope, SemanticUiId,
+    /// };
+    ///
+    /// // A is the application's own ActionKey enum; undo/save are application actions.
+    /// fn toolbar<A: ActionKey>(
+    ///     ui: &mut egui::Ui, tokens: DesignTokens, font_scale: f32, undo: A, save: A,
+    /// ) -> (bool, PresentationObservations) {
+    ///     let mut p = PresentationContext::new(
+    ///         ui, tokens, font_scale, PresentationScope::new("document-toolbar"),
+    ///         SemanticUiId::root(),
+    ///     );
+    ///     let mut save_clicked = false;
+    ///     ui.horizontal(|ui| {
+    ///         p.icon_action(ui, "undo", ActionButtonSpec {
+    ///             target: ActionTarget::application(undo),
+    ///             availability: Availability::Disabled { reason: "History is empty".into() },
+    ///             state: ActionButtonState::Momentary,
+    ///             emphasis: ActionEmphasis::QuietBorderless,
+    ///             compact: false,
+    ///         }, IconId::Undo);
+    ///         save_clicked = p.action_with_icon(ui, "save", ActionButtonSpec {
+    ///             target: ActionTarget::application(save),
+    ///             availability: Availability::Enabled,
+    ///             state: ActionButtonState::Momentary,
+    ///             emphasis: ActionEmphasis::Primary,
+    ///             compact: false,
+    ///         }, IconId::Save).clicked();
+    ///     });
+    ///     (save_clicked, p.finish(ui))
+    /// }
+    /// ```
+    pub fn icon_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        icon: IconId,
+    ) -> Response {
+        self.action_with_content(ui, key, spec, ActionButtonContent::IconOnly(icon))
+    }
+
+    /// Leading icon and measured label; narrow labels elide with complete semantics.
+    pub fn action_with_icon<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        icon: IconId,
+    ) -> Response {
+        self.action_with_content(ui, key, spec, ActionButtonContent::IconLabel(icon))
+    }
+
+    /// Explicit presentation with matching automatic semantic/text observations.
+    pub fn action_with_content<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+    ) -> Response {
         self.check_pass(ui);
         let identity = self.scope.instance(key).action_identity();
         let target = spec.target;
         let state = spec.state;
         let availability = spec.availability.clone();
-        let response = action_button_with_identity(
+        let response = action_button_with_identity_and_content(
             ui,
             spec,
             &identity,
+            content,
             &self.tokens,
             self.font_scale,
             &mut self.text_layouts,
@@ -238,7 +310,9 @@ impl PresentationContext {
         if self.domain_reference.is_some() {
             node.domain_reference = self.domain_reference.clone();
         }
-        self.semantic_nodes.push(node);
+        if response.interact_rect.is_positive() {
+            self.semantic_nodes.push(node);
+        }
         response
     }
 

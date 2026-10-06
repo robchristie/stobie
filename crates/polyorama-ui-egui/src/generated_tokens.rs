@@ -123,6 +123,11 @@ pub struct DesignTokens {
 }
 
 impl DesignTokens {
+    /// Common artwork size, generated without changing public token struct literals.
+    pub const fn icon_size(&self) -> Points {
+        ICON_SIZE
+    }
+
     pub const fn resolve(theme: ThemeVariant, density: DensityVariant) -> Self {
         let colours = match theme {
             ThemeVariant::Light => COLOURS_LIGHT,
@@ -763,6 +768,8 @@ const GEOMETRY_COMFORTABLE: GeometryTokens = GeometryTokens {
     control_radius: Points(3.0),
     minimum_hit_size: Points(32.0),
 };
+
+const ICON_SIZE: Points = Points(16.0);
 
 const TYPOGRAPHY: TypographyTokens = TypographyTokens {
     application_title_size: Points(18.0),

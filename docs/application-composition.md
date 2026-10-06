@@ -156,6 +156,20 @@ and [interaction guidance](ui-guides/interactions.md) for action availability,
 shortcuts and completed gestures. `PanePresenter` and `PresentationContext`
 rustdoc retain these local ownership and pass-lifetime contracts.
 
+## Compose icon actions
+
+Import `IconId` from `polyorama_ui_egui`. `PresentationContext::icon_action` and
+`action_with_icon` use your existing `ActionButtonSpec` and `ActionKey`; the icon
+selects artwork without changing capability routing or the full accessible name.
+Use stable logical keys for each instance and finish the context in this pass.
+The [component guide's compilable toolbar example](ui-guides/components.md#typed-icons-and-action-presentations)
+shows an unavailable icon-only Undo and a primary Save with a leading icon.
+
+The application continues to arrange layout and apply validated intents. Choose
+icon-only deliberately; labelled actions reserve measured ellipsis space and
+never collapse implicitly. `paint_icon` exposes the same decorative artwork for
+application-owned compositions without introducing another interaction model.
+
 ## Add asynchronous scalar images when needed
 
 The minimal consumer deliberately uses no tile pipeline. For a scalar-image

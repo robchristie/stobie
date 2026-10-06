@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "icons/vocabulary",
+      "rect": {
+        "min_x": 362,
+        "min_y": 48,
+        "max_x": 1322,
+        "max_y": 668
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

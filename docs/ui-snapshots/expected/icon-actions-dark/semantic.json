@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "icons/action-presentations",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 454
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.4745864528c19005",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Link views",
+      "description": "Link or unlink this camera with camera group A",
+      "rect": {
+        "min_x": 534,
+        "min_y": 232,
+        "max_x": 566,
+        "max_y": 264
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": [
+        "link_views"
+      ]
+    },
+    {
+      "id": "presentation.9a4cfb53ae5a1e36",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Fit view",
+      "description": "Fit the complete image into the active viewport",
+      "rect": {
+        "min_x": 534,
+        "min_y": 158,
+        "max_x": 566,
+        "max_y": 190
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": [
+        "fit_view"
+      ]
+    },
+    {
+      "id": "presentation.c31515aae44b17a0",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Save layout",
+      "description": "Persist the current workspace layout",
+      "rect": {
+        "min_x": 534,
+        "min_y": 195,
+        "max_x": 637.5,
+        "max_y": 227
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "save_layout"
+      ]
+    },
+    {
+      "id": "presentation.feb6c0d2958a23c2",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Save layout",
+      "description": "Persist the current workspace layout",
+      "rect": {
+        "min_x": 534,
+        "min_y": 121,
+        "max_x": 614.5,
+        "max_y": 153
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "save_layout"
+      ]
+    },
+    {
+      "id": "presentation.ff93ef13b1b3b560",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Undo",
+      "description": "Undo the most recent change",
+      "rect": {
+        "min_x": 534,
+        "min_y": 269,
+        "max_x": 566,
+        "max_y": 301
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "undo"
+      ],
+      "disabled_reason": "History is empty"
+    }
+  ],
+  "semantic_audit": []
+}

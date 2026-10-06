@@ -90,6 +90,63 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(self.request("/record-desk/bootstrap.js")[0], 404)
         self.assertEqual(self.request(ADAPTER.READINESS_PATH)[0], 200)
 
+    def gallery_assets(self):
+        web = self.worktree / "apps/polyorama-gallery/web"
+        (web / "pkg").mkdir(parents=True)
+        for name in ADAPTER.GALLERY_ASSETS:
+            (web / name).write_bytes(b"\x00asm\x01\x00\x00\x00" if name.endswith(".wasm")
+                                    else f"gallery fixture {name}".encode())
+        return web
+
+    def test_gallery_route_serves_only_allowlisted_regular_assets(self):
+        web = self.gallery_assets()
+        self.wait_ready(self.start())
+        self.assertEqual(self.request("/gallery/")[2], (web / "index.html").read_bytes())
+        for name, mime in ADAPTER.GALLERY_ASSETS.items():
+            with self.subTest(name=name):
+                status, headers, body = self.request("/gallery/" + name + "?reload=1")
+                self.assertEqual(status, 200)
+                self.assertEqual(headers["Content-Type"], mime)
+                self.assertEqual(headers["Cache-Control"], "no-store")
+                self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+                self.assertEqual(body, (web / name).read_bytes())
+                status, headers, body = self.request("/gallery/" + name, method="HEAD")
+                self.assertEqual(status, 200)
+                self.assertEqual(body, b"")
+                self.assertEqual(int(headers["Content-Length"]), (web / name).stat().st_size)
+        for path in ("/gallery/Cargo.toml", "/gallery/pkg/record_desk.js", "/gallery/pkg/",
+                     "/gallery/../bootstrap.js", "/gallery/%2e%2e/bootstrap.js",
+                     "/gallery/pkg\\secret.js", "/gallery/extra.txt"):
+            with self.subTest(path=path):
+                self.assertEqual(self.request(path)[0], 404)
+        self.assert_port_owned()
+
+    def test_gallery_route_rejects_missing_invalid_and_symlink_assets(self):
+        web = self.gallery_assets()
+        self.wait_ready(self.start())
+        wasm = web / "pkg/polyorama_gallery_bg.wasm"
+        for contents in (None, b"", b"not WASM"):
+            with self.subTest(contents=contents):
+                wasm.unlink(missing_ok=True)
+                if contents is not None:
+                    wasm.write_bytes(contents)
+                self.assertEqual(self.request("/gallery/pkg/polyorama_gallery_bg.wasm")[0], 404)
+        wasm.unlink()
+        os.mkfifo(wasm)
+        self.assertEqual(self.request("/gallery/pkg/polyorama_gallery_bg.wasm")[0], 404)
+        asset = web / "bootstrap.js"
+        asset.unlink()
+        asset.symlink_to(self.web / "bootstrap.js")
+        self.assertEqual(self.request("/gallery/bootstrap.js")[0], 404)
+        shutil.rmtree(web / "pkg")
+        (web / "pkg").symlink_to(self.web / "pkg", target_is_directory=True)
+        self.assertEqual(self.request("/gallery/pkg/polyorama_gallery.js")[0], 404)
+        shutil.rmtree(web)
+        web.symlink_to(self.web, target_is_directory=True)
+        self.assertEqual(self.request("/gallery/bootstrap.js")[0], 404)
+        # Gallery availability is independent of the Lab's readiness contract.
+        self.assertEqual(self.request(ADAPTER.READINESS_PATH)[0], 200)
+
     def request(self, path, method="GET"):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=0.2)
         try:

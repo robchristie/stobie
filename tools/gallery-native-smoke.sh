@@ -25,6 +25,8 @@ DISPLAY_NUMBER=:96
 XVFB_LOG="$EVIDENCE_DIR/gallery-native-xvfb.log"
 APP_LOG="$EVIDENCE_DIR/gallery-native-runtime.log"
 SNAPSHOT="$ROOT/.tools/runtime/gallery-native-snapshot.json"
+STORY_COUNT="$(sed -n 's/.*pub const ALL: \[Self; \([0-9]*\)\].*/\1/p' apps/polyorama-gallery/src/catalogue.rs)"
+[[ "$STORY_COUNT" =~ ^[0-9]+$ ]]
 SMOKE_TMP="$ROOT/.tools/runtime/gallery-native-x11-tmp"
 
 mkdir -p "$SMOKE_TMP/.X11-unix"
@@ -58,9 +60,9 @@ for _ in 1 2 3 4 5; do
   sleep 0.2
 done
 test -s "$SNAPSHOT"
-jq -e '
+jq -e --argjson story_count "$STORY_COUNT" '
   .story == "reference/application-shell"
-  and .story_count == 20
+  and .story_count == $story_count
   and (.text | length) > 0
   and (.text_audit | length) == 0
   and (.ui_snapshot.nodes | length) > 0
@@ -76,4 +78,4 @@ if grep -E "panicked|WGPU error|Exiting because of error" "$APP_LOG"; then
   echo "native gallery smoke observed an application failure" >&2
   exit 1
 fi
-echo "native gallery smoke passed: GL/llvmpipe, 20 stories, empty text and semantic audits"
+echo "native gallery smoke passed: GL/llvmpipe, $STORY_COUNT stories, empty text and semantic audits"

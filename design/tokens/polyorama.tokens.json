@@ -77,6 +77,9 @@
     "controlRadius": { "$type": "dimension", "$value": 3 },
     "minimumHitSize": { "$type": "dimension", "$value": 32 }
   },
+  "icon": {
+    "size": { "$type": "dimension", "$value": 16, "$description": "Common square artwork size, independent of density and hit target" }
+  },
   "typography": {
     "applicationTitleSize": { "$type": "fontSize", "$value": 18 },
     "paneTitleSize": { "$type": "fontSize", "$value": 16 },

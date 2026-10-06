@@ -55,3 +55,12 @@ Baseline changes are ordinary reviewed source changes. Generate candidate
 artefacts outside `expected/`, inspect every affected visual and semantic/text
 diff, and copy only the deliberately accepted files into the checked-in tree.
 CI must never perform that operation.
+
+The icon fixtures pin the production action presentations in dark comfortable
+mode, the vocabulary in light compact mode, and narrow labelled actions in light
+high contrast at 150%. Physical hover/press, keyboard, toggle/disabled and display
+scale probes run through `tools/icon-actions-browser-smoke.mjs` and the Linux
+native companion in full verification. Catalogue growth changes Gallery chrome
+and native-control coverage; review those differences alongside any deliberate
+artwork change before updating the original fixtures. Frozen seed tasks and their
+assertions remain unchanged.

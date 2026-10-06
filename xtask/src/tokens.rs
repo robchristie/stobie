@@ -650,6 +650,11 @@ pub struct DesignTokens {{
 }}
 
 impl DesignTokens {{
+    /// Common artwork size, generated without changing public token struct literals.
+    pub const fn icon_size(&self) -> Points {{
+        ICON_SIZE
+    }}
+
     pub const fn resolve(theme: ThemeVariant, density: DensityVariant) -> Self {{
         let colours = match theme {{
             ThemeVariant::Light => COLOURS_LIGHT,
@@ -675,6 +680,8 @@ impl DesignTokens {{
 
 {density_constants}
 
+const ICON_SIZE: Points = Points({icon_size});
+
 const TYPOGRAPHY: TypographyTokens = TypographyTokens {{
     application_title_size: Points({application_title_size}),
     pane_title_size: Points({pane_title_size}),
@@ -698,6 +705,7 @@ const MOTION: MotionTokens = MotionTokens {{
     quick: Milliseconds({motion_quick}),
 }};
 "#,
+        icon_size = number_literal(required_number(&common, "icon.size")?),
         application_title_size =
             number_literal(required_number(&common, "typography.applicationTitleSize")?),
         pane_title_size = number_literal(required_number(&common, "typography.paneTitleSize")?),

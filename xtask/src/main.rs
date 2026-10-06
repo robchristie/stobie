@@ -51,6 +51,9 @@ fn verify() -> Result<()> {
     fs::create_dir_all(&evidence_directory)
         .context("create ignored verification evidence directory")?;
     let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence_directory.as_path())];
+    let icon_evidence_directory = evidence_directory.join("typed-icons");
+    fs::create_dir_all(&icon_evidence_directory).context("create typed icon evidence directory")?;
+    let icon_evidence_environment = [("POLYORAMA_EVIDENCE_DIR", icon_evidence_directory.as_path())];
     run(
         "python3",
         &["-m", "unittest", "discover", "-s", "tools/tests"],
@@ -139,6 +142,11 @@ fn verify() -> Result<()> {
         &["run", "gallery-browser-smoke"],
         &evidence_environment,
     )?;
+    run_with_environment(
+        "bash",
+        &["tools/icon-actions-browser-smoke.sh"],
+        &icon_evidence_environment,
+    )?;
     browser::build(Vec::new())?;
     run(
         "node",
@@ -180,6 +188,11 @@ fn verify() -> Result<()> {
             "bash",
             &["tools/gallery-native-smoke.sh"],
             &evidence_environment,
+        )?;
+        run_with_environment(
+            "bash",
+            &["tools/icon-actions-native-smoke.sh"],
+            &icon_evidence_environment,
         )?;
         run_with_environment(
             "bash",

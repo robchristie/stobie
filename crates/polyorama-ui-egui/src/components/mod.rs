@@ -1,5 +1,8 @@
 mod action_button;
 mod choice;
+mod icon;
+#[cfg(test)]
+mod icon_action_tests;
 mod property;
 mod range;
 mod result_row;
@@ -8,10 +11,13 @@ mod thumbnail;
 mod viewport_status;
 
 pub use action_button::{
-    ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis, action_button,
-    action_button_with_identity, action_semantic_node, action_semantic_node_with_identity,
+    ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis,
+    action_button, action_button_with_content, action_button_with_identity,
+    action_button_with_identity_and_content, action_semantic_node,
+    action_semantic_node_with_identity,
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
+pub use icon::{IconId, icon_size, paint_icon};
 pub use property::property_row;
 pub use range::range_control;
 pub use result_row::{ResultRowSpec, result_row, result_row_height};
@@ -306,14 +312,12 @@ pub fn dock_overflow_trigger(
     });
     ui.painter()
         .rect_filled(hit_rect, 3.0, ui.visuals().widgets.inactive.bg_fill);
-    let centre = hit_rect.center();
-    for offset in [-5.0, 0.0, 5.0] {
-        ui.painter().circle_filled(
-            centre + egui::vec2(offset, 0.0),
-            1.35,
-            tokens.colours.text_primary,
-        );
-    }
+    paint_icon(
+        ui.painter(),
+        IconId::Overflow,
+        Rect::from_center_size(hit_rect.center(), egui::Vec2::splat(icon_size(tokens, 1.0))),
+        tokens.colours.text_primary.into(),
+    );
     if response.has_focus() {
         ui.painter().rect_stroke(
             hit_rect,
@@ -322,7 +326,7 @@ pub fn dock_overflow_trigger(
             egui::StrokeKind::Inside,
         );
     }
-    response
+    response.on_hover_text("More tabs")
 }
 
 /// The isolated application-bar recipe is the first production token

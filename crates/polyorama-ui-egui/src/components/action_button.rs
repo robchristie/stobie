@@ -2,8 +2,8 @@ use egui::{Color32, Rect, Response, Sense, Stroke};
 
 use crate::{
     ActionKey, ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
-    SemanticActionId, SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec, UiNode,
-    UiRole, measure_text, paint_measured_text,
+    IconId, SemanticActionId, SemanticUiId, TextComponentId, TextOverflow, TextRole, TextSpec,
+    UiNode, UiRole, icon_size, measure_text, paint_icon, paint_measured_text,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -32,6 +32,15 @@ impl ActionButtonState {
             Self::Toggle { pressed } => Some(pressed),
         }
     }
+}
+
+/// Explicit artwork/label presentation; capability and semantic names stay in the action.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ActionButtonContent {
+    Text,
+    IconOnly(IconId),
+    /// Leading decorative icon and one measured, start-aligned label.
+    IconLabel(IconId),
 }
 
 /// Widget, semantic and text identities for one displayed capability instance.
@@ -95,6 +104,51 @@ pub fn action_button_with_identity<A: ActionKey>(
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
+    action_button_with_identity_and_content(
+        ui,
+        spec,
+        identity,
+        ActionButtonContent::Text,
+        tokens,
+        font_scale,
+        observations,
+    )
+}
+
+/// Render an explicit icon/text presentation using the historical target identity.
+/// Labelled actions reserve horizontal padding, artwork, inline spacing and a
+/// measured ellipsis as their minimum useful width. Parents must provide that
+/// width or move the action into overflow. Labels never collapse implicitly.
+pub fn action_button_with_content<A: ActionKey>(
+    ui: &mut egui::Ui,
+    spec: ActionButtonSpec<A>,
+    content: ActionButtonContent,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
+    let identity = ActionButtonIdentity::for_target(spec.target);
+    action_button_with_identity_and_content(
+        ui,
+        spec,
+        &identity,
+        content,
+        tokens,
+        font_scale,
+        observations,
+    )
+}
+
+/// Common action implementation for all presentations and logical identities.
+pub fn action_button_with_identity_and_content<A: ActionKey>(
+    ui: &mut egui::Ui,
+    spec: ActionButtonSpec<A>,
+    identity: &ActionButtonIdentity,
+    content: ActionButtonContent,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
     debug_assert!(spec.availability.visible());
     let action = spec.target.action.specification();
     let visible_label = if spec.compact {
@@ -104,32 +158,56 @@ pub fn action_button_with_identity<A: ActionKey>(
     };
     let enabled = spec.availability.enabled();
     let text_spec = TextSpec {
-        horizontal_alignment: HorizontalTextAlignment::Centre,
+        horizontal_alignment: if matches!(content, ActionButtonContent::IconLabel(_)) {
+            HorizontalTextAlignment::Start
+        } else {
+            HorizontalTextAlignment::Centre
+        },
         ..TextSpec::single_line(TextRole::ButtonLabel, TextOverflow::Ellipsis)
     };
-    let intrinsic = measure_text(
-        ui.painter(),
-        visible_label,
-        TextSpec {
-            overflow: TextOverflow::Expand,
-            ..text_spec
-        },
-        tokens,
-        font_scale,
-        4_096.0,
-    )
-    .ok()
-    .map_or(tokens.geometry.minimum_hit_size.0, |text| {
-        text.size().x + tokens.geometry.control_padding_x.0 * 2.0
-    });
-    let width = intrinsic
-        .max(tokens.geometry.minimum_hit_size.0)
-        .min(ui.available_width().max(tokens.geometry.minimum_hit_size.0));
+    let padding = tokens.geometry.control_padding_x.0 * 2.0;
+    let artwork_size = icon_size(tokens, font_scale);
+    let icon_reservation = if matches!(content, ActionButtonContent::IconLabel(_)) {
+        artwork_size + tokens.spacing.inline.0
+    } else {
+        0.0
+    };
     let hit_height = tokens
         .geometry
         .minimum_hit_size
         .0
         .max(tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5));
+    let (intrinsic, minimum_width) = if matches!(content, ActionButtonContent::IconOnly(_)) {
+        let side = hit_height.max(artwork_size);
+        (side, side)
+    } else {
+        let text_width = |label| {
+            measure_text(
+                ui.painter(),
+                label,
+                TextSpec {
+                    overflow: TextOverflow::Expand,
+                    ..text_spec
+                },
+                tokens,
+                font_scale,
+                4_096.0,
+            )
+            .map_or(tokens.geometry.minimum_hit_size.0, |text| text.size().x)
+        };
+        let minimum = if matches!(content, ActionButtonContent::IconLabel(_)) {
+            (padding + icon_reservation + text_width("…")).max(tokens.geometry.minimum_hit_size.0)
+        } else {
+            tokens.geometry.minimum_hit_size.0
+        };
+        (
+            text_width(visible_label) + padding + icon_reservation,
+            minimum,
+        )
+    };
+    let width = intrinsic
+        .max(minimum_width)
+        .min(ui.available_width().max(minimum_width));
     let (_, hit_rect) = ui.allocate_space(egui::vec2(width, hit_height));
     let response = ui.interact(
         hit_rect,
@@ -143,46 +221,54 @@ pub fn action_button_with_identity<A: ActionKey>(
     if response.clicked() {
         response.request_focus();
     }
-    response
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, action.label));
-    ui.ctx().accesskit_node_builder(response.id, |node| {
-        use egui::accesskit::{Action, Role, Toggled};
-        node.set_role(Role::Button);
-        node.set_label(action.label);
-        node.set_author_id(identity.semantic_id.0.clone());
-        // Match the current pointer target when a scroll area clips the control.
-        if response.interact_rect.is_positive() {
-            node.set_bounds(egui::accesskit::Rect {
-                x0: f64::from(response.interact_rect.min.x),
-                y0: f64::from(response.interact_rect.min.y),
-                x1: f64::from(response.interact_rect.max.x),
-                y1: f64::from(response.interact_rect.max.y),
-            });
-        }
-        let description = spec.availability.disabled_reason().map_or_else(
-            || action.description.to_owned(),
-            |reason| format!("{}; unavailable: {reason}", action.description),
-        );
-        node.set_description(description);
-        if !enabled {
-            node.set_disabled();
-        }
-        node.clear_selected();
-        node.clear_toggled();
-        if let Some(pressed) = spec.state.toggled() {
-            node.set_toggled(if pressed {
-                Toggled::True
-            } else {
-                Toggled::False
-            });
-        }
-        if enabled {
-            node.add_action(Action::Click);
-        }
-    });
+    if response.interact_rect.is_positive() {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, action.label)
+        });
+        ui.ctx().accesskit_node_builder(response.id, |node| {
+            use egui::accesskit::{Action, Role, Toggled};
+            node.set_role(Role::Button);
+            node.set_label(action.label);
+            node.set_author_id(identity.semantic_id.0.clone());
+            // Match the current pointer target when a scroll area clips the control.
+            if response.interact_rect.is_positive() {
+                node.set_bounds(egui::accesskit::Rect {
+                    x0: f64::from(response.interact_rect.min.x),
+                    y0: f64::from(response.interact_rect.min.y),
+                    x1: f64::from(response.interact_rect.max.x),
+                    y1: f64::from(response.interact_rect.max.y),
+                });
+            }
+            let description = spec.availability.disabled_reason().map_or_else(
+                || action.description.to_owned(),
+                |reason| format!("{}; unavailable: {reason}", action.description),
+            );
+            node.set_description(description);
+            if !enabled {
+                node.set_disabled();
+            }
+            node.clear_selected();
+            node.clear_toggled();
+            if let Some(pressed) = spec.state.toggled() {
+                node.set_toggled(if pressed {
+                    Toggled::True
+                } else {
+                    Toggled::False
+                });
+            }
+            if enabled {
+                node.add_action(Action::Click);
+            }
+        });
+    }
     let visual_height =
         (tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5)).min(hit_rect.height());
-    let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(width, visual_height));
+    let visual_width = if matches!(content, ActionButtonContent::IconOnly(_)) {
+        visual_height
+    } else {
+        width
+    };
+    let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(visual_width, visual_height));
     let fill = if !enabled {
         Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
     } else if spec.emphasis == ActionEmphasis::Primary {
@@ -212,11 +298,31 @@ pub fn action_button_with_identity<A: ActionKey>(
         fill,
         if spec.emphasis == ActionEmphasis::QuietBorderless {
             Stroke::NONE
+        } else if enabled && spec.emphasis == ActionEmphasis::Primary && response.hovered() {
+            Stroke::new(1.0, tokens.colours.action_primary_foreground)
         } else {
             Stroke::new(1.0, tokens.colours.border_control)
         },
         egui::StrokeKind::Inside,
     );
+    if enabled && (spec.state.pressed() || response.is_pointer_button_down_on()) {
+        // The reference theme aliases hover and selection fills. Keep active
+        // feedback explicit, with geometry distinct from the outer focus ring.
+        let inset = tokens.spacing.unit.0 * 0.5;
+        ui.painter().rect_stroke(
+            visual.shrink(inset),
+            (tokens.geometry.control_radius.0 - inset).max(0.0),
+            Stroke::new(
+                1.0,
+                if spec.emphasis == ActionEmphasis::Primary {
+                    tokens.colours.action_primary_foreground
+                } else {
+                    tokens.colours.selection_indicator
+                },
+            ),
+            egui::StrokeKind::Inside,
+        );
+    }
     if response.has_focus() {
         ui.painter().rect_stroke(
             visual,
@@ -225,18 +331,40 @@ pub fn action_button_with_identity<A: ActionKey>(
             egui::StrokeKind::Inside,
         );
     }
-    let label_rect = visual.shrink2(egui::vec2(tokens.geometry.control_padding_x.0, 0.0));
-    {
-        // Resolve the single-colour label before layout: a galley's explicit
-        // vertex colours take precedence over Painter::galley's fallback.
-        let mut label_tokens = *tokens;
-        label_tokens.colours.text_primary = if !enabled {
-            tokens.colours.text_muted
-        } else if spec.emphasis == ActionEmphasis::Primary {
-            tokens.colours.action_primary_foreground
-        } else {
-            tokens.colours.text_primary
-        };
+    // Resolve artwork and label through exactly the same foreground rule.
+    let mut label_tokens = *tokens;
+    label_tokens.colours.text_primary = if !enabled {
+        tokens.colours.text_muted
+    } else if spec.emphasis == ActionEmphasis::Primary {
+        tokens.colours.action_primary_foreground
+    } else {
+        tokens.colours.text_primary
+    };
+    let foreground = label_tokens.colours.text_primary.into();
+    let mut label_rect = visual.shrink2(egui::vec2(tokens.geometry.control_padding_x.0, 0.0));
+    match content {
+        ActionButtonContent::Text => {}
+        ActionButtonContent::IconOnly(icon) => {
+            paint_icon(
+                ui.painter(),
+                icon,
+                Rect::from_center_size(visual.center(), egui::Vec2::splat(artwork_size)),
+                foreground,
+            );
+        }
+        ActionButtonContent::IconLabel(icon) => {
+            let centre = egui::pos2(label_rect.left() + artwork_size * 0.5, visual.center().y);
+            paint_icon(
+                ui.painter(),
+                icon,
+                Rect::from_center_size(centre, egui::Vec2::splat(artwork_size)),
+                foreground,
+            );
+            label_rect.min.x += icon_reservation;
+        }
+    }
+    let mut truncated = false;
+    if !matches!(content, ActionButtonContent::IconOnly(_)) {
         let measured = crate::measure_component_text(
             ui.painter(),
             visible_label,
@@ -245,8 +373,8 @@ pub fn action_button_with_identity<A: ActionKey>(
             font_scale,
             label_rect.width().max(0.5),
         );
-        let truncated = measured.truncated();
-        observations.push(paint_measured_text(
+        truncated = measured.truncated();
+        let observation = paint_measured_text(
             &ui.painter_at(label_rect),
             &measured,
             label_rect,
@@ -255,14 +383,18 @@ pub fn action_button_with_identity<A: ActionKey>(
                 identity.text_instance,
             ),
             None,
-        ));
-        if truncated || spec.compact || !enabled {
-            let mut tooltip = format!("{}\n{}", action.label, action.description);
-            if let Some(reason) = spec.availability.disabled_reason() {
-                tooltip.push_str(&format!("\nUnavailable: {reason}"));
-            }
-            response.clone().on_hover_text(tooltip);
+        );
+        if response.interact_rect.is_positive() || observation.layout_error.is_some() {
+            observations.push(observation);
         }
+    }
+    if matches!(content, ActionButtonContent::IconOnly(_)) || truncated || spec.compact || !enabled
+    {
+        let mut tooltip = format!("{}\n{}", action.label, action.description);
+        if let Some(reason) = spec.availability.disabled_reason() {
+            tooltip.push_str(&format!("\nUnavailable: {reason}"));
+        }
+        response.clone().on_hover_text(tooltip);
     }
     response
 }

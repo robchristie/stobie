@@ -205,7 +205,20 @@ initial vocabulary should cover global actions, pane tools, disclosure,
 status, overflow and directional movement. Prefer project-authored geometric
 SVG paths under Apache-2.0. Any third-party icon set requires a checked-in
 licence and attribution record before its paths enter the generated or source
-tree. The later component increment owns the first icon implementation.
+tree. The first implementation contains 30 project-authored SVGs, compiled into static
+vector geometry by an offline, closed-subset compiler. Both native and WASM use
+the same egui painter. `icon.size` resolves 16-point artwork independently
+of hit geometry, with the same 100–150% scale as action typography. Round caps,
+round joins and two-unit strokes share a 24-unit view box.
+
+`ActionButtonContent` explicitly selects text, icon-only or leading icon+label.
+The existing action implementation owns interaction, emphasis and full semantic
+text; decorative icons introduce no accessible owner. Leading icons reserve
+artwork plus inline-token spacing before one start-aligned measured label.
+Minimum useful labelled width includes measured ellipsis; callers must wrap,
+provide that width or explicitly choose icon-only/overflow. Icons never silently
+replace a label. See [component contracts](ui-guides/components.md#typed-icons-and-action-presentations)
+and the [artwork/licence record](../crates/polyorama-ui-egui/assets/icons/README.md).
 
 ## Motion
 
@@ -306,6 +319,11 @@ actions omit their resting outline, retain hover treatment and always retain
 the independent keyboard-focus ring. A pointer press on an ordinary action uses
 selection colours, while a primary action retains its primary pair. Disabled
 foreground is resolved before text layout, including for primary actions.
+Enabled pressed/selected actions also paint an inset state outline using the
+selection indicator (primary foreground on Primary), separate from the outer
+focus ring. This distinguishes active feedback where the reference theme aliases
+hover and selection fills. Primary hover changes its outer border to the primary
+foreground while retaining its foreground/background pair.
 
 New themes validate opaque primary and muted text on canvas, panel, raised,
 hover, selection and quiet-hover backgrounds, plus primary-action pairs, at
@@ -335,7 +353,7 @@ generated from its checked-in source.
 ## Gallery and reference recipes
 
 `polyorama-gallery` is a native and browser application, not a second widget
-implementation. Its typed Rust catalogue has 20 stable story IDs and fixed
+implementation. Its typed Rust catalogue has 24 stable story IDs and fixed
 metadata for description, component group, recommended viewport, applicable
 appearance/density variants and interaction scenarios. It supports the four
 light/dark and standard/high-contrast combinations, both densities, 100%, 125%

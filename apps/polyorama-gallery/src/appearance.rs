@@ -262,6 +262,7 @@ mod tests {
                             &mut observations,
                             &mut Vec::new(),
                             &mut None,
+                            &mut crate::stories::IconFixtureState::default(),
                         );
                         assert!(!workbench.show(&context, variant));
                     },

@@ -18,7 +18,7 @@ class ApiDocsTests(unittest.TestCase):
         for consumer in DOCS.SOURCE_CONSUMERS:
             path = root / consumer
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("//! ```\n//! assert!(true);\n//! ```\n" if path.name == "lib.rs" else "")
+            path.write_text("//! ```\n//! assert!(true);\n//! ```\n" if path.name in ("lib.rs", "presentation.rs") else "")
         for consumer in DOCS.MARKDOWN_CONSUMERS:
             path = root / consumer
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -42,7 +42,7 @@ class ApiDocsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            self.assertEqual(sum(DOCS.coverage(root).values()), 4)
+            self.assertEqual(sum(DOCS.coverage(root).values()), 5)
             source = root / DOCS.SOURCE_CONSUMERS[0]
             source.write_text("")
             with self.assertRaisesRegex(ValueError, "explicitly accounted"):

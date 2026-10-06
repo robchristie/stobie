@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     catalogue::{STORIES, StoryId, story_definition},
-    stories::{DockSceneState, render_story},
+    stories::{DockSceneState, IconFixtureState, render_story},
 };
 
 /// Gallery-owned fixture actions used to demonstrate the generic controls.
@@ -28,6 +28,7 @@ pub enum GalleryAction {
     PolygonTool,
     EditVerticesTool,
     DisplaySettings,
+    ExportSelection,
 }
 
 impl ActionKey for GalleryAction {
@@ -42,6 +43,7 @@ impl ActionKey for GalleryAction {
             Self::PolygonTool => "polygon_tool",
             Self::EditVerticesTool => "edit_vertices_tool",
             Self::DisplaySettings => "display_settings",
+            Self::ExportSelection => "export_selection",
         }
     }
 
@@ -109,6 +111,13 @@ impl ActionKey for GalleryAction {
                 None,
                 None,
                 ActionScope::Pane,
+            ),
+            Self::ExportSelection => (
+                "Export the selected annotations and their complete supporting evidence",
+                "Export the selected annotations and their supporting evidence to a local file",
+                None,
+                None,
+                ActionScope::Application,
             ),
         };
         ActionSpec {
@@ -216,6 +225,7 @@ pub struct GallerySnapshot {
     pub text_audit: Vec<TextAuditFinding>,
     pub text_audit_coverage: Option<polyorama_ui_egui::TextAuditCoverage>,
     pub ui_snapshot: UiSnapshot,
+    pub icon_fixture: IconFixtureState,
 }
 
 pub struct GalleryApp {
@@ -228,6 +238,7 @@ pub struct GalleryApp {
     frame: u64,
     snapshot: GallerySnapshot,
     focus_story: Option<StoryId>,
+    icon_fixture: IconFixtureState,
 }
 
 impl GalleryApp {
@@ -236,7 +247,11 @@ impl GalleryApp {
             .ok()
             .and_then(|value| StoryId::from_str(&value).ok())
             .unwrap_or(StoryId::ReferenceApplicationShell);
-        let configuration = GalleryConfiguration::default();
+        let configuration = std::env::var("POLYORAMA_GALLERY_CONFIGURATION")
+            .ok()
+            .and_then(|value| serde_json::from_str::<GalleryConfiguration>(&value).ok())
+            .map(GalleryConfiguration::validated)
+            .unwrap_or_default();
         apply_design_system(&creation.egui_ctx, configuration.preferences());
         Self {
             context: creation.egui_ctx.clone(),
@@ -256,8 +271,10 @@ impl GalleryApp {
                 text_audit: Vec::new(),
                 text_audit_coverage: None,
                 ui_snapshot: UiSnapshot::default(),
+                icon_fixture: IconFixtureState::default(),
             },
             focus_story: None,
+            icon_fixture: IconFixtureState::default(),
         }
     }
 
@@ -266,6 +283,7 @@ impl GalleryApp {
             self.selected = story;
             self.dock = DockSceneState::new(story);
             self.focus_story = None;
+            self.icon_fixture = IconFixtureState::default();
             self.context.request_repaint();
         }
     }
@@ -362,6 +380,7 @@ impl eframe::App for GalleryApp {
                     &mut observations,
                     &mut semantic_nodes,
                     &mut self.focus_story,
+                    &mut self.icon_fixture,
                 );
                 rect
             })
@@ -408,13 +427,15 @@ impl eframe::App for GalleryApp {
             text_audit,
             text_audit_coverage,
             ui_snapshot,
+            icon_fixture: self.icon_fixture.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]
         crate::startup_frame(true);
 
         #[cfg(not(target_arch = "wasm32"))]
-        if root_ui.input(|input| input.key_pressed(egui::Key::F12))
+        if (root_ui.input(|input| input.key_pressed(egui::Key::F12))
+            || std::env::var("POLYORAMA_GALLERY_SNAPSHOT_CONTINUOUS").as_deref() == Ok("1"))
             && let Ok(path) = std::env::var("POLYORAMA_GALLERY_SNAPSHOT_PATH")
             && let Ok(json) = serde_json::to_vec_pretty(&self.snapshot)
         {

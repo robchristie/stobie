@@ -1,6 +1,7 @@
 mod buttons;
 mod data;
 mod dock;
+mod icons;
 mod reference;
 mod toolbars;
 mod typography;
@@ -11,6 +12,7 @@ use polyorama_ui_egui::{DesignTokens, TextLayoutObservation, UiNode};
 use crate::catalogue::{StoryId, story_definition};
 
 pub(crate) use dock::DockSceneState;
+pub use icons::{IconControl, IconFixtureState};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn render_story(
@@ -22,12 +24,25 @@ pub(super) fn render_story(
     observations: &mut Vec<TextLayoutObservation>,
     semantic_nodes: &mut Vec<UiNode>,
     focus_story: &mut Option<StoryId>,
+    icon_fixture: &mut IconFixtureState,
 ) {
     let definition = story_definition(story);
     ui.strong(definition.id.as_str());
     ui.label(definition.description);
     ui.separator();
     match story {
+        StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, observations),
+        StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
+            icons::actions(
+                ui,
+                story,
+                tokens,
+                font_scale,
+                observations,
+                semantic_nodes,
+                icon_fixture,
+            )
+        }
         StoryId::TypographyDense | StoryId::TypographyReading => typography::story(
             ui,
             if story == StoryId::TypographyReading {
@@ -164,6 +179,7 @@ mod tests {
                 let mut observations = Vec::new();
                 let mut semantic_nodes = Vec::new();
                 let mut focus_story = None;
+                let mut icon_fixture = IconFixtureState::default();
                 let size = egui::vec2(
                     configuration.width.points(),
                     f32::from(story_definition(story).recommended_viewport.height),
@@ -183,6 +199,7 @@ mod tests {
                             &mut observations,
                             &mut semantic_nodes,
                             &mut focus_story,
+                            &mut icon_fixture,
                         )
                     },
                 );

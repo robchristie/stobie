@@ -25,10 +25,14 @@ pub enum StoryId {
     ReferenceDiagnostics,
     TypographyDense,
     TypographyReading,
+    IconsVocabulary,
+    IconsActionPresentations,
+    IconsToolbar,
+    IconsLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 24] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -49,6 +53,10 @@ impl StoryId {
         Self::ReferenceDiagnostics,
         Self::TypographyDense,
         Self::TypographyReading,
+        Self::IconsVocabulary,
+        Self::IconsActionPresentations,
+        Self::IconsToolbar,
+        Self::IconsLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -73,6 +81,10 @@ impl StoryId {
             Self::TypographyDense => "typography/dense",
             Self::TypographyReading => "typography/reading",
             Self::ReferenceDiagnostics => "reference/diagnostics",
+            Self::IconsVocabulary => "icons/vocabulary",
+            Self::IconsActionPresentations => "icons/action-presentations",
+            Self::IconsToolbar => "icons/toolbar",
+            Self::IconsLongNarrow => "icons/long-narrow",
         }
     }
 }
@@ -123,6 +135,7 @@ pub enum StoryGroup {
     Status,
     VirtualGrid,
     Reference,
+    Icon,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -240,6 +253,19 @@ const PARTIAL_STATES: &[StoryState] = &[
 const REFERENCE_STATES: &[StoryState] = &[StoryState::Default, StoryState::Selected];
 const REFERENCE_LONG: &[StoryState] = &[StoryState::LongText, StoryState::Selected];
 const REFERENCE_SCALE: &[StoryState] = &[StoryState::LongText, StoryState::HighTextScale];
+const ICON_ACTION_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::Selected,
+    StoryState::Disabled,
+    StoryState::KeyboardFocused,
+];
+const ICON_NARROW_STATES: &[StoryState] = &[
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
+];
 
 const fn story(
     id: StoryId,
@@ -262,7 +288,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 20] = [
+pub static STORIES: [StoryDefinition; 24] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -442,6 +468,42 @@ pub static STORIES: [StoryDefinition; 20] = [
         560,
         REFERENCE_SCALE,
         PASSIVE,
+    ),
+    story(
+        StoryId::IconsVocabulary,
+        "Complete project-authored vector vocabulary with measured captions.",
+        StoryGroup::Icon,
+        760,
+        620,
+        REFERENCE_SCALE,
+        PASSIVE,
+    ),
+    story(
+        StoryId::IconsActionPresentations,
+        "Text, icon-only and leading-icon actions with real input and feedback.",
+        StoryGroup::Icon,
+        640,
+        400,
+        ICON_ACTION_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::IconsToolbar,
+        "Quiet viewport tools and a named primary action in a bounded toolbar.",
+        StoryGroup::Icon,
+        640,
+        320,
+        ICON_ACTION_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::IconsLongNarrow,
+        "Long action names retain their leading artwork and measured label slot.",
+        StoryGroup::Icon,
+        320,
+        400,
+        ICON_NARROW_STATES,
+        KEYBOARD,
     ),
 ];
 

@@ -119,7 +119,7 @@ semantic_nodes.extend(observed.semantic_nodes);
 ```
 
 An action specification paints the production component and records its matching
-snapshot node and measured text. Its widget identity is separate from
+snapshot node and, when painted, measured text. Its widget identity is separate from
 `ActionTarget`, so repeated capabilities remain distinct. Heading and content
 methods delegate the existing text recipes and retain their accessible text
 owners, with stable responses and AccessKit author IDs. The legacy low-level
@@ -164,3 +164,89 @@ row or evidence node with the application's explicit public identity, parent and
 domain reference. It does not manufacture text measurements or replace the
 AccessKit owner. Keep native readers and row interactions in the application;
 annotate their exceptional paint with `raw` and record native controls where used.
+
+## Typed icons and action presentations
+
+Select artwork with `IconId`; never pass a glyph, emoji or runtime icon name.
+`PresentationContext::action` remains the text-only recipe. `icon_action` paints
+an icon-only action; `action_with_icon` paints a leading decorative icon and
+label. `action_with_content` accepts the explicit `ActionButtonContent` choice.
+These methods share capability, availability, emphasis, toggle, response and
+logical-identity contracts. `ActionButtonSpec` struct literals remain compatible.
+
+The icon-only allocation is a square token minimum hit target (32 points at the
+reference scale), with centred square visual chrome and 16-point artwork. Artwork
+scales with 100–150% font preferences. Its full action name and description own
+semantics and a tooltip, including a disabled reason; the icon has no separate
+accessible owner and produces no measured-text attempt. Icon+label uses one
+start-aligned, inert, eliding `ButtonLabel`, vertically centred beside the icon.
+Its gap is `spacing.inline` (5 points compact, 7 comfortable). Full action text
+remains in semantics and appears in a tooltip on truncation/compact presentation.
+
+A labelled action reserves padding + icon + gap + **measured ellipsis** as its
+minimum useful width. It can therefore exceed a smaller available width. A parent
+must provide that minimum, wrap the action group or move an action into explicit
+overflow. Selecting `icon_action` is an explicit caller decision, retaining a
+usable name; the component never silently collapses its label. Text-only layout
+and its historical identities remain compatible. Quiet, QuietBorderless, Normal
+and Primary share the existing enabled, pressed/selected, disabled and focus
+rules; icons use the exact resolved label foreground. Enabled pressed/selected
+actions have an inset state outline separate from keyboard focus, and Primary
+hover changes its outer border. These shared chrome corrections make states
+visible even when the analytical reference aliases hover and selection fills;
+resting text-only layout and appearance remain compatible.
+
+The following helper compiles as a rustdoc example on `icon_action`. Handle the
+returned click through your application's intent/command route and publish the
+returned observations for this pass:
+
+```rust
+use polyorama_ui_egui::{
+    ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionTarget,
+    Availability, DesignTokens, IconId, PresentationContext, PresentationObservations,
+    PresentationScope, SemanticUiId,
+};
+
+// A is the application's own ActionKey enum; undo/save are application actions.
+fn toolbar<A: ActionKey>(
+    ui: &mut egui::Ui, tokens: DesignTokens, font_scale: f32, undo: A, save: A,
+) -> (bool, PresentationObservations) {
+    let mut p = PresentationContext::new(
+        ui, tokens, font_scale, PresentationScope::new("document-toolbar"),
+        SemanticUiId::root(),
+    );
+    let mut save_clicked = false;
+    ui.horizontal(|ui| {
+        p.icon_action(ui, "undo", ActionButtonSpec {
+            target: ActionTarget::application(undo),
+            availability: Availability::Disabled { reason: "History is empty".into() },
+            state: ActionButtonState::Momentary,
+            emphasis: ActionEmphasis::QuietBorderless,
+            compact: false,
+        }, IconId::Undo);
+        save_clicked = p.action_with_icon(ui, "save", ActionButtonSpec {
+            target: ActionTarget::application(save),
+            availability: Availability::Enabled,
+            state: ActionButtonState::Momentary,
+            emphasis: ActionEmphasis::Primary,
+            compact: false,
+        }, IconId::Save).clicked();
+    });
+    (save_clicked, p.finish(ui))
+}
+```
+
+Low-level callers use `action_button_with_content`, or
+`action_button_with_identity_and_content` for distinct logical instances, and
+record the matching `action_semantic_node_with_identity`. The reusable
+`paint_icon(painter, IconId::Calendar, artwork_rect, foreground)` creates decorative
+vector paint only; obtain component dimensions from `icon_size(tokens, font_scale)`
+and choose a foreground from the owning resolved theme. Application compositions
+still own allocation, hit geometry and complete semantics.
+
+The [artwork record](../../crates/polyorama-ui-egui/assets/icons/README.md) owns the
+SVG source/compiler and licence. Gallery `icons/vocabulary`,
+`icons/action-presentations`, `icons/toolbar` and `icons/long-narrow` demonstrate
+production compositions and adversarial cases. New platform accessibility claims
+require the existing [qualification contract](accessibility.md); these recipes
+extend semantic and keyboard coverage, not the platform support matrix.

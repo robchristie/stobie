@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
-import { resultSelectionConfirmed } from './lab-result-selection.mjs';
+import { assertFrozenResultTarget, firstResultRowTarget, resolveResultRowTarget,
+  resultSelectionConfirmed, waitForStableResultTarget } from './lab-result-selection.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
 const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
@@ -28,6 +29,7 @@ const server = createServer(async (request, response) => {
 await new Promise((resolve) => server.listen(4173, '127.0.0.1', resolve));
 
 const errors = [];
+const resultSelectionReceipts = [];
 const installedChromium = chromium.executablePath();
 const revisionDirectory = basename(dirname(dirname(installedChromium)));
 const revision = revisionDirectory.slice(revisionDirectory.lastIndexOf('-') + 1);
@@ -166,7 +168,6 @@ try {
     const semanticRoot = semantic.nodes.find((node) => node.id === semantic.root)?.rect;
     const root = semanticRoot ?? geometry.root;
     let rect;
-    let result;
     if (target.kind === 'action') {
       rect = semantic.nodes.find((node) => node.actions.includes(target.action)
         && (target.pane == null || node.pane === target.pane))?.rect;
@@ -184,14 +185,6 @@ try {
         (rightmost, item) => !rightmost || item.rect.min_x > rightmost.min_x ? item.rect : rightmost,
         null,
       );
-    } else if (target.kind === 'first_result_row') {
-      const scroll = geometry.results_scroll;
-      const row = geometry.result_rows.find((item) => {
-        const centreY = (item.rect.min_y + item.rect.max_y) * 0.5;
-        return !scroll || (centreY >= scroll.min_y && centreY <= scroll.max_y);
-      });
-      rect = row?.rect;
-      result = row?.result;
     } else {
       rect = geometry[target.kind].find((item) => item.pane === target.pane)?.rect;
     }
@@ -212,7 +205,7 @@ try {
       || point.y < canvas.y || point.y > canvas.y + canvas.height) {
       throw new Error(`Rust UI target fell outside canvas: ${JSON.stringify({ target, point, canvas })}`);
     }
-    return { ...point, ...(result !== undefined ? { result } : {}) };
+    return point;
   };
   const clickTarget = async (target, options = {}) => {
     if (target.kind === 'action') {
@@ -691,17 +684,56 @@ try {
     const linked = cameras.find((item) => item.pane === 2)?.camera;
     return primary?.pixels_per_screen_point < 512 && JSON.stringify(primary) === JSON.stringify(linked);
   });
+  const beforeResultScrollSnapshot = await semanticSnapshot();
+  const beforeResultScroll = firstResultRowTarget(beforeResultScrollSnapshot,
+    await page.locator('#polyorama-canvas').boundingBox());
+  if (!beforeResultScroll) throw new Error('Results has no initial first-row target');
   await observe('million_row_scroll', async () => {
     const point = await targetPoint({ kind: 'results_scroll' });
     await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, 1800);
   });
-  const clickedResult = await clickTarget({ kind: 'first_result_row' });
+  const resultReceipt = { stage: 'settling', before_wheel: beforeResultScroll };
+  resultSelectionReceipts.push(resultReceipt);
+  try {
+    resultReceipt.settled = await waitForStableResultTarget(async () => firstResultRowTarget(
+      await semanticSnapshot(), await page.locator('#polyorama-canvas').boundingBox()),
+    ms => page.waitForTimeout(ms), beforeResultScroll);
+  } catch (error) {
+    resultReceipt.settle_observations = error.observations;
+    throw error;
+  }
+  const frozenResult = resultReceipt.settled.target;
+  await page.mouse.move(frozenResult.x, frozenResult.y);
+  const resultDispatchSnapshot = await semanticSnapshot();
+  const clickedResult = resolveResultRowTarget(resultDispatchSnapshot,
+    await page.locator('#polyorama-canvas').boundingBox(), frozenResult.result);
+  resultReceipt.stage = 'resolved';
+  resultReceipt.picked = frozenResult;
+  resultReceipt.dispatch = clickedResult;
+  resultReceipt.before_click = resultDispatchSnapshot;
+  assertFrozenResultTarget(frozenResult, clickedResult);
+  // Keep receipt writes after the one physical dispatch; file I/O must not
+  // widen the gap between current Rust geometry and the click it identifies.
+  await page.mouse.click(clickedResult.x, clickedResult.y);
+  resultReceipt.stage = 'clicked';
+  resultReceipt.after_click = await semanticSnapshot();
+  await writeFile(join(evidenceRoot, 'browser-result-selection-receipts.json'), `${JSON.stringify(resultSelectionReceipts, null, 2)}\n`);
   // Selection can add an action bar and move the clicked row outside the clip.
   // Observe its stable identity in the Inspector and the primary view instead.
   await page.waitForFunction(resultSelectionConfirmed, clickedResult.result);
   const resultSelectionSemantic = await semanticSnapshot();
+  resultSelectionReceipts.at(-1).stage = 'confirmed';
+  resultSelectionReceipts.at(-1).confirmed = resultSelectionSemantic;
+  await writeFile(join(evidenceRoot, 'browser-result-selection-receipts.json'), `${JSON.stringify(resultSelectionReceipts, null, 2)}\n`);
   semanticEvidence.physical_result_selection = {
     result: clickedResult.result,
+    target_receipt: {
+      file: 'browser-result-selection-receipts.json',
+      observed_ms: resultReceipt.settled.observed_ms,
+      stable_ms: resultReceipt.settled.stable_ms,
+      picked: frozenResult,
+      dispatch: clickedResult,
+    },
     viewport_description: resultSelectionSemantic.ui_snapshot.nodes
       .find((node) => node.id === 'pane.1.viewport').description,
   };
@@ -1082,6 +1114,10 @@ try {
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(JSON.stringify({ status: 'passed', ...evidence }, null, 2));
 } catch (error) {
+  if (resultSelectionReceipts.length) {
+    resultSelectionReceipts.at(-1).failure_snapshot = await page.evaluate(() => window.__POLYORAMA_HANDLE?.test_snapshot()).catch(() => null);
+    await writeFile(join(evidenceRoot, 'browser-result-selection-receipts.json'), `${JSON.stringify(resultSelectionReceipts, null, 2)}\n`);
+  }
   await page.screenshot({ path: join(evidenceRoot, 'browser-failure.png') });
   const diagnostics = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS ?? null)
     .catch(() => null);
