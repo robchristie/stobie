@@ -92,6 +92,7 @@ Default alignment and overflow are semantic:
 | Names, labels and prose | Start | One in chrome; multiple in content | Truncate in chrome with semantic full text; wrap in content |
 | Numeric result columns | End | One | Truncate only after preserving sign, unit and semantic full text |
 | Status and errors | Start | Wrap when persistent | Wrap, or move detail to diagnostics when chrome is narrow |
+| Compact status chips | Start | One | Measured ellipsis with complete semantic value and tooltip |
 | Tabs | Centre | One | Truncate, then move tabs to an overflow control |
 | Toolbars | Start | One | Collapse labels or move lower-priority actions to overflow |
 
@@ -99,6 +100,15 @@ Every reusable component must eventually declare alignment, line count,
 minimum useful width, semantic full text and one of: scroll, wrap, truncate,
 collapse, move to overflow controls, or a deliberate minimum state. Character
 count is never a text-width proxy.
+
+Compact informational status uses a small pill with regular Status typography,
+opaque panel fill and primary text; semantic tone boundaries supplement the full
+label. It has no action, focus or toggle affordance. Token padding/icon reservations
+and measured ellipsis define its minimum; parents wrap or relocate below that
+minimum. Standalone text remains selectable, with explicit inert presentation in
+pointer-owned rows. Keep the wrapping badge for longer explanations and navigation
+badges under their row-owned count/context contract. See the
+[chip component contract](ui-guides/components.md#compact-status-chips).
 
 The measured-text layer exposes the bounded roles `application_title`,
 `pane_title`, `section_heading`, `body`, `secondary`, `caption`,

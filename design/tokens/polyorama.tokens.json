@@ -1,5 +1,9 @@
 {
   "$description": "Polyorama visual primitives and semantic UI roles. See docs/design-language.md for the supported subset.",
+  "statusChip": {
+    "maxWidth": { "$type": "dimension", "$value": 192, "$description": "Default bounded visual status-chip width at 100% text scale." },
+    "radius": { "$type": "dimension", "$value": 16, "$description": "Informational pill radius, bounded to half the visual height and scaled with text." }
+  },
   "colour": {
     "palette": {
       "canvas": { "$type": "color", "$value": "#0b0f12" },

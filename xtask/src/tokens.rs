@@ -655,6 +655,16 @@ impl DesignTokens {{
         ICON_SIZE
     }}
 
+    /// Bounded content width at reference font scale, without changing struct literals.
+    pub const fn status_chip_max_width(&self) -> Points {{
+        Points({chip_max_width})
+    }}
+
+    /// Informational pill geometry, bounded by the recipe to half its height.
+    pub const fn status_chip_radius(&self) -> Points {{
+        Points({chip_radius})
+    }}
+
     pub const fn resolve(theme: ThemeVariant, density: DensityVariant) -> Self {{
         let colours = match theme {{
             ThemeVariant::Light => COLOURS_LIGHT,
@@ -705,6 +715,8 @@ const MOTION: MotionTokens = MotionTokens {{
     quick: Milliseconds({motion_quick}),
 }};
 "#,
+        chip_radius = number_literal(required_number(&common, "statusChip.radius")?),
+        chip_max_width = number_literal(required_number(&common, "statusChip.maxWidth")?),
         icon_size = number_literal(required_number(&common, "icon.size")?),
         application_title_size =
             number_literal(required_number(&common, "typography.applicationTitleSize")?),

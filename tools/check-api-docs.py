@@ -18,7 +18,7 @@ CRATES = (
     "polyorama-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["polyorama-ui-egui"] = 3  # Crate composition, icon toolbar and navigation consumer.
+EXPECTED_EXAMPLES["polyorama-ui-egui"] = 4  # Composition, icon toolbar, navigation and status-chip consumers.
 SOURCE_CONSUMERS = (
     "crates/polyorama-core/src/lib.rs",
     "crates/polyorama-core/src/data.rs",
@@ -131,7 +131,7 @@ def main() -> None:
         check_doctest_result(output, expected[crate])
     for target in ([], ["--target", "wasm32-unknown-unknown"]):
         run(["cargo", "check", *target, "-p", "analytical-workspace-lab", "--example", "minimal-workspace"])
-    print("API documentation checks passed: rendered generation, six executed examples, native/WASM consumer compilation and selected local links")
+    print(f"API documentation checks passed: rendered generation, {sum(expected.values())} executed examples, native/WASM consumer compilation and selected local links")
 
 
 if __name__ == "__main__":

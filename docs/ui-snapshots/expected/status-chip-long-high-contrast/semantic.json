@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "status-chip/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 503
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.25394c4ea5d49ccb",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Überprüfung durch das regionale Forschungsteam ausstehend",
+      "description": "Awaiting review by the regional research team",
+      "rect": {
+        "min_x": 732,
+        "min_y": 272,
+        "max_x": 837,
+        "max_y": 297
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.3d553916827103d0",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "description": "The parent must provide the minimum label reservation",
+      "rect": {
+        "min_x": 732,
+        "min_y": 352,
+        "max_x": 780,
+        "max_y": 377
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.5cac3b4e50ca2584",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled after collection validation and approval",
+      "description": "The application owns the scheduling rules",
+      "rect": {
+        "min_x": 732,
+        "min_y": 312,
+        "max_x": 787,
+        "max_y": 337
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.93fdbbb1da7e3cbe",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 732,
+        "min_y": 461,
+        "max_x": 815.15625,
+        "max_y": 486
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    }
+  ],
+  "semantic_audit": []
+}

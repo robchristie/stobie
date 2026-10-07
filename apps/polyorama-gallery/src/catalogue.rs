@@ -14,6 +14,9 @@ pub enum StoryId {
     ToolbarNarrow,
     PropertyRowLongValue,
     StatusErrorLongMessage,
+    StatusChipTasks,
+    StatusChipTreatments,
+    StatusChipLongNarrow,
     VirtualGridLoading,
     VirtualGridPartial,
     ReferenceApplicationShell,
@@ -35,7 +38,7 @@ pub enum StoryId {
 }
 
 impl StoryId {
-    pub const ALL: [Self; 27] = [
+    pub const ALL: [Self; 30] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -45,6 +48,9 @@ impl StoryId {
         Self::ToolbarNarrow,
         Self::PropertyRowLongValue,
         Self::StatusErrorLongMessage,
+        Self::StatusChipTasks,
+        Self::StatusChipTreatments,
+        Self::StatusChipLongNarrow,
         Self::VirtualGridLoading,
         Self::VirtualGridPartial,
         Self::ReferenceApplicationShell,
@@ -76,6 +82,9 @@ impl StoryId {
             Self::ToolbarNarrow => "toolbar/narrow",
             Self::PropertyRowLongValue => "property-row/long-value",
             Self::StatusErrorLongMessage => "status/error-long-message",
+            Self::StatusChipTasks => "status-chip/tasks",
+            Self::StatusChipTreatments => "status-chip/treatments",
+            Self::StatusChipLongNarrow => "status-chip/long-narrow",
             Self::VirtualGridLoading => "virtual-grid/loading",
             Self::VirtualGridPartial => "virtual-grid/partial",
             Self::ReferenceApplicationShell => "reference/application-shell",
@@ -298,7 +307,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 27] = [
+pub static STORIES: [StoryDefinition; 30] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -539,6 +548,33 @@ pub static STORIES: [StoryDefinition; 27] = [
         StoryGroup::Navigation,
         320,
         400,
+        ICON_NARROW_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::StatusChipTasks,
+        "Task rows and detail status, selectable standalone and inert in rows.",
+        StoryGroup::Status,
+        640,
+        470,
+        REFERENCE_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::StatusChipTreatments,
+        "Quiet tones, text/artwork and ordinary, hovered and selected parents.",
+        StoryGroup::Status,
+        640,
+        430,
+        REFERENCE_STATES,
+        POINTER,
+    ),
+    story(
+        StoryId::StatusChipLongNarrow,
+        "Localised labels, minimum width, deliberate ellipsis and clipped scrolling.",
+        StoryGroup::Status,
+        320,
+        430,
         ICON_NARROW_STATES,
         SCROLL,
     ),

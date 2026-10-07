@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "status-chip/treatments",
+      "rect": {
+        "min_x": 522,
+        "min_y": 48,
+        "max_x": 1162,
+        "max_y": 478
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.103f029c0340f632",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Completed",
+      "rect": {
+        "min_x": 825.90625,
+        "min_y": 247.5,
+        "max_x": 883.5625,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.18fc9bd86e24003d",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Paused",
+      "rect": {
+        "min_x": 899.1875,
+        "min_y": 133.5,
+        "max_x": 937.1875,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.30524bf753429df2",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 628.65625,
+        "min_y": 190.5,
+        "max_x": 684.09375,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.308802544b383400",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 586.65625,
+        "min_y": 133.5,
+        "max_x": 642.09375,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.38ef19bd621e0183",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 540,
+        "min_y": 133.5,
+        "max_x": 571.65625,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.467f001ac0a6c140",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 561,
+        "min_y": 190.5,
+        "max_x": 592.65625,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.493f0cc2ad0ed9f4",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Completed",
+      "rect": {
+        "min_x": 741.90625,
+        "min_y": 133.5,
+        "max_x": 799.5625,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.4f67f7c3b91d83c5",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 720.09375,
+        "min_y": 190.5,
+        "max_x": 789.90625,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.5a768fda2cbc781c",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 720.09375,
+        "min_y": 247.5,
+        "max_x": 789.90625,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.624569a9dac419ef",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 561,
+        "min_y": 247.5,
+        "max_x": 592.65625,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.6dc780a25c81aef4",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 657.09375,
+        "min_y": 133.5,
+        "max_x": 726.90625,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.81c476ad427db444",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 628.65625,
+        "min_y": 247.5,
+        "max_x": 684.09375,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.9016fe446d286601",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Completed",
+      "rect": {
+        "min_x": 825.90625,
+        "min_y": 190.5,
+        "max_x": 883.5625,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.a80d73e5014d5746",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Upload failed",
+      "rect": {
+        "min_x": 814.5625,
+        "min_y": 133.5,
+        "max_x": 884.1875,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.ab0c6a612753a346",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Upload failed",
+      "rect": {
+        "min_x": 919.5625,
+        "min_y": 247.5,
+        "max_x": 989.1875,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.bf499ffd38eb0c45",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Paused",
+      "rect": {
+        "min_x": 1004.1875,
+        "min_y": 247.5,
+        "max_x": 1042.1875,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.d0806fb4ef2a18a1",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Upload failed",
+      "rect": {
+        "min_x": 919.5625,
+        "min_y": 190.5,
+        "max_x": 989.1875,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.f1c7b3767a6f2983",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Paused",
+      "rect": {
+        "min_x": 1004.1875,
+        "min_y": 190.5,
+        "max_x": 1042.1875,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    }
+  ],
+  "semantic_audit": []
+}

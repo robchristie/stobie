@@ -4,6 +4,7 @@ mod dock;
 mod icons;
 mod navigation;
 mod reference;
+mod status_chips;
 mod toolbars;
 mod typography;
 
@@ -15,6 +16,7 @@ use crate::catalogue::{StoryId, story_definition};
 pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
+pub use status_chips::StatusChipFixtureState;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn render_story(
@@ -28,12 +30,24 @@ pub(super) fn render_story(
     focus_story: &mut Option<StoryId>,
     icon_fixture: &mut IconFixtureState,
     navigation_fixture: &mut NavigationFixtureState,
+    status_chip_fixture: &mut StatusChipFixtureState,
 ) {
     let definition = story_definition(story);
     ui.strong(definition.id.as_str());
     ui.label(definition.description);
     ui.separator();
     match story {
+        StoryId::StatusChipTasks
+        | StoryId::StatusChipTreatments
+        | StoryId::StatusChipLongNarrow => status_chips::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            observations,
+            semantic_nodes,
+            status_chip_fixture,
+        ),
         StoryId::NavigationSidebar | StoryId::NavigationStates | StoryId::NavigationLongNarrow => {
             navigation::story(
                 ui,
@@ -195,6 +209,7 @@ mod tests {
                 let mut focus_story = None;
                 let mut icon_fixture = IconFixtureState::default();
                 let mut navigation_fixture = NavigationFixtureState::default();
+                let mut status_chip_fixture = StatusChipFixtureState::default();
                 let size = egui::vec2(
                     configuration.width.points(),
                     f32::from(story_definition(story).recommended_viewport.height),
@@ -216,6 +231,7 @@ mod tests {
                             &mut focus_story,
                             &mut icon_fixture,
                             &mut navigation_fixture,
+                            &mut status_chip_fixture,
                         )
                     },
                 );

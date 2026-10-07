@@ -125,6 +125,8 @@ pub enum UiRole {
     ResultRow,
     ThumbnailCell,
     Status,
+    /// Informational measured Label; never a button or live region.
+    StatusChip,
     Section,
 }
 
@@ -334,6 +336,7 @@ pub enum AccessKitMismatch {
     AdjustAction { id: SemanticUiId },
     CustomActions { id: SemanticUiId },
     Bounds { id: SemanticUiId },
+    InformationalState { id: SemanticUiId },
 }
 
 /// Compare the common semantics for Polyorama-owned custom controls. Snapshot
@@ -367,6 +370,7 @@ pub fn audit_accesskit(
                 | UiRole::Viewport
                 | UiRole::ResultRow
                 | UiRole::ThumbnailCell
+                | UiRole::StatusChip
         )
     }) {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
@@ -393,6 +397,7 @@ pub fn audit_accesskit(
             UiRole::Splitter => egui::accesskit::Role::Splitter,
             UiRole::Viewport => egui::accesskit::Role::Canvas,
             UiRole::ResultRow | UiRole::ThumbnailCell => egui::accesskit::Role::ListBoxOption,
+            UiRole::StatusChip => egui::accesskit::Role::Label,
             _ => unreachable!(),
         };
         if node.role() != expected_role {
@@ -400,8 +405,25 @@ pub fn audit_accesskit(
                 id: semantic.id.clone(),
             });
         }
-        if node.label().unwrap_or_default() != semantic.name {
+        let accessible_name = if semantic.role == UiRole::StatusChip {
+            node.value()
+        } else {
+            node.label()
+        };
+        if accessible_name.unwrap_or_default() != semantic.name {
             findings.push(AccessKitMismatch::Name {
+                id: semantic.id.clone(),
+            });
+        }
+        if semantic.role == UiRole::StatusChip
+            && (node.supports_action(egui::accesskit::Action::Focus)
+                || node.is_selected().is_some()
+                || node.toggled().is_some()
+                || node.aria_current().is_some()
+                || node.live().is_some()
+                || node.label().is_some())
+        {
+            findings.push(AccessKitMismatch::InformationalState {
                 id: semantic.id.clone(),
             });
         }
@@ -469,7 +491,8 @@ pub fn audit_accesskit(
                     | UiRole::ThumbnailCell
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
-        if (should_click && !supports_click)
+        if (semantic.role == UiRole::StatusChip && supports_click)
+            || (should_click && !supports_click)
             || (matches!(semantic.role, UiRole::Button | UiRole::NavigationItem)
                 && !semantic.enabled
                 && supports_click)

@@ -8,6 +8,9 @@ mod property;
 mod range;
 mod result_row;
 mod status;
+mod status_chip;
+#[cfg(test)]
+mod status_chip_tests;
 mod thumbnail;
 mod viewport_status;
 
@@ -27,6 +30,10 @@ pub use property::property_row;
 pub use range::range_control;
 pub use result_row::{ResultRowSpec, result_row, result_row_height};
 pub use status::{StatusTone, status_badge};
+pub use status_chip::{
+    StatusChipColours, StatusChipResponse, StatusChipSpec, StatusChipWidth, status_chip,
+    status_chip_colours, status_chip_semantic_node,
+};
 pub use thumbnail::{ThumbnailCellSpec, ThumbnailState, thumbnail_cell, thumbnail_cell_side};
 pub use viewport_status::{ImageStatusSpec, image_status_height, paint_image_status};
 

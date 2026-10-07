@@ -1,0 +1,323 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "status-chip/tasks",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 524
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.0242fc047d5aa916",
+      "parent": "gallery.story",
+      "role": "result_row",
+      "name": "Prepare field notes",
+      "rect": {
+        "min_x": 534,
+        "min_y": 189,
+        "max_x": 1150,
+        "max_y": 225.875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "1"
+        }
+      },
+      "actions": [
+        "gallery.task.open"
+      ]
+    },
+    {
+      "id": "presentation.15e7328db3374ec9",
+      "parent": "gallery.story",
+      "role": "result_row",
+      "name": "Check collection metadata",
+      "rect": {
+        "min_x": 534,
+        "min_y": 272.75,
+        "max_x": 1150,
+        "max_y": 309.625
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "3"
+        }
+      },
+      "actions": [
+        "gallery.task.open"
+      ]
+    },
+    {
+      "id": "presentation.28dc1ee844d75250",
+      "parent": "presentation.77a94043759eb6fa",
+      "role": "status_chip",
+      "name": "Completed",
+      "rect": {
+        "min_x": 715.9375,
+        "min_y": 324.625,
+        "max_x": 773.59375,
+        "max_y": 341.625
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "4"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.452d0900af48afd7",
+      "parent": "presentation.a83a8d111bd9a2df",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 688.15625,
+        "min_y": 240.875,
+        "max_x": 743.59375,
+        "max_y": 257.875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "2"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.69d1e0f319eeb8d1",
+      "parent": "presentation.792fb2874f2e388c",
+      "role": "status_chip",
+      "name": "Upload failed",
+      "rect": {
+        "min_x": 701.21875,
+        "min_y": 366.5,
+        "max_x": 770.84375,
+        "max_y": 383.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "5"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.707398cd79cbfccd",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Complete demo task",
+      "description": "Change the consumer-owned task status",
+      "rect": {
+        "min_x": 534,
+        "min_y": 398.375,
+        "max_x": 662.3125,
+        "max_y": 430.375
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.status-chip.complete"
+      ]
+    },
+    {
+      "id": "presentation.77a94043759eb6fa",
+      "parent": "gallery.story",
+      "role": "result_row",
+      "name": "Archive approved records",
+      "rect": {
+        "min_x": 534,
+        "min_y": 314.625,
+        "max_x": 1150,
+        "max_y": 351.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "4"
+        }
+      },
+      "actions": [
+        "gallery.task.open"
+      ]
+    },
+    {
+      "id": "presentation.792fb2874f2e388c",
+      "parent": "gallery.story",
+      "role": "result_row",
+      "name": "Upload regional report",
+      "rect": {
+        "min_x": 534,
+        "min_y": 356.5,
+        "max_x": 1150,
+        "max_y": 393.375
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "5"
+        }
+      },
+      "actions": [
+        "gallery.task.open"
+      ]
+    },
+    {
+      "id": "presentation.a5bdbecc73ba4f59",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 684.125,
+        "min_y": 126.5,
+        "max_x": 715.78125,
+        "max_y": 143.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "1"
+        }
+      },
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.a83a8d111bd9a2df",
+      "parent": "gallery.story",
+      "role": "result_row",
+      "name": "Survey northern site",
+      "rect": {
+        "min_x": 534,
+        "min_y": 230.875,
+        "max_x": 1150,
+        "max_y": 267.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "2"
+        }
+      },
+      "actions": [
+        "gallery.task.open"
+      ]
+    },
+    {
+      "id": "presentation.a9cc44af76858525",
+      "parent": "presentation.0242fc047d5aa916",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 679.8125,
+        "min_y": 199,
+        "max_x": 711.46875,
+        "max_y": 216
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "1"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.ab18b0e09719e1ff",
+      "parent": "presentation.15e7328db3374ec9",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 721.84375,
+        "min_y": 282.75,
+        "max_x": 791.65625,
+        "max_y": 299.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.task",
+          "id": "3"
+        }
+      },
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

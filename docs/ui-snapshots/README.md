@@ -75,3 +75,12 @@ Successful partially clipped text is measured by the recipe but omitted from
 Gallery's fully visible audited subset; the pass coverage inventory still counts
 those attempts and retains every failed measurement. Clipped row interaction
 semantics remain visible with current bounds.
+
+Status-chip fixtures add task rows/detail in dark comfortable mode, all four
+tones on parent surfaces in light compact mode, and localised narrow ellipsis in
+light high contrast at 150%. Physical `tools/status-chip-browser-smoke.sh` and
+its Linux native companion exercise standalone selection/copy input, inert chip
+parent activation, stable current status updates and bounded idle behaviour.
+The browser journey verifies actual clipboard content for a fully elided localised
+label, and scrolling replaces clipped owners while retaining every attempt.
+Rust regressions prove native egui selection/copy and AccessKit ownership/parity.

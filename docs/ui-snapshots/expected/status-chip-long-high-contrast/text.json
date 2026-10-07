@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 3442907269440900
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 732,
+        "min_y": 312,
+        "max_x": 787,
+        "max_y": 337
+      },
+      "painted_rect": {
+        "min_x": 732,
+        "min_y": 312,
+        "max_x": 786.78125,
+        "max_y": 337
+      },
+      "clip_rect": {
+        "min_x": 732,
+        "min_y": 312,
+        "max_x": 787,
+        "max_y": 337
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 5973743351432144
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 732,
+        "min_y": 352,
+        "max_x": 780,
+        "max_y": 377
+      },
+      "painted_rect": {
+        "min_x": 732,
+        "min_y": 352,
+        "max_x": 779.78125,
+        "max_y": 377
+      },
+      "clip_rect": {
+        "min_x": 732,
+        "min_y": 352,
+        "max_x": 780,
+        "max_y": 377
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 7120775091100875
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 732,
+        "min_y": 272,
+        "max_x": 837,
+        "max_y": 297
+      },
+      "painted_rect": {
+        "min_x": 732,
+        "min_y": 272,
+        "max_x": 829.78125,
+        "max_y": 297
+      },
+      "clip_rect": {
+        "min_x": 732,
+        "min_y": 272,
+        "max_x": 837,
+        "max_y": 297
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 8369146873920702
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 732,
+        "min_y": 461,
+        "max_x": 815.15625,
+        "max_y": 486
+      },
+      "painted_rect": {
+        "min_x": 732,
+        "min_y": 461,
+        "max_x": 815,
+        "max_y": 486
+      },
+      "clip_rect": {
+        "min_x": 732,
+        "min_y": 461,
+        "max_x": 815.15625,
+        "max_y": 486
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 4,
+    "attempted_components": 15,
+    "successful_components": 15,
+    "failed_components": 0,
+    "native_text_controls": 36,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

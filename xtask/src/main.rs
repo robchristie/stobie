@@ -152,6 +152,11 @@ fn verify() -> Result<()> {
         &["tools/navigation-browser-smoke.sh"],
         &evidence_environment,
     )?;
+    run_with_environment(
+        "bash",
+        &["tools/status-chip-browser-smoke.sh"],
+        &evidence_environment,
+    )?;
     browser::build(Vec::new())?;
     run(
         "node",
@@ -202,6 +207,11 @@ fn verify() -> Result<()> {
         run_with_environment(
             "bash",
             &["tools/navigation-native-smoke.sh"],
+            &evidence_environment,
+        )?;
+        run_with_environment(
+            "bash",
+            &["tools/status-chip-native-smoke.sh"],
             &evidence_environment,
         )?;
         run_with_environment(

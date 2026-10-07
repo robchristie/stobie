@@ -212,6 +212,57 @@ mod tests {
     use super::*;
 
     #[test]
+    fn status_chips_keep_contrast_on_authored_application_surfaces() {
+        use polyorama_ui_egui::{
+            DensityVariant, StatusTone, TypographyProfile, status_chip_colours,
+        };
+        let luminance = |c: egui::Color32| {
+            let linear = |v: u8| {
+                let s = f64::from(v) / 255.0;
+                if s <= 0.04045 {
+                    s / 12.92
+                } else {
+                    ((s + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            0.2126 * linear(c.r()) + 0.7152 * linear(c.g()) + 0.0722 * linear(c.b())
+        };
+        for index in 0..=2 {
+            for (variant, target) in [
+                (ThemeVariant::Light, 4.5),
+                (ThemeVariant::Dark, 4.5),
+                (ThemeVariant::LightHighContrast, 7.0),
+                (ThemeVariant::DarkHighContrast, 7.0),
+            ] {
+                for density in [DensityVariant::Compact, DensityVariant::Comfortable] {
+                    let tokens =
+                        authored_theme(index).resolve(variant, density, TypographyProfile::Dense);
+                    for tone in [
+                        StatusTone::Neutral,
+                        StatusTone::Success,
+                        StatusTone::Warning,
+                        StatusTone::Error,
+                    ] {
+                        let pair = status_chip_colours(&tokens, tone);
+                        assert_eq!(pair.background.a(), 255, "opaque on every parent surface");
+                        assert_eq!(pair.foreground.a(), 255);
+                        let a = luminance(pair.foreground);
+                        let b = luminance(pair.background);
+                        assert!(
+                            (a.max(b) + 0.05) / (a.min(b) + 0.05) >= target,
+                            "preset {index} {variant:?} {tone:?}"
+                        );
+                        assert_eq!(
+                            pair.background,
+                            egui::Color32::from(tokens.colours.surface_panel)
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn workbench_and_production_shell_render_each_authored_identity() {
         use polyorama_ui_egui::{DensityVariant, TypographyProfile, UiPreferences};
         for index in 0..=2 {
@@ -264,6 +315,7 @@ mod tests {
                             &mut None,
                             &mut crate::stories::IconFixtureState::default(),
                             &mut crate::stories::NavigationFixtureState::default(),
+                            &mut crate::stories::StatusChipFixtureState::default(),
                         );
                         assert!(!workbench.show(&context, variant));
                     },

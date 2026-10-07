@@ -75,6 +75,84 @@ When a new state is consequential, add a typed gallery story and a bounded
 fixture rather than a runtime description or unbounded data set. See
 [UI review](ui-review.md) for the evidence loop.
 
+## Compact status chips
+
+Use `PresentationContext::status_chip(ui, key, StatusChipSpec::new(label, tone))`
+for concise status beside task names, detail headings, property summaries or
+toolbars. Applications own workflow states, localisation, transitions and the
+explicit `StatusTone`. “Scheduled” can be neutral; “Needs review” is a warning
+only when the application's rules say so. Optional `IconId` is decorative;
+optional `explanation` supplies context. Use a stable local key such as `"status"`
+in a domain-scoped context, independently of label or tone changes.
+
+The chip measures one start-aligned, vertically centred, regular `Status` line
+with `TextOverflow::Ellipsis`. It is content-sized, capped by the generated
+192-point maximum scaled with 100–150% text. `StatusChipWidth::AtMost(points)`
+sets a smaller finite positive logical-point cap. Resolved inline/block spacing
+supplies padding; artwork uses `icon_size` and one inline gap. Reserve these
+before measuring the label. The useful label minimum is intrinsic width capped
+at one scaled token minimum-hit width, with measured ellipsis as the floor.
+Smaller parents/caps receive that minimum allocation: the parent must wrap,
+scroll or relocate the chip. The recipe never implicitly becomes icon-only.
+Empty/whitespace labels are rejected. Long messages belong in reading surfaces.
+
+Standalone status defaults to `TextInteraction::Selectable`, using
+`present_measured_text` and egui selection/copy. Selecting an entire elided galley
+copies the original label, including non-ASCII text. Choose `Inert` explicitly
+inside a pointer-owned row so click/drag stays with the parent. Inert chips still
+own an informational accessible label. `StatusChipResponse` separates the
+decorative `visual_rect`, selection `text_rect`, optional `icon_rect` and
+`truncated` from its text `response`; selection sensing is not activation.
+There is no button minimum hit target, focus stop, toggle, click action or live
+announcement. Ellipsis provides a full-label tooltip; supplied explanation always
+provides tooltip context.
+
+Opaque panel fill and primary text use the validated `ApplicationTheme` pair,
+preserving 4.5:1 standard and 7:1 high contrast on ordinary, hovered or selected
+parents. The generated pill radius scales with text and is bounded by half the
+visual height. Neutral uses a decorative boundary; success/warning/error use
+semantic status colours. Artwork matches text foreground. Boundary colour
+supplements the complete label and is not the sole meaning cue.
+
+`UiRole::StatusChip` maps to one AccessKit Label with full `value`, optional
+description and stable author ID. Bounds match the currently clipped text-response
+allocation. Fully hidden owners/successful observations are omitted; partial
+text retains allocation and effective clip, and pass coverage retains every
+attempt. The scoped method inherits explicit parent/domain metadata and existing
+viewport/pass publication rules. Decorative chrome/artwork adds no owner or new
+platform accessibility claim.
+
+The application-owned state mapping is an executable rustdoc example on
+`PresentationContext::status_chip`; this short consumer helper uses the same API:
+
+```rust
+use polyorama_ui_egui::{DesignTokens, IconId, PresentationContext,
+    PresentationObservations, PresentationScope, SemanticUiId,
+    StatusChipSpec, StatusTone};
+
+fn scheduled(ui: &mut egui::Ui, tokens: DesignTokens, task_id: u64)
+    -> PresentationObservations
+{
+    let mut p = PresentationContext::new(ui, tokens, 1.0,
+        PresentationScope::new("task-detail").child(task_id), SemanticUiId::root());
+    p.status_chip(ui, "status", StatusChipSpec {
+        icon: Some(IconId::Calendar),
+        explanation: Some("Starts after the collection is approved"),
+        ..StatusChipSpec::new("Scheduled", StatusTone::Neutral)
+    });
+    p.finish(ui)
+}
+```
+
+Low-level callers use `status_chip` with a stable `PresentationId`, then publish
+`status_chip_semantic_node` and measured observations. `status_chip_colours`
+exposes the painted pair for theme checks. Choose the existing wrapping
+`status_badge`/`PresentationContext::badge` for longer selectable status/error
+messages. Choose `NavigationBadge` for navigation-row counts/context, including
+its `99+` abbreviation and row-owned semantics. Gallery `status-chip/tasks`,
+`status-chip/treatments` and `status-chip/long-narrow` use the production recipe;
+the [evidence record](../status-chip-evidence.md) retains visual and physical proof.
+
 ## Scoped presentation
 
 Use `PresentationContext` when a feature needs the shared heading, bounded content,

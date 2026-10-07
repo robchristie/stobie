@@ -202,6 +202,26 @@ explicit parent scroll/relocation policy. See the
 [navigation component contract](ui-guides/components.md#navigation-items) for
 clipping, measurements, state treatment and platform limits.
 
+## Present application-owned workflow status
+
+Keep workflow enums and transitions in your application. Map a state to borrowed
+visible text and explicit `StatusTone`, then call
+`presentation.status_chip(ui, "status", StatusChipSpec::new(label, tone))`.
+An active or scheduled task need not mean success or warning. The executable
+example on `PresentationContext::status_chip` maps its own Active/Scheduled/
+NeedsReview states and adds typed artwork. Dynamic/localised labels work identically.
+
+Set `interaction: TextInteraction::Inert` inside a pointer-owned task row;
+standalone status is selectable by default. Scope to the stable task ID and use
+`"status"` as the local key to preserve identity across label/tone updates.
+Construct/finish in the current pass and publish observations. Applications still
+own row/detail layout, validated intents and repaint after state changes.
+
+Use compact chips for concise inline information, wrapping badges for longer
+status/error explanations, and `NavigationBadge` for navigation-row counts/context.
+The [chip contract and consumer helper](ui-guides/components.md#compact-status-chips)
+explain measured limits, ellipsis/tooltips, semantic ownership and theme behaviour.
+
 ## Add asynchronous scalar images when needed
 
 The minimal consumer deliberately uses no tile pipeline. For a scalar-image

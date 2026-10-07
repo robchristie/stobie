@@ -236,6 +236,7 @@ pub enum TextComponentKind {
     PropertyRow,
     ResultRow,
     StatusBadge,
+    StatusChip,
     ThumbnailCell,
     DiagnosticRow,
     SectionHeading,
@@ -476,13 +477,15 @@ pub fn present_accessible_measured_text(
         )),
         Sense::hover(),
     );
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(
-            egui::WidgetType::Label,
-            label_ui.is_enabled(),
-            measured.galley.text(),
-        )
-    });
+    if response.interact_rect.is_positive() {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Label,
+                label_ui.is_enabled(),
+                measured.galley.text(),
+            )
+        });
+    }
     label_ui
         .painter()
         .galley(galley_position, measured.galley.clone(), measured.colour);
@@ -536,13 +539,15 @@ pub fn present_measured_text(
         Id::new(("polyorama.measured-text", component_id, parent_id)),
         sense,
     );
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(
-            egui::WidgetType::Label,
-            selection_ui.is_enabled(),
-            measured.galley.text(),
-        )
-    });
+    if response.interact_rect.is_positive() {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Label,
+                selection_ui.is_enabled(),
+                measured.galley.text(),
+            )
+        });
+    }
     if selection_ui.is_rect_visible(response.rect) {
         LabelSelectionState::label_text_selection(
             &selection_ui,

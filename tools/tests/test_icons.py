@@ -16,7 +16,8 @@ class IconCompilerTests(unittest.TestCase):
 
     def test_maintained_toolbar_example_matches_executed_rustdoc(self):
         guide = (ICONS.ROOT / 'docs/ui-guides/components.md').read_text()
-        example = guide.split('```rust\n')[1].split('```')[0].strip()
+        toolbar = guide.split('## Typed icons and action presentations\n', 1)[1]
+        example = toolbar.split('```rust\n', 1)[1].split('```', 1)[0].strip()
         source = (ICONS.ROOT / 'crates/polyorama-ui-egui/src/presentation.rs').read_text()
         doc = source.split('    /// ```\n')[1].split('    /// ```')[0]
         self.assertEqual(example, '\n'.join(line.removeprefix('    ///').removeprefix(' ') for line in doc.splitlines()).strip())

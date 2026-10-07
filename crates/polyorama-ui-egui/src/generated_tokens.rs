@@ -128,6 +128,16 @@ impl DesignTokens {
         ICON_SIZE
     }
 
+    /// Bounded content width at reference font scale, without changing struct literals.
+    pub const fn status_chip_max_width(&self) -> Points {
+        Points(192.0)
+    }
+
+    /// Informational pill geometry, bounded by the recipe to half its height.
+    pub const fn status_chip_radius(&self) -> Points {
+        Points(16.0)
+    }
+
     pub const fn resolve(theme: ThemeVariant, density: DensityVariant) -> Self {
         let colours = match theme {
             ThemeVariant::Light => COLOURS_LIGHT,

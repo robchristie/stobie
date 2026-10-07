@@ -519,6 +519,60 @@ impl PresentationContext {
         );
     }
 
+    /// Compact, informational status with automatic measured text and one
+    /// matching semantic owner. The consumer chooses label, meaning and tone.
+    /// Default text is selectable; choose Inert inside a pointer-owned row.
+    ///
+    /// ```
+    /// use polyorama_ui_egui::{DesignTokens, IconId, PresentationContext,
+    ///     PresentationObservations, PresentationScope, SemanticUiId,
+    ///     StatusChipSpec, StatusTone};
+    ///
+    /// // Workflow states and this mapping belong to the application.
+    /// enum TaskState { Active, Scheduled, NeedsReview }
+    /// fn task_status(ui: &mut egui::Ui, tokens: DesignTokens, scale: f32,
+    ///                task_id: u64, state: TaskState) -> PresentationObservations {
+    ///     let (label, tone, icon) = match state {
+    ///         TaskState::Active => ("Active", StatusTone::Neutral, IconId::Clock),
+    ///         TaskState::Scheduled => ("Scheduled", StatusTone::Neutral, IconId::Calendar),
+    ///         TaskState::NeedsReview => ("Needs review", StatusTone::Warning, IconId::Warning),
+    ///     };
+    ///     let mut p = PresentationContext::new(ui, tokens, scale,
+    ///         PresentationScope::new("task-detail").child(task_id), SemanticUiId::root());
+    ///     p.status_chip(ui, "status", StatusChipSpec {
+    ///         icon: Some(icon), ..StatusChipSpec::new(label, tone)
+    ///     });
+    ///     p.finish(ui)
+    /// }
+    /// ```
+    pub fn status_chip(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: crate::StatusChipSpec<'_>,
+    ) -> crate::StatusChipResponse {
+        self.check_pass(ui);
+        let identity = self.scope.instance(key);
+        let chip = crate::status_chip(
+            ui,
+            spec,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if let Some(node) = crate::status_chip_semantic_node(
+            &chip,
+            spec,
+            identity,
+            self.parent.clone(),
+            self.domain_reference.clone(),
+        ) {
+            self.semantic_nodes.push(node);
+        }
+        chip
+    }
+
     /// A native control remains explicitly unmeasured in the text denominator.
     pub fn native<R>(
         &mut self,

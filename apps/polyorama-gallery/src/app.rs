@@ -12,7 +12,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     catalogue::{STORIES, StoryId, story_definition},
-    stories::{DockSceneState, IconFixtureState, NavigationFixtureState, render_story},
+    stories::{
+        DockSceneState, IconFixtureState, NavigationFixtureState, StatusChipFixtureState,
+        render_story,
+    },
 };
 
 /// Gallery-owned fixture actions used to demonstrate the generic controls.
@@ -227,6 +230,7 @@ pub struct GallerySnapshot {
     pub ui_snapshot: UiSnapshot,
     pub icon_fixture: IconFixtureState,
     pub navigation_fixture: NavigationFixtureState,
+    pub status_chip_fixture: StatusChipFixtureState,
 }
 
 pub struct GalleryApp {
@@ -241,6 +245,7 @@ pub struct GalleryApp {
     focus_story: Option<StoryId>,
     icon_fixture: IconFixtureState,
     navigation_fixture: NavigationFixtureState,
+    status_chip_fixture: StatusChipFixtureState,
 }
 
 impl GalleryApp {
@@ -275,10 +280,12 @@ impl GalleryApp {
                 ui_snapshot: UiSnapshot::default(),
                 icon_fixture: IconFixtureState::default(),
                 navigation_fixture: NavigationFixtureState::default(),
+                status_chip_fixture: StatusChipFixtureState::default(),
             },
             focus_story: None,
             icon_fixture: IconFixtureState::default(),
             navigation_fixture: NavigationFixtureState::default(),
+            status_chip_fixture: StatusChipFixtureState::default(),
         }
     }
 
@@ -289,6 +296,7 @@ impl GalleryApp {
             self.focus_story = None;
             self.icon_fixture = IconFixtureState::default();
             self.navigation_fixture = NavigationFixtureState::default();
+            self.status_chip_fixture = StatusChipFixtureState::default();
             self.context.request_repaint();
         }
     }
@@ -387,6 +395,7 @@ impl eframe::App for GalleryApp {
                     &mut self.focus_story,
                     &mut self.icon_fixture,
                     &mut self.navigation_fixture,
+                    &mut self.status_chip_fixture,
                 );
                 rect
             })
@@ -435,6 +444,7 @@ impl eframe::App for GalleryApp {
             ui_snapshot,
             icon_fixture: self.icon_fixture.clone(),
             navigation_fixture: self.navigation_fixture.clone(),
+            status_chip_fixture: self.status_chip_fixture.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]
