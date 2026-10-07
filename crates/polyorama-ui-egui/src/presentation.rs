@@ -316,6 +316,94 @@ impl PresentationContext {
         response
     }
 
+    /// Present a destination row with automatic semantic and measured-text ownership.
+    /// Supply a stable destination key; handle clicked() through your own intent route.
+    /// Hidden rows return an empty hover response without observations.
+    ///
+    /// ```
+    /// use polyorama_ui_egui::{ActionKey, ActionScope, ActionSpec, ActionTarget,
+    ///     Availability, DesignTokens, IconId, NavigationBadge, NavigationItemSpec,
+    ///     PresentationContext, PresentationObservations, PresentationScope, SemanticUiId};
+    /// use serde::Serialize;
+    ///
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+    /// enum Destination { Home, Tasks }
+    /// impl ActionKey for Destination {
+    ///     fn stable_id(self) -> &'static str {
+    ///         match self { Self::Home => "app.home", Self::Tasks => "app.tasks" }
+    ///     }
+    ///     fn specification(self) -> ActionSpec<Self> {
+    ///         ActionSpec { id: self, label: match self { Self::Home => "Home", Self::Tasks => "Tasks" },
+    ///             description: "Open this destination", compact_label: None,
+    ///             shortcut: None, scope: ActionScope::Application }
+    ///     }
+    /// }
+    /// fn sidebar(ui: &mut egui::Ui, tokens: DesignTokens, scale: f32,
+    ///     selected: &mut Destination, tasks: u64) -> PresentationObservations {
+    ///     let mut p = PresentationContext::new(ui, tokens, scale,
+    ///         PresentationScope::new("main-navigation"), SemanticUiId::root());
+    ///     let mut intent = None;
+    ///     for destination in [Destination::Home, Destination::Tasks] {
+    ///         let action = destination.specification();
+    ///         let response = p.navigation_item(ui, destination, NavigationItemSpec {
+    ///             target: ActionTarget::application(destination),
+    ///             icon: match destination { Destination::Home => IconId::Home, Destination::Tasks => IconId::Tasks },
+    ///             label: action.label, description: action.description,
+    ///             selected: *selected == destination, availability: Availability::Enabled,
+    ///             badge: if destination == Destination::Tasks {
+    ///                 Some(NavigationBadge::Count { value: tasks, meaning: "outstanding tasks" })
+    ///             } else { None },
+    ///         });
+    ///         if response.clicked() {
+    ///             intent = Some(destination);
+    ///         }
+    ///     }
+    ///     let observed = p.finish(ui);
+    ///     if let Some(destination) = intent {
+    ///         *selected = destination; // Apply the application navigation intent.
+    ///         ui.ctx().request_repaint();
+    ///     }
+    ///     observed
+    /// }
+    /// ```
+    pub fn navigation_item<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: crate::NavigationItemSpec<'_, A>,
+    ) -> Response {
+        self.check_pass(ui);
+        let identity = self.scope.instance(key);
+        if !spec.availability.visible() {
+            return ui.interact(
+                egui::Rect::NOTHING,
+                identity.egui_id(),
+                egui::Sense::hover(),
+            );
+        }
+        let response = crate::navigation_item(
+            ui,
+            &spec,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if response.interact_rect.is_positive() {
+            let mut node = crate::navigation_item_semantic_node(
+                &response,
+                &spec,
+                identity,
+                self.parent.clone(),
+            );
+            if self.domain_reference.is_some() {
+                node.domain_reference = self.domain_reference.clone();
+            }
+            self.semantic_nodes.push(node);
+        }
+        response
+    }
+
     pub fn heading(
         &mut self,
         ui: &mut Ui,

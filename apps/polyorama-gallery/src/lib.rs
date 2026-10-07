@@ -5,7 +5,7 @@ mod stories;
 
 pub use app::{GalleryApp, GalleryConfiguration, GallerySnapshot, GalleryWidth};
 pub use catalogue::{STORIES, StoryDefinition, StoryId};
-pub use stories::{IconControl, IconFixtureState};
+pub use stories::{Destination, IconControl, IconFixtureState, NavigationFixtureState};
 
 pub const APPLICATION_NAME: &str = "Polyorama Component Gallery";
 

@@ -66,7 +66,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges and virtual thumbnail cells. Their deterministic examples are the
+badges, navigation items and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -250,3 +250,63 @@ SVG source/compiler and licence. Gallery `icons/vocabulary`,
 production compositions and adversarial cases. New platform accessibility claims
 require the existing [qualification contract](accessibility.md); these recipes
 extend semantic and keyboard coverage, not the platform support matrix.
+
+## Navigation items
+
+`PresentationContext::navigation_item` paints one full-width sidebar destination
+and automatically records its `NavigationItem` node plus separate
+`NavigationLabel`/`NavigationBadge` measurements. Supply a
+`NavigationItemSpec<'_, A>` with typed `ActionTarget<A>`, `IconId`, full borrowed
+label and description, caller-owned `selected`, `Availability` and an optional
+`NavigationBadge`. The leading artwork and badge are decorative; the row alone
+owns interaction and accessible text. Existing action APIs remain compatible.
+
+Use stable logical scope and destination keys, such as an application enum,
+independently of labels, counts, order and desktop/narrow placement. Handle
+`Response::clicked()` through the application's intent/command route. Selection,
+routing and persistence belong to the consumer; focus never selects a destination.
+Each enabled row is an independent Tab stop; Enter/Space and pointer release
+activate it. There is no composite arrow-key or roving-selection policy.
+
+The label is an inert, start-aligned, centred single-line `ButtonLabel` with
+explicit ellipsis. Its tooltip and semantic name retain the complete label.
+`navigation_item_minimum_width` measures reservations for padding, icon, gaps,
+a useful label slot of two minimum-hit widths scaled with text, and the bounded
+badge. Parents must provide that width, scroll horizontally or relocate the
+sidebar. A smaller parent receives a minimum allocation that overflows; neither
+label nor badge is implicitly removed. The full row retains a token hit height,
+increasing for density and enlarged fonts. Selected rows keep a leading marker
+and fill, hover adds a control outline, press uses the validated selection colour pair and adds an inset state outline, and
+keyboard focus adds the outer focus ring. Current state remains recognisable
+when reference hover and selection fills coincide, including a disabled current
+row. All colours resolve from the supplied theme tokens.
+
+`NavigationBadge::Count { value, meaning }` shows exact 0–99 and `99+` above 99.
+Its inert Caption is end-aligned, and the count slot reserves measured `99+`
+width so neighbouring count badges align. `Label { text, description }` paints
+one centred, eliding Caption. Badge text width is capped at two minimum-hit widths
+scaled with text, plus inline padding; it never wraps or becomes another target.
+The row description retains the full count and meaning or supplied status
+explanation. `None` omits the badge; zero is shown only when explicitly supplied.
+Count/status changes preserve the stable destination name, identity and focus.
+
+`UiRole::NavigationItem` uses `UiNode.selected` to mean **current destination**.
+AccessKit exposes Button + `aria_current(True/False)`, with no selected/toggled
+property. Both use the full name and description, current state, badge meaning,
+disabled reason and clipped `Response::interact_rect`. Hidden availability and
+fully clipped rows publish no visible node. This is an application navigation
+action, distinct from dock tabs and independent toggles. Native AccessKit
+semantics and keyboard testing add no new screen-reader qualification; eframe’s
+browser accessibility adapter limitation remains unchanged.
+
+The [compilable consumer example on `navigation_item`](https://github.com/robchristie/polyorama/blob/main/crates/polyorama-ui-egui/src/presentation.rs)
+defines its own destination enum, selection and counts. Gallery
+`navigation/sidebar`, `navigation/states` and `navigation/long-narrow` use this
+production API, including scrolling and long-label/badge adversaries.
+
+Low-level callers use `navigation_item` with a stable `PresentationId`, and
+publish `navigation_item_semantic_node` only for positive current interaction
+bounds. Gallery audits its fully visible text allocation subset, retaining all
+measurement attempts in coverage. Production observations include partial clips.
+Preserve the viewport/pass inventory when filtering clipped successful text; never discard failed measurements. The scoped method handles ordinary
+publication and inherits the context's explicit domain reference and target pane.

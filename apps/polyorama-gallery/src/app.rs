@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     catalogue::{STORIES, StoryId, story_definition},
-    stories::{DockSceneState, IconFixtureState, render_story},
+    stories::{DockSceneState, IconFixtureState, NavigationFixtureState, render_story},
 };
 
 /// Gallery-owned fixture actions used to demonstrate the generic controls.
@@ -226,6 +226,7 @@ pub struct GallerySnapshot {
     pub text_audit_coverage: Option<polyorama_ui_egui::TextAuditCoverage>,
     pub ui_snapshot: UiSnapshot,
     pub icon_fixture: IconFixtureState,
+    pub navigation_fixture: NavigationFixtureState,
 }
 
 pub struct GalleryApp {
@@ -239,6 +240,7 @@ pub struct GalleryApp {
     snapshot: GallerySnapshot,
     focus_story: Option<StoryId>,
     icon_fixture: IconFixtureState,
+    navigation_fixture: NavigationFixtureState,
 }
 
 impl GalleryApp {
@@ -272,9 +274,11 @@ impl GalleryApp {
                 text_audit_coverage: None,
                 ui_snapshot: UiSnapshot::default(),
                 icon_fixture: IconFixtureState::default(),
+                navigation_fixture: NavigationFixtureState::default(),
             },
             focus_story: None,
             icon_fixture: IconFixtureState::default(),
+            navigation_fixture: NavigationFixtureState::default(),
         }
     }
 
@@ -284,6 +288,7 @@ impl GalleryApp {
             self.dock = DockSceneState::new(story);
             self.focus_story = None;
             self.icon_fixture = IconFixtureState::default();
+            self.navigation_fixture = NavigationFixtureState::default();
             self.context.request_repaint();
         }
     }
@@ -381,6 +386,7 @@ impl eframe::App for GalleryApp {
                     &mut semantic_nodes,
                     &mut self.focus_story,
                     &mut self.icon_fixture,
+                    &mut self.navigation_fixture,
                 );
                 rect
             })
@@ -428,6 +434,7 @@ impl eframe::App for GalleryApp {
             text_audit_coverage,
             ui_snapshot,
             icon_fixture: self.icon_fixture.clone(),
+            navigation_fixture: self.navigation_fixture.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]

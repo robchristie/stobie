@@ -18,7 +18,7 @@ CRATES = (
     "polyorama-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["polyorama-ui-egui"] = 2  # Crate composition and typed icon toolbar.
+EXPECTED_EXAMPLES["polyorama-ui-egui"] = 3  # Crate composition, icon toolbar and navigation consumer.
 SOURCE_CONSUMERS = (
     "crates/polyorama-core/src/lib.rs",
     "crates/polyorama-core/src/data.rs",
@@ -118,7 +118,7 @@ def main() -> None:
     args = parser.parse_args()
     expected = coverage(ROOT)
     count = local_links(ROOT)
-    print(f"Selected coverage: five runnable rustdoc examples, native/WASM consumer, presenter variation; {count} local links")
+    print(f"Selected coverage: {sum(expected.values())} runnable rustdoc examples, native/WASM consumer, presenter variation; {count} local links")
     if args.links_only:
         return
     packages = [argument for crate in CRATES for argument in ("-p", crate)]
@@ -131,7 +131,7 @@ def main() -> None:
         check_doctest_result(output, expected[crate])
     for target in ([], ["--target", "wasm32-unknown-unknown"]):
         run(["cargo", "check", *target, "-p", "analytical-workspace-lab", "--example", "minimal-workspace"])
-    print("API documentation checks passed: rendered generation, five executed examples, native/WASM consumer compilation and selected local links")
+    print("API documentation checks passed: rendered generation, six executed examples, native/WASM consumer compilation and selected local links")
 
 
 if __name__ == "__main__":

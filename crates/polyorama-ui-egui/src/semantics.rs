@@ -111,6 +111,7 @@ pub enum UiRole {
     ApplicationBar,
     Toolbar,
     Button,
+    NavigationItem,
     RadioButton,
     ComboBox,
     TextInput,
@@ -355,6 +356,7 @@ pub fn audit_accesskit(
         matches!(
             node.role,
             UiRole::Button
+                | UiRole::NavigationItem
                 | UiRole::RadioButton
                 | UiRole::ComboBox
                 | UiRole::TextInput
@@ -381,7 +383,7 @@ pub fn audit_accesskit(
         }
         let node = candidates[0];
         let expected_role = match semantic.role {
-            UiRole::Button => egui::accesskit::Role::Button,
+            UiRole::Button | UiRole::NavigationItem => egui::accesskit::Role::Button,
             UiRole::RadioButton => egui::accesskit::Role::RadioButton,
             UiRole::ComboBox => egui::accesskit::Role::ComboBox,
             UiRole::TextInput => egui::accesskit::Role::TextInput,
@@ -431,6 +433,19 @@ pub fn audit_accesskit(
                 id: semantic.id.clone(),
             });
         }
+        if semantic.role == UiRole::NavigationItem
+            && (node.aria_current()
+                != if semantic.selected {
+                    Some(egui::accesskit::AriaCurrent::True)
+                } else {
+                    Some(egui::accesskit::AriaCurrent::False)
+                }
+                || node.is_selected().is_some())
+        {
+            findings.push(AccessKitMismatch::Selected {
+                id: semantic.id.clone(),
+            });
+        }
         let expected_toggled = semantic.checked.map(|checked| {
             if checked {
                 egui::accesskit::Toggled::True
@@ -447,6 +462,7 @@ pub fn audit_accesskit(
             && matches!(
                 semantic.role,
                 UiRole::Button
+                    | UiRole::NavigationItem
                     | UiRole::RadioButton
                     | UiRole::Tab
                     | UiRole::ResultRow
@@ -454,7 +470,9 @@ pub fn audit_accesskit(
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
         if (should_click && !supports_click)
-            || (semantic.role == UiRole::Button && !semantic.enabled && supports_click)
+            || (matches!(semantic.role, UiRole::Button | UiRole::NavigationItem)
+                && !semantic.enabled
+                && supports_click)
         {
             findings.push(AccessKitMismatch::ClickAction {
                 id: semantic.id.clone(),

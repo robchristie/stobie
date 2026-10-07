@@ -2,6 +2,7 @@ mod buttons;
 mod data;
 mod dock;
 mod icons;
+mod navigation;
 mod reference;
 mod toolbars;
 mod typography;
@@ -13,6 +14,7 @@ use crate::catalogue::{StoryId, story_definition};
 
 pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
+pub use navigation::{Destination, NavigationFixtureState};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn render_story(
@@ -25,12 +27,24 @@ pub(super) fn render_story(
     semantic_nodes: &mut Vec<UiNode>,
     focus_story: &mut Option<StoryId>,
     icon_fixture: &mut IconFixtureState,
+    navigation_fixture: &mut NavigationFixtureState,
 ) {
     let definition = story_definition(story);
     ui.strong(definition.id.as_str());
     ui.label(definition.description);
     ui.separator();
     match story {
+        StoryId::NavigationSidebar | StoryId::NavigationStates | StoryId::NavigationLongNarrow => {
+            navigation::story(
+                ui,
+                story,
+                tokens,
+                font_scale,
+                observations,
+                semantic_nodes,
+                navigation_fixture,
+            )
+        }
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
             icons::actions(
@@ -180,6 +194,7 @@ mod tests {
                 let mut semantic_nodes = Vec::new();
                 let mut focus_story = None;
                 let mut icon_fixture = IconFixtureState::default();
+                let mut navigation_fixture = NavigationFixtureState::default();
                 let size = egui::vec2(
                     configuration.width.points(),
                     f32::from(story_definition(story).recommended_viewport.height),
@@ -200,6 +215,7 @@ mod tests {
                             &mut semantic_nodes,
                             &mut focus_story,
                             &mut icon_fixture,
+                            &mut navigation_fixture,
                         )
                     },
                 );

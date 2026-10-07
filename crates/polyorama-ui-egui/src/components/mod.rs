@@ -3,6 +3,7 @@ mod choice;
 mod icon;
 #[cfg(test)]
 mod icon_action_tests;
+mod navigation;
 mod property;
 mod range;
 mod result_row;
@@ -18,6 +19,10 @@ pub use action_button::{
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub use icon::{IconId, icon_size, paint_icon};
+pub use navigation::{
+    NavigationBadge, NavigationItemSpec, navigation_item, navigation_item_minimum_width,
+    navigation_item_semantic_node,
+};
 pub use property::property_row;
 pub use range::range_control;
 pub use result_row::{ResultRowSpec, result_row, result_row_height};

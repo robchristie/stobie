@@ -64,3 +64,14 @@ native companion in full verification. Catalogue growth changes Gallery chrome
 and native-control coverage; review those differences alongside any deliberate
 artwork change before updating the original fixtures. Frozen seed tasks and their
 assertions remain unchanged.
+
+Navigation fixtures add the ordinary dark sidebar, light compact state/count
+examples, and narrow light high contrast at 150%. The physical
+`tools/navigation-browser-smoke.sh` and Linux native companion run through full
+verification. The browser journey exercises actual Tab/Enter/Space, pointer
+hover/press, consumer selection/count changes, disabled and zero-count rows,
+large counts, long label/badge elision, scrolling and bounded idle behaviour.
+Successful partially clipped text is measured by the recipe but omitted from
+Gallery's fully visible audited subset; the pass coverage inventory still counts
+those attempts and retains every failed measurement. Clipped row interaction
+semantics remain visible with current bounds.

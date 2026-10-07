@@ -147,6 +147,11 @@ fn verify() -> Result<()> {
         &["tools/icon-actions-browser-smoke.sh"],
         &icon_evidence_environment,
     )?;
+    run_with_environment(
+        "bash",
+        &["tools/navigation-browser-smoke.sh"],
+        &evidence_environment,
+    )?;
     browser::build(Vec::new())?;
     run(
         "node",
@@ -193,6 +198,11 @@ fn verify() -> Result<()> {
             "bash",
             &["tools/icon-actions-native-smoke.sh"],
             &icon_evidence_environment,
+        )?;
+        run_with_environment(
+            "bash",
+            &["tools/navigation-native-smoke.sh"],
+            &evidence_environment,
         )?;
         run_with_environment(
             "bash",
@@ -454,7 +464,7 @@ fn architecture() -> Result<()> {
         if source.starts_with("#![cfg(test)]") {
             continue;
         }
-        if source.contains("ActionKey for ") {
+        if has_action_key_implementation(&source) {
             bail!(
                 "egui action framework source {} implements ActionKey; move the application registry to its application crate",
                 path.display()
@@ -482,6 +492,15 @@ fn architecture() -> Result<()> {
         "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
+}
+
+// Compiled rustdoc consumers may demonstrate application-owned action enums.
+// Keep the production ownership guard while excluding those documentation lines.
+fn has_action_key_implementation(source: &str) -> bool {
+    source.lines().any(|line| {
+        let line = line.trim_start();
+        !line.starts_with("///") && !line.starts_with("//!") && line.contains("ActionKey for ")
+    })
 }
 
 fn workspace_definition_count(source: &str) -> usize {
@@ -626,7 +645,20 @@ fn build_viewer_web() -> Result<()> {
 
 #[cfg(test)]
 mod architecture_tests {
-    use super::workspace_definition_count;
+    use super::{has_action_key_implementation, workspace_definition_count};
+
+    #[test]
+    fn action_ownership_guard_allows_rustdoc_consumers_and_rejects_production_registries() {
+        let examples =
+            "    /// impl ActionKey for Destination {}\n//! impl ActionKey for ConsumerAction {}";
+        assert!(!has_action_key_implementation(examples));
+        assert!(has_action_key_implementation(&format!(
+            "{examples}\nimpl ActionKey for FrameworkAction {{}}"
+        )));
+        assert!(has_action_key_implementation(
+            "impl crate::ActionKey for FrameworkAction {}"
+        ));
+    }
 
     #[test]
     fn workspace_guard_counts_complete_identifiers_and_detects_duplicates() {

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "navigation/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 473
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.1a625849c07e38af",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Home",
+      "description": "Open this destination; Current destination",
+      "rect": {
+        "min_x": 694,
+        "min_y": 184,
+        "max_x": 979,
+        "max_y": 226
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.navigation.home"
+      ]
+    },
+    {
+      "id": "presentation.9d82c6d319a0f2fa",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Tasks awaiting review by the entire regional operations team",
+      "description": "Open this destination; 12500 outstanding tasks",
+      "rect": {
+        "min_x": 694,
+        "min_y": 231,
+        "max_x": 979,
+        "max_y": 273
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.tasks"
+      ]
+    },
+    {
+      "id": "presentation.b8b35c79d90be215",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Needs attention",
+      "description": "Open this destination; 3 items needing attention",
+      "rect": {
+        "min_x": 694,
+        "min_y": 278,
+        "max_x": 979,
+        "max_y": 320
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.needs_attention"
+      ]
+    },
+    {
+      "id": "presentation.d2912afd3436ed31",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Activity",
+      "description": "Open this destination; 0 new events",
+      "rect": {
+        "min_x": 694,
+        "min_y": 325,
+        "max_x": 979,
+        "max_y": 367
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.activity"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

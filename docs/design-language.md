@@ -220,6 +220,19 @@ provide that width or explicitly choose icon-only/overflow. Icons never silently
 replace a label. See [component contracts](ui-guides/components.md#typed-icons-and-action-presentations)
 and the [artwork/licence record](../crates/polyorama-ui-egui/assets/icons/README.md).
 
+## Destination navigation
+
+A navigation item is one full-width action row: leading typed decorative icon,
+start-aligned single-line measured control label, and optional compact inert
+Caption badge. Applications own destinations, counts, current state and intent
+routing. The current destination retains a leading selection marker independently
+of hover fill, inset pointer-press outline and outer keyboard-focus ring. Badge
+counts above 99 paint as `99+` while the accessible row description retains the
+full count and meaning. Navigation is independent Tab stops with Enter/Space
+activation; focus never changes selection. The
+[navigation recipe contract](ui-guides/components.md#navigation-items) defines
+minimum parent width, abbreviation, clipping and current-state semantics.
+
 ## Motion
 
 Motion explains continuity, focus movement or a state transition. The quick
@@ -353,7 +366,7 @@ generated from its checked-in source.
 ## Gallery and reference recipes
 
 `polyorama-gallery` is a native and browser application, not a second widget
-implementation. Its typed Rust catalogue has 24 stable story IDs and fixed
+implementation. Its typed Rust catalogue has 27 stable story IDs and fixed
 metadata for description, component group, recommended viewport, applicable
 appearance/density variants and interaction scenarios. It supports the four
 light/dark and standard/high-contrast combinations, both densities, 100%, 125%

@@ -33,8 +33,10 @@ files. It additionally serves Record Desk’s fixed HTML/bootstrap/bindgen
 allowlist at `/record-desk/` after `bash consumers/record-desk/build-web.sh`. Use the root
 manifest: the gateway accepts only the canonical Git worktree root. Append
 `/record-desk/` to the returned URL. Lab readiness remains scoped to Lab assets;
-consumer readiness and workflow need their own browser observation. It publishes
-no repository root, evidence directory, Gallery, viewer or data service. Every
+consumer readiness and workflow need their own browser observation. It also serves Gallery’s fixed HTML/bootstrap/bindgen allowlist at `/gallery/`
+after `cargo xtask build-web`. Gallery readiness and interaction require their
+own browser observation. It publishes no repository root, evidence directory,
+viewer or data service. Every
 response uses `Cache-Control: no-store`; WASM responses use
 `application/wasm`. Existing relative imports keep the worker and its package
 on the same preview origin.

@@ -170,6 +170,38 @@ icon-only deliberately; labelled actions reserve measured ellipsis space and
 never collapse implicitly. `paint_icon` exposes the same decorative artwork for
 application-owned compositions without introducing another interaction model.
 
+## Compose application navigation
+
+Use `PresentationContext::navigation_item` for sidebar destinations. Define your
+own destination enum implementing `ActionKey`; keep current selection and counts
+in your application. Pass that enum as the logical key and `ActionTarget`, choose
+an `IconId`, supply full label/description, caller selection and availability,
+and optionally `NavigationBadge::Count { value, meaning }` or `Label`.
+
+The [compiled navigation consumer example](https://github.com/robchristie/polyorama/blob/main/crates/polyorama-ui-egui/src/presentation.rs)
+shows the complete enum and `sidebar` function. Its core call is:
+
+```text
+let response = p.navigation_item(ui, destination, NavigationItemSpec {
+    target: ActionTarget::application(destination),
+    icon: IconId::Tasks,
+    label: "Tasks", description: "Open outstanding tasks",
+    selected: current == destination, availability: Availability::Enabled,
+    badge: Some(NavigationBadge::Count { value: tasks, meaning: "outstanding tasks" }),
+});
+if response.clicked() { intents.push(Navigate(destination)); }
+```
+
+Finish the context in the same pass and publish its returned observations.
+After applying navigation intents, request repaint for the changed state.
+Keyboard focus is UI state and leaves selection unchanged; Enter/Space activate
+through the same response. The row owns no router or destination registry.
+Counts above 99 paint as `99+` with exact accessible meaning; omission/zero are
+explicit caller choices. Provide the measured minimum sidebar width or an
+explicit parent scroll/relocation policy. See the
+[navigation component contract](ui-guides/components.md#navigation-items) for
+clipping, measurements, state treatment and platform limits.
+
 ## Add asynchronous scalar images when needed
 
 The minimal consumer deliberately uses no tile pipeline. For a scalar-image

@@ -29,10 +29,13 @@ pub enum StoryId {
     IconsActionPresentations,
     IconsToolbar,
     IconsLongNarrow,
+    NavigationSidebar,
+    NavigationStates,
+    NavigationLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 27] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -57,6 +60,9 @@ impl StoryId {
         Self::IconsActionPresentations,
         Self::IconsToolbar,
         Self::IconsLongNarrow,
+        Self::NavigationSidebar,
+        Self::NavigationStates,
+        Self::NavigationLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -85,6 +91,9 @@ impl StoryId {
             Self::IconsActionPresentations => "icons/action-presentations",
             Self::IconsToolbar => "icons/toolbar",
             Self::IconsLongNarrow => "icons/long-narrow",
+            Self::NavigationSidebar => "navigation/sidebar",
+            Self::NavigationStates => "navigation/states",
+            Self::NavigationLongNarrow => "navigation/long-narrow",
         }
     }
 }
@@ -136,6 +145,7 @@ pub enum StoryGroup {
     VirtualGrid,
     Reference,
     Icon,
+    Navigation,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -288,7 +298,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 24] = [
+pub static STORIES: [StoryDefinition; 27] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -504,6 +514,33 @@ pub static STORIES: [StoryDefinition; 24] = [
         400,
         ICON_NARROW_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::NavigationSidebar,
+        "Application-owned sidebar destinations, counts and content.",
+        StoryGroup::Navigation,
+        640,
+        400,
+        REFERENCE_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::NavigationStates,
+        "Navigation current, hover, press, focus, zero count and disabled states.",
+        StoryGroup::Navigation,
+        640,
+        400,
+        ICON_ACTION_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::NavigationLongNarrow,
+        "Elided destination and badge text, large counts and clipped scrolling.",
+        StoryGroup::Navigation,
+        320,
+        400,
+        ICON_NARROW_STATES,
+        SCROLL,
     ),
 ];
 

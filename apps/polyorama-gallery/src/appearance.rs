@@ -263,6 +263,7 @@ mod tests {
                             &mut Vec::new(),
                             &mut None,
                             &mut crate::stories::IconFixtureState::default(),
+                            &mut crate::stories::NavigationFixtureState::default(),
                         );
                         assert!(!workbench.show(&context, variant));
                     },
