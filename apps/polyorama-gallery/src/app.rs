@@ -439,7 +439,7 @@ impl eframe::App for GalleryApp {
             && let Ok(path) = std::env::var("POLYORAMA_GALLERY_SNAPSHOT_PATH")
             && let Ok(json) = serde_json::to_vec_pretty(&self.snapshot)
         {
-            let _ = std::fs::write(path, json);
+            let _ = publish_snapshot(std::path::Path::new(&path), &json);
         }
     }
 
@@ -447,6 +447,34 @@ impl eframe::App for GalleryApp {
     fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
+}
+
+// Readers observe a complete old or new frame, including during continuous
+// publication. Never truncate the file they use for physical targeting.
+#[cfg(not(target_arch = "wasm32"))]
+fn publish_snapshot(path: &std::path::Path, json: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let name = path.file_name().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "snapshot path requires a filename",
+        )
+    })?;
+    let mut temporary_name = name.to_os_string();
+    temporary_name.push(format!(".{}.tmp", std::process::id()));
+    let temporary = path.with_file_name(temporary_name);
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temporary)?;
+    let result = file.write_all(json).and_then(|()| {
+        drop(file);
+        std::fs::rename(&temporary, path)
+    });
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temporary);
+    }
+    result
 }
 
 fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignTokens) {
@@ -596,6 +624,56 @@ fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn concurrent_snapshot_readers_observe_complete_frames() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        };
+        let directory =
+            std::env::temp_dir().join(format!("polyorama-gallery-snapshot-{}", std::process::id()));
+        std::fs::create_dir(&directory).unwrap();
+        let path = directory.join("frame.json");
+        publish_snapshot(&path, br#"{"frame":0,"payload":"initial"}"#).unwrap();
+        let running = Arc::new(AtomicBool::new(true));
+        let reader_flag = running.clone();
+        let reader_path = path.clone();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let reader = std::thread::spawn(move || {
+            let mut reads = 0;
+            loop {
+                let bytes = std::fs::read(&reader_path).unwrap();
+                let frame: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                assert!(frame["frame"].is_u64());
+                assert!(frame["payload"].is_string());
+                reads += 1;
+                if reads == 1 {
+                    ready_tx.send(()).unwrap();
+                }
+                if !reader_flag.load(Ordering::Acquire) {
+                    return reads;
+                }
+            }
+        });
+        ready_rx.recv().unwrap();
+        for frame in 1..=100 {
+            let bytes = serde_json::to_vec(
+                &serde_json::json!({"frame":frame,"payload":"x".repeat(16_384)}),
+            )
+            .unwrap();
+            publish_snapshot(&path, &bytes).unwrap();
+        }
+        running.store(false, Ordering::Release);
+        assert!(reader.join().unwrap() > 1);
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(&path).unwrap()).unwrap()["frame"],
+            100
+        );
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 1);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn workbench_entry_fits_catalogue_at_enlarged_text_and_records_native_coverage() {
