@@ -11,7 +11,11 @@ production static bytes remain identical; the intervening delta includes CI/harn
 code, as described below. Later documentation-only commits preserve this repaired
 qualification surface. Production manifests retain their actual build
 revision; they do not relabel an earlier build. [PR #54](https://github.com/robchristie/polyorama/pull/54)
-owns exact-head review, applicable public CI, merge and post-merge CI.
+owns its exact-head review, applicable public CI and merge. Its failed actual
+merge-CI browser observation and bounded continuation are owned by
+[PR #55](https://github.com/robchristie/polyorama/pull/55) and the
+[browser final-action evidence](../navigation-browser-focus-evidence/README.md).
+The original qualification and three archives below retain their attribution.
 
 [observations.tar.gz](observations.tar.gz) retains 306 actual receipts, complete
 logs, public fixture recipes/hashes, native/browser snapshots, canonical

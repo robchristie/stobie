@@ -8,6 +8,7 @@ import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
+import { focusNavigationDestination } from './navigation-browser-focus.mjs';
 
 const root = resolve('apps/polyorama-gallery/web');
 const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/navigation-browser');
@@ -64,11 +65,11 @@ async function target(destination) {
 }
 async function click(destination) { const { point } = await target(destination); await page.mouse.click(point.x, point.y); }
 async function focus(destination) {
-  for (let attempt = 0; attempt < 45; attempt++) {
-    if ((await target(destination)).node.focused) return;
-    await page.keyboard.press('Tab'); await page.waitForTimeout(60);
-  }
-  throw new Error(`Tab did not reach ${destination}`);
+  return focusNavigationDestination(destination, {
+    target,
+    pressTab: () => page.keyboard.press('Tab'),
+    wait: ms => page.waitForTimeout(ms),
+  });
 }
 async function record(name, expected = {}) {
   await fixture(expected);

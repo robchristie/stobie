@@ -128,6 +128,7 @@ fn verify() -> Result<()> {
             "apps/emuella-viewer/web/tests/worker.test.mjs",
             "tools/tests/browser-startup.test.mjs",
             "tools/tests/browser-idle.test.mjs",
+            "tools/tests/navigation-browser-focus.test.mjs",
             "tools/tests/record-desk-target.test.mjs",
             "tools/tests/application-client.test.mjs",
             "tools/tests/lab-result-selection.test.mjs",
