@@ -166,7 +166,5 @@ except BaseException as error:
     subprocess.run([imagemagick, "-window", window, str(evidence / "native-failure.png")], check=False)
     raise
 PY
-if rg 'panicked|WGPU error|Exiting because of error' "$EVIDENCE_DIR/native-runtime.log"; then
-  echo 'native status-chip smoke observed an application failure' >&2
-  exit 1
-fi
+source "$ROOT/tools/native-runtime-errors.sh"
+assert_clean_native_runtime_log "$EVIDENCE_DIR/native-runtime.log" "native status-chip smoke"

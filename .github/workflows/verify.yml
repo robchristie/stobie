@@ -25,7 +25,7 @@ jobs:
         id: scope
         run: python3 tools/verify.py --classify
 
-      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: dtolnay/rust-toolchain@1.99.0
         with:
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
@@ -59,7 +59,7 @@ jobs:
         if: steps.scope.outputs.mode != 'docs'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers python3-gdal python3-numpy xdotool xvfb
+          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers python3-gdal python3-numpy ripgrep xdotool xvfb
           npm ci
           npx playwright install --with-deps chromium
 

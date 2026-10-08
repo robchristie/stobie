@@ -40,10 +40,11 @@ import struct
 import subprocess
 import sys
 import time
+from tools.navigation_native_focus import focus_navigation_target
 
 snapshot_path, xdotool, imagemagick, evidence = sys.argv[1:]
 evidence = Path(evidence)
-steps, targets = [], []
+steps, targets, focus_transitions = [], [], []
 
 def xdo(*arguments):
     return subprocess.check_output([xdotool, *map(str, arguments)], text=True).strip()
@@ -102,13 +103,9 @@ def fixture(**expected):
     return wait(lambda s: all(s["navigation_fixture"][key] == value for key, value in expected.items()), str(expected))
 
 def focus(control):
-    for _ in range(40):
-        state = snapshot()
-        if any(n["id"] == next(t["id"] for t in state["navigation_fixture"]["targets"] if t["destination"] == control) and n["focused"] for n in state["ui_snapshot"]["nodes"]):
-            return
-        xdo("key", "Tab")
-        time.sleep(0.06)
-    raise AssertionError(f"keyboard did not reach {control}")
+    state = snapshot()
+    target = next(t["id"] for t in state["navigation_fixture"]["targets"] if t["destination"] == control)
+    focus_navigation_target(snapshot, lambda: xdo("key", "Tab"), target, focus_transitions)
 
 def record(name):
     state = snapshot()
@@ -171,17 +168,26 @@ try:
     report = {"source_revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
               "binary_sha256": hashlib.sha256(Path("target/release/polyorama-gallery").read_bytes()).hexdigest(),
               "story": state["story"], "configuration": state["configuration"], "display": os.environ["DISPLAY"],
-              "backend": "GL/llvmpipe on Xvfb", "steps": steps, "targets": targets, "idle": idle,
+              "backend": "GL/llvmpipe on Xvfb", "steps": steps, "targets": targets, "focus_transitions": focus_transitions, "idle": idle,
               "image": {"path": capture.name, "width": width, "height": height, "sha256": hashlib.sha256(image).hexdigest()},
               "input_route": "xdotool pointer and keyboard; continuous snapshot publication reads state only"}
     (evidence / "native-workflow.json").write_text(json.dumps(report, indent=2) + "\n")
     print(f"Navigation native smoke passed: {state['story']}, pointer/keyboard, empty audits and idle")
 except BaseException as error:
-    (evidence / "native-failure-report.json").write_text(json.dumps({"error": str(error), "steps": steps, "targets": targets}, indent=2) + "\n")
-    subprocess.run([imagemagick, "-window", window, str(evidence / "native-failure.png")], check=False)
+    failure = {"error": str(error), "steps": steps, "targets": targets, "focus_transitions": focus_transitions}
+    try:
+        failure["latest_snapshot"] = snapshot()
+    except BaseException as observation_error:
+        failure["snapshot_error"] = str(observation_error)
+    try:
+        (evidence / "native-failure-report.json").write_text(json.dumps(failure, indent=2) + "\n")
+    except BaseException as observation_error:
+        print(f"Could not retain native navigation failure report: {observation_error}", file=sys.stderr)
+    try:
+        subprocess.run([imagemagick, "-window", window, str(evidence / "native-failure.png")], check=False)
+    except BaseException as observation_error:
+        print(f"Could not retain native navigation failure image: {observation_error}", file=sys.stderr)
     raise
 PY
-if rg 'panicked|WGPU error|Exiting because of error' "$EVIDENCE_DIR/native-runtime.log"; then
-  echo 'native navigation smoke observed an application failure' >&2
-  exit 1
-fi
+source "$ROOT/tools/native-runtime-errors.sh"
+assert_clean_native_runtime_log "$EVIDENCE_DIR/native-runtime.log" "native navigation smoke"

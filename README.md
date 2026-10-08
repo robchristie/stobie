@@ -88,7 +88,7 @@ Run these commands from the repository root.
 ### Prerequisites
 
 - Rust and Cargo. [The repository toolchain](rust-toolchain.toml) and
-  [CI](.github/workflows/verify.yml) select Rust **1.98.1** for development and
+  [CI](.github/workflows/verify.yml) select Rust **1.99.0** for development and
   verification. The workspace minimum remains Rust **1.97.1**.
 - For native applications, a graphical session and a working graphics backend
   supported by wgpu. Linux builds enable X11 and Wayland support.
@@ -196,7 +196,7 @@ access and can take longer than ordinary Rust tests.
 
 On Linux, the default [bootstrap script](tools/bootstrap-linux-ui.sh) unpacks
 pinned x86_64 UI packages into `.tools/`; that path also relies on tools such as
-`curl`, `bsdtar`, `bwrap`, ImageMagick and `jq`. For a system-library setup, use
+`curl`, `bsdtar`, `bwrap`, ImageMagick, `jq` and `rg`. For a system-library setup, use
 `POLYORAMA_USE_SYSTEM_UI_LIBS=1` and provision the dependencies and display as
 shown in the [Ubuntu CI workflow](.github/workflows/verify.yml).
 

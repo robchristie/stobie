@@ -9,7 +9,7 @@ image/JPIP contracts are unchanged.
 
 ## Build and serve
 
-Use the repository's Rust **1.98.1** toolchain, the `wasm32-unknown-unknown` target, `wasm-bindgen-cli`
+Use the repository's Rust **1.99.0** toolchain, the `wasm32-unknown-unknown` target, `wasm-bindgen-cli`
 **0.2.127**, Node **25.8.2**, and Binaryen **131**. On Linux x86-64:
 
 ```sh

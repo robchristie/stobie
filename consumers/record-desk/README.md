@@ -10,7 +10,7 @@ is needed. Eframe still owns the host's GPU rendering of egui.
 ## Build and run
 
 Run from this directory (`consumers/record-desk`). Use the repository's Rust
-1.98.1 toolchain. Native needs a graphical session and a wgpu-compatible backend;
+1.99.0 toolchain. Native needs a graphical session and a wgpu-compatible backend;
 Linux enables X11 and Wayland. See the framework
 [prerequisites](../../README.md#prerequisites).
 
