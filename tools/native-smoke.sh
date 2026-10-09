@@ -45,9 +45,7 @@ launch_app() {
     POLYORAMA_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
     POLYORAMA_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
     owned_start APP_PID target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1
-  sleep 5
-  kill -0 "$APP_PID"
-  WINDOW_ID="$(xdo search --onlyvisible --name 'Analytical Workspace Lab' | head -n 1)"
+  WINDOW_ID="$(owned_wait_window 'Analytical Workspace Lab' "$APP_PID")"
   xdo windowfocus --sync "$WINDOW_ID"
   WINDOW_WIDTH="$(xdo getwindowgeometry --shell "$WINDOW_ID" | sed -n 's/^WIDTH=//p')"
   WINDOW_HEIGHT="$(xdo getwindowgeometry --shell "$WINDOW_ID" | sed -n 's/^HEIGHT=//p')"

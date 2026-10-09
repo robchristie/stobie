@@ -21,6 +21,8 @@ pub struct RecordDeskApp {
     narrow_layout: bool,
     focus_search: bool,
     frame: u64,
+    tab_input_epoch: u64,
+    tab_input_frame: Option<u64>,
     snapshot: Snapshot,
     inspection: Option<Inspection>,
     desk_epoch: u64,
@@ -32,6 +34,8 @@ pub struct RecordDeskApp {
 
 #[derive(Clone, Default, Serialize)]
 pub struct Snapshot {
+    /// Tab keydowns observed by the application, counted once per input frame.
+    pub tab_input_epoch: u64,
     pub ui: UiSnapshot,
     pub controls: Vec<Control>,
     pub records: Vec<Record>,
@@ -76,6 +80,8 @@ impl RecordDeskApp {
             narrow_layout: false,
             focus_search: false,
             frame: 0,
+            tab_input_epoch: 0,
+            tab_input_frame: None,
             snapshot: Snapshot::default(),
             inspection: None,
             desk_epoch: 0,
@@ -244,6 +250,27 @@ impl RecordDeskApp {
     }
 
     pub fn present(&mut self, root: &mut Ui) {
+        let input_frame = root.ctx().cumulative_frame_nr();
+        // Discarded layout passes replay input; acknowledge each frame once.
+        if self.tab_input_frame != Some(input_frame) {
+            self.tab_input_epoch += root.ctx().input(|input| {
+                input
+                    .events
+                    .iter()
+                    .filter(|event| {
+                        matches!(
+                            event,
+                            egui::Event::Key {
+                                key: egui::Key::Tab,
+                                pressed: true,
+                                ..
+                            }
+                        )
+                    })
+                    .count()
+            }) as u64;
+            self.tab_input_frame = Some(input_frame);
+        }
         let tokens = self.preferences.tokens(root.style().visuals.dark_mode);
         // Adapt the authoritative tree itself; never create a second docking model.
         self.narrow_layout = root.available_width() < 640.0;
@@ -468,6 +495,7 @@ impl RecordDeskApp {
             changed = true;
         }
         self.snapshot = Snapshot {
+            tab_input_epoch: self.tab_input_epoch,
             ui: ui_snapshot,
             controls: output.controls,
             records: self.desk.records().to_vec(),

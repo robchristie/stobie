@@ -10,116 +10,103 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  scope:
     runs-on: ubuntu-24.04
-    env:
-      POLYORAMA_USE_SYSTEM_UI_LIBS: "1"
-      POLYORAMA_BROWSER_HEADFUL: "1"
-      DISPLAY: ":95"
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Classify verification scope
         id: scope
         run: python3 tools/verify.py --classify
+      - name: Read canonical stage inventory
+        id: matrix
+        run: python3 tools/ci.py matrix
 
-      - uses: dtolnay/rust-toolchain@1.99.0
+  documentation:
+    needs: scope
+    if: needs.scope.outputs.mode == 'docs'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
         with:
-          targets: wasm32-unknown-unknown
-          components: clippy, rustfmt
-
-      - uses: Swatinem/rust-cache@v2
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-verification
         with:
-          workspaces: |
-            . -> target
-            consumers/record-desk -> target
-          # Only a successful full main run may publish dependency artifacts.
-          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs' }}
-          # The dedicated cache below owns the pinned wasm-bindgen executable.
-          cache-bin: false
+          stage: docs
+      - run: python3 tools/verify.py
 
-      - uses: actions/setup-node@v5
-        if: steps.scope.outputs.mode != 'docs'
+  qualification:
+    name: Verify ${{ matrix.name }}
+    needs: scope
+    if: needs.scope.outputs.mode == 'full'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.scope.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    env:
+      POLYORAMA_USE_SYSTEM_UI_LIBS: '1'
+      POLYORAMA_BROWSER_HEADFUL: '1'
+      DISPLAY: ':95'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-verification
+        id: setup
         with:
-          node-version: 25.8.2
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Restore wasm-bindgen CLI
-        id: wasm_bindgen_cache
-        if: steps.scope.outputs.mode != 'docs'
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cargo/bin/wasm-bindgen
-          key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Install Linux UI prerequisites
-        if: steps.scope.outputs.mode != 'docs'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers python3-gdal python3-numpy ripgrep xdotool xvfb
-          npm ci
-          npx playwright install --with-deps chromium
-
-      - name: Install wasm-bindgen CLI
-        if: steps.scope.outputs.mode != 'docs'
-        run: bash tools/ensure-wasm-bindgen-cli.sh
-
-      - name: Install pinned Binaryen
-        if: steps.scope.outputs.mode != 'docs'
-        run: bash tools/install-binaryen.sh
-
-      - name: Verify
-        if: steps.scope.outputs.mode != 'docs'
+          stage: ${{ matrix.name }}
+          ui: ${{ matrix.ui }}
+          browser: ${{ matrix.browser }}
+          consumer: ${{ matrix.consumer }}
+      - name: Verify stage
+        env:
+          STAGE: ${{ matrix.name }}
+          NEEDS_BROWSER: ${{ matrix.browser }}
         run: |
           mkdir -p .tools/runtime/verification-evidence
-          Xvfb "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX \
-            >.tools/runtime/verification-evidence/browser-xvfb.log 2>&1 &
-          browser_xvfb_pid=$!
-          trap 'kill "$browser_xvfb_pid" 2>/dev/null || true' EXIT
-          sleep 1
+          if [[ "$NEEDS_BROWSER" == true ]]; then
+            Xvfb "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX \
+              >.tools/runtime/verification-evidence/browser-xvfb.log 2>&1 &
+            browser_xvfb_pid=$!
+            trap 'kill "$browser_xvfb_pid" 2>/dev/null || true' EXIT
+            sleep 1
+          fi
           set -o pipefail
-          python3 tools/verify.py 2>&1 | tee .tools/runtime/verification-evidence/cargo-xtask-verify.log
-
-      - name: Verify documentation
-        if: steps.scope.outputs.mode == 'docs'
-        run: python3 tools/verify.py
-
+          cargo xtask verify-stage "$STAGE" 2>&1 | tee ".tools/runtime/verification-evidence/$STAGE.log"
       - name: Exclude generated browser output from Rust cache
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs'
+        if: success()
         run: rm -rf -- target/browser-staging target/browser-production
-
-      - name: Save wasm-bindgen CLI
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.scope.outputs.mode != 'docs' && steps.wasm_bindgen_cache.outputs.cache-hit != 'true'
+      - name: Save pinned wasm-bindgen CLI
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.name == 'browser' && steps.setup.outputs.wasm-bindgen-cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/.cargo/bin/wasm-bindgen
           key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Upload verification evidence
-        if: ${{ failure() }}
+      - name: Retain qualification evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: verification-evidence
+          name: verification-${{ matrix.name }}
           path: .tools/runtime/verification-evidence
-          if-no-files-found: warn
-
-      - name: Retain Record Desk qualification evidence
-        if: ${{ always() && steps.scope.outputs.mode != 'docs' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: record-desk-evidence
-          path: .tools/runtime/verification-evidence/record-desk
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Retain shared interface qualification evidence
-        if: ${{ always() && steps.scope.outputs.mode != 'docs' }}
-        uses: actions/upload-artifact@v4
+  verify:
+    needs: [scope, qualification, documentation]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read observed interface qualification
+        if: needs.scope.outputs.mode == 'full' && needs.qualification.result == 'success'
+        uses: actions/download-artifact@v4
         with:
-          name: application-interface-evidence
-          path: .tools/runtime/verification-evidence/application-interface
-          retention-days: 14
-          if-no-files-found: warn
+          pattern: verification-*
+          path: .tools/runtime/verification-evidence
+          merge-multiple: true
+      - name: Require the complete selected surface
+        env:
+          VERIFICATION_NEEDS: ${{ toJSON(needs) }}
+        run: python3 tools/ci.py gate

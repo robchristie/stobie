@@ -29,4 +29,4 @@ trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
 export DISPLAY=:90 WGPU_BACKEND=gl POLYORAMA_BROWSER_HEADFUL=1
 owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/xvfb.log" 2>&1
 sleep 1
-POLYORAMA_EVIDENCE_DIR="$EVIDENCE_DIR" ui_sandbox "$(command -v node)" tools/application-interface-smoke.mjs
+POLYORAMA_EVIDENCE_DIR="$EVIDENCE_DIR" ui_sandbox "$(command -v node)" tools/application-interface-smoke.mjs "$@"

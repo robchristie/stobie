@@ -219,6 +219,8 @@ impl From<egui::Rect> for GalleryRect {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct GallerySnapshot {
+    /// Tab keydowns observed by the application, counted once per input frame.
+    pub tab_input_epoch: u64,
     pub frame: u64,
     pub story: StoryId,
     pub configuration: GalleryConfiguration,
@@ -241,6 +243,8 @@ pub struct GalleryApp {
     applied_configuration: Option<GalleryConfiguration>,
     dock: DockSceneState,
     frame: u64,
+    tab_input_epoch: u64,
+    tab_input_frame: Option<u64>,
     snapshot: GallerySnapshot,
     focus_story: Option<StoryId>,
     icon_fixture: IconFixtureState,
@@ -268,7 +272,10 @@ impl GalleryApp {
             applied_configuration: Some(configuration),
             dock: DockSceneState::new(selected),
             frame: 0,
+            tab_input_epoch: 0,
+            tab_input_frame: None,
             snapshot: GallerySnapshot {
+                tab_input_epoch: 0,
                 frame: 0,
                 story: selected,
                 configuration,
@@ -336,6 +343,27 @@ impl eframe::App for GalleryApp {
         let context = root_ui.ctx().clone();
         self.update_style();
         self.frame += 1;
+        let input_frame = context.cumulative_frame_nr();
+        // Discarded layout passes replay input; acknowledge each frame once.
+        if self.tab_input_frame != Some(input_frame) {
+            self.tab_input_epoch += context.input(|input| {
+                input
+                    .events
+                    .iter()
+                    .filter(|event| {
+                        matches!(
+                            event,
+                            egui::Event::Key {
+                                key: egui::Key::Tab,
+                                pressed: true,
+                                ..
+                            }
+                        )
+                    })
+                    .count()
+            }) as u64;
+            self.tab_input_frame = Some(input_frame);
+        }
         let root_rect = root_ui.max_rect();
         let preferences = self.configuration.preferences();
         let variant = preferences.theme_variant(context.theme() == egui::Theme::Dark);
@@ -433,6 +461,7 @@ impl eframe::App for GalleryApp {
         };
         ui_snapshot.semantic_audit = ui_snapshot.audit();
         self.snapshot = GallerySnapshot {
+            tab_input_epoch: self.tab_input_epoch,
             frame: self.frame,
             story: self.selected,
             configuration: self.configuration,

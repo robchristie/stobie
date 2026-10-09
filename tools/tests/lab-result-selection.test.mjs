@@ -164,3 +164,31 @@ test('final resolution preserves the frozen identity or fails before dispatch', 
   assert.throws(() => assertFrozenResultTarget(frozen, moved), /moved or disappeared/);
   assert.doesNotThrow(() => assertFrozenResultTarget(frozen, { ...frozen, frame: 100 }));
 });
+
+test('hover-induced geometry changes settle before the target is frozen', async () => {
+  const time = clock();
+  let rowHeight = 21;
+  let frame = 1;
+  const pointerMoves = [];
+  const settled = await waitForStableResultTarget(() => {
+    const current = target(64, ++frame);
+    current.rect.max_y = current.rect.min_y + rowHeight;
+    return current;
+  }, time.wait, target(0, 1, 20, 0), time.now, async current => {
+    pointerMoves.push(current.rect.max_y);
+    rowHeight = 20;
+  });
+  assert.deepEqual(pointerMoves, [41, 40]);
+  assert.equal(settled.target.rect.max_y, 40);
+  assert.equal(settled.stable_ms, 200);
+  assert.doesNotThrow(() => assertFrozenResultTarget(settled.target, settled.target));
+  assert.throws(() => assertFrozenResultTarget(settled.target,
+    { ...settled.target, rect: { ...settled.target.rect, max_y: 41 } }), /moved or disappeared/);
+});
+
+test('pointer preparation remains inside the existing settling deadline', async () => {
+  const time = clock();
+  await assert.rejects(waitForStableResultTarget(() => target(64, 2), time.wait,
+    target(0, 1, 20, 0), time.now, async () => time.advance(3500)), /did not settle within 3500 ms/);
+  assert.equal(time.now(), 3500);
+});

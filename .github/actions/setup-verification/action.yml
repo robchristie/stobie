@@ -1,0 +1,80 @@
+name: Set up verification
+description: Prepare one qualification stage on a disposable hosted runner
+inputs:
+  stage:
+    description: Qualification stage
+    required: true
+  ui:
+    description: Install native UI prerequisites
+    default: 'false'
+  browser:
+    description: Install the pinned browser and WASM tooling
+    default: 'false'
+  consumer:
+    description: Include the independent consumer Cargo target
+    default: 'false'
+outputs:
+  wasm-bindgen-cache-hit:
+    description: Exact restore of the pinned executable
+    value: ${{ steps.wasm_bindgen_cache.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@1.99.0
+      with:
+        targets: wasm32-unknown-unknown
+        components: clippy, rustfmt
+    - name: Normalise hosted Rust toolchains
+      shell: bash
+      run: bash tools/normalise-ci-toolchain.sh
+    - uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: v1-polyorama
+        shared-key: qualification-${{ inputs.stage == 'docs' && 'checks' || inputs.stage == 'gallery-browser' && 'ui' || inputs.stage }}
+        workspaces: |
+          . -> target
+          ${{ inputs.consumer == 'true' && 'consumers/record-desk -> target' || '' }}
+        # Each complete successful main stage owns its dependency archive.
+        save-if: ${{ inputs.stage != 'docs' && inputs.stage != 'gallery-browser' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        cache-bin: false
+    - uses: actions/setup-node@v5
+      if: inputs.stage != 'docs' && inputs.stage != 'native-other'
+      with:
+        node-version: 25.8.2
+        cache: npm
+        cache-dependency-path: package-lock.json
+    - name: Install verification prerequisites
+      if: inputs.stage == 'checks' || inputs.ui == 'true'
+      shell: bash
+      env:
+        STAGE: ${{ inputs.stage }}
+        NEEDS_UI: ${{ inputs.ui }}
+      run: |
+        sudo apt-get update
+        if [[ "$STAGE" == checks ]]; then
+          sudo apt-get install --yes python3-gdal python3-numpy ripgrep
+        fi
+        if [[ "$NEEDS_UI" == true ]]; then
+          sudo apt-get install --yes imagemagick jq libegl-mesa0 libegl1 libgl1-mesa-dri libglx-mesa0 libglx0 libxkbcommon-x11-0 mesa-vulkan-drivers ripgrep xdotool xvfb
+        fi
+    - name: Restore wasm-bindgen CLI
+      id: wasm_bindgen_cache
+      if: inputs.browser == 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.cargo/bin/wasm-bindgen
+        key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
+    - name: Install wasm-bindgen CLI
+      if: inputs.browser == 'true'
+      shell: bash
+      run: bash tools/ensure-wasm-bindgen-cli.sh
+    - name: Install pinned Binaryen
+      if: inputs.stage == 'checks' || inputs.stage == 'production'
+      shell: bash
+      run: bash tools/install-binaryen.sh
+    - name: Install Chromium prerequisites
+      if: inputs.browser == 'true'
+      shell: bash
+      run: |
+        npm ci
+        npx playwright install --with-deps chromium

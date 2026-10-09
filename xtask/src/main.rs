@@ -6,11 +6,17 @@ mod browser;
 mod plans;
 mod tokens;
 mod ui;
+mod verify;
 
 fn main() -> Result<()> {
     let command = env::args().nth(1).unwrap_or_else(|| "help".into());
     match command.as_str() {
-        "verify" => verify(),
+        "verify" => verify::all(),
+        "verify-stage" => verify::run_stage(
+            &env::args()
+                .nth(2)
+                .context("verify-stage requires a stage name")?,
+        ),
         "build-web" => build_web(),
         "build-browser-production" => browser::build(env::args().skip(2).collect()),
         "build-viewer-web" => build_viewer_web(),
@@ -29,6 +35,7 @@ fn main() -> Result<()> {
             println!(
                 "cargo xtask verify      run the complete native/browser verification surface"
             );
+            println!("cargo xtask verify-stage <name> run one complete hosted qualification stage");
             println!("cargo xtask build-web   build release WASM application and Worker packages");
             println!("cargo xtask build-browser-production [--variant none|Oz|O3] [--output DIR]");
             println!("cargo xtask architecture check dependency boundaries");
@@ -42,194 +49,6 @@ fn main() -> Result<()> {
             Ok(())
         }
     }
-}
-
-fn verify() -> Result<()> {
-    let evidence_directory = env::current_dir()
-        .context("resolve verification working directory")?
-        .join(".tools/runtime/verification-evidence");
-    fs::create_dir_all(&evidence_directory)
-        .context("create ignored verification evidence directory")?;
-    let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence_directory.as_path())];
-    let icon_evidence_directory = evidence_directory.join("typed-icons");
-    fs::create_dir_all(&icon_evidence_directory).context("create typed icon evidence directory")?;
-    let icon_evidence_environment = [("POLYORAMA_EVIDENCE_DIR", icon_evidence_directory.as_path())];
-    run(
-        "python3",
-        &["-m", "unittest", "discover", "-s", "tools/tests"],
-    )?;
-    plans::check(Path::new("."))?;
-    tokens::check(Path::new("."))?;
-    run("cargo", &["fmt", "--all", "--check"])?;
-    run(
-        "cargo",
-        &[
-            "clippy",
-            "--workspace",
-            "--all-targets",
-            "--all-features",
-            "--",
-            "-D",
-            "warnings",
-        ],
-    )?;
-    run(
-        "cargo",
-        &[
-            "clippy",
-            "--target",
-            "wasm32-unknown-unknown",
-            "-p",
-            "analytical-workspace-lab",
-            "-p",
-            "polyorama-gallery",
-            "-p",
-            "polyorama-tile-worker",
-            "-p",
-            "emuella-viewer",
-            "--",
-            "-D",
-            "warnings",
-        ],
-    )?;
-    run("cargo", &["test", "--workspace"])?;
-    run("python3", &["tools/check-api-docs.py"])?;
-    architecture()?;
-    run("python3", &["tools/check-record-desk.py"])?;
-    run(
-        "cargo",
-        &["test", "-p", "polyorama-ui-egui", "--no-default-features"],
-    )?;
-    run("cargo", &["build", "--workspace", "--release"])?;
-    run(
-        "cargo",
-        &[
-            "build",
-            "--release",
-            "-p",
-            "analytical-workspace-lab",
-            "--example",
-            "minimal-workspace",
-        ],
-    )?;
-    build_web()?;
-    if cfg!(target_os = "linux") {
-        run("bash", &["tools/bootstrap-linux-ui.sh"])?;
-    }
-    run("npm", &["ci"])?;
-    run_with_environment(
-        "node",
-        &[
-            "--test",
-            "tools/tests/viewer-acceptance-browser-masks.test.mjs",
-            "tools/tests/representation-efficiency-browser-masks.test.mjs",
-            "tools/tests/viewer-acceptance-browser-launch.test.mjs",
-            "tools/tests/viewer-merged-qualification-preload.test.mjs",
-            "apps/emuella-viewer/web/tests/worker.test.mjs",
-            "tools/tests/browser-startup.test.mjs",
-            "tools/tests/browser-idle.test.mjs",
-            "tools/tests/navigation-browser-focus.test.mjs",
-            "tools/tests/record-desk-target.test.mjs",
-            "tools/tests/application-client.test.mjs",
-            "tools/tests/lab-result-selection.test.mjs",
-            "tools/tests/browser-package.test.mjs",
-        ],
-        &evidence_environment,
-    )?;
-    run("npx", &["playwright", "install", "chromium"])?;
-    run_with_environment("npm", &["run", "browser-smoke"], &evidence_environment)?;
-    run_with_environment(
-        "npm",
-        &["run", "gallery-browser-smoke"],
-        &evidence_environment,
-    )?;
-    run_with_environment(
-        "bash",
-        &["tools/icon-actions-browser-smoke.sh"],
-        &icon_evidence_environment,
-    )?;
-    run_with_environment(
-        "bash",
-        &["tools/navigation-browser-smoke.sh"],
-        &evidence_environment,
-    )?;
-    run_with_environment(
-        "bash",
-        &["tools/status-chip-browser-smoke.sh"],
-        &evidence_environment,
-    )?;
-    browser::build(Vec::new())?;
-    run(
-        "node",
-        &[
-            "tools/browser-startup-smoke.mjs",
-            "target/browser-production",
-        ],
-    )?;
-    run(
-        "node",
-        &[
-            "tools/browser-startup-benchmark.mjs",
-            "--directory",
-            "target/browser-production",
-            "--output",
-            ".tools/runtime/verification-evidence/startup",
-            "--pairs",
-            "1",
-            "--profiles",
-            "local",
-            "--apps",
-            "lab,gallery",
-        ],
-    )?;
-    ui::verify(Path::new("."), &evidence_directory.join("ui-snapshots"))?;
-    run_with_environment(
-        "bash",
-        &["tools/record-desk-browser-smoke.sh"],
-        &evidence_environment,
-    )?;
-    if cfg!(target_os = "linux") {
-        run_with_environment(
-            "bash",
-            &["tools/application-interface-smoke.sh"],
-            &evidence_environment,
-        )?;
-        run_with_environment("bash", &["tools/native-smoke.sh"], &evidence_environment)?;
-        run_with_environment(
-            "bash",
-            &["tools/gallery-native-smoke.sh"],
-            &evidence_environment,
-        )?;
-        run_with_environment(
-            "bash",
-            &["tools/icon-actions-native-smoke.sh"],
-            &icon_evidence_environment,
-        )?;
-        run_with_environment(
-            "bash",
-            &["tools/navigation-native-smoke.sh"],
-            &evidence_environment,
-        )?;
-        run_with_environment(
-            "bash",
-            &["tools/status-chip-native-smoke.sh"],
-            &evidence_environment,
-        )?;
-        run_with_environment(
-            "bash",
-            &["tools/minimal-native-smoke.sh"],
-            &evidence_environment,
-        )?;
-        run_with_environment(
-            "bash",
-            &["tools/record-desk-native-smoke.sh"],
-            &evidence_environment,
-        )?;
-    }
-    println!(
-        "Polyorama verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
-    );
-    Ok(())
 }
 
 fn build_web() -> Result<()> {

@@ -92,11 +92,12 @@ export function sameResultTarget(a, b) {
 // establish 200 ms of stable targeting geometry. Tile/diagnostic frames may
 // continue; the whole application need not be idle. The fixed budget fails
 // continuous motion rather than dispatching at a moving or missing target.
-export async function waitForStableResultTarget(readTarget, wait, beforeWheel, now = () => performance.now()) {
+export async function waitForStableResultTarget(readTarget, wait, beforeWheel, now = () => performance.now(), prepareTarget) {
   const observations = [];
   const started = now();
   let previous = null;
   let stableSince = null;
+  let prepared = null;
   while (true) {
     const current = await readTarget();
     const observedMs = now() - started;
@@ -108,6 +109,16 @@ export async function waitForStableResultTarget(readTarget, wait, beforeWheel, n
     const resultsMoved = current && (current.result !== beforeWheel.result
       || !equalFields(current.rect, beforeWheel.rect, RECT_FIELDS)
       || current.visible_rows.some((value, index) => value !== beforeWheel.visible_rows[index]));
+    // Hover can change the clipped row geometry. Position the pointer while
+    // settling, then freeze only a pose already observed under that pointer.
+    if (prepareTarget && wheelProcessed && resultsMoved && !sameResultTarget(prepared, current)) {
+      await prepareTarget(current);
+      prepared = current;
+      previous = null;
+      stableSince = null;
+      await wait(Math.max(0, Math.min(50, 3500 - (now() - started))));
+      continue;
+    }
     if (!wheelProcessed || !resultsMoved) stableSince = null;
     else if (stableSince === null || !sameResultTarget(previous, current)) stableSince = observedMs;
     const stableMs = stableSince === null ? 0 : observedMs - stableSince;

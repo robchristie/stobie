@@ -8,6 +8,7 @@ import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
+import { focusByTab } from './browser-keyboard-focus.mjs';
 
 const root = resolve('apps/polyorama-gallery/web');
 const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/icons-browser');
@@ -76,21 +77,22 @@ async function control(control) {
     y: canvas.y + ((r.min_y + r.max_y) / 2 - rr.min_y) * canvas.height / (rr.max_y - rr.min_y),
   };
   targets.push({ control, node_id: node.id, frame: s.frame, rect: r, point });
-  return { node, point };
+  return { node, point, tab_input_epoch: s.tab_input_epoch };
 }
 async function click(controlId) {
   const { point } = await control(controlId);
   await page.mouse.click(point.x, point.y);
 }
 async function focus(controlId) {
-  for (let attempt = 0; attempt < 40; attempt++) {
-    const s = await snapshot();
-    if (s.ui_snapshot.nodes.some(node => node.id === s.icon_fixture.targets[controlId] && node.focused)) return;
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(60);
-  }
-  throw new Error(`Keyboard traversal did not reach ${controlId}`);
+  return focusByTab(controlId, {
+    target: control,
+    pressTab: () => page.keyboard.press('Tab'),
+    waitForTab: epoch => page.waitForFunction(epoch => window.__POLYORAMA_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
+    wait: ms => page.waitForTimeout(ms),
+    maxTabs: 40,
+  });
 }
+
 async function record(name, capture = true, expectedFixture = {}, expectedFocusedControl) {
   let s = await snapshot();
   assert.deepEqual(s.text_audit, [], `${name}: text audit`);

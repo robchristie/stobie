@@ -7,6 +7,7 @@ import { resolve, extname } from 'node:path';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { waitForClickTarget } from './record-desk-target.mjs';
+import { focusByTab } from './browser-keyboard-focus.mjs';
 
 const root = resolve('consumers/record-desk/web');
 const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/record-desk-evidence/record-desk');
@@ -50,17 +51,21 @@ async function clickNode(id) {
   await page.mouse.click(canvas.x + ((r.min_x + r.max_x) / 2 - rootRect.min_x) * canvas.width / (rootRect.max_x - rootRect.min_x), canvas.y + ((r.min_y + r.max_y) / 2 - rootRect.min_y) * canvas.height / (rootRect.max_y - rootRect.min_y));
 }
 async function focusNode(id) {
-  for (let i = 0; i < 24; i++) {
-    const s = await snapshot();
-    if (s.ui.nodes.some(n => n.id === id && n.focused)) return;
-    await page.keyboard.press('Tab');
-    await wait(`s => s.ui.frame > ${s.ui.frame}`);
-    // Egui applies traversal as controls are submitted; observe the subsequent
-    // settled pass before dispatching another traversal/activation event.
-    await page.waitForTimeout(50);
-  }
-  throw new Error(`Keyboard could not reach ${id}`);
+  return focusByTab(id, {
+    target: async () => {
+      const s = await snapshot();
+      const node = s.ui.nodes.find(node => node.id === id);
+      assert(node, `current keyboard target ${id}`);
+      return { node, tab_input_epoch: s.tab_input_epoch };
+    },
+    pressTab: () => page.keyboard.press('Tab'),
+    waitForTab: epoch => wait(`s => s.tab_input_epoch > ${epoch}`),
+    wait: ms => page.waitForTimeout(ms),
+    maxTabs: 24,
+    settleMs: 50,
+  });
 }
+
 async function field(id, value) {
   await clickNode(id);
   await wait(`s => s.ui.nodes.some(n => n.id === ${JSON.stringify(id)} && n.focused)`);

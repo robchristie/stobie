@@ -61,13 +61,14 @@ async function target(destination) {
   const r = node.rect;
   const point = { x: canvas.x + ((r.min_x + r.max_x) / 2 - root.min_x) * canvas.width / (root.max_x - root.min_x), y: canvas.y + ((r.min_y + r.max_y) / 2 - root.min_y) * canvas.height / (root.max_y - root.min_y) };
   targets.push({ destination, id, frame: s.frame, rect: r, point });
-  return { node, point };
+  return { node, point, tab_input_epoch: s.tab_input_epoch };
 }
 async function click(destination) { const { point } = await target(destination); await page.mouse.click(point.x, point.y); }
 async function focus(destination) {
   return focusNavigationDestination(destination, {
     target,
     pressTab: () => page.keyboard.press('Tab'),
+    waitForTab: epoch => page.waitForFunction(epoch => window.__POLYORAMA_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
     wait: ms => page.waitForTimeout(ms),
   });
 }

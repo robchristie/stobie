@@ -24,6 +24,24 @@ owned_stop() {
     printf -v "$1" '%s' ''
   fi
 }
+owned_wait_window() {
+  local window_title="$1" window_owner="$2" window_wait_limit="${3:-30}"
+  local window_wait_started=$SECONDS window_ids
+  [[ "$window_wait_limit" =~ ^[0-9]+$ ]] || return 2
+  while (( SECONDS - window_wait_started < window_wait_limit )); do
+    if ! kill -0 "$window_owner" 2>/dev/null; then
+      echo "application exited before window appeared: $window_title" >&2
+      return 1
+    fi
+    if window_ids="$(xdo search --onlyvisible --name "$window_title")"; then
+      printf '%s\n' "${window_ids%%$'\n'*}"
+      return
+    fi
+    sleep 0.1
+  done
+  echo "window did not appear within ${window_wait_limit}s: $window_title" >&2
+  return 1
+}
 APP_PID=""
 XVFB_PID=""
 cleanup() {

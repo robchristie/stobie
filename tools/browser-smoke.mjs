@@ -697,13 +697,13 @@ try {
   try {
     resultReceipt.settled = await waitForStableResultTarget(async () => firstResultRowTarget(
       await semanticSnapshot(), await page.locator('#polyorama-canvas').boundingBox()),
-    ms => page.waitForTimeout(ms), beforeResultScroll);
+    ms => page.waitForTimeout(ms), beforeResultScroll, undefined,
+    target => page.mouse.move(target.x, target.y));
   } catch (error) {
     resultReceipt.settle_observations = error.observations;
     throw error;
   }
   const frozenResult = resultReceipt.settled.target;
-  await page.mouse.move(frozenResult.x, frozenResult.y);
   const resultDispatchSnapshot = await semanticSnapshot();
   const clickedResult = resolveResultRowTarget(resultDispatchSnapshot,
     await page.locator('#polyorama-canvas').boundingBox(), frozenResult.result);

@@ -49,9 +49,7 @@ DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl \
   POLYORAMA_GALLERY_STORY=reference/application-shell \
   POLYORAMA_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
   owned_start APP_PID target/release/polyorama-gallery >>"$APP_LOG" 2>&1
-sleep 5
-kill -0 "$APP_PID"
-WINDOW_ID="$(xdo search --onlyvisible --name 'Polyorama Component Gallery' | head -n 1)"
+WINDOW_ID="$(owned_wait_window 'Polyorama Component Gallery' "$APP_PID")"
 xdo windowfocus --sync "$WINDOW_ID"
 DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$IMPORT" -window root "$EVIDENCE_DIR/gallery-native-overview.png"
 xdo key --window "$WINDOW_ID" F12

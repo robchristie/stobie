@@ -1,61 +1,100 @@
-# CI cache ownership and inspection
+# CI verification and cache ownership
 
-The required `verify` job still runs the full verification selected by
-`tools/verify.py`. A restored cache never skips a build, test or smoke check.
-Caches are disposable: a miss or service error leaves Cargo and the pinned tool
-installer to do the required work.
+The required `verify` check aggregates eight parallel qualification stages. The
+closed inventory in `tools/verification-stages.json` is shared with
+`cargo xtask verify`, which runs the same stages sequentially locally. A stage
+can be reproduced with `cargo xtask verify-stage <name>`.
 
-`Swatinem/rust-cache@v2` owns Cargo registry and dependency build artifacts under
-the ordinary `target` directory. Its recursive cleanup also reaches
-`target/browser-cargo`, where the production browser build uses a separate
-Cargo target directory. The action retains dependency artifacts and fingerprints
-for native and WASM profiles, but removes workspace-crate artifacts, generated
-package files and incremental output before saving. Keeping workspace crates would
-increase the archive and require a refresh policy for changed source, so it is
-not enabled. Cargo checks freshness after every restore.
+| Stage | Required surface |
+| --- | --- |
+| `checks` | Tool regressions, plans/tokens, formatting, native/WASM lint, workspace tests, rendered API documentation and selected doctests, native/WASM example compilation, architecture, no-default-feature UI tests and browser-tool regressions |
+| `native-lab` | Lab library/binary and minimal example in one release invocation; Lab and minimal native smokes; Lab/native interface journey |
+| `native-other` | Every remaining workspace release library/binary; Gallery, icon, navigation and status-chip native smokes |
+| `browser` | Development Lab/Gallery/Worker/Viewer release WASM and bindgen packages; Lab browser smoke; Lab/browser interface journey |
+| `gallery-browser` | Shared UI Gallery release WASM/bindgen builder; Gallery, icon, navigation and status-chip browser smokes |
+| `production` | Separate production release WASM build, packaging and response-header validation, startup smoke and the prescribed startup benchmark |
+| `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
+| `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
 
-The action's cleanup can leave empty nested directory skeletons under `target`.
-After successful full main verification, CI removes the generated
-`target/browser-staging` and `target/browser-production` trees before saving;
-otherwise the browser packager would reject a restored, non-empty skeleton as
-unrelated output. `target/browser-cargo` remains available for dependency reuse.
-Excluding Cargo binaries changes the Rust archive's path-derived cache version,
-so the older archive containing those skeletons cannot be restored by this
-workflow even when its visible key matches.
+The two native package selections cover the previous workspace release targets.
+The Lab's example is selected with its normal library and binary to avoid a
+second shared-framework build pass. Record Desk retains its independent Cargo
+workspace and dependency boundary. Product release settings remain ThinLTO with
+one codegen unit; parallel qualification does not substitute a faster profile.
 
-Rust cache compatibility includes runner OS and architecture, installed Rust
-toolchain versions, selected Cargo/Rust/build environment, `Cargo.lock`, Cargo
-manifests and Cargo configuration. An Ubuntu image update can change a
-*non-selected* installed toolchain and cause a cache miss even while the pinned
-compiler remains 1.98.1; do not bypass the action's compatibility check to
-force a hit. Only a successful full `main` push writes the Rust archive. PRs
-restore from an accessible `main` cache and do not write a PR-scoped Rust entry.
-Documentation-only and failed jobs do not write incomplete Rust entries.
+`tools/verify.py` remains the Git-derived scope guard. Only a successful docs
+classification may select documentation verification instead of the eight
+stages. The final job runs even after failure and cancellation; it requires the
+selected route to succeed and rejects missing, failed, cancelled or unexpected
+job results. Full qualification also checks the observed four app/host interface
+reports, their clean source revision and their exact stage selections. Interface
+stages retain separate summaries under
+`.tools/runtime/verification-evidence/interface-<stage>/application-interface/`.
+The standalone interface smoke still selects all four journeys by default.
+Each stage uploads its qualification evidence separately for 14 days.
 
-The dedicated `actions/cache` entry owns only
-`~/.cargo/bin/wasm-bindgen`, keyed by CLI version, OS and architecture. The Rust
-action excludes Cargo binaries. The installer checks the executable's reported
-version, reinstalls the pinned CLI if it is absent or wrong, and checks again.
-Only a successful full `main` push saves a missing binary entry. `setup-node`
-continues to manage npm's package-download cache independently.
+Browser Tab traversal waits for the application's `tab_input_epoch` receipt
+before sending another key. The diagnostic counts keydowns once per egui input
+frame, including discarded layout passes without double-counting. Fixed pacing
+alone can leave keys queued behind slow frames; the physical focus, activation,
+capture and idle assertions and the existing action limits remain required.
 
-To investigate a miss or slow restore, inspect the Rust and wasm-bindgen restore
-and save steps in the `Verify` Actions job, then compare the requested key,
-restored key, `refs/heads/main` or `refs/pull/*/merge` scope, cache version,
-archive size, and save result with the repository's Actions cache listing.
-Check the active and other installed Rust versions in the action's
-`Environment considered` block. Compare Cargo `Compiling` and `Finished` lines
-for the native, ordinary WASM and `target/browser-cargo` phases; an exact cache
-hit alone does not show effective reuse. A reservation warning can mean a
-competing writer in the same scope, so check whether a usable entry was saved.
+## Rust dependencies
 
-## Measurement plan
+`Swatinem/rust-cache@v2` owns the Cargo registry and dependency build artefacts.
+Each build workload has its own key and caches only target directories created
+by its commands; only Record Desk includes the independent consumer target. The docs
+route can restore the checks-stage cache. `gallery-browser` restores the UI
+archive and is never a writer: both lanes invoke the exact same Gallery Cargo
+and bindgen builder, and the Gallery smokes add no Cargo builds. UI owns that
+shared successful-main archive. The production stage's recursive
+`target` cache includes `target/browser-cargo`. Cleanup removes workspace-crate
+and incremental output; every restored build still runs Cargo freshness checks.
+A hit never skips compilation, testing, packaging or runtime qualification.
 
-The baseline is the successful Diagnostics main run 36499413327 and an unchanged
-fresh-run rerun of that revision, compared phase by phase. The required cache
-change PR and post-merge runs provide controlled cold observations for changed
-Rust cache paths. If the merged full run saves a new main entry, rerun that
-revision once on a fresh hosted runner to measure warm main-scope restoration.
-Use a bounded Rust source-change probe to confirm normal Cargo invalidation.
-The PR description and landing comment own run IDs, timings, cache metadata and
-the retain-or-reject decision. No wall-clock threshold controls CI success.
+The disposable hosted runner first selects the repository's pinned Rust
+**1.99.0**, then removes unrelated image-installed toolchains. The normalisation
+script refuses developer and self-hosted environments and verifies the active
+compiler before removing anything. Cache compatibility retains OS, architecture,
+compiler, Cargo/build environment, manifests, lockfiles and configuration.
+
+Ordinary PRs restore dependency archives without saving. Successful main stages
+save their own dependency archives; a successful stage does not establish that
+the complete workflow passed. Archives represent that stage's complete workload
+rather than a partially completed serial verifier. This replaces the former
+single full-main-job cache owner. Failed stages and prose-only jobs do not save.
+Caches remain disposable: misses and service errors require ordinary builds.
+
+Generated `target/browser-staging` and `target/browser-production` trees are
+removed before caching so restored directory skeletons cannot be mistaken for
+owned packages. `target/browser-cargo` retains the required dependency reuse.
+
+## Tools
+
+The dedicated `actions/cache` entry owns only `~/.cargo/bin/wasm-bindgen`, keyed
+by version, OS and architecture. The installer checks the executable's exit
+status and exact **0.2.127** version, installs on a miss/mismatch, and checks
+again. The browser stage owns successful main saves of a missing binary entry;
+Rust archives exclude Cargo binaries. `setup-node` manages npm's download cache.
+Only stages requiring Chromium install its runtime; Node regressions do not
+launch a browser. Pinned Binaryen remains installed where packaging/tool tests
+require it.
+
+## Calibration and limits
+
+The owning CI performance PR retains run IDs, source/toolchain identities,
+per-stage timings, restore/save sizes and the retain-or-reject decision. Measure
+workflow elapsed time including classification, setup, compilation, runtime
+checks, uploads, cache saving and final aggregation. A successful warm rerun
+must also be followed by a representative changed-source warm run. Different
+profiles, source surfaces and dependency states are not interchangeable.
+
+Provisional calibration populated successful stage archives in this task's PR
+scope to permit fresh-runner warm measurement before landing. The final workflow
+restores those entries but no longer writes PR archives. GitHub's scope boundary
+keeps those entries out of main; post-merge qualification must populate the
+ordinary main-stage archives separately.
+
+Five minutes is the cached-run engineering target, not permission to truncate
+qualification or a guarantee of hosted queue/service latency. The CI plan owns
+remaining critical-path work until the measured outcome is reconciled.

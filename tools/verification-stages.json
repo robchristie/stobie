@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "stages": [
+    {
+      "name": "checks",
+      "browser": false,
+      "ui": false,
+      "consumer": false
+    },
+    {
+      "name": "native-lab",
+      "browser": false,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "native-other",
+      "browser": false,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "browser",
+      "browser": true,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "gallery-browser",
+      "browser": true,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "production",
+      "browser": true,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "ui",
+      "browser": true,
+      "ui": true,
+      "consumer": false
+    },
+    {
+      "name": "record-desk",
+      "browser": true,
+      "ui": true,
+      "consumer": true
+    }
+  ]
+}

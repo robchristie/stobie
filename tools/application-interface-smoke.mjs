@@ -8,6 +8,9 @@ import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { ApplicationClient, SocketTransport, BrowserTransport, BrowserPhysicalAdapter, NativePhysicalAdapter } from './application-client.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
+import { interfaceSelection, assertInterfaceCoverage } from './application-interface-selection.mjs';
+
+const selection = interfaceSelection(process.argv.slice(2));
 
 const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/application-interface-evidence/application-interface');
 await mkdir(evidence, { recursive: true });
@@ -213,27 +216,29 @@ const server = createServer(async (request, response) => {
 let browser;
 try {
   await new Promise(done => server.listen(0, '127.0.0.1', done));
-  browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
+  if (selection.hosts.includes('browser')) browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
   const previewRecord = resolve('.tools/runtime/application-interface-preview-up.json');
   try {
-    const preview = JSON.parse(await readFile(previewRecord));
-    const page = await browser.newPage();
-    try {
-      const response = await page.goto(`${preview.url}/?automation=1`);
-      await writeFile(resolve(evidence, 'private-preview-browser.json'), JSON.stringify({ preview, status: response.status(), browser_verified: response.ok() && await page.locator('canvas').count() === 1 }, null, 2));
-    } catch (error) {
-      await writeFile(resolve(evidence, 'private-preview-browser.json'), JSON.stringify({ preview, browser_verified: false, error: error.message }, null, 2));
-    } finally { await page.close(); }
+    const preview = browser && JSON.parse(await readFile(previewRecord));
+    if (preview) {
+      const page = await browser.newPage();
+      try {
+        const response = await page.goto(`${preview.url}/?automation=1`);
+        await writeFile(resolve(evidence, 'private-preview-browser.json'), JSON.stringify({ preview, status: response.status(), browser_verified: response.ok() && await page.locator('canvas').count() === 1 }, null, 2));
+      } catch (error) {
+        await writeFile(resolve(evidence, 'private-preview-browser.json'), JSON.stringify({ preview, browser_verified: false, error: error.message }, null, 2));
+      } finally { await page.close(); }
+    }
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
-  for (const app of ['record-desk', 'lab']) {
+  for (const app of selection.hosts.includes('browser') ? selection.apps : []) {
     const page = await browser.newPage({ viewport: app === 'lab' ? { width: 1440, height: 900 } : { width: 1080, height: 760 } });
     await page.goto(`http://127.0.0.1:${server.address().port}/${app}/?automation=1`);
     await journey(app, 'browser', new ApplicationClient(new BrowserTransport(page)), new BrowserPhysicalAdapter(page), { wasm_sha256: await hash(resolve(webRoots[app], 'pkg', app === 'lab' ? 'analytical_workspace_lab_bg.wasm' : 'record_desk_bg.wasm')) });
     await page.close();
   }
-  for (const app of ['record-desk', 'lab']) {
+  for (const app of selection.hosts.includes('native') ? selection.apps : []) {
     const binary = resolve(app === 'lab' ? 'target/release/analytical-workspace-lab' : 'consumers/record-desk/target/release/record-desk');
     const socket = resolve('.tools/runtime', `ai-${randomUUID().slice(0, 8)}.sock`);
     const storage = await mkdtemp(resolve('.tools/runtime', 'ai-store-'));
@@ -255,8 +260,9 @@ try {
       await rm(storage, { recursive: true });
     }
   }
-  await writeFile(resolve(evidence, 'summary.json'), JSON.stringify({ revision, dirty, reports: reports.map(report => ({ app: report.app, host: report.host, instance: report.instance, steps: report.steps.length, failures: report.failures.length, idle: report.idle, capture: report.capture.status })) }, null, 2));
-  console.log('Shared interface: Record Desk and Lab native/browser journeys passed');
+  assertInterfaceCoverage(reports, selection);
+  await writeFile(resolve(evidence, 'summary.json'), JSON.stringify({ revision, dirty, selection, slice_only: sliceOnly, reports: reports.map(report => ({ app: report.app, host: report.host, instance: report.instance, steps: report.steps.length, failures: report.failures.length, idle: report.idle, capture: report.capture.status })) }, null, 2));
+  console.log(`Shared interface passed: ${reports.map(report => `${report.app}/${report.host}`).join(', ')}`);
 } catch (error) {
   await writeFile(resolve(evidence, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack, code: error.code, last_observation: error.observation, reports }, null, 2));
   throw error;
