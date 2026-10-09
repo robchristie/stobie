@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 
+from native_keyboard_focus import focus_native_target
+
 ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE = Path(sys.argv[1]).resolve()
 XDO, IMPORT = sys.argv[2:4]
@@ -16,6 +18,7 @@ BINARY = ROOT / "consumers/record-desk/target/release/record-desk"
 SNAPSHOT = EVIDENCE / "native-current.json"
 STATE = EVIDENCE / "native-state.json"
 STEPS = []
+FOCUS_TRANSITIONS = []
 app = None
 window = None
 runtime = None
@@ -66,14 +69,8 @@ def click(identity):
 
 
 def focus(identity):
-    for _ in range(24):
-        state = wait(lambda s: True)
-        if any(n["id"] == identity and n["focused"] for n in state["ui"]["nodes"]):
-            return
-        frame = state["ui"]["frame"]
-        key("Tab")
-        wait(lambda s: s["ui"]["frame"] > frame)
-    raise AssertionError(f"Keyboard could not reach {identity}")
+    return focus_native_target(lambda: wait(lambda s: True), lambda: key("Tab"),
+        wait, identity, FOCUS_TRANSITIONS, max_actions=24)
 
 
 def title(value):
@@ -209,3 +206,4 @@ try:
     print("Record Desk native passed: search/filter/select, invalid Apply, transaction, undo/redo, save/restart, draft exclusion, layout restore, narrow and malformed state")
 finally:
     stop()
+    (EVIDENCE / "native-focus.json").write_text(json.dumps(FOCUS_TRANSITIONS, indent=2))

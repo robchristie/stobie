@@ -38,6 +38,11 @@ before sending another key. The diagnostic counts keydowns once per egui input
 frame, including discarded layout passes without double-counting. Fixed pacing
 alone can leave keys queued behind slow frames; the physical focus, activation,
 capture and idle assertions and the existing action limits remain required.
+Record Desk's native traversal also requires receipt before presentation pacing
+and a fresh focus observation, including the final permitted Tab. It retains
+`record-desk/native-focus.json` with target availability, input receipts, frames
+and focus transitions on success or failure; a newer frame alone does not
+acknowledge physical input.
 
 ## Rust dependencies
 
