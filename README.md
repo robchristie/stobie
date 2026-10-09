@@ -98,6 +98,12 @@ Run these commands from the repository root.
 - Node.js and npm for automated browser/UI verification. CI currently uses
   Node.js **25.8.2**; Playwright is pinned in `package-lock.json`.
 
+The root workspace and independent Record Desk workspace use Cargo resolver 3,
+making Rust-version-aware dependency selection the default. When selecting new
+dependency versions, Cargo prefers versions compatible with declared
+`rust-version` values. This fallback is a preference; it does not guarantee
+that every dependency supports the workspace minimum.
+
 ### Native desktop
 
 Launch the analytical workspace:
