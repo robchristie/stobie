@@ -56,6 +56,8 @@ pub fn run_stage(name: &str) -> Result<()> {
     let interface_environment = [("POLYORAMA_EVIDENCE_DIR", interface.as_path())];
     match name {
         "checks" => {
+            // Clear owned configurations before setup or compilation can fail.
+            run("python3", &["tools/test-rust.py", "prepare"])?;
             run(
                 "python3",
                 &["-m", "unittest", "discover", "-s", "tools/tests"],
@@ -94,13 +96,10 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "warnings",
                 ],
             )?;
-            run("cargo", &["test", "--workspace"])?;
+            run("python3", &["tools/test-rust.py", "workspace"])?;
             run("python3", &["tools/check-api-docs.py"])?;
             architecture()?;
-            run(
-                "cargo",
-                &["test", "-p", "polyorama-ui-egui", "--no-default-features"],
-            )?;
+            run("python3", &["tools/test-rust.py", "ui-no-default"])?;
             run("npm", &["ci"])?;
             run(
                 "node",

@@ -1,0 +1,27 @@
+nextest-version = { required = "0.9.146", recommended = "0.9.146" }
+
+[store]
+dir = ".tools/runtime/verification-evidence/nextest"
+
+[profile.default]
+slow-timeout = "5s"
+retries = 0
+
+[profile.ci]
+fail-fast = false
+
+[profile.workspace]
+inherits = "ci"
+
+[profile.workspace.junit]
+path = "junit.xml"
+report-name = "polyorama-workspace"
+report-skipped = "all"
+
+[profile.ui-no-default]
+inherits = "ci"
+
+[profile.ui-no-default.junit]
+path = "junit.xml"
+report-name = "polyorama-ui-no-default-features"
+report-skipped = "all"

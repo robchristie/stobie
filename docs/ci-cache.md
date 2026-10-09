@@ -76,6 +76,34 @@ owned packages. `target/browser-cargo` retains the required dependency reuse.
 
 ## Tools
 
+The checks and Record Desk stages install the checksum-verified pre-built Nextest
+**0.9.146** binary through the pinned installer action, with source fallback
+disabled. `.config/nextest.toml` enforces that minimum before test compilation.
+Both local and hosted canonical checks use `tools/test-rust.py`: the `workspace`
+selection retains the workspace's default packages, targets and features, and
+`ui-no-default` separately tests `polyorama-ui-egui --no-default-features`.
+Record Desk retains its independent workspace's locked default selection and
+portable Nextest configuration. Each runs Cargo doctests afterwards with the
+same selection. The selected API documentation doctest coverage remains required.
+
+The three Nextest profiles inherit their workspace's CI settings: continue after test
+failure, no retries, and diagnostic slow warnings every five seconds without a
+hard timeout. JUnit includes ignored and filtered tests and failed-test output,
+and is written to the three distinct paths:
+`.tools/runtime/verification-evidence/nextest/workspace/junit.xml`,
+`.tools/runtime/verification-evidence/nextest/ui-no-default/junit.xml`, and
+`.tools/runtime/verification-evidence/nextest/record-desk/junit.xml`.
+The checks stage clears these owned XML files before setup/compilation; the
+Record Desk stage clears only its own report before setup/compilation.
+Each focused invocation clears its own report before version preflight. Reports
+from completed runs survive later verification failures and Rust-cache cleanup,
+and the existing always-run stage upload retains them for 14 days. Nextest compilation
+or initial setup failure leaves the affected report absent rather than reusing stale
+results. Direct focused commands are `python3 tools/test-rust.py workspace`,
+`python3 tools/test-rust.py ui-no-default`, and
+`python3 tools/test-rust.py record-desk`; Nextest execution times describe
+individual tests, not the complete compilation and verification journey.
+
 The dedicated `actions/cache` entry owns only `~/.cargo/bin/wasm-bindgen`, keyed
 by version, OS and architecture. The installer checks the executable's exit
 status and exact **0.2.127** version, installs on a miss/mismatch, and checks

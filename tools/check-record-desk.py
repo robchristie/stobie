@@ -4,9 +4,13 @@ import json
 from pathlib import Path
 import subprocess
 import tomllib
+import importlib.util
 
 ROOT = Path(__file__).resolve().parent.parent
 CONSUMER = ROOT / "consumers/record-desk"
+spec = importlib.util.spec_from_file_location("rust_tests", ROOT / "tools/test-rust.py")
+rust_tests = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(rust_tests)
 
 
 def run(*args):
@@ -44,10 +48,11 @@ def independence():
 
 
 if __name__ == "__main__":
+    rust_tests.clear_reports(ROOT, ["record-desk"])
     independence()
     run("cargo", "fmt", "--all", "--check")
     run("cargo", "clippy", "--locked", "--all-targets", "--", "-D", "warnings")
-    run("cargo", "test", "--locked")
+    rust_tests.run("record-desk")
     run("cargo", "clippy", "--locked", "--target", "wasm32-unknown-unknown", "--lib", "--", "-D", "warnings")
     run("cargo", "build", "--locked", "--release")
     run("bash", "build-web.sh")

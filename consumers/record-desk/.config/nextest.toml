@@ -1,0 +1,20 @@
+nextest-version = { required = "0.9.146", recommended = "0.9.146" }
+
+# This independent workspace retains its report with the product's stage evidence.
+[store]
+dir = "../../.tools/runtime/verification-evidence/nextest"
+
+[profile.default]
+slow-timeout = "5s"
+retries = 0
+
+[profile.ci]
+fail-fast = false
+
+[profile.record-desk]
+inherits = "ci"
+
+[profile.record-desk.junit]
+path = "junit.xml"
+report-name = "polyorama-record-desk"
+report-skipped = "all"

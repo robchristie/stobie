@@ -185,7 +185,7 @@ backend, backup or cross-device synchronisation service.
 ## Verify and inspect
 
 ```sh
-cargo test --locked
+python3 ../../tools/test-rust.py record-desk
 cargo fmt --package record-desk --check
 cargo clippy --locked --all-targets -- -D warnings
 bash build-web.sh
@@ -194,6 +194,10 @@ python3 ../../tools/check-record-desk.py
 
 The last command verifies workspace/dependency independence, formatting, tests,
 native/WASM lint/build and browser packaging; it is also in `cargo xtask verify`.
+The test command retains the consumer's locked default selection with Nextest
+**0.9.146** or later, followed by separate Cargo doctests. Its JUnit report is
+`../../.tools/runtime/verification-evidence/nextest/record-desk/junit.xml`,
+distinct from both framework test configurations and retained on test failure.
 From the product root, physical workflows use:
 
 ```sh

@@ -90,6 +90,9 @@ Run these commands from the repository root.
 - Rust and Cargo. [The repository toolchain](rust-toolchain.toml) and
   [CI](.github/workflows/verify.yml) select Rust **1.99.0** for development and
   verification. The workspace minimum remains Rust **1.97.1**.
+- cargo-nextest **0.9.146** or later for the canonical Rust test runner. The
+  [Nextest installation guide](https://nexte.st/docs/installation/pre-built-binaries/)
+  provides pre-built binaries; CI installs the pinned, checksum-verified release.
 - For native applications, a graphical session and a working graphics backend
   supported by wgpu. Linux builds enable X11 and Wayland support.
 - For browser builds, the `wasm32-unknown-unknown` target,
@@ -214,7 +217,9 @@ inventory, focused reproduction commands and timing limits.
 For focused development checks:
 
 ```sh
-cargo test --workspace
+python3 tools/test-rust.py workspace
+python3 tools/test-rust.py ui-no-default
+python3 tools/test-rust.py record-desk
 cargo xtask architecture
 cargo xtask tokens check
 cargo xtask ui list --output-dir .tools/runtime/ui-list
