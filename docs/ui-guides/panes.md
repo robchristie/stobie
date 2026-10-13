@@ -5,7 +5,9 @@ owns workspace layout; each pane owns only its local content and scrolling.
 Do not introduce a second docking state or let a pane allocate GPU resources.
 
 Pane entry points receive narrow read models plus intent, demand and render
-sinks. Keep durable annotation changes in the document, session-only
+sinks. In a hosted application, `Frame::dock` gives each pane the `Frame`, an
+intent and action sink, never the application; the host observes pane, tab
+and splitter semantics. Keep durable annotation changes in the document, session-only
 selection/camera/tool/gesture preview in the session, and hover/focus in the
 UI. A completed gesture creates one validated command and one undo record;
 render its preview during that frame.

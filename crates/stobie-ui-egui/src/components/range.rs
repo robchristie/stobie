@@ -4,7 +4,8 @@ use super::SemanticControlOutput;
 use crate::{ActionKey, DesignTokens, SemanticActionId, SemanticUiId, UiNode, UiRole};
 
 /// Present a stable, token-sized range control with matching AccessKit and
-/// augmented snapshot semantics.
+/// augmented snapshot semantics. A hosted application observes the returned
+/// node automatically.
 #[allow(clippy::too_many_arguments)]
 pub fn range_control<A: ActionKey>(
     ui: &mut egui::Ui,
@@ -44,7 +45,7 @@ pub fn range_control<A: ActionKey>(
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
     });
-    SemanticControlOutput {
+    let output = SemanticControlOutput {
         node: UiNode {
             id: semantic_id,
             parent: Some(parent),
@@ -64,5 +65,7 @@ pub fn range_control<A: ActionKey>(
             disabled_reason: None,
         },
         response,
-    }
+    };
+    crate::observation::observe_recipe_node(ui, &output.node);
+    output
 }

@@ -46,11 +46,13 @@ startup failure reporting, not production hosting.
 ## Workflow and state ownership
 
 `model.rs` owns records, stable `RecordId`s, filters, selected identity, editing
-draft and bounded transaction history. `app.rs` owns one core `Workspace`, dock
-interaction previews, persistence feedback and the latest read-only observation.
-`panes.rs` receives narrow record views and emits `Intent`s; it has no mutable
-access to the model, complete application, runtime or GPU resources. The
-[composition guide](../../docs/application-composition.md) and
+draft and bounded transaction history. `app.rs` implements the framework
+`Application`: one core `Workspace`, persistence feedback, availability, the
+intent and action handlers, published facts and the smoke snapshot. The
+framework host owns observation, shortcuts, inspection and repaint. `panes.rs`
+receives narrow record views and the frame; it emits intents and actions and
+has no access to the model, complete application, runtime or GPU resources.
+The [composition guide](../../docs/application-composition.md) and
 [UI guides](../../docs/ui-guides/README.md) own the framework contracts.
 
 Search is case-insensitive over title and notes; category and review filters
@@ -72,14 +74,14 @@ and redo reverse/reapply committed record changes and refresh the selected
 draft. They require Apply or Cancel first if a draft is dirty. A new Apply clears
 redo. History retains at most 100 transactions and does not survive restart.
 
-The application presents views, gathers draft/filter outputs, then handles
-selection/actions against current state. This order makes a same-pass Apply
-consume the current draft. Each mutation requests one subsequent presentation;
-egui handles input/animation invalidation. Inspection reads do not repaint.
-`dock_workspace_layout` returns a layout-only `WorkspaceResize`, validated via
-`apply` without a fabricated image `Document` or `Session`. Tab moves/activation
-update the same canonical tree directly. Dirty tracking compares the complete
-saved envelope, so these changes are included too.
+The host presents views, applies this pass's draft, filter and selection
+intents, then runs its actions against current state. This order makes a
+same-pass Apply consume the current draft. Each mutation requests one subsequent
+presentation; egui handles input/animation invalidation. Inspection reads do not
+repaint. The dock presents the canonical tree read-only and emits tab, move
+and resize changes as `Intent::Layout`, applied with `WorkspaceChange::apply`
+without a fabricated image `Document` or `Session`. Dirty tracking compares the
+complete saved envelope, so these changes are included too.
 
 Below 640 points the root split stacks the panes in the authoritative tree.
 Local scrolling retains editor actions and list content. Arrange panes toggles
@@ -127,30 +129,30 @@ migration decision; unsupported versions must remain protected.
 For a control, use `PresentationContext` and shared recipes, tokens and measured
 text. Native editable controls use `NativeTextControlKind::TextEdit` and retain
 their explicit audit exclusion. Use `choice_control_with_options` to retain
-current floating popup targets; do not clip these option nodes to the pane.
-Browser read-only app inspection also requires eframe's WASM `App::as_any_mut`
-hook. Record rows use a consumer-owned measured recipe with stable
+current floating popup targets; the recipe observes them in their own layer.
+Record rows use a consumer-owned measured recipe with stable
 domain/semantic identity and the native egui activation behaviour.
 Custom controls must keep their AccessKit name, description, state and current
 visible bounds consistent with their semantic observation. Shared dock splitter
 names describe the divider's orientation, perpendicular to the split axis.
-The consumer owns observation visibility: toolbar actions are omitted only when
-a valid allocation is completely clipped in the current sizing pass. Partial
-targets keep their visible bounds; invalid allocation evidence remains auditable.
+The host clips each observation to the region it was drawn in: a valid
+allocation that is clipped away is omitted, partial targets keep their visible
+bounds, and invalid allocation evidence remains auditable.
 `tests/workflow_ui.rs` audits the actual AccessKit tree at ordinary/narrow sizes
 with full records and open/closed options, and checks semantic/text observations
 from every startup presentation. Run it when adding interactive chrome.
 For an action, add a variant to the derived `Action` enum with its label,
-description and optional shortcut, then extend availability and the
-application action handler. Its stable ID defaults to `record-desk.<kebab-case variant>`. Emit `Intent::Action`; route the registered shortcut
-through the same availability rule. Domain operations belong in `Desk`, not panes.
+description and optional shortcut, then extend `availability`, `perform` and,
+if its effect depends on observed state, `meaning`. Its stable ID defaults to
+`record-desk.<kebab-case variant>`. Present it with `Frame::action`; clicks,
+the shortcut and agents then share one availability rule and handler. Domain
+operations belong in `Desk`, not panes.
 If a new browser shortcut conflicts with a browser default, add its exact chord
 to the focus-scoped reservation in `web/bootstrap.js`; leave the event forwarding
 to eframe intact.
 Add a model or UI test that proves the behavioural invariant rather than the enum.
-When shortcuts share a key, match their declared Shift/Alt modifiers before
-calling `consume_action_shortcut`: egui's logical matcher accepts extra
-modifiers. An unavailable Shift shortcut must not activate its plain counterpart.
+The host matches shortcut modifiers exactly, so an unavailable Shift shortcut
+never activates its plain counterpart and leaves the key press unconsumed.
 The Reset filters tests exercise the button, shortcut, disabled input and
 preservation of a hidden selection with an editing draft through public UI input.
 
@@ -217,6 +219,7 @@ before each pointer event; a bounded timeout fails visibly. Reports retain the
 frame and rectangle used, including popup options that need following passes.
 `RECORD_DESK_SNAPSHOT=/absolute/path/snapshot.json` enables native read-only
 observations; browser `window.__RECORD_DESK.snapshot()` returns the same JSON.
+Each snapshot records the state its pass presented, so state and geometry agree.
 The hook supplies no application commands. Direct model/UI tests and physical
 runtime evidence are distinguished in the maintained
 [consumer evidence](../../docs/record-desk-evidence.md), including opened

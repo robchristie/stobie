@@ -1,43 +1,39 @@
 use egui::Ui;
 use serde::Serialize;
-use stobie_core::{DockNode, SplitAxis, Workspace};
+use stobie_core::{DockNode, SplitAxis, Workspace, WorkspaceChange};
 use stobie_ui_egui::*;
 
 use crate::{actions::Action, model::*, panes::*, store::Store};
 
-#[path = "inspection.rs"]
-mod inspection;
-
-pub struct RecordDeskApp {
+/// The hosted application: domain state, persistence feedback and layout.
+pub struct RecordDesk {
     pub(crate) desk: Desk,
     pub(crate) workspace: Workspace,
-    dock: DockBehaviour,
     store: Store,
     persisted: Option<SavedState>,
     load_error: bool,
     message: String,
     error: bool,
-    preferences: UiPreferences,
     narrow_layout: bool,
-    focus_search: bool,
-    frame: u64,
-    tab_input_epoch: u64,
-    tab_input_frame: Option<u64>,
-    snapshot: Snapshot,
-    inspection: Option<Inspection>,
     desk_epoch: u64,
-    #[cfg(not(target_arch = "wasm32"))]
-    _inspection_host: Option<NativeInspectionHost>,
-    #[cfg(target_arch = "wasm32")]
-    inspection_context: egui::Context,
+    snapshot: Snapshot,
 }
 
+pub type RecordDeskApp = AppHost<RecordDesk>;
+
+/// UI-only state: a pending search-focus request.
+#[derive(Default)]
+pub struct View {
+    focus_search: bool,
+}
+
+/// Read-only test observation for the native and browser smokes. It records
+/// the state a pass presented, so its geometry and state always agree.
 #[derive(Clone, Default, Serialize)]
 pub struct Snapshot {
-    /// Tab keydowns observed by the application, counted once per input frame.
+    /// Tab keydowns observed by the host, counted once per input frame.
     pub tab_input_epoch: u64,
     pub ui: UiSnapshot,
-    pub controls: Vec<Control>,
     pub records: Vec<Record>,
     pub visible_ids: Vec<RecordId>,
     pub selected: Option<RecordId>,
@@ -53,22 +49,18 @@ pub struct Snapshot {
     pub workspace: Option<Workspace>,
 }
 
-impl RecordDeskApp {
+impl RecordDesk {
     pub fn new(creation: &eframe::CreationContext<'_>) -> Self {
-        let app = Self::with_store(&creation.egui_ctx, Store::new());
         if let Some(render_state) = &creation.wgpu_render_state {
             eprintln!("Record Desk adapter: {:?}", render_state.adapter.get_info());
         }
-        app
+        Self::with_store(Store::new())
     }
 
-    pub fn with_store(context: &egui::Context, store: Store) -> Self {
-        let preferences = UiPreferences::default();
-        apply_design_system(context, preferences);
-        let mut app = Self {
+    pub fn with_store(store: Store) -> Self {
+        let mut desk = Self {
             desk: Desk::default(),
             workspace: default_workspace(),
-            dock: DockBehaviour::default(),
             store,
             persisted: None,
             load_error: false,
@@ -76,32 +68,25 @@ impl RecordDeskApp {
                 "Synthetic records ready. Apply commits a draft; Save persists records and layout."
                     .into(),
             error: false,
-            preferences,
             narrow_layout: false,
-            focus_search: false,
-            frame: 0,
-            tab_input_epoch: 0,
-            tab_input_frame: None,
-            snapshot: Snapshot::default(),
-            inspection: None,
             desk_epoch: 0,
-            #[cfg(not(target_arch = "wasm32"))]
-            _inspection_host: None,
-            #[cfg(target_arch = "wasm32")]
-            inspection_context: context.clone(),
+            snapshot: Snapshot::default(),
         };
-        app.load();
-        #[cfg(not(target_arch = "wasm32"))]
-        app.start_inspection(context);
-        app
+        desk.load();
+        desk
+    }
+
+    /// A hosted desk, as the native and browser entry points run it.
+    pub fn hosted(context: &egui::Context, store: Store) -> RecordDeskApp {
+        AppHost::new(context, Self::with_store(store))
+    }
+
+    pub fn snapshot(&self) -> Snapshot {
+        self.snapshot.clone()
     }
 
     fn state(&self) -> SavedState {
-        SavedState {
-            schema_version: VERSION,
-            records: self.desk.records().to_vec(),
-            workspace: self.workspace.clone(),
-        }
+        SavedState::from_desk(&self.desk, &self.workspace)
     }
 
     fn unsaved(&self) -> bool {
@@ -121,7 +106,7 @@ impl RecordDeskApp {
                         "Restored committed records and layout. Undo history starts empty.".into();
                     self.error = false;
                 }
-                Err(error) => self.failure(error),
+                Err(error) => self.report_error(error),
             },
             Ok(None) => {
                 self.desk = Desk::default();
@@ -134,17 +119,43 @@ impl RecordDeskApp {
             }
             Err(error) => {
                 self.load_error = true;
-                self.failure(format!("Restore failed: {error}. Saved data is preserved. Repair or move it outside the app, then use Restore."));
+                self.report_error(format!("Restore failed: {error}. Saved data is preserved. Repair or move it outside the app, then use Restore."));
             }
         }
     }
 
-    fn failure(&mut self, error: String) {
-        self.message = error;
-        self.error = true;
+    fn layout_axis(&self) -> String {
+        match &self.workspace.root {
+            DockNode::Split { axis, .. } => format!("{axis:?}"),
+            _ => "unsplit".into(),
+        }
+    }
+}
+
+pub enum Intent {
+    Select(RecordId),
+    Filters(Filters),
+    Draft(Record),
+    Layout(WorkspaceChange),
+}
+
+impl From<WorkspaceChange> for Intent {
+    fn from(change: WorkspaceChange) -> Self {
+        Self::Layout(change)
+    }
+}
+
+impl Application for RecordDesk {
+    type Action = Action;
+    type Intent = Intent;
+    type UiState = View;
+
+    fn identity(&self) -> ApplicationIdentity {
+        application_identity!("Record Desk")
     }
 
-    pub(crate) fn availability(&self, action: Action) -> Availability {
+    fn availability(&self, target: ActionTarget<Action>) -> Availability {
+        let action = target.action;
         if matches!(action, Action::ToggleReviewed | Action::EditCategory)
             && self.desk.draft().is_none()
         {
@@ -180,10 +191,97 @@ impl RecordDeskApp {
         })
     }
 
-    fn action(&mut self, action: Action) -> Result<(), String> {
-        if let Availability::Disabled { reason } = self.availability(action) {
-            return Err(reason.into_owned());
+    // Guard assumptions that affect meaning, not focus or repaint counters.
+    fn meaning(&self, target: ActionTarget<Action>) -> String {
+        let epoch = self.desk_epoch;
+        match target.action {
+            Action::Apply | Action::Cancel | Action::ToggleReviewed => format!(
+                "{epoch}:draft:{}:history:{}",
+                self.desk.draft_revision(),
+                self.desk.history_revision()
+            ),
+            Action::Undo | Action::Redo => {
+                format!("{epoch}:history:{}", self.desk.history_revision())
+            }
+            Action::ResetFilters => format!("{epoch}:filters:{}", self.desk.filter_revision()),
+            Action::Arrange => self.layout_axis(),
+            _ => "stable".into(),
         }
+    }
+
+    fn prepare(&mut self, pass: &mut PassContext<'_>) {
+        // Adapt the authoritative tree itself; never create a second docking model.
+        self.narrow_layout = pass.available_rect().width() < 640.0;
+        if self.narrow_layout
+            && let DockNode::Split { axis, .. } = &mut self.workspace.root
+        {
+            *axis = SplitAxis::Vertical;
+        }
+    }
+
+    fn ui(&self, root: &mut Ui, view: &mut View, frame: &mut Frame<'_, Action, Intent>) {
+        egui::Panel::top("record-desk-bar").show(root, |ui| {
+            let scope = PresentationScope::new("record-desk.chrome");
+            let mut p = frame.presentation(ui, scope, SemanticUiId::root());
+            ui.horizontal_wrapped(|ui| p.heading(ui, "title", "Record Desk"));
+            ui.horizontal_wrapped(|ui| {
+                for action in [
+                    Action::Undo,
+                    Action::Redo,
+                    Action::Save,
+                    Action::Restore,
+                    Action::Arrange,
+                ] {
+                    frame.action(ui, &mut p, action, ActionEmphasis::Normal);
+                }
+            });
+            let state = format!(
+                "{} · {} · {}",
+                if self.desk.is_dirty() {
+                    "Editing draft"
+                } else {
+                    "No draft changes"
+                },
+                if self.unsaved() {
+                    "Unsaved committed state/layout"
+                } else {
+                    "Saved"
+                },
+                self.store.description()
+            );
+            p.content(ui, "state", &state, content_spec(TextRole::Secondary, 2));
+        });
+        egui::Panel::bottom("record-desk-status").show(root, |ui| {
+            let scope = PresentationScope::new("record-desk.feedback");
+            let mut p = frame.presentation(ui, scope, SemanticUiId::root());
+            p.status(ui, "message", &self.message, self.error);
+        });
+        let mut panes = RecordPanes {
+            records: self.desk.visible(),
+            total: self.desk.records().len(),
+            selected: self.desk.selected(),
+            draft: self.desk.draft(),
+            filters: self.desk.filters(),
+            dirty: self.desk.is_dirty(),
+            tokens: frame.tokens(),
+            focus_search: std::mem::take(&mut view.focus_search),
+        };
+        egui::CentralPanel::default().show(root, |ui| frame.dock(ui, &self.workspace, &mut panes));
+    }
+
+    // Draft/filter outputs from a pass apply before actions that consume them.
+    fn apply(&mut self, intent: Intent, _: &mut View) -> Result<bool, String> {
+        match intent {
+            Intent::Select(id) => self.desk.select(id)?,
+            Intent::Filters(filters) => self.desk.set_filters(filters),
+            Intent::Draft(draft) => self.desk.edit_draft(draft)?,
+            Intent::Layout(change) => return change.apply(&mut self.workspace),
+        }
+        Ok(true)
+    }
+
+    fn perform(&mut self, target: ActionTarget<Action>, view: &mut View) -> Result<bool, String> {
+        let action = target.action;
         match action {
             Action::Apply => {
                 self.message = if self.desk.apply()? {
@@ -219,7 +317,7 @@ impl RecordDeskApp {
             Action::Restore => self.load(),
             Action::Search => {
                 self.workspace.activate(LIST_PANE);
-                self.focus_search = true;
+                view.focus_search = true;
             }
             Action::ResetFilters => {
                 self.desk.set_filters(Filters::default());
@@ -227,277 +325,56 @@ impl RecordDeskApp {
             }
             Action::Arrange => {
                 if let DockNode::Split { axis, .. } = &mut self.workspace.root {
-                    *axis = if *axis == SplitAxis::Horizontal {
-                        SplitAxis::Vertical
-                    } else {
-                        SplitAxis::Horizontal
+                    *axis = match axis {
+                        SplitAxis::Horizontal => SplitAxis::Vertical,
+                        SplitAxis::Vertical => SplitAxis::Horizontal,
                     };
                 } else {
                     self.workspace = default_workspace();
                 }
                 self.message = "Pane arrangement changed. Save retains the layout.".into();
             }
-            _ => {}
+            Action::ToggleReviewed => {
+                let mut draft = self.desk.draft().ok_or("Choose a record first")?.clone();
+                draft.reviewed = !draft.reviewed;
+                self.desk.edit_draft(draft)?;
+            }
+            Action::FilterCategory | Action::FilterReview | Action::EditCategory => {
+                return Ok(false);
+            }
         }
-        if action != Action::Restore {
+        // Restore reports its own outcome; toggling edits only the draft.
+        if !matches!(action, Action::Restore | Action::ToggleReviewed) {
             self.error = false;
         }
-        Ok(())
+        Ok(true)
     }
 
-    pub fn snapshot(&self) -> Snapshot {
-        self.snapshot.clone()
+    fn report_error(&mut self, message: String) {
+        self.message = message;
+        self.error = true;
     }
 
-    pub fn present(&mut self, root: &mut Ui) {
-        let input_frame = root.ctx().cumulative_frame_nr();
-        // Discarded layout passes replay input; acknowledge each frame once.
-        if self.tab_input_frame != Some(input_frame) {
-            self.tab_input_epoch += root.ctx().input(|input| {
-                input
-                    .events
-                    .iter()
-                    .filter(|event| {
-                        matches!(
-                            event,
-                            egui::Event::Key {
-                                key: egui::Key::Tab,
-                                pressed: true,
-                                ..
-                            }
-                        )
-                    })
-                    .count()
-            }) as u64;
-            self.tab_input_frame = Some(input_frame);
-        }
-        let tokens = self.preferences.tokens(root.style().visuals.dark_mode);
-        // Adapt the authoritative tree itself; never create a second docking model.
-        self.narrow_layout = root.available_width() < 640.0;
-        if self.narrow_layout
-            && let DockNode::Split {
-                axis: SplitAxis::Horizontal,
-                ..
-            } = &self.workspace.root
-            && let DockNode::Split { axis, .. } = &mut self.workspace.root
-        {
-            *axis = SplitAxis::Vertical;
-        }
-        self.drain_inspection(root.ctx());
-        let mut output = PaneOutput::default();
-        let mut nodes = vec![UiNode::container(
-            SemanticUiId::root(),
-            None,
-            UiRole::Application,
-            root.max_rect().into(),
-        )];
-        nodes[0].name = "Record Desk".into();
-        let mut text = Vec::new();
+    fn observe(&self, observation: &mut Observation<'_>) {
+        let text = |value: Option<String>| value.unwrap_or_default();
+        observation.fact("undo_entries", self.desk.undo_len() as u64);
+        observation.fact("redo_entries", self.desk.redo_len() as u64);
+        observation.fact("draft_dirty", self.desk.is_dirty());
+        observation.fact("status", self.message.as_str());
+        observation.fact("error", self.error);
+        let selected = self.desk.selected().map(|id| id.0.to_string());
+        observation.fact("selected_record", text(selected));
+        let title = self.desk.draft().map(|record| record.title.clone());
+        observation.fact("draft_title", text(title));
+        observation.fact("layout_axis", self.layout_axis());
+        let total = self.desk.records().len() as u64;
+        observation.counted_collection("records", UiRole::ResultRow, total);
+    }
 
-        // Check the more specific Shift shortcuts before their plain counterparts.
-        for action in [
-            Action::Redo,
-            Action::Cancel,
-            Action::Restore,
-            Action::ResetFilters,
-            Action::Apply,
-            Action::Undo,
-            Action::Save,
-            Action::Search,
-            Action::Arrange,
-        ] {
-            let shortcut = action
-                .specification()
-                .shortcut
-                .expect("registered shortcut");
-            // Egui's logical matcher accepts extra Shift/Alt. An unavailable
-            // Reset shortcut must not fall through to the plain Search action.
-            let exact_modifiers = root.input(|input| {
-                input.events.iter().any(|event| {
-                    matches!(event, egui::Event::Key { key, pressed: true, modifiers, .. }
-                        if *key == shortcut.key.egui()
-                            && modifiers.shift == shortcut.shift
-                            && modifiers.alt == shortcut.alt)
-                })
-            });
-            if exact_modifiers
-                && self.availability(action) == Availability::Enabled
-                && consume_action_shortcut(root, action, true)
-            {
-                output.intents.push(Intent::Action(action));
-            }
-        }
-        egui::Panel::top("record-desk-bar").show(root, |ui| {
-            let scope = PresentationScope::new("record-desk.chrome");
-            let mut clipped_actions = Vec::new();
-            let mut p = PresentationContext::new(ui, tokens, 1.0, scope, SemanticUiId::root());
-            ui.horizontal_wrapped(|ui| {
-                p.heading(ui, "title", "Record Desk");
-            });
-            ui.horizontal_wrapped(|ui| {
-                for action in [
-                    Action::Undo,
-                    Action::Redo,
-                    Action::Save,
-                    Action::Restore,
-                    Action::Arrange,
-                ] {
-                    let response = p.action(
-                        ui,
-                        action,
-                        button(
-                            action,
-                            None,
-                            self.availability(action),
-                            ActionEmphasis::Normal,
-                        ),
-                    );
-                    if completely_clipped_action(response.rect, response.interact_rect) {
-                        clipped_actions.push(scope.instance(action).semantic_id());
-                    }
-                    if response.clicked() {
-                        output.intents.push(Intent::Action(action));
-                    }
-                }
-            });
-            p.content(
-                ui,
-                "state",
-                &format!(
-                    "{} · {} · {}",
-                    if self.desk.is_dirty() {
-                        "Editing draft"
-                    } else {
-                        "No draft changes"
-                    },
-                    if self.unsaved() {
-                        "Unsaved committed state/layout"
-                    } else {
-                        "Saved"
-                    },
-                    self.store.description()
-                ),
-                content_spec(TextRole::Secondary, 2),
-            );
-            let observed = p.finish(ui);
-            nodes.extend(
-                observed
-                    .semantic_nodes
-                    .into_iter()
-                    .filter(|node| !clipped_actions.contains(&node.id)),
-            );
-            text.extend(observed.text_layouts);
-        });
-        egui::Panel::bottom("record-desk-status").show(root, |ui| {
-            let mut p = PresentationContext::new(
-                ui,
-                tokens,
-                1.0,
-                PresentationScope::new("record-desk.feedback"),
-                SemanticUiId::root(),
-            );
-            p.content(
-                ui,
-                "message",
-                &self.message,
-                content_spec(
-                    if self.error {
-                        TextRole::Error
-                    } else {
-                        TextRole::Status
-                    },
-                    3,
-                ),
-            );
-            let observed = p.finish(ui);
-            nodes.extend(observed.semantic_nodes);
-            text.extend(observed.text_layouts);
-        });
-        let mut presenter = RecordPanes {
-            records: self.desk.visible(),
-            total: self.desk.records().len(),
-            selected: self.desk.selected(),
-            draft: self.desk.draft(),
-            filters: self.desk.filters(),
-            dirty: self.desk.is_dirty(),
-            apply: self.availability(Action::Apply),
-            cancel: self.availability(Action::Cancel),
-            reset_filters: self.availability(Action::ResetFilters),
-            tokens,
-            focus_search: std::mem::take(&mut self.focus_search),
-            output: &mut output,
-        };
-        let resize = egui::CentralPanel::default()
-            .show(root, |ui| {
-                dock_workspace_layout(
-                    ui,
-                    &mut self.workspace,
-                    &mut self.dock,
-                    &mut presenter,
-                    DockTextContext {
-                        tokens,
-                        font_scale: 1.0,
-                    },
-                )
-            })
-            .inner;
-        nodes.extend(output.nodes);
-        text.extend(output.text);
-        // Scroll surfaces may submit offscreen/partial controls. Keep failed
-        // attempts, but audit measured successes only when their complete text
-        // is visible. The shared inventory still reports all submitted attempts.
-        text.retain(|t| {
-            t.layout_error.is_some()
-                || (t.clip_rect.min_x <= t.allocated_rect.min_x + 1.0
-                    && t.clip_rect.min_y <= t.allocated_rect.min_y + 1.0
-                    && t.clip_rect.max_x >= t.allocated_rect.max_x - 1.0
-                    && t.clip_rect.max_y >= t.allocated_rect.max_y - 1.0)
-        });
-        let coverage = text_audit_coverage(root.ctx(), &text);
-        self.frame += 1;
-        let mut ui_snapshot = UiSnapshot {
-            frame: self.frame,
-            pixels_per_point: root.ctx().pixels_per_point(),
-            root: SemanticUiId::root(),
-            nodes,
-            text_audit: audit_text_layouts(&text),
-            text,
-            text_audit_coverage: Some(coverage),
-            semantic_audit: vec![],
-        };
-        ui_snapshot.semantic_audit = ui_snapshot.audit();
-        self.publish_inspection(root.ctx(), &ui_snapshot);
-        let mut changed = false;
-        if let Some(resize) = resize {
-            match resize.apply(&mut self.workspace) {
-                Ok(applied) => changed |= applied,
-                Err(error) => self.failure(error),
-            }
-        }
-        // Draft/filter outputs from this pass precede actions that consume them.
-        output.intents.sort_by_key(|intent| match intent {
-            Intent::Draft(_) | Intent::Filters(_) => 0,
-            _ => 1,
-        });
-        for intent in output.intents {
-            let result = match intent {
-                Intent::Select(id) => self.desk.select(id),
-                Intent::Filters(filters) => {
-                    self.desk.set_filters(filters);
-                    Ok(())
-                }
-                Intent::Draft(draft) => self.desk.edit_draft(draft),
-                Intent::Action(action) => self.action(action),
-            };
-            if let Err(error) = result {
-                self.failure(error);
-            }
-            changed = true;
-        }
+    fn completed(&mut self, pass: &CompletedPass<'_>) {
         self.snapshot = Snapshot {
-            tab_input_epoch: self.tab_input_epoch,
-            ui: ui_snapshot,
-            controls: output.controls,
+            tab_input_epoch: pass.tab_presses,
+            ui: pass.snapshot.clone(),
             records: self.desk.records().to_vec(),
             visible_ids: self.desk.visible().iter().map(|r| r.id).collect(),
             selected: self.desk.selected(),
@@ -512,10 +389,6 @@ impl RecordDeskApp {
             error: self.error,
             workspace: Some(self.workspace.clone()),
         };
-        // Outputs affect the next presentation; egui owns input/animation repaints.
-        if changed || self.dock.interaction_active() {
-            root.ctx().request_repaint();
-        }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(path) = std::env::var_os("RECORD_DESK_SNAPSHOT") {
             let _ = std::fs::write(path, serde_json::to_vec(&self.snapshot).unwrap());
@@ -523,44 +396,6 @@ impl RecordDeskApp {
     }
 }
 
-impl eframe::App for RecordDeskApp {
-    #[cfg(target_arch = "wasm32")]
-    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
-        Some(self)
-    }
-
-    fn ui(&mut self, root: &mut Ui, _frame: &mut eframe::Frame) {
-        self.present(root);
-    }
-}
-
-fn completely_clipped_action(allocated: egui::Rect, interactive: egui::Rect) -> bool {
-    // The first panel sizing pass can clip a valid toolbar allocation entirely.
-    // Preserve invalid allocations/non-finite observations as audit failures.
-    allocated.is_finite()
-        && allocated.is_positive()
-        && interactive.is_finite()
-        && !interactive.is_positive()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::completely_clipped_action;
-    use egui::{Rect, pos2};
-
-    #[test]
-    fn visibility_requires_valid_allocation_and_complete_finite_clipping() {
-        let allocated = Rect::from_min_max(pos2(8.0, 35.0), pos2(60.0, 63.0));
-        let hidden = Rect::from_min_max(allocated.min, pos2(60.0, 33.0));
-        let partial = Rect::from_min_max(allocated.min, pos2(60.0, 48.0));
-        assert!(completely_clipped_action(allocated, hidden));
-        assert!(!completely_clipped_action(allocated, partial));
-        assert!(!completely_clipped_action(allocated, allocated));
-        assert!(!completely_clipped_action(hidden, hidden));
-        assert!(!completely_clipped_action(Rect::NOTHING, hidden));
-        assert!(!completely_clipped_action(allocated, Rect::NOTHING));
-        let invalid = Rect::from_min_max(pos2(f32::NAN, 35.0), allocated.max);
-        assert!(!completely_clipped_action(invalid, hidden));
-        assert!(!completely_clipped_action(allocated, invalid));
-    }
-}
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "app_tests.rs"]
+mod tests;

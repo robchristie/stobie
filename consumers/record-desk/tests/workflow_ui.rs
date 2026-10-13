@@ -2,7 +2,11 @@
 
 use egui::{Key, Modifiers, Vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use record_desk::{app::RecordDeskApp, model::*, store::Store};
+use record_desk::{
+    app::{RecordDesk, RecordDeskApp},
+    model::*,
+    store::Store,
+};
 use stobie_ui_egui::audit_accesskit;
 
 fn app_harness(
@@ -22,7 +26,7 @@ fn app_harness(
         .build_ui_state(
             move |ui, state: &mut Option<RecordDeskApp>| {
                 if state.is_none() {
-                    *state = Some(RecordDeskApp::with_store(ui.ctx(), Store::at_path(&path)));
+                    *state = Some(RecordDesk::hosted(ui.ctx(), Store::at_path(&path)));
                     ui.ctx().request_repaint();
                     return;
                 }
@@ -48,13 +52,13 @@ fn every_startup_presentation_publishes_valid_visible_semantics() {
             .build_ui_state(
                 move |ui, state: &mut (Option<RecordDeskApp>, Vec<record_desk::app::Snapshot>)| {
                     if state.0.is_none() {
-                        state.0 = Some(RecordDeskApp::with_store(ui.ctx(), Store::at_path(&path)));
+                        state.0 = Some(RecordDesk::hosted(ui.ctx(), Store::at_path(&path)));
                         ui.ctx().request_repaint();
                         return;
                     }
                     let app = state.0.as_mut().unwrap();
                     app.present(ui);
-                    state.1.push(app.snapshot());
+                    state.1.push(app.app().snapshot());
                 },
                 (None, Vec::new()),
             );
@@ -69,7 +73,7 @@ fn every_startup_presentation_publishes_valid_visible_semantics() {
             );
             assert!(snapshot.ui.text_audit.is_empty());
         }
-        let settled = harness.state().0.as_ref().unwrap().snapshot();
+        let settled = harness.state().0.as_ref().unwrap().app().snapshot();
         assert!(settled.ui.nodes.iter().any(|node| {
             node.actions
                 .iter()
@@ -79,7 +83,7 @@ fn every_startup_presentation_publishes_valid_visible_semantics() {
 }
 
 fn assert_accesskit(h: &Harness<'_, Option<RecordDeskApp>>) {
-    let snapshot = h.state().as_ref().unwrap().snapshot();
+    let snapshot = h.state().as_ref().unwrap().app().snapshot();
     // The harness consumes egui's updates. Audit its resulting AccessKit tree,
     // retaining actual node data rather than deriving it from our observations.
     fn collect(
@@ -121,22 +125,22 @@ fn replace(h: &mut Harness<'_, Option<RecordDeskApp>>, text: &str) {
 fn editor_routes_invalid_cancel_apply_and_history_through_the_ui() {
     let (mut h, _dir) = app_harness(1080.0, records());
     assert_accesskit(&h);
-    let original = h.state().as_ref().unwrap().snapshot().records;
+    let original = h.state().as_ref().unwrap().app().snapshot().records;
     replace(&mut h, "");
     h.key_press_modifiers(Modifiers::COMMAND, Key::Enter);
     h.run();
-    let invalid = h.state().as_ref().unwrap().snapshot();
+    let invalid = h.state().as_ref().unwrap().app().snapshot();
     assert!(invalid.error);
     assert_eq!(invalid.records, original);
     assert_eq!(invalid.undo_entries, 0);
     assert_accesskit(&h);
     h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::Enter);
     h.run();
-    assert!(!h.state().as_ref().unwrap().snapshot().draft_dirty);
+    assert!(!h.state().as_ref().unwrap().app().snapshot().draft_dirty);
     replace(&mut h, &format!("  {}  ", original[0].title));
     h.key_press_modifiers(Modifiers::COMMAND, Key::Enter);
     h.run();
-    let normalised = h.state().as_ref().unwrap().snapshot();
+    let normalised = h.state().as_ref().unwrap().app().snapshot();
     assert_eq!(normalised.records, original);
     assert_eq!(normalised.undo_entries, 0);
     assert!(!normalised.draft_dirty);
@@ -146,19 +150,22 @@ fn editor_routes_invalid_cancel_apply_and_history_through_the_ui() {
     h.run();
     h.key_press_modifiers(Modifiers::COMMAND, Key::Enter);
     h.run();
-    let applied = h.state().as_ref().unwrap().snapshot();
+    let applied = h.state().as_ref().unwrap().app().snapshot();
     assert_eq!(applied.undo_entries, 1);
     assert_eq!(applied.records[0].title, "A committed edit");
     assert_ne!(applied.records[0].reviewed, original[0].reviewed);
     assert_accesskit(&h);
     h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
     h.run();
-    assert_eq!(h.state().as_ref().unwrap().snapshot().records, original);
+    assert_eq!(
+        h.state().as_ref().unwrap().app().snapshot().records,
+        original
+    );
     assert_accesskit(&h);
     h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::Z);
     h.run();
     assert_eq!(
-        h.state().as_ref().unwrap().snapshot().records,
+        h.state().as_ref().unwrap().app().snapshot().records,
         applied.records
     );
     assert_accesskit(&h);
@@ -171,7 +178,7 @@ fn open_filter_options_match_accesskit_and_disappear_when_closed() {
         h.get_by_label("Category filter").click();
         h.run();
         assert_accesskit(&h);
-        let snapshot = h.state().as_ref().unwrap().snapshot();
+        let snapshot = h.state().as_ref().unwrap().app().snapshot();
         assert_eq!(
             snapshot
                 .ui
@@ -184,7 +191,7 @@ fn open_filter_options_match_accesskit_and_disappear_when_closed() {
         h.get_by_label("Ideas").click();
         h.run();
         assert_accesskit(&h);
-        let snapshot = h.state().as_ref().unwrap().snapshot();
+        let snapshot = h.state().as_ref().unwrap().app().snapshot();
         assert_eq!(snapshot.filters.category, Some(Category::Ideas));
         assert!(
             snapshot
@@ -202,7 +209,7 @@ fn ordinary_narrow_and_empty_observations_have_stable_identity_and_honest_text_c
     for width in [1080.0, 390.0] {
         let (h, _dir) = app_harness(width, Desk::default().records().to_vec());
         assert_accesskit(&h);
-        let s = h.state().as_ref().unwrap().snapshot();
+        let s = h.state().as_ref().unwrap().app().snapshot();
         assert!(s.ui.semantic_audit.is_empty(), "{:?}", s.ui.semantic_audit);
         assert!(s.ui.text_audit.is_empty(), "{:?}", s.ui.text_audit);
         let arrange =
@@ -239,7 +246,7 @@ fn ordinary_narrow_and_empty_observations_have_stable_identity_and_honest_text_c
     assert_eq!(identities[0], identities[1]);
     let (h, _dir) = app_harness(390.0, vec![]);
     assert_accesskit(&h);
-    let s = h.state().as_ref().unwrap().snapshot();
+    let s = h.state().as_ref().unwrap().app().snapshot();
     assert!(s.visible_ids.is_empty());
     assert!(s.selected.is_none());
     assert!(h.query_by_label("Choose a record").is_some());

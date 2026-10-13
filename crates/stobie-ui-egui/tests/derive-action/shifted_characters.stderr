@@ -1,0 +1,11 @@
+error: Shift changes the character `1` produces, so this chord never reaches the application; bind a letter or named key instead
+ --> tests/derive-action/shifted_characters.rs:7:77
+  |
+7 |     #[action(label = "Tool", description = "Shift+1 produces !", shortcut = "Shift+1")]
+  |                                                                             ^^^^^^^^^
+
+error: Shift changes the character `/` produces, so this chord never reaches the application; bind a letter or named key instead
+ --> tests/derive-action/shifted_characters.rs:9:77
+  |
+9 |     #[action(label = "Help", description = "Shift+/ produces ?", shortcut = "Cmd+Shift+/")]
+  |                                                                             ^^^^^^^^^^^^^

@@ -38,6 +38,39 @@ impl WorkspaceResize {
     }
 }
 
+/// One completed dock interaction from a read-only presentation. Apply it
+/// after the UI pass; the canonical [`Workspace`] remains the only dock tree.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum WorkspaceChange {
+    /// Show a pane in its tab group and make it the active pane.
+    Activate(PaneId),
+    /// Move a pane beside or into another pane's tab group.
+    Move {
+        pane: PaneId,
+        target: PaneId,
+        drop: DockDrop,
+    },
+    /// Change one split fraction.
+    Resize(WorkspaceResize),
+}
+
+impl WorkspaceChange {
+    /// Apply this change and report whether the workspace changed. Stale moves
+    /// and activations of absent panes leave the workspace unchanged; an
+    /// invalid resize is an error that never mutates.
+    pub fn apply(self, workspace: &mut Workspace) -> Result<bool, String> {
+        match self {
+            Self::Resize(resize) => resize.apply(workspace),
+            Self::Move { pane, target, drop } => Ok(workspace.move_pane(pane, target, drop)),
+            Self::Activate(pane) => {
+                let before = (workspace.root.clone(), workspace.active_pane);
+                workspace.activate(pane);
+                Ok((workspace.root.clone(), workspace.active_pane) != before)
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SplitAxis {
     Horizontal,
@@ -330,14 +363,43 @@ impl DockNode {
 /// A UI presenter borrows this tree; do not maintain a second stateful dock model.
 /// Use [`Workspace::validate`] after constructing or restoring application layouts.
 pub struct Workspace {
+    /// Layout schema; [`LAYOUT_SCHEMA_VERSION`] for current layouts.
     pub schema_version: u32,
+    /// The dock tree of splits and tab groups.
     pub root: DockNode,
+    /// The pane that last received a tab activation or move.
     pub active_pane: PaneId,
+    /// Optional panes the application has closed and may reopen.
     pub closed_optional_panes: BTreeSet<PaneId>,
+    /// The next unused dock node ID; above every node in `root`.
     pub next_node_id: u64,
 }
 
 impl Workspace {
+    /// One tab group holding `panes`, with the first active. For a
+    /// single-pane application pass one pane. Panics if `panes` is empty.
+    ///
+    /// ```
+    /// use stobie_core::{PaneId, Workspace};
+    /// let workspace = Workspace::with_tabs(&[PaneId(1), PaneId(2)]);
+    /// assert_eq!(workspace.validate(), Ok(()));
+    /// assert_eq!(workspace.active_pane, PaneId(1));
+    /// ```
+    pub fn with_tabs(panes: &[PaneId]) -> Self {
+        assert!(!panes.is_empty(), "a workspace needs at least one pane");
+        Self {
+            schema_version: LAYOUT_SCHEMA_VERSION,
+            root: DockNode::Tabs {
+                id: DockNodeId(1),
+                tabs: panes.to_vec(),
+                active: 0,
+            },
+            active_pane: panes[0],
+            closed_optional_panes: BTreeSet::new(),
+            next_node_id: 2,
+        }
+    }
+
     pub fn analytical_default() -> Self {
         let tabs = |id, ids: &[u32]| DockNode::Tabs {
             id: DockNodeId(id),
@@ -524,6 +586,49 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn workspace_changes_report_whether_they_changed_the_tree() {
+        let mut workspace = Workspace::analytical_default();
+        let mut panes = Vec::new();
+        workspace.root.pane_ids(&mut panes);
+        let (first, second) = (panes[0], panes[1]);
+        let mut active = Vec::new();
+        workspace.root.active_panes(&mut active);
+        let inactive = panes
+            .iter()
+            .copied()
+            .find(|pane| !active.contains(pane))
+            .expect("analytical default has an inactive tab");
+        assert_eq!(
+            WorkspaceChange::Activate(inactive).apply(&mut workspace),
+            Ok(true)
+        );
+        assert_eq!(workspace.active_pane, inactive);
+        assert_eq!(
+            WorkspaceChange::Activate(inactive).apply(&mut workspace),
+            Ok(false)
+        );
+        assert_eq!(
+            WorkspaceChange::Activate(PaneId(999)).apply(&mut workspace),
+            Ok(false)
+        );
+        let before = workspace.clone();
+        let stale = WorkspaceChange::Move {
+            pane: PaneId(999),
+            target: first,
+            drop: DockDrop::Tab,
+        };
+        assert_eq!(stale.apply(&mut workspace), Ok(false));
+        assert_eq!(workspace, before);
+        let moved = WorkspaceChange::Move {
+            pane: second,
+            target: first,
+            drop: DockDrop::Right,
+        };
+        assert_eq!(moved.apply(&mut workspace), Ok(true));
+        assert_ne!(workspace, before);
+    }
     #[test]
     fn layout_only_resize_rejects_stale_invalid_and_missing_outputs_without_mutation() {
         let mut workspace = Workspace::analytical_default();

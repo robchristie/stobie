@@ -1,0 +1,35 @@
+error: omit the trailing `.`; the derive adds it
+ --> tests/derive-action/enum_options.rs:5:19
+  |
+5 | #[action(prefix = "test.")]
+  |                   ^^^^^^^
+
+error: stable identities cannot contain whitespace or control characters
+  --> tests/derive-action/enum_options.rs:12:19
+   |
+12 | #[action(prefix = "test app")]
+   |                   ^^^^^^^^^^
+
+error: unknown enum attribute; expected `prefix` or `crate`, and put per-action keys on variants
+  --> tests/derive-action/enum_options.rs:19:27
+   |
+19 | #[action(prefix = "test", label = "Not an enum option")]
+   |                           ^^^^^
+
+error: duplicate `crate`
+  --> tests/derive-action/enum_options.rs:26:53
+   |
+26 | #[action(prefix = "test", crate = "stobie_ui_egui", crate = "again")]
+   |                                                     ^^^^^
+
+error: an action enum needs at least one variant
+  --> tests/derive-action/enum_options.rs:34:6
+   |
+34 | enum Empty {}
+   |      ^^^^^
+
+error: action enums cannot be generic
+  --> tests/derive-action/enum_options.rs:38:13
+   |
+38 | enum Generic<T> {
+   |             ^^^

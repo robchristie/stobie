@@ -4,7 +4,7 @@ use egui::{Key, Modifiers, Vec2};
 use egui_kittest::{Harness, kittest::Queryable};
 use record_desk::{
     actions::Action,
-    app::{RecordDeskApp, Snapshot},
+    app::{RecordDesk, RecordDeskApp, Snapshot},
     model::{
         Category, Desk, Filters, Record, RecordId, ReviewFilter, SavedState, default_workspace,
     },
@@ -48,7 +48,7 @@ fn harness() -> (Harness<'static, TestState>, tempfile::TempDir) {
         .build_ui_state(
             move |ui, state: &mut TestState| {
                 if state.app.is_none() {
-                    state.app = Some(RecordDeskApp::with_store(ui.ctx(), Store::at_path(&path)));
+                    state.app = Some(RecordDesk::hosted(ui.ctx(), Store::at_path(&path)));
                     // Font installation needs a new pass before measured presentation.
                     ui.ctx().request_repaint();
                     return;
@@ -70,7 +70,7 @@ fn harness() -> (Harness<'static, TestState>, tempfile::TempDir) {
 }
 
 fn snapshot(harness: &Harness<'_, TestState>) -> Snapshot {
-    harness.state().app.as_ref().unwrap().snapshot()
+    harness.state().app.as_ref().unwrap().app().snapshot()
 }
 
 fn reset_node(snapshot: &Snapshot) -> &UiNode {

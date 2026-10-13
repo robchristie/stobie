@@ -27,7 +27,7 @@ pub trait ActionKey: Copy + Eq + Hash + Ord + Serialize {
 
 /// The complete, closed set of an application's actions, used to discover,
 /// dispatch and audit every capability without a hand-maintained list.
-pub trait ActionSet: ActionKey + 'static {
+pub trait ActionSet: ActionKey + std::fmt::Debug + 'static {
     /// Every action, in declaration order.
     const ALL: &'static [Self];
 }
@@ -266,6 +266,14 @@ pub struct ActionTarget<A: ActionKey> {
     pub action: A,
     /// Stable pane identity for pane scopes; absent for application scope.
     pub pane: Option<PaneId>,
+}
+
+/// An application-scoped action is its own target. Panics for pane scopes,
+/// which need [`ActionTarget::pane`].
+impl<A: ActionKey> From<A> for ActionTarget<A> {
+    fn from(action: A) -> Self {
+        Self::application(action)
+    }
 }
 
 impl<A: ActionKey> ActionTarget<A> {

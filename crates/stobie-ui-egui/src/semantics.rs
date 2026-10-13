@@ -43,6 +43,15 @@ impl From<egui::Rect> for UiRect {
     }
 }
 
+impl From<UiRect> for egui::Rect {
+    fn from(rect: UiRect) -> Self {
+        egui::Rect::from_min_max(
+            egui::pos2(rect.min_x, rect.min_y),
+            egui::pos2(rect.max_x, rect.max_y),
+        )
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct SemanticUiId(pub String);

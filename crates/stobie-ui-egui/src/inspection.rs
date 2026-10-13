@@ -107,6 +107,26 @@ impl From<u64> for ObservationValue {
         Self::UnsignedInteger(value)
     }
 }
+impl From<usize> for ObservationValue {
+    fn from(value: usize) -> Self {
+        Self::UnsignedInteger(value as u64)
+    }
+}
+impl From<u32> for ObservationValue {
+    fn from(value: u32) -> Self {
+        Self::UnsignedInteger(value.into())
+    }
+}
+impl From<i64> for ObservationValue {
+    fn from(value: i64) -> Self {
+        Self::Integer(value)
+    }
+}
+impl From<i32> for ObservationValue {
+    fn from(value: i32) -> Self {
+        Self::Integer(value.into())
+    }
+}
 impl From<String> for ObservationValue {
     fn from(value: String) -> Self {
         Self::Text(value)

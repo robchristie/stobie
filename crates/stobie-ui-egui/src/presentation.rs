@@ -100,6 +100,10 @@ pub struct PresentationObservations {
 /// explicit egui layout, state, command delivery and collection virtualisation.
 /// Construct inside each pass and finish before leaving it. Reuse in another
 /// context, viewport or pass is rejected, including publication after a retry.
+///
+/// In a hosted application ([`AppHost`](crate::AppHost)) the context registers
+/// its observations with the pass's collector when it is finished or dropped,
+/// each node clipped to the region it was presented in; no merging is needed.
 pub struct PresentationContext {
     context: egui::Context,
     viewport: egui::ViewportId,
@@ -109,9 +113,24 @@ pub struct PresentationContext {
     scope: PresentationScope,
     parent: SemanticUiId,
     domain_reference: Option<DomainReference>,
+    pane: Option<stobie_core::PaneId>,
     text_layouts: Vec<TextLayoutObservation>,
     semantic_nodes: Vec<UiNode>,
+    /// The clip rectangle each semantic node was presented under.
+    node_clips: Vec<egui::Rect>,
     raw_presentations: Vec<RawPresentation>,
+}
+
+impl Drop for PresentationContext {
+    fn drop(&mut self) {
+        // An unfinished context still reaches a hosted collector.
+        let pending = !self.semantic_nodes.is_empty() || !self.text_layouts.is_empty();
+        if pending && crate::observation::is_enabled(&self.context, self.viewport) {
+            let nodes = std::mem::take(&mut self.semantic_nodes);
+            let text = std::mem::take(&mut self.text_layouts);
+            self.register(nodes, text);
+        }
+    }
 }
 
 impl PresentationContext {
@@ -134,10 +153,39 @@ impl PresentationContext {
             scope,
             parent,
             domain_reference: None,
+            pane: None,
             text_layouts: Vec::new(),
             semantic_nodes: Vec::new(),
+            node_clips: Vec::new(),
             raw_presentations: Vec::new(),
         }
+    }
+
+    fn push_node(&mut self, ui: &Ui, mut node: UiNode) {
+        if node.pane.is_none() {
+            node.pane = self.pane;
+        }
+        self.semantic_nodes.push(node);
+        self.node_clips.push(ui.clip_rect());
+    }
+
+    /// Associate this context's nodes with a pane, so pane queries find them.
+    /// Nodes that already name a pane keep it.
+    pub fn with_pane(mut self, pane: stobie_core::PaneId) -> Self {
+        self.pane = Some(pane);
+        self
+    }
+
+    /// Hand observations to the enabled hosted collector with their clips.
+    fn register(&mut self, nodes: Vec<UiNode>, text: Vec<TextLayoutObservation>) {
+        let clips = std::mem::take(&mut self.node_clips);
+        crate::observation::record(
+            &self.context,
+            self.viewport,
+            self.pass,
+            nodes.into_iter().zip(clips),
+            text,
+        );
     }
 
     /// Domain metadata is separate from capability routing. Include the stable
@@ -173,12 +221,14 @@ impl PresentationContext {
             self.parent.clone(),
         );
         child.domain_reference = self.domain_reference.clone();
+        child.pane = self.pane;
         let result = render(ui, &mut child);
-        let observations = child.finish(ui);
-        self.text_layouts.extend(observations.text_layouts);
-        self.semantic_nodes.extend(observations.semantic_nodes);
-        self.raw_presentations
-            .extend(observations.raw_presentations);
+        child.check_pass(ui);
+        // The parent publishes the child's observations; the child registers nothing.
+        self.text_layouts.append(&mut child.text_layouts);
+        self.semantic_nodes.append(&mut child.semantic_nodes);
+        self.node_clips.append(&mut child.node_clips);
+        self.raw_presentations.append(&mut child.raw_presentations);
         result
     }
 
@@ -186,7 +236,13 @@ impl PresentationContext {
     /// The caller supplies its complete stable identity, parent and domain data.
     pub fn observe_node(&mut self, ui: &Ui, node: UiNode) {
         self.check_pass(ui);
-        self.semantic_nodes.push(node);
+        self.push_node(ui, node);
+    }
+
+    /// Retain application-owned measured text, such as a custom row's label.
+    pub fn observe_text(&mut self, ui: &Ui, observation: TextLayoutObservation) {
+        self.check_pass(ui);
+        self.text_layouts.push(observation);
     }
 
     fn check_pass(&self, ui: &Ui) {
@@ -311,7 +367,7 @@ impl PresentationContext {
             node.domain_reference = self.domain_reference.clone();
         }
         if response.interact_rect.is_positive() {
-            self.semantic_nodes.push(node);
+            self.push_node(ui, node);
         }
         response
     }
@@ -399,7 +455,7 @@ impl PresentationContext {
             if self.domain_reference.is_some() {
                 node.domain_reference = self.domain_reference.clone();
             }
-            self.semantic_nodes.push(node);
+            self.push_node(ui, node);
         }
         response
     }
@@ -568,9 +624,46 @@ impl PresentationContext {
             self.parent.clone(),
             self.domain_reference.clone(),
         ) {
-            self.semantic_nodes.push(node);
+            self.push_node(ui, node);
         }
         chip
+    }
+
+    /// A status or error message with a semantic `status` node named by its
+    /// full text, so inspection clients can wait for it. Use it for an
+    /// application's status line; [`Self::content`] publishes no node.
+    pub fn status(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        text: &str,
+        error: bool,
+    ) -> Response {
+        let identity = self.scope.instance(&key);
+        let spec = ContentTextSpec {
+            role: if error {
+                TextRole::Error
+            } else {
+                TextRole::Status
+            },
+            overflow: TextOverflow::Wrap,
+            max_lines: 3,
+            interaction: TextInteraction::Selectable,
+        };
+        let response = self.content(ui, key, text, spec);
+        if response.rect.is_positive() {
+            let mut node = UiNode::container(
+                identity.semantic_id(),
+                Some(self.parent.clone()),
+                crate::UiRole::Status,
+                response.rect.into(),
+            );
+            node.name = text.to_owned();
+            node.text_selectable = true;
+            node.domain_reference = self.domain_reference.clone();
+            self.push_node(ui, node);
+        }
+        response
     }
 
     /// A native control remains explicitly unmeasured in the text denominator.
@@ -621,16 +714,22 @@ impl PresentationContext {
     /// Publish and consume this context in its original pass. Panics if used
     /// with another context, viewport or pass. Keep only the latest publication
     /// after layout retries; see [`PresentationObservations`] for coverage merging.
-    pub fn finish(self, ui: &mut Ui) -> PresentationObservations {
+    pub fn finish(mut self, ui: &mut Ui) -> PresentationObservations {
         self.check_pass(ui);
-        let coverage = text_audit_coverage(ui.ctx(), &self.text_layouts);
+        let text_layouts = std::mem::take(&mut self.text_layouts);
+        let semantic_nodes = std::mem::take(&mut self.semantic_nodes);
+        if crate::observation::is_enabled(&self.context, self.viewport) {
+            self.register(semantic_nodes.clone(), text_layouts.clone());
+        }
+        self.node_clips.clear();
+        let coverage = text_audit_coverage(ui.ctx(), &text_layouts);
         PresentationObservations {
             viewport: self.viewport,
             pass: self.pass,
-            text_layouts: self.text_layouts,
-            semantic_nodes: self.semantic_nodes,
+            text_layouts,
+            semantic_nodes,
             coverage,
-            raw_presentations: self.raw_presentations,
+            raw_presentations: std::mem::take(&mut self.raw_presentations),
         }
     }
 }

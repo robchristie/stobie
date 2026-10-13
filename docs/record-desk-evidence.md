@@ -13,7 +13,7 @@ owns exact-head review, candidate and post-merge CI, and terminal landing eviden
 Record Desk is an excluded, single-package Cargo workspace with its own manifest,
 lockfile and profiles. `tools/check-record-desk.py` retains `cargo metadata
 --locked` and checks its workspace root/member and resolved Stobie crates:
-only `stobie-core` and `stobie-ui-egui`. No Lab, Gallery, Emuella, worker or
+only `stobie-core`, `stobie-ui-egui` and its re-exported `stobie-ui-egui-derive`. No Lab, Gallery, Emuella, worker or
 image-renderer package is present; there is no source inclusion shortcut.
 Eframe/egui and storage/serialisation libraries are ordinary declared dependencies.
 

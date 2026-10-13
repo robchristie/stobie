@@ -1,11 +1,19 @@
 //! egui composition, dock presentation and application-owned pane extension.
 //!
-//! Start with [`dock_workspace`] and [`PanePresenter`]: the core `Workspace`
-//! remains the only dock tree, while the presenter borrows a narrow read model
-//! and emits intents for the application to validate and execute. Keep hover,
-//! focus and [`DockBehaviour`] here; durable data and transient session state
-//! remain in core. Panes own content/layout and local scrolling, not GPU devices
-//! or the complete mutable application/runtime.
+//! Start with [`Application`], [`AppHost`] and `#[derive(Action)]`: an
+//! application declares state, actions, UI and intent handling, and the host
+//! owns observation, shortcuts, agent inspection and repaint. Present panes
+//! with [`Frame::dock`] and [`Panes`]; `run_native` and `web_handle!` are the
+//! entry points. The core `Workspace` remains the only dock tree. See the
+//! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
+//! and its compiled `notes` example.
+//!
+//! The lower-level path ([`dock_workspace`], [`PanePresenter`] and manually
+//! merged [`PresentationObservations`]) remains for applications that wire
+//! their own pass, such as the image Lab. Keep hover, focus and
+//! [`DockBehaviour`] here; durable data and transient session state remain in
+//! core. Panes own content/layout and local scrolling, not GPU devices or the
+//! complete mutable application/runtime.
 //!
 //! [`PresentationContext`] adds stable identity, measured recipes and observations
 //! to application-owned egui layout. Construct it inside each UI pass, use
@@ -30,11 +38,18 @@
 //! [`submit_render_plan`] before callback preparation. Repaint after applied
 //! commands, active interactions, worker completion or pending uploads; avoid an
 //! unconditional frame loop. See the
-//! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
+//! [image application guide](https://github.com/robchristie/stobie/blob/main/docs/image-application-composition.md)
 //! and its small native consumer and presenter variation.
 
 // Derived code names `::stobie_ui_egui`; this alias lets the crate's own tests use it.
 extern crate self as stobie_ui_egui;
+
+/// Paths used by exported macros. Not part of the public API.
+#[doc(hidden)]
+pub mod __private {
+    #[cfg(all(feature = "eframe", target_arch = "wasm32"))]
+    pub use {js_sys, wasm_bindgen, web_sys};
+}
 
 mod actions;
 mod application_theme;
@@ -42,7 +57,9 @@ mod virtual_grid;
 
 mod components;
 mod generated_tokens;
+mod host;
 pub mod inspection;
+mod observation;
 mod pane_content;
 mod preferences;
 mod preferences_control;
@@ -60,7 +77,9 @@ pub use actions::*;
 pub use application_theme::*;
 pub use components::*;
 pub use generated_tokens::*;
+pub use host::*;
 pub use inspection::*;
+pub use observation::{observe_node, observe_text};
 pub use pane_content::*;
 pub use preferences::*;
 pub use preferences_control::*;
@@ -75,9 +94,18 @@ pub use semantics::*;
 /// `"active_pane"`), an explicit stable `id` and `physical_only = "reason"`.
 /// The stable ID defaults to `<prefix>.<kebab-case variant>`. Shortcuts are
 /// modifiers then one key: `Cmd` (or `Ctrl`, the platform command modifier),
-/// `Shift` and `Alt`, then a letter, digit, named key or `F1`–`F12`. Tab is
-/// reserved for focus traversal. Unknown keys, repeated IDs or chords, blank
-/// values and data-carrying variants are compile errors at the offending span.
+/// `Shift` and `Alt`, then a key: `A`–`Z`, `0`–`9`, `Enter` (or `Return`),
+/// `Escape` (`Esc`), `Space`, `Backspace`, `Delete` (`Del`), `Insert`, `Home`,
+/// `End`, `PageUp`, `PageDown`, `ArrowUp`/`Up`, `ArrowDown`/`Down`,
+/// `ArrowLeft`/`Left`, `ArrowRight`/`Right`, `Comma` (`,`), `Period` (`.`),
+/// `Minus` (`-`), `Equals` (`=`), `Slash` (`/`) or `F1`–`F12`; case is
+/// ignored. Tab is reserved for focus traversal, and Shift with a digit or
+/// punctuation is rejected because it changes the character typed. Unknown
+/// keys, repeated IDs or chords, blank values and data-carrying variants are
+/// compile errors at the offending span.
+///
+/// A shortcut without `Cmd` does not fire while a text field has keyboard
+/// focus, so typing is never captured; give text-adjacent actions a `Cmd` chord.
 ///
 /// Every action is semantically invocable by default. Declare `physical_only`
 /// with a reason when physical input is required, for example because the
@@ -123,7 +151,7 @@ use egui::{Pos2, Rect, Ui};
 use std::sync::{Arc, RwLock};
 use stobie_core::{
     Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,
-    ViewportPoint, Workspace, WorkspaceResize,
+    ViewportPoint, Workspace, WorkspaceChange, WorkspaceResize,
 };
 #[cfg(feature = "image-rendering")]
 use stobie_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
@@ -138,7 +166,7 @@ pub struct DockTextContext {
     pub font_scale: f32,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 /// UI-only dock interaction state retained across frames for drag/split previews.
 /// The authoritative layout remains in core [`Workspace`].
 pub struct DockBehaviour {
@@ -170,6 +198,7 @@ struct SplitPreview {
     pointer_origin: Pos2,
 }
 
+#[derive(Clone, Copy)]
 enum DockAction {
     Activate(PaneId),
     Move {
@@ -250,44 +279,56 @@ pub fn dock_workspace_layout(
     presenter: &mut impl PanePresenter,
     text_context: DockTextContext,
 ) -> Option<WorkspaceResize> {
+    match dock_workspace_view(ui, workspace, behaviour, presenter, text_context)? {
+        WorkspaceChange::Resize(resize) => Some(resize),
+        change => {
+            // Activation and moves cannot fail; stale targets leave the tree unchanged.
+            let _ = change.apply(workspace);
+            None
+        }
+    }
+}
+
+/// Present the canonical layout read-only. Every completed interaction,
+/// including tab activation and moves, is returned for the caller to apply
+/// after the pass with [`WorkspaceChange::apply`]; the newly activated tab is
+/// already shown in this pass. Drag and split previews stay in `behaviour`.
+pub fn dock_workspace_view(
+    ui: &mut Ui,
+    workspace: &Workspace,
+    behaviour: &mut DockBehaviour,
+    presenter: &mut impl PanePresenter,
+    text_context: DockTextContext,
+) -> Option<WorkspaceChange> {
     behaviour.interaction_active = false;
     let rect = ui.available_rect_before_wrap();
     render_node(
         ui,
-        &mut workspace.root,
+        &workspace.root,
         rect,
         behaviour,
         presenter,
         text_context,
     );
     behaviour.finish_frame(ui.input(|input| input.pointer.any_down()));
-    if let Some(action) = behaviour.pending.take() {
-        match action {
-            DockAction::Activate(pane) => {
-                workspace.activate(pane);
-            }
-            DockAction::Move { pane, target, drop } => {
-                workspace.move_pane(pane, target, drop);
-            }
-            DockAction::Resize {
-                node,
-                before,
-                after,
-            } => {
-                return Some(WorkspaceResize {
-                    node,
-                    before,
-                    after,
-                });
-            }
-        }
-    }
-    None
+    behaviour.pending.take().map(|action| match action {
+        DockAction::Activate(pane) => WorkspaceChange::Activate(pane),
+        DockAction::Move { pane, target, drop } => WorkspaceChange::Move { pane, target, drop },
+        DockAction::Resize {
+            node,
+            before,
+            after,
+        } => WorkspaceChange::Resize(WorkspaceResize {
+            node,
+            before,
+            after,
+        }),
+    })
 }
 
 fn render_node(
     ui: &mut Ui,
-    node: &mut DockNode,
+    node: &DockNode,
     rect: Rect,
     behaviour: &mut DockBehaviour,
     presenter: &mut impl PanePresenter,
@@ -475,7 +516,7 @@ fn render_node(
                     .rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
                 return;
             }
-            *active = (*active).min(tabs.len() - 1);
+            let active = (*active).min(tabs.len() - 1);
             let tab_visual_height = TAB_VISUAL_HEIGHT * text_context.font_scale;
             let tab_height = text_context
                 .tokens
@@ -532,7 +573,7 @@ fn render_node(
                     .unwrap_or(maximum_tab_width)
                 })
                 .collect::<Vec<_>>();
-            let mut shown_active = *active;
+            let mut shown_active = active;
             let mut requested_focus = None;
             if let Some(focused_index) = tabs.iter().position(|pane| {
                 tab_ui.memory(|memory| memory.has_focus(egui::Id::new(("stobie.dock.tab", pane.0))))

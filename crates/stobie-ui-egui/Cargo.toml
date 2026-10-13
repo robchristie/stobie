@@ -6,8 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 
 [features]
-default = ["image-rendering"]
+default = ["image-rendering", "eframe"]
 image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
+# Native and browser entry points for hosted applications.
+eframe = ["dep:eframe", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:console_error_panic_hook"]
 
 [dependencies]
 egui.workspace = true
@@ -18,6 +20,19 @@ stobie-ui-egui-derive = { path = "../stobie-ui-egui-derive" }
 stobie-render-wgpu = { path = "../stobie-render-wgpu", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+# Applications choose further eframe features; Linux windowing needs a winit backend to build.
+eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_default_features", "x11", "wayland"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { workspace = true, optional = true }
+wasm-bindgen-futures = { workspace = true, optional = true }
+js-sys = { version = "0.3.104", optional = true }
+web-sys = { workspace = true, features = ["HtmlCanvasElement"], optional = true }
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[[example]]
+name = "notes"
+required-features = ["eframe"]
 
 [dev-dependencies]
 egui_kittest.workspace = true
