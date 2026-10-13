@@ -17,7 +17,7 @@ and [file manifest](emuella-viewer-evidence/nitf-qualified/manifest.json) retain
 exact source, binary, preparation, request, resource and reference evidence.
 No external image pixels are included.
 
-Native/static binaries were built from clean Polyorama
+Native/static binaries were built from clean Stobie
 `16296520e146df842555a8d763fcce704207adc8`, which passed full `cargo xtask verify`.
 The composed harness ran at `3ad17777371e5069db902049e799008c5e8713e7`; intervening
 changes are evidence, documentation and visual-provenance labelling, with unchanged

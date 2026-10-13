@@ -151,10 +151,10 @@ function boundedJson(value, bound, label) {
 
 /** One request per local Unix stream. No connection or mutation is retried. */
 export class SocketTransport {
-  constructor(path = process.env.POLYORAMA_AUTOMATION_SOCKET) {
+  constructor(path = process.env.STOBIE_AUTOMATION_SOCKET) {
     if (process.platform === 'win32') throw failure('unsupported_host', 'The local socket adapter requires Unix');
     if (typeof path !== 'string' || !path || path.includes('\0')) {
-      throw failure('invalid_request', 'Supply the explicit POLYORAMA_AUTOMATION_SOCKET path');
+      throw failure('invalid_request', 'Supply the explicit STOBIE_AUTOMATION_SOCKET path');
     }
     this.path = path;
     this.kind = 'native_unix';
@@ -200,14 +200,14 @@ export class BrowserTransport {
     let result;
     try {
       if (JSON.parse(json).operation?.op === 'hello') {
-        await this.page.waitForFunction(() => typeof window.__POLYORAMA_AUTOMATION?.request === 'function', null, { timeout: 60000 });
+        await this.page.waitForFunction(() => typeof window.__STOBIE_AUTOMATION?.request === 'function', null, { timeout: 60000 });
         aborted(signal);
       }
       result = await this.page.evaluate(async request => {
-      if (typeof window.__POLYORAMA_AUTOMATION?.request !== 'function') {
+      if (typeof window.__STOBIE_AUTOMATION?.request !== 'function') {
         throw new Error('Application automation is unavailable; enable ?automation=1 before startup');
       }
-      return await window.__POLYORAMA_AUTOMATION.request(request);
+      return await window.__STOBIE_AUTOMATION.request(request);
     }, json); }
     catch (error) { throw failure('disconnected', error.message); }
     return boundedJson(result, RESPONSE_BYTES, 'Response');

@@ -162,8 +162,8 @@ try:
     key("ctrl+shift+z")
     wait(lambda s: s["undo_entries"] == 1 and s["redo_entries"] == 0)
     record("redo")
-    click("polyorama.dock.splitter.1")
-    wait(lambda s: any(n["id"] == "polyorama.dock.splitter.1" and n["focused"] for n in s["ui"]["nodes"]))
+    click("stobie.dock.splitter.1")
+    wait(lambda s: any(n["id"] == "stobie.dock.splitter.1" and n["focused"] for n in s["ui"]["nodes"]))
     key("Right")
     wait(lambda s: s["workspace"]["root"]["Split"]["fraction"] > 0.36)
     saved_layout = wait(lambda s: True)["workspace"]

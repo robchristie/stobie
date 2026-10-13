@@ -172,7 +172,7 @@ def main():
     write_json(args.output / 'catalogue.json', catalogue)
     write_json(args.output / 'service-before.json', before)
     revisions = {}
-    for name, repo in [('polyorama', root), ('codec', args.codec_repo), ('benchmark', args.benchmark_repo)]:
+    for name, repo in [('stobie', root), ('codec', args.codec_repo), ('benchmark', args.benchmark_repo)]:
         revisions[name] = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
         (args.output / f'{name}.diff').write_bytes(subprocess.check_output(['git', '-C', str(repo), 'diff', 'HEAD']))
     builds = {'native': digest(args.native_bin.read_bytes())}

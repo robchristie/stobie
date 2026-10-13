@@ -1,9 +1,9 @@
 # Browser navigation final-action observations
 
 This is the bounded continuation of portfolio Rust 1.99.0 package P1 after
-[compiler PR #54](https://github.com/robchristie/polyorama/pull/54) merged at
+[compiler PR #54](https://github.com/robchristie/stobie/pull/54) merged at
 `e7691e2d457c2db2c7146dbcc33509e2758df88c`. The compiler change remains qualified;
-its [actual merge CI](https://github.com/robchristie/polyorama/actions/runs/37758099129)
+its [actual merge CI](https://github.com/robchristie/stobie/actions/runs/37758099129)
 failed a separate browser observer. The new repair's canonical source is clean
 `c3aa2d28472247fee737d5157ec546f22814237b`, tree
 `cf563a43ba320ea69db7987e1e9f52b0c97a83ed`. Later documentation commits do not

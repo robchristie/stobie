@@ -105,13 +105,13 @@ impl Default for WebHandle {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_name = __polyoramaStartupMark)]
+    #[wasm_bindgen(js_name = __stobieStartupMark)]
     pub(crate) fn startup_mark(name: &str);
-    #[wasm_bindgen(js_name = __polyoramaStartupFail)]
+    #[wasm_bindgen(js_name = __stobieStartupFail)]
     pub(crate) fn startup_fail(phase: &str, message: &str);
-    #[wasm_bindgen(js_name = __polyoramaWorkerUrl)]
+    #[wasm_bindgen(js_name = __stobieWorkerUrl)]
     pub(crate) fn startup_worker_url() -> String;
-    #[wasm_bindgen(js_name = __polyoramaStartupWorkerMessage)]
+    #[wasm_bindgen(js_name = __stobieStartupWorkerMessage)]
     pub(crate) fn startup_worker_message(value: &JsValue) -> bool;
 }
 

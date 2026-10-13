@@ -2,20 +2,20 @@
 //! Run and vary it using docs/application-composition.md.
 
 use egui::{Color32, Pos2, Rect, Stroke, Ui};
-use polyorama_core::{
+use serde::Serialize;
+use stobie_core::{
     CommandHistory, DockNode, DockNodeId, Document, ImageIntent, LAYOUT_SCHEMA_VERSION, LayerId,
     PaneId, Session, Workspace, WorldPoint, validate_intent,
 };
-use polyorama_ui_egui::{
+use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
     ActionTarget, Availability, DockBehaviour, DockTextContext, PanePresenter, PresentationContext,
     PresentationObservations, PresentationScope, SemanticUiId, UiPreferences, apply_design_system,
     dock_workspace,
 };
-use serde::Serialize;
 
 const PANE: PaneId = PaneId(1);
-const TITLE: &str = "Polyorama Minimal Workspace";
+const TITLE: &str = "Stobie Minimal Workspace";
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
 enum Action {
@@ -44,7 +44,7 @@ struct TrianglePane<'a> {
     document: &'a Document,
     intents: &'a mut Vec<ImageIntent>,
     publication: &'a mut Option<PresentationObservations>,
-    tokens: polyorama_ui_egui::DesignTokens,
+    tokens: stobie_ui_egui::DesignTokens,
 }
 
 impl PanePresenter for TrianglePane<'_> {
@@ -120,13 +120,13 @@ struct MinimalApp {
     workspace: Workspace,
     history: CommandHistory,
     dock: DockBehaviour,
-    tokens: polyorama_ui_egui::DesignTokens,
+    tokens: stobie_ui_egui::DesignTokens,
 }
 
 impl MinimalApp {
     fn new(creation: &eframe::CreationContext<'_>) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
-        if std::env::var_os("POLYORAMA_MINIMAL_SNAPSHOT").is_some()
+        if std::env::var_os("STOBIE_MINIMAL_SNAPSHOT").is_some()
             && let Some(render_state) = &creation.wgpu_render_state
         {
             eprintln!(
@@ -221,14 +221,14 @@ fn write_smoke_observation(
     publication: PresentationObservations,
 ) {
     #[cfg(not(target_arch = "wasm32"))]
-    if let Some(path) = std::env::var_os("POLYORAMA_MINIMAL_SNAPSHOT") {
+    if let Some(path) = std::env::var_os("STOBIE_MINIMAL_SNAPSHOT") {
         let snapshot = serde_json::json!({
             "annotations": document.annotations.len(),
             "undo_entries": history.undo_len(),
             "displayed_count": displayed_count,
             "nodes": publication.semantic_nodes,
             "text": publication.text_layouts,
-            "text_audit": polyorama_ui_egui::audit_text_layouts(&publication.text_layouts),
+            "text_audit": stobie_ui_egui::audit_text_layouts(&publication.text_layouts),
         });
         std::fs::write(path, serde_json::to_vec_pretty(&snapshot).unwrap())
             .expect("write requested smoke observation");

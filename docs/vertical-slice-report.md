@@ -8,7 +8,7 @@ Licence: Apache-2.0
 
 ## Summary
 
-Polyorama now contains a runnable, application-shaped analytical workspace built from one Rust application model for native desktop and WebAssembly/WebGPU. The default serialisable dock workspace contains four separately interactive GPU image panes plus Results, Thumbnails, Inspector and Diagnostics. It exercises progressive LZ4-decoded scalar tiles, camera linking, world-coordinate polygon editing with undo/redo, virtual collections, persistence, explicit repaint scheduling and structured instrumentation.
+Stobie now contains a runnable, application-shaped analytical workspace built from one Rust application model for native desktop and WebAssembly/WebGPU. The default serialisable dock workspace contains four separately interactive GPU image panes plus Results, Thumbnails, Inspector and Diagnostics. It exercises progressive LZ4-decoded scalar tiles, camera linking, world-coordinate polygon editing with undo/redo, virtual collections, persistence, explicit repaint scheduling and structured instrumentation.
 
 The complete release verification passed on both targets. The native binary was launched under a user-space Xvfb display and rendered through wgpu's OpenGL backend on Mesa llvmpipe. The WebAssembly build was launched in headless Chromium with real WebGPU, a module Web Worker and persisted browser storage. Both paths were interacted with and captured; neither result rests on compilation alone.
 
@@ -23,7 +23,7 @@ The no-new-features hardening pass made the architectural claims reviewed after 
 - one preview camera is calculated before tile demand, render planning, annotations, pointer coordinates and overview presentation; linked panes receive the same transient value, and a deterministic test fixes this ordering;
 - camera commands record exact before/after values for every affected pane, link joins synchronise explicitly, undo is independent of later link topology, and a wheel burst coalesces after 140 ms;
 - feature presenters receive camera, tool, gesture, selection, diagnostics and virtualisation projections instead of mutable access to the complete `Session`; Results, Thumbnails and Inspector are separate feature modules;
-- `FrameOutput` owns the actual `RenderPlan`; `polyorama-ui-egui` stages opaque callbacks in the correct egui paint lists, then the application publishes the final cross-pane preview requests before wgpu preparation begins;
+- `FrameOutput` owns the actual `RenderPlan`; `stobie-ui-egui` stages opaque callbacks in the correct egui paint lists, then the application publishes the final cross-pane preview requests before wgpu preparation begins;
 - the renderer is the only GPU-residency authority. Runtime/renderer transitions carry exact request tokens, and the application no longer mirrors scalar resident keys;
 - reconciliation compares complete desired sets, rejects stale demand generations before admission, keeps the complete outstanding scheduler set within its configured capacity, retains tokens only for retained work, obsoletes disappeared work, bounds native/browser/decoded/renderer queues, reprioritises retained demand and strictly rejects unknown, obsolete, superseded or duplicate completions;
 - source-generation changes clear old renderer textures, queued uploads and residency acknowledgements before drawing, while restored application state must contain the exact registered pane, camera, tool and display mappings with valid selections;
@@ -33,7 +33,7 @@ The no-new-features hardening pass made the architectural claims reviewed after 
 - latency p50/p95 values are real bounded-window percentiles, renderer preparation accumulates across jobs, paint callbacks/draws are counted when invoked, returned command buffers are truthfully zero, actual render-pass topology remains unavailable, and application update CPU time is labelled as such;
 - Rust-owned browser test actions and snapshots establish linked-camera, render-plan, command-history, annotation, canonical workspace, queue-bound, decoded-thumbnail and warmed-idle correctness. The browser and native physical harnesses resolve pane, tab, splitter, control and scroll rectangles from the current Rust frame instead of embedding layout coordinates.
 
-The reusable crates were renamed to `polyorama-core`, `polyorama-runtime`, `polyorama-render-wgpu` and `polyorama-ui-egui` before external consumers existed. All workspace packages use Apache-2.0.
+The reusable crates were renamed to `stobie-core`, `stobie-runtime`, `stobie-render-wgpu` and `stobie-ui-egui` before external consumers existed. All workspace packages use Apache-2.0.
 
 ## Version 0.1.2 lifecycle closure
 
@@ -60,7 +60,7 @@ visual:
   derives displacement from the pointer press origin, so movement before egui's
   drag-recognition threshold and a final move coalesced with release are retained
   without repeatedly mutating a camera;
-- `VirtualGridPresenter` in `polyorama-ui-egui` presents 100,000 logical items
+- `VirtualGridPresenter` in `stobie-ui-egui` presents 100,000 logical items
   through `ScrollArea::show_rows`, establishes the exact 33,334-row extent,
   positions only visible rows plus two rows of overscan, retains the scroll
   state under a stable ID and exposes the visible/materialised ranges, offset,
@@ -90,7 +90,7 @@ visual:
 The fourth no-new-features hardening pass closes the reusable interaction seams
 identified before usage-led development:
 
-- `polyorama_core::layout_virtual_grid` is the single pure authority for total,
+- `stobie_core::layout_virtual_grid` is the single pure authority for total,
   visible and overscanned row/item ranges. `VirtualGridPresenter` supplies the
   exact egui visible rows and delegates all range clamping and row-to-item
   mapping to that helper;
@@ -180,12 +180,12 @@ and physical evidence match the intended interaction contract:
 
 | Component | Responsibility | Enforced boundary |
 | --- | --- | --- |
-| `polyorama-core` | Typed IDs and coordinates, document/session state, canonical `Workspace`, intents, commands, undo/redo, renderer-independent demand and diagnostics types, virtual-range calculations | No egui, eframe, wgpu, web or windowing dependency |
-| `polyorama-runtime` | Demand reconciliation, resource state machine, priorities/generations/failures, common decode protocol, native worker, browser request queue, LZ4 decode, CPU cache policy and runtime metrics | No egui or wgpu dependency; workers receive bytes and typed keys only |
-| `polyorama-render-wgpu` | Typed `ImageRenderRequest`, scalar textures, WGSL display pipeline, shared residency, upload budget, physical viewport/scissor rendering and renderer metrics | Depends on wgpu, not egui; creates no device or queue |
-| `polyorama-ui-egui` | Canonical dock-tree presentation, semantic UI identity, typed viewport allocation/input translation and the hidden `egui_wgpu` callback bridge | The only framework crate that understands egui |
+| `stobie-core` | Typed IDs and coordinates, document/session state, canonical `Workspace`, intents, commands, undo/redo, renderer-independent demand and diagnostics types, virtual-range calculations | No egui, eframe, wgpu, web or windowing dependency |
+| `stobie-runtime` | Demand reconciliation, resource state machine, priorities/generations/failures, common decode protocol, native worker, browser request queue, LZ4 decode, CPU cache policy and runtime metrics | No egui or wgpu dependency; workers receive bytes and typed keys only |
+| `stobie-render-wgpu` | Typed `ImageRenderRequest`, scalar textures, WGSL display pipeline, shared residency, upload budget, physical viewport/scissor rendering and renderer metrics | Depends on wgpu, not egui; creates no device or queue |
+| `stobie-ui-egui` | Canonical dock-tree presentation, semantic UI identity, typed viewport allocation/input translation and the hidden `egui_wgpu` callback bridge | The only framework crate that understands egui |
 | `analytical-workspace-lab` | Demo composition, narrow pane projections/sinks, persistence, synthetic source selection, native and browser entry points | Owns orchestration, not reusable GPU/runtime internals |
-| `polyorama-tile-worker` | Separate browser Worker Wasm entry point using the common runtime protocol | No UI or GPU object is accepted or owned |
+| `stobie-tile-worker` | Separate browser Worker Wasm entry point using the common runtime protocol | No UI or GPU object is accepted or owned |
 | `xtask` | One deterministic verification entry point and mechanical architecture checks | Fails rather than silently weakening a target check |
 
 State ownership follows the specification: annotations are document state; dock nodes, pane configuration and active pane are workspace state; selection, cameras, links, tools and gesture previews are session state; drag/hover geometry is UI behaviour; texture/pipeline/cache/upload state is renderer-owned; and demands, generations, failures and worker queues are runtime-owned. Egui memory is not authoritative for document, workspace or selection state.
@@ -216,7 +216,7 @@ flowchart LR
 
 An intent records a feature-scoped request. Validation creates a durable command; the history applies it and supplies undo/redo. Gesture previews remain transient and a completed camera drag, vertex drag or polygon construction produces one command. No asynchronous domain effect was needed in this fixture: persistence is an explicit shell operation, while decode work is expressed as idempotent demand and typed runtime events rather than disguised as commands. The distinction remains mechanical in `FrameOutput`, `ImageIntent`, `Command`, `TileDemand`, `DecodeEvent`, `ImageRenderRequest` and `RepaintReason`.
 
-`polyorama_core::Workspace` is the only dock-tree representation. The egui presenter walks that tree directly and keeps only a transient split preview; it has no mirrored docking model. Stable `DockNodeId` and `PaneId` values survive rearrangement and JSON restoration. Releasing a splitter emits one undoable `ResizeSplit` command, while pane drops modify the canonical tree and prune vacated splits deterministically.
+`stobie_core::Workspace` is the only dock-tree representation. The egui presenter walks that tree directly and keeps only a transient split preview; it has no mirrored docking model. Stable `DockNodeId` and `PaneId` values survive rearrangement and JSON restoration. Releasing a splitter emits one undoable `ResizeSplit` command, while pane drops modify the canonical tree and prune vacated splits deterministically.
 
 The application obtains eframe's wgpu render state once and installs one `ScalarRenderer` in callback resources. Every pane callback receives that same device and queue. Renderer-owned `R16Uint` textures, pipelines, buffers, bind groups and cache entries are shared by tile key. Each tile's image extent is transformed through the request camera into viewport geometry before the custom shader draws it, so pan and zoom affect the scalar raster itself. The callback bridge converts egui allocation and clipping into physical viewport/scissor rectangles; pane code does not see a device, queue, render pass or persistent GPU object.
 
@@ -258,12 +258,12 @@ Native decode uses a named background thread and an explicit egui repaint waker.
 | I02 | Structured spans around frame, command, demand, decode, upload, eviction, render preparation, viewport and layout serialisation | Verified | Source span inventory; native subscriber; tracing `log` fallback reaches the browser web logger | Both target builds compile the same instrumented operations. |
 | I03 | Copy/save structured snapshot with versions, backend, viewports, budgets, datasets and counters | Verified | “Copy JSON snapshot”; `browser-diagnostics.json` | Snapshot includes pinned dependency versions; browser adapter name is unavailable and remains empty. |
 | I04 | Honest release observations for all eight specified scenarios, with environment and unavailable metrics distinguished | Verified | `browser-performance.json` and Performance observations below | Splitter/pane-drag observations are additional. |
-| V01 | All specified focused automated tests run without UI/GPU where required | Verified | `polyorama-core`, `polyorama-runtime`, renderer and application tests in `cargo test --workspace` | Covers dock, schema, IDs, links, coordinates, validation, history, camera and bounded-raster geometry, demand, cache, eviction, invalidation, upload, virtualisation and stable selection. |
+| V01 | All specified focused automated tests run without UI/GPU where required | Verified | `stobie-core`, `stobie-runtime`, renderer and application tests in `cargo test --workspace` | Covers dock, schema, IDs, links, coordinates, validation, history, camera and bounded-raster geometry, demand, cache, eviction, invalidation, upload, virtualisation and stable selection. |
 | V02 | Native release actually launched and required interactions captured | Verified | `tools/native-smoke.sh`, `native-semantic.json`, runtime log, seven native screenshots | xdotool resolves current Rust-owned geometry; camera, gallery, splitter and vertex-edit results—including exact coordinates and undo/redo—are asserted through Rust snapshots, and the failure scan rejects panic and fatal wgpu errors. |
 | V03 | Browser Wasm actually launched in a real browser, checked and interacted with | Verified | Playwright readiness plus Rust-owned `browser-semantic.json`; semantic geometry targets; exact physical camera/splitter/vertex drag, wheel, undo/redo and out-and-back snapshots; six-sample splitter preview trace; zero-viewport/Worker-failure probes; compositor screenshots; console failure hooks; pane drag/save/reload; independent Lantern canvas inspection | Physical input claims enter through browser events at rectangles reported by the current Rust frame; semantic actions remain for architecture/lifecycle invariants. |
 | V04 | Mechanical architecture verification | Verified | `cargo xtask architecture` output | Checks dependency trees, read-model/feature-state pane API, presenter module split, checked plan publication, renderer maintenance staging, one Workspace definition and no renderer device creation. |
 | V05 | One documented command runs format, native+Wasm lint, tests, architecture, release builds and both runtime smokes | Verified | `cargo xtask verify`; README and xtask help | The command completed successfully on 28 August 2026. |
-| L01 | Polyorama code is Apache-2.0 and stated non-goals/boundaries remain intact | Verified | Full SPDX Apache-2.0 `LICENSE`; Cargo `license = "Apache-2.0"`; architecture scan and diff review | No network data service, proprietary data, egui/wgpu fork, generic GUI core, render graph or WebGL fallback was added. |
+| L01 | Stobie code is Apache-2.0 and stated non-goals/boundaries remain intact | Verified | Full SPDX Apache-2.0 `LICENSE`; Cargo `license = "Apache-2.0"`; architecture scan and diff review | No network data service, proprietary data, egui/wgpu fork, generic GUI core, render graph or WebGL fallback was added. |
 
 ### Mandatory invariant cross-check
 
@@ -335,14 +335,14 @@ It passed and ran, in order:
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo clippy --target wasm32-unknown-unknown \
-  -p analytical-workspace-lab -p polyorama-tile-worker -- -D warnings
+  -p analytical-workspace-lab -p stobie-tile-worker -- -D warnings
 cargo test --workspace
 cargo xtask architecture
 cargo build --workspace --release
 cargo build --release --target wasm32-unknown-unknown \
-  -p analytical-workspace-lab -p polyorama-tile-worker
+  -p analytical-workspace-lab -p stobie-tile-worker
 wasm-bindgen ... analytical_workspace_lab.wasm
-wasm-bindgen ... polyorama_tile_worker.wasm
+wasm-bindgen ... stobie_tile_worker.wasm
 npm ci
 npx playwright install chromium
 npm run browser-smoke

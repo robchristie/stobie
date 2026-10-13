@@ -5,7 +5,7 @@ question is which process mappings and retained lifetimes account for the
 native RSS failure, and whether settled memory grows over repeated eviction and
 revisit. The smallest representative measurement is one identified full-scene
 configuration covering startup/graphics, first view, peak phases and ten fixed
-eviction/revisit cycles. Polyorama owns these observations; the workspace
+eviction/revisit cycles. Stobie owns these observations; the workspace
 `docs/plans/active/viewer-acceptance.md` owns selection and terminal acceptance.
 The original Python collector checkpoint ran no viewer or build; authored native
 validation is now recorded in the linked native instrument protocol.

@@ -1,5 +1,5 @@
 [package]
-name = "polyorama-tile-worker"
+name = "stobie-tile-worker"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,4 +11,4 @@ crate-type = ["cdylib"]
 [dependencies]
 serde-wasm-bindgen = "0.6.5"
 wasm-bindgen.workspace = true
-polyorama-runtime = { path = "../../crates/polyorama-runtime" }
+stobie-runtime = { path = "../../crates/stobie-runtime" }

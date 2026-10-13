@@ -16,5 +16,5 @@ inherits = "ci"
 
 [profile.record-desk.junit]
 path = "junit.xml"
-report-name = "polyorama-record-desk"
+report-name = "stobie-record-desk"
 report-skipped = "all"

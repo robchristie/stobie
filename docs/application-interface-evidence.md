@@ -27,7 +27,7 @@ are attributed to dirty prototype builds, not final qualification.
 
 ## Shared and application-owned work
 
-`polyorama-ui-egui::Inspection` owns the versioned serialisation, retained
+`stobie-ui-egui::Inspection` owns the versioned serialisation, retained
 publication, query/discovery bounds, request ledger, execution revalidation and
 private native transport. The common JavaScript client owns transports, waits,
 physical target stability/recheck, keyboard focus evidence and capture reports.
@@ -72,7 +72,7 @@ instances, observation identities, input receipts and capture timing/hashes.
 Full reports remain in ignored `.tools/runtime/interface-final-source/application-interface/`.
 Canonical verification writes the same reports beneath
 `.tools/runtime/verification-evidence/application-interface`; CI retains them
-on success and failure for 14 days. [PR #48](https://github.com/robchristie/polyorama/pull/48)
+on success and failure for 14 days. [PR #48](https://github.com/robchristie/stobie/pull/48)
 owns exact-head review, required checks, squash identity and post-merge CI.
 
 | Surface | Result |

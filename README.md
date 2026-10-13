@@ -1,13 +1,16 @@
-# Polyorama
+# Stobie
 
-Polyorama is an experimental Rust framework layer for building GPU-driven
+Previously named Polyorama. See the [rename and saved-state migration guide](docs/project-rename.md)
+for current development names and the attribution of historical evidence.
+
+Stobie is an experimental Rust framework layer for building GPU-driven
 analytical workspaces on native desktop and WebGPU-capable browsers. It brings
 together dockable panes, large tiled images, linked views, annotations and
 virtualised collections above **egui**, **eframe** and **wgpu**.
 
 The repository contains reusable framework crates, an independent consumer and
 three runnable applications:
-**Analytical Workspace Lab** exercises an analytical workflow, **Polyorama
+**Analytical Workspace Lab** exercises an analytical workflow, **Stobie
 Gallery** demonstrates the UI components, and **Emuella Image Viewer** composes
 indexed JPEG 2000 regional delivery with multiple views and detection browsing.
 They run natively and in the browser from Rust application code.
@@ -59,7 +62,7 @@ the same pane as a tab beside Inspector and selects it. Use **Save layout** to
 retain the open or closed state across restarts. Closing and reopening do not
 change annotations, selection or cameras.
 
-### Polyorama Gallery
+### Stobie Gallery
 
 The gallery is the reference application for the shared design system. Its
 fixed stories exercise buttons, tabs, splitters, status messages, virtual grids
@@ -73,7 +76,7 @@ The [viewer application](apps/emuella-viewer/README.md) reconstructs regions and
 detection thumbnails from larger indexed HTJ2K codestreams. A shared compressed
 cache serves multiple image panes and a virtualised gallery of 10000 logical
 detections; display stretch preserves compressed-data identity. Native and
-browser workers use Emuella, while Polyorama owns generic demands and bounded
+browser workers use Emuella, while Stobie owns generic demands and bounded
 decoded/GPU resources.
 
 Start with the [preparation and local service commands](docs/emuella-viewer-service.md),
@@ -118,7 +121,7 @@ cargo run --release -p analytical-workspace-lab
 Or launch the component gallery:
 
 ```sh
-cargo run --release -p polyorama-gallery
+cargo run --release -p stobie-gallery
 ```
 
 ### Browser
@@ -142,10 +145,10 @@ Open [Analytical Workspace Lab](http://localhost:8080). To run the gallery in
 another terminal:
 
 ```sh
-python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/polyorama-gallery/web
+python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/stobie-gallery/web
 ```
 
-Open [Polyorama Gallery](http://localhost:8081). Serve the files over HTTP rather
+Open [Stobie Gallery](http://localhost:8081). Serve the files over HTTP rather
 than opening `index.html` directly. Browser rendering requires WebGPU; there is
 no WebGL fallback. Re-run `cargo xtask build-web` after changing Rust code.
 
@@ -156,23 +159,23 @@ the [private development preview guide](docs/private-preview.md).
 
 ## How the project fits together
 
-Polyorama separates application state, asynchronous work, GPU resources and UI
+Stobie separates application state, asynchronous work, GPU resources and UI
 presentation so each has a clear owner.
 
 | Package | Responsibility |
 | --- | --- |
-| [`polyorama-core`](crates/polyorama-core) | Documents, session state, the serialisable dock tree, validated commands, typed coordinates and renderer-independent demands. No egui, wgpu or browser dependencies. |
-| [`polyorama-runtime`](crates/polyorama-runtime) | Demand reconciliation, bounded worker scheduling and completion state. Independent of egui and wgpu. |
-| [`polyorama-render-wgpu`](crates/polyorama-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
-| [`polyorama-ui-egui`](crates/polyorama-ui-egui) | The framework's egui integration: dock presentation, measured components, typed design tokens and semantic UI observations. |
+| [`stobie-core`](crates/stobie-core) | Documents, session state, the serialisable dock tree, validated commands, typed coordinates and renderer-independent demands. No egui, wgpu or browser dependencies. |
+| [`stobie-runtime`](crates/stobie-runtime) | Demand reconciliation, bounded worker scheduling and completion state. Independent of egui and wgpu. |
+| [`stobie-render-wgpu`](crates/stobie-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
+| [`stobie-ui-egui`](crates/stobie-ui-egui) | The framework's egui integration: dock presentation, measured components, typed design tokens and semantic UI observations. |
 | [`record-desk`](consumers/record-desk) | Independent native/browser record workflow with its own manifest, dependencies and lockfile; no image renderer/runtime or application-package dependency. |
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
 | [`minimal-workspace` example](apps/analytical-workspace-lab/examples/minimal-workspace.rs) | A small native consumer using public framework APIs and existing package dependencies, independent of Lab implementation. |
-| [`polyorama-gallery`](apps/polyorama-gallery) | The component catalogue and deterministic UI stories. |
-| [`polyorama-tile-worker`](apps/tile-worker) | The browser Web Worker entry point for tile preparation and decoding. |
+| [`stobie-gallery`](apps/stobie-gallery) | The component catalogue and deterministic UI stories. |
+| [`stobie-tile-worker`](apps/tile-worker) | The browser Web Worker entry point for tile preparation and decoding. |
 | [`xtask`](xtask) | Builds, architecture checks, token generation and verification tooling. |
 
-The serialisable `polyorama_core::Workspace` is the sole authoritative dock
+The serialisable `stobie_core::Workspace` is the sole authoritative dock
 tree. Pane presenters receive narrow state views and emit intents; validated
 commands apply changes. Durable annotations live in the document, while
 selection, cameras, tools and gesture previews live in the session.
@@ -206,7 +209,7 @@ access and can take longer than ordinary Rust tests.
 On Linux, the default [bootstrap script](tools/bootstrap-linux-ui.sh) unpacks
 pinned x86_64 UI packages into `.tools/`; that path also relies on tools such as
 `curl`, `bsdtar`, `bwrap`, ImageMagick, `jq` and `rg`. For a system-library setup, use
-`POLYORAMA_USE_SYSTEM_UI_LIBS=1` and provision the dependencies and display as
+`STOBIE_USE_SYSTEM_UI_LIBS=1` and provision the dependencies and display as
 shown in the [Ubuntu CI setup action](.github/actions/setup-verification/action.yml).
 
 Hosted verification runs eight stages in parallel and requires all of them under
@@ -241,7 +244,7 @@ does not update them automatically.
 - [UI guides](docs/ui-guides/README.md): entry point for component, pane,
   interaction, accessibility and UI review work.
 - [Design language](docs/design-language.md): visual and semantic contracts,
-  backed by the [token source](design/tokens/polyorama.tokens.json).
+  backed by the [token source](design/tokens/stobie.tokens.json).
 - [UI evaluation seed](docs/ui-evaluation-seed.md): frozen tasks and explicit
   scoring criteria for repeatable UI evaluation.
 - [Regional adapter contract](docs/regional-adapter-contract.md): immutable
@@ -257,7 +260,7 @@ does not update them automatically.
 
 ## Current limits
 
-Polyorama compiles eframe's native AccessKit adapter and is
+Stobie compiles eframe's native AccessKit adapter and is
 **AccessKit-semantic and keyboard-tested**. The representative workflow is
 directly qualified with human-confirmed audible Orca output for the exact
 Debian 13/GNOME 48/RDP/Orca 48.1 environment. Its tests cover roles, names,
@@ -285,5 +288,5 @@ environments and the scope of each performance observation.
 
 ## Licence
 
-Polyorama and its workspace packages are licensed under
+Stobie and its workspace packages are licensed under
 [Apache License 2.0](LICENSE).

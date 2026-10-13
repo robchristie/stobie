@@ -12,24 +12,24 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 # This is a bounded coverage policy, not every export or Markdown file.
 CRATES = (
-    "polyorama-core",
-    "polyorama-runtime",
-    "polyorama-render-wgpu",
-    "polyorama-ui-egui",
+    "stobie-core",
+    "stobie-runtime",
+    "stobie-render-wgpu",
+    "stobie-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["polyorama-ui-egui"] = 4  # Composition, icon toolbar, navigation and status-chip consumers.
+EXPECTED_EXAMPLES["stobie-ui-egui"] = 4  # Composition, icon toolbar, navigation and status-chip consumers.
 SOURCE_CONSUMERS = (
-    "crates/polyorama-core/src/lib.rs",
-    "crates/polyorama-core/src/data.rs",
-    "crates/polyorama-core/src/commands.rs",
-    "crates/polyorama-core/src/dock.rs",
-    "crates/polyorama-runtime/src/lib.rs",
-    "crates/polyorama-render-wgpu/src/lib.rs",
-    "crates/polyorama-ui-egui/src/lib.rs",
-    "crates/polyorama-ui-egui/src/actions.rs",
-    "crates/polyorama-ui-egui/src/presentation.rs",
-    "crates/polyorama-ui-egui/src/components/action_button.rs",
+    "crates/stobie-core/src/lib.rs",
+    "crates/stobie-core/src/data.rs",
+    "crates/stobie-core/src/commands.rs",
+    "crates/stobie-core/src/dock.rs",
+    "crates/stobie-runtime/src/lib.rs",
+    "crates/stobie-render-wgpu/src/lib.rs",
+    "crates/stobie-ui-egui/src/lib.rs",
+    "crates/stobie-ui-egui/src/actions.rs",
+    "crates/stobie-ui-egui/src/presentation.rs",
+    "crates/stobie-ui-egui/src/components/action_button.rs",
 )
 MARKDOWN_CONSUMERS = (
     "README.md",
@@ -37,7 +37,7 @@ MARKDOWN_CONSUMERS = (
 )
 EXAMPLE = "apps/analytical-workspace-lab/examples/minimal-workspace.rs"
 VARIATION = ('presentation.badge(ui, "state", "Document annotation", '
-             'polyorama_ui_egui::StatusTone::Success);')
+             'stobie_ui_egui::StatusTone::Success);')
 
 
 def local_links(root: Path, consumers=MARKDOWN_CONSUMERS) -> int:

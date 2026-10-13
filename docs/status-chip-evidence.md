@@ -87,7 +87,7 @@ Canonical qualification passed with `cargo xtask verify` at
 format/lint/tests, native/WASM release builds, architecture and documentation,
 14 zero-tolerance fixtures, existing application paths and both new physical
 status-chip journeys. Its result and exact independent review/CI/merge identities
-are retained in [PR #53](https://github.com/robchristie/polyorama/pull/53).
+are retained in [PR #53](https://github.com/robchristie/stobie/pull/53).
 
 ## Platform and preview limits
 

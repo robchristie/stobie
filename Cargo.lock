@@ -164,13 +164,13 @@ dependencies = [
  "js-sys",
  "log",
  "parking_lot",
- "polyorama-core",
- "polyorama-render-wgpu",
- "polyorama-runtime",
- "polyorama-ui-egui",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "stobie-core",
+ "stobie-render-wgpu",
+ "stobie-runtime",
+ "stobie-ui-egui",
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
@@ -1087,14 +1087,14 @@ dependencies = [
  "emuella-viewer-source",
  "js-sys",
  "libc",
- "polyorama-core",
- "polyorama-render-wgpu",
- "polyorama-runtime",
- "polyorama-ui-egui",
  "reqwest",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "stobie-core",
+ "stobie-render-wgpu",
+ "stobie-runtime",
+ "stobie-ui-egui",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -2833,82 +2833,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polyorama-core"
-version = "0.1.6"
-dependencies = [
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "polyorama-gallery"
-version = "0.1.6"
-dependencies = [
- "console_error_panic_hook",
- "eframe",
- "egui",
- "log",
- "polyorama-core",
- "polyorama-ui-egui",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "polyorama-render-wgpu"
-version = "0.1.6"
-dependencies = [
- "bytemuck",
- "parking_lot",
- "polyorama-core",
- "polyorama-runtime",
- "tracing",
- "web-time",
- "wgpu",
-]
-
-[[package]]
-name = "polyorama-runtime"
-version = "0.1.6"
-dependencies = [
- "crossbeam-channel",
- "lz4_flex",
- "parking_lot",
- "polyorama-core",
- "serde",
- "tracing",
- "web-time",
-]
-
-[[package]]
-name = "polyorama-tile-worker"
-version = "0.1.6"
-dependencies = [
- "polyorama-runtime",
- "serde-wasm-bindgen",
- "wasm-bindgen",
-]
-
-[[package]]
-name = "polyorama-ui-egui"
-version = "0.1.6"
-dependencies = [
- "egui",
- "egui-wgpu",
- "egui_kittest",
- "polyorama-core",
- "polyorama-render-wgpu",
- "serde",
- "serde_json",
- "wgpu",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3652,6 +3576,82 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "stobie-core"
+version = "0.1.6"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "stobie-gallery"
+version = "0.1.6"
+dependencies = [
+ "console_error_panic_hook",
+ "eframe",
+ "egui",
+ "log",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "stobie-core",
+ "stobie-ui-egui",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "stobie-render-wgpu"
+version = "0.1.6"
+dependencies = [
+ "bytemuck",
+ "parking_lot",
+ "stobie-core",
+ "stobie-runtime",
+ "tracing",
+ "web-time",
+ "wgpu",
+]
+
+[[package]]
+name = "stobie-runtime"
+version = "0.1.6"
+dependencies = [
+ "crossbeam-channel",
+ "lz4_flex",
+ "parking_lot",
+ "serde",
+ "stobie-core",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "stobie-tile-worker"
+version = "0.1.6"
+dependencies = [
+ "serde-wasm-bindgen",
+ "stobie-runtime",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "stobie-ui-egui"
+version = "0.1.6"
+dependencies = [
+ "egui",
+ "egui-wgpu",
+ "egui_kittest",
+ "serde",
+ "serde_json",
+ "stobie-core",
+ "stobie-render-wgpu",
+ "wgpu",
+]
 
 [[package]]
 name = "subtle"
@@ -4993,10 +4993,10 @@ name = "xtask"
 version = "0.1.6"
 dependencies = [
  "anyhow",
- "polyorama-gallery",
- "polyorama-ui-egui",
  "serde",
  "serde_json",
+ "stobie-gallery",
+ "stobie-ui-egui",
 ]
 
 [[package]]

@@ -75,10 +75,10 @@ test('failure is terminal, phase-labelled, restores observation and keeps the er
 test('worker envelopes use their own clock/memory and leave decode messages untouched', () => {
   const env = environment();
   const startup = installStartup({ app: 'test', workerUrl: 'https://example.test/a/worker.js', scope: env.scope });
-  assert.equal(env.scope.__polyoramaWorkerUrl(), 'https://example.test/a/worker.js');
+  assert.equal(env.scope.__stobieWorkerUrl(), 'https://example.test/a/worker.js');
   const worker = { timeOrigin: 2000, milestones: { worker_ready: { atMs: 4, epochMs: 2004 } }, memory: { worker_ready: { wasmLinearBytes: 131072 } }, resources: [] };
-  assert.equal(env.scope.__polyoramaStartupWorkerMessage({ Completed: {} }), false);
-  assert.equal(env.scope.__polyoramaStartupWorkerMessage({ __polyoramaStartup: worker }), true);
+  assert.equal(env.scope.__stobieStartupWorkerMessage({ Completed: {} }), false);
+  assert.equal(env.scope.__stobieStartupWorkerMessage({ __stobieStartup: worker }), true);
   assert.equal(startup.report.worker.timeOrigin, 2000);
   assert.deepEqual(startup.report.memory.worker, worker.memory);
   assert.deepEqual(startup.report.memory.main, {});
@@ -109,17 +109,17 @@ test('worker publishes bounded one-shot timing snapshots and terminal errors', (
   worker.mark('wasm_init_end'); worker.mark('worker_ready'); worker.mark('worker_ready');
   worker.mark('first_decode_complete'); worker.mark('first_decode_complete');
   assert.equal(messages.length, 2);
-  assert.equal(messages[0].__polyoramaStartup.milestones.first_decode_complete, undefined);
-  assert.equal(messages[1].__polyoramaStartup.memory.first_decode_complete.wasmLinearBytes, 131072);
+  assert.equal(messages[0].__stobieStartup.milestones.first_decode_complete, undefined);
+  assert.equal(messages[1].__stobieStartup.memory.first_decode_complete.wasmLinearBytes, 131072);
   worker.fail('decode', 'bad input'); worker.fail('again', 'ignored'); worker.mark('later');
   assert.equal(messages.length, 3);
-  assert.equal(messages[2].__polyoramaStartup.failure.phase, 'decode');
+  assert.equal(messages[2].__stobieStartup.failure.phase, 'decode');
 });
 
 test('a worker startup failure prevents readiness and cannot be overwritten', () => {
   const env = environment();
   const startup = installStartup({ app: 'test', workerUrl: 'worker.js', scope: env.scope });
-  env.scope.__polyoramaStartupWorkerMessage({ __polyoramaStartup: { memory: {}, failure: { phase: 'catalogue', message: 'HTTP 404' } } });
+  env.scope.__stobieStartupWorkerMessage({ __stobieStartup: { memory: {}, failure: { phase: 'catalogue', message: 'HTTP 404' } } });
   assert.equal(startup.report.failure.phase, 'worker:catalogue');
   assert.equal(startup.mark('worker_ready'), false);
 });
@@ -160,7 +160,7 @@ test('an asynchronous terminal failure stops bootstrap before framework construc
   const env = environment();
   const startup = await startApplication({ app: 'test', scope: env.scope,
     load: async () => ({ default: async () => {
-      env.scope.__polyoramaStartupFail('worker', 'failed during init');
+      env.scope.__stobieStartupFail('worker', 'failed during init');
       return { memory: { buffer: { byteLength: 65536 } } };
     }, WebHandle: class { constructor() { assert.fail('must not construct'); } } }),
   });
@@ -191,7 +191,7 @@ function workspaceFrame(env, startup) {
 }
 
 function workerEnvelope(milestones, memory = {}) {
-  return { __polyoramaStartup: { timeOrigin: 2000, milestones, memory, resources: [] } };
+  return { __stobieStartup: { timeOrigin: 2000, milestones, memory, resources: [] } };
 }
 
 test('a usable saved layout without imagery clears the watchdog and never destroys its handle', async () => {
@@ -206,7 +206,7 @@ test('a usable saved layout without imagery clears the watchdog and never destro
   const staleTimer = [...env.timers.values()][0];
   workspaceFrame(env, startup);
   assert.equal(startup.report.status, 'starting', 'worker readiness is still required');
-  env.scope.__polyoramaStartupWorkerMessage(workerEnvelope({ worker_ready: { atMs: 1, epochMs: 2001 } }));
+  env.scope.__stobieStartupWorkerMessage(workerEnvelope({ worker_ready: { atMs: 1, epochMs: 2001 } }));
   assert.equal(startup.report.status, 'ready');
   assert.equal(startup.report.milestones.first_useful_content, undefined);
   assert.equal(startup.report.memory.main.first_useful_content, undefined);
@@ -247,17 +247,17 @@ test('the worker first-decode report survives readiness without turning runtime 
   const env = environment(); let failures = 0;
   const startup = installStartup({ app: 'lab', workerUrl: '/worker.js', scope: env.scope, onFailure: () => failures++ });
   const ready = { worker_ready: { atMs: 1, epochMs: 2001 } };
-  env.scope.__polyoramaStartupWorkerMessage(workerEnvelope(ready));
+  env.scope.__stobieStartupWorkerMessage(workerEnvelope(ready));
   workspaceFrame(env, startup);
   assert.equal(startup.report.status, 'ready');
-  env.scope.__polyoramaStartupWorkerMessage({ __polyoramaStartup: { failure: { phase: 'decode', message: 'runtime error' } } });
+  env.scope.__stobieStartupWorkerMessage({ __stobieStartup: { failure: { phase: 'decode', message: 'runtime error' } } });
   assert.equal(startup.report.worker.failure, undefined);
   const decoded = { ...ready, first_decode_complete: { atMs: 10, epochMs: 2010 } };
   const memory = { first_decode_complete: { wasmLinearBytes: 131072 } };
-  env.scope.__polyoramaStartupWorkerMessage(workerEnvelope(decoded, memory));
+  env.scope.__stobieStartupWorkerMessage(workerEnvelope(decoded, memory));
   assert.deepEqual(startup.report.worker.milestones, decoded);
   assert.deepEqual(startup.report.memory.worker, memory);
-  env.scope.__polyoramaStartupWorkerMessage(workerEnvelope(decoded, { changed: true }));
+  env.scope.__stobieStartupWorkerMessage(workerEnvelope(decoded, { changed: true }));
   assert.deepEqual(startup.report.memory.worker, memory, 'first decode sample remains one-shot');
   assert.equal(startup.fail('worker_transport', 'runtime transport error'), false);
   assert.equal(failures, 0);

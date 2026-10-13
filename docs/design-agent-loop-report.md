@@ -1,4 +1,4 @@
-# Polyorama design system and agent UI loop report
+# Stobie design system and agent UI loop report
 
 Status: complete; landed as PR #17
 
@@ -9,7 +9,7 @@ current adapter and assistive-technology qualification state is maintained in
 ## Outcome
 
 The design-system and agent-control-plane goal is implemented without changing
-the egui/wgpu substrate or adding analytical capability. Polyorama now has one
+the egui/wgpu substrate or adding analytical capability. Stobie now has one
 typed token source, one measured component vocabulary, persisted orthogonal
 preferences, AccessKit-aligned semantics, a shared action registry, a native
 and browser gallery, deterministic UI verification, and a completely migrated
@@ -98,8 +98,8 @@ It records exact revisions, capture commands, environments and SHA-256 values
 for selected artefacts. Principal proof includes:
 
 - generated token source and drift tests in
-  [polyorama.tokens.json](../design/tokens/polyorama.tokens.json) and
-  [generated_tokens.rs](../crates/polyorama-ui-egui/src/generated_tokens.rs);
+  [stobie.tokens.json](../design/tokens/stobie.tokens.json) and
+  [generated_tokens.rs](../crates/stobie-ui-egui/src/generated_tokens.rs);
 - the documented grammar in
   [design-language.md](design-language.md);
 - five pinned expected fixtures and their semantic/text metadata in
@@ -176,7 +176,7 @@ performance-motivated product change was made in this increment.
 | Observations expose allocation, paint, clip, lines and truncation | Directly verified | `TextLayoutObservation` schema, snapshots and inspection commands |
 | Audits reject undeclared overflow, overlap, invalid geometry and alignment deviation | Directly verified | Negative text-audit tests and `cargo xtask ui audit-text` |
 | No mandatory story has accidental clipping or overlap | Directly verified | All 18 stories render with empty text audit; selected snapshots pass exact comparison |
-| Production and gallery share typed component implementations | Directly verified | Gallery imports production `polyorama-ui-egui` recipes; architecture and all-story tests |
+| Production and gallery share typed component implementations | Directly verified | Gallery imports production `stobie-ui-egui` recipes; architecture and all-story tests |
 
 ### Gallery, semantics and actions
 

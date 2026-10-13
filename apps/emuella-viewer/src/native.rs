@@ -1,13 +1,13 @@
 use crate::engine::{CATALOGUE_LIMIT, Engine, Event, HTTP_LIMIT, Job, WorkerTiming, pacing_now_ms};
 use anyhow::{Result, anyhow, ensure};
 use emuella_viewer_source::{Manifest, ResponseReader, SharedClient};
-use polyorama_runtime::{RegionalRequest, RequestToken};
 use std::{
     collections::BTreeSet,
     io::Read,
     sync::{Arc, Mutex, mpsc},
     time::{Duration, Instant},
 };
+use stobie_runtime::{RegionalRequest, RequestToken};
 
 pub struct Executor {
     sender: mpsc::SyncSender<Job>,
@@ -342,9 +342,9 @@ mod tests {
 
     #[test]
     fn immediate_worker_uses_real_receipt_reservations_and_upload_handoff() {
-        use polyorama_core::{DemandPriority, RegionConsumerId, RegionDemand};
-        use polyorama_runtime::{RegionalCompletion, RegionalRuntime, RegionalRuntimeLimits};
         use std::{io::Write, net::TcpListener};
+        use stobie_core::{DemandPriority, RegionConsumerId, RegionDemand};
+        use stobie_runtime::{RegionalCompletion, RegionalRuntime, RegionalRuntimeLimits};
         let job = crate::engine::diagnostic_tests::job();
         job.manifest.validate().unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();

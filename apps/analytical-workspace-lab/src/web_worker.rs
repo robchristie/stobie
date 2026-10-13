@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
-use polyorama_runtime::{DecodeEvent, DecodeRequest};
+use stobie_runtime::{DecodeEvent, DecodeRequest};
 use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 
@@ -17,7 +17,7 @@ impl BrowserWorker {
     pub fn new(context: egui::Context) -> Result<Self, wasm_bindgen::JsValue> {
         let options = WorkerOptions::new();
         options.set_type(WorkerType::Module);
-        options.set_name("polyorama-scalar-decoder");
+        options.set_name("stobie-scalar-decoder");
         let worker = Worker::new_with_options(&crate::startup_worker_url(), &options)?;
         let events = Rc::new(RefCell::new(VecDeque::new()));
         let failures = Rc::new(RefCell::new(VecDeque::new()));

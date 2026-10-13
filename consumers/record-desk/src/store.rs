@@ -12,11 +12,15 @@ use std::{
 };
 
 #[cfg(target_arch = "wasm32")]
-const STORAGE_KEY: &str = "polyorama.record-desk.v1";
+const STORAGE_KEY: &str = "stobie.record-desk.v1";
+#[cfg(target_arch = "wasm32")]
+const LEGACY_STORAGE_KEY: &str = "polyorama.record-desk.v1";
 
 pub struct Store {
     #[cfg(not(target_arch = "wasm32"))]
     path: Result<PathBuf, String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    legacy_path: Option<PathBuf>,
 }
 
 impl Default for Store {
@@ -27,9 +31,17 @@ impl Default for Store {
 
 impl Store {
     pub fn new() -> Self {
-        Self {
-            #[cfg(not(target_arch = "wasm32"))]
-            path: native_state_path(),
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self::from_environment(
+                std::env::var_os("RECORD_DESK_STATE_PATH"),
+                std::env::var_os("XDG_STATE_HOME"),
+                std::env::var_os("HOME"),
+            )
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self {}
         }
     }
 
@@ -42,7 +54,27 @@ impl Store {
             } else {
                 Ok(path)
             },
+            legacy_path: None,
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn from_environment(
+        override_path: Option<std::ffi::OsString>,
+        xdg_state_home: Option<std::ffi::OsString>,
+        home: Option<std::ffi::OsString>,
+    ) -> Self {
+        let explicit = override_path.is_some();
+        let path = resolve_native_state_path(override_path, xdg_state_home, home);
+        let legacy_path = if explicit {
+            None
+        } else {
+            path.as_ref()
+                .ok()
+                .and_then(|path| path.parent()?.parent())
+                .map(|base| base.join("polyorama-record-desk/state.json"))
+        };
+        Self { path, legacy_path }
     }
 
     pub fn description(&self) -> String {
@@ -63,34 +95,25 @@ impl Store {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let path = self.path.as_ref().map_err(Clone::clone)?;
-            let file = match File::open(path) {
-                Ok(file) => file,
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-                Err(error) => return Err(format!("Could not open {}: {error}", path.display())),
-            };
-            // Bound the actual read, including a file that grows after opening.
-            let mut bytes = Vec::new();
-            file.take((MAX_STATE_BYTES + 1) as u64)
-                .read_to_end(&mut bytes)
-                .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
-            if bytes.len() > MAX_STATE_BYTES {
-                return Err(format!(
-                    "Saved state at {} exceeds the 1 MiB limit.",
-                    path.display()
-                ));
+            match read_native_state(path)? {
+                Some(state) => Ok(Some(state)),
+                None => match &self.legacy_path {
+                    Some(legacy) => read_native_state(legacy),
+                    None => Ok(None),
+                },
             }
-            let text = std::str::from_utf8(&bytes).map_err(|error| {
-                format!("Saved state at {} is not UTF-8: {error}", path.display())
-            })?;
-            decode(text)
-                .map(Some)
-                .map_err(|error| format!("Could not load {}: {error}", path.display()))
         }
         #[cfg(target_arch = "wasm32")]
         {
-            let text = browser_storage()?
+            let storage = browser_storage()?;
+            let mut text = storage
                 .get_item(STORAGE_KEY)
                 .map_err(|error| format!("Could not read browser local storage: {error:?}"))?;
+            if text.is_none() {
+                text = storage.get_item(LEGACY_STORAGE_KEY).map_err(|error| {
+                    format!("Could not read former browser local storage: {error:?}")
+                })?;
+            }
             text.as_deref().map(decode).transpose()
         }
     }
@@ -133,12 +156,28 @@ impl Store {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn native_state_path() -> Result<PathBuf, String> {
-    resolve_native_state_path(
-        std::env::var_os("RECORD_DESK_STATE_PATH"),
-        std::env::var_os("XDG_STATE_HOME"),
-        std::env::var_os("HOME"),
-    )
+fn read_native_state(path: &Path) -> Result<Option<SavedState>, String> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("Could not open {}: {error}", path.display())),
+    };
+    // Bound the actual read, including a file that grows after opening.
+    let mut bytes = Vec::new();
+    file.take((MAX_STATE_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
+    if bytes.len() > MAX_STATE_BYTES {
+        return Err(format!(
+            "Saved state at {} exceeds the 1 MiB limit.",
+            path.display()
+        ));
+    }
+    let text = std::str::from_utf8(&bytes)
+        .map_err(|error| format!("Saved state at {} is not UTF-8: {error}", path.display()))?;
+    decode(text)
+        .map(Some)
+        .map_err(|error| format!("Could not load {}: {error}", path.display()))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -168,7 +207,7 @@ fn resolve_native_state_path(
     if !base.is_absolute() {
         return Err("XDG_STATE_HOME or HOME must identify an absolute state directory.".into());
     }
-    Ok(base.join("polyorama-record-desk/state.json"))
+    Ok(base.join("stobie-record-desk/state.json"))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -190,6 +229,54 @@ mod tests {
     }
 
     #[test]
+    fn rename_preserves_old_state_and_prefers_the_current_location() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = Store::from_environment(None, Some(directory.path().into()), None);
+        let legacy = store.legacy_path.as_ref().unwrap();
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        let state = saved_state();
+        let original = encode(&state).unwrap();
+        std::fs::write(legacy, &original).unwrap();
+        assert_eq!(store.load().unwrap(), Some(state.clone()));
+        store.save(&state).unwrap();
+        let restarted = Store::from_environment(None, Some(directory.path().into()), None);
+        assert_eq!(restarted.load().unwrap(), Some(state.clone()));
+        assert_eq!(std::fs::read_to_string(legacy).unwrap(), original);
+
+        let mut current = state.clone();
+        current.records[0].title = "Saved under Stobie".into();
+        store.save(&current).unwrap();
+        assert_eq!(store.load().unwrap(), Some(current));
+        let path = store.path.as_ref().unwrap();
+        std::fs::write(path, "{broken").unwrap();
+        assert!(store.load().is_err());
+        assert!(store.save(&state).is_err());
+        assert_eq!(std::fs::read_to_string(path).unwrap(), "{broken");
+        std::fs::remove_file(path).unwrap();
+        std::fs::write(legacy, "{broken").unwrap();
+        assert!(store.load().is_err());
+        assert!(store.save(&state).is_err());
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn explicit_state_location_disables_legacy_fallback() {
+        let directory = tempfile::tempdir().unwrap();
+        let legacy = directory.path().join("polyorama-record-desk/state.json");
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&legacy, encode(&saved_state()).unwrap()).unwrap();
+        let path = directory.path().join("chosen.json");
+        let store = Store::from_environment(
+            Some(path.clone().into()),
+            Some(directory.path().into()),
+            None,
+        );
+        assert!(store.legacy_path.is_none());
+        assert_eq!(store.load().unwrap(), None);
+        assert_eq!(Store::at_path(path).load().unwrap(), None);
+    }
+
+    #[test]
     fn native_location_honours_explicit_and_xdg_paths_without_a_cwd_fallback() {
         let override_path = Some("/chosen/state.json".into());
         let xdg = Some("/state-root".into());
@@ -200,11 +287,11 @@ mod tests {
         );
         assert_eq!(
             resolve_native_state_path(None, xdg, home.clone()).unwrap(),
-            PathBuf::from("/state-root/polyorama-record-desk/state.json")
+            PathBuf::from("/state-root/stobie-record-desk/state.json")
         );
         assert_eq!(
             resolve_native_state_path(None, Some("".into()), home).unwrap(),
-            PathBuf::from("/home/example/.local/state/polyorama-record-desk/state.json")
+            PathBuf::from("/home/example/.local/state/stobie-record-desk/state.json")
         );
         assert!(resolve_native_state_path(None, None, None).is_err());
         assert!(

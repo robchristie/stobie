@@ -141,7 +141,7 @@ export TMPDIR="$VIEWER_BUILD/tmp"
 export CARGO_NET_OFFLINE=true
 cargo fmt --all --check
 cargo test --locked -p emuella-viewer --lib --bins
-cargo test --locked -p polyorama-runtime --lib
+cargo test --locked -p stobie-runtime --lib
 python3 -B -m unittest discover -s tools/tests -p 'test_viewer_acceptance_scheduling.py'
 cargo clippy --locked -p emuella-viewer --all-targets -- -D warnings
 cargo clippy --locked --target wasm32-unknown-unknown -p emuella-viewer -- -D warnings

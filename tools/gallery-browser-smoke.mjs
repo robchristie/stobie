@@ -7,8 +7,8 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 
-const root = normalize(join(process.cwd(), 'apps/polyorama-gallery/web'));
-const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
+const root = normalize(join(process.cwd(), 'apps/stobie-gallery/web'));
+const evidenceRoot = normalize(process.env.STOBIE_EVIDENCE_DIR
   ?? join(process.cwd(), 'docs/design-agent-loop-evidence'));
 await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
@@ -29,7 +29,7 @@ const errors = [];
 const installedChromium = chromium.executablePath();
 const revisionDirectory = basename(dirname(dirname(installedChromium)));
 const revision = revisionDirectory.slice(revisionDirectory.lastIndexOf('-') + 1);
-const headlessShell = process.env.POLYORAMA_CHROMIUM ?? join(
+const headlessShell = process.env.STOBIE_CHROMIUM ?? join(
   dirname(dirname(dirname(installedChromium))),
   `chromium_headless_shell-${revision}`,
   'chrome-headless-shell-linux64',
@@ -43,10 +43,10 @@ const browserFlags = [
 let browser;
 let browserProcess;
 let browserProfile;
-if (process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1') {
+if (process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1') {
   browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
 } else {
-  browserProfile = await mkdtemp(join(tmpdir(), 'polyorama-gallery-browser-'));
+  browserProfile = await mkdtemp(join(tmpdir(), 'stobie-gallery-browser-'));
   browserProcess = spawn(headlessShell, [
     ...browserFlags, '--remote-debugging-port=0',
     `--user-data-dir=${browserProfile}`, 'about:blank',
@@ -103,14 +103,14 @@ const assertRenderedScreenshot = async (screenshot, label) => {
   }
 };
 
-const snapshot = () => page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
+const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const selectStory = async (story) => {
   const before = await snapshot();
   const startedMs = Date.now();
-  await page.evaluate((value) => window.__POLYORAMA_GALLERY_HANDLE.select_story(value), story);
+  await page.evaluate((value) => window.__STOBIE_GALLERY_HANDLE.select_story(value), story);
   await page.waitForFunction(
     ({ frame, storyId }) => {
-      const current = window.__POLYORAMA_GALLERY_HANDLE.snapshot();
+      const current = window.__STOBIE_GALLERY_HANDLE.snapshot();
       return current.frame > frame && current.story === storyId;
     },
     { frame: before.frame, storyId: story },
@@ -128,9 +128,9 @@ const selectStory = async (story) => {
 try {
   await page.goto('http://127.0.0.1:4174', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.body.classList.contains('ready')
-    && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
+    && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
   releaseObservations.initial_ready_wall_ms = Date.now() - launchStartedMs;
-  const manifest = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.manifest());
+  const manifest = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.manifest());
   if (manifest.length === 0 || new Set(manifest.map((entry) => entry.id)).size !== manifest.length) {
     throw new Error(`invalid gallery manifest: ${JSON.stringify(manifest)}`);
   }
@@ -151,7 +151,7 @@ try {
   const overview = await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-overview.png') });
   await assertRenderedScreenshot(overview, 'gallery overview screenshot');
 
-  await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.set_configuration({
+  await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.set_configuration({
     appearance: 'light', contrast: 'high', density: 'compact', font_scale: 1.5, width: 'narrow',
   }));
   current = await selectStory('reference/diagnostics');
@@ -189,7 +189,7 @@ try {
   }
   await page.screenshot({ path: join(evidenceRoot, 'gallery-browser-loading.png') });
 
-  await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.set_configuration({
+  await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.set_configuration({
     appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1.0, width: 'wide',
   }));
   current = await selectStory('reference/inspector');
@@ -221,7 +221,7 @@ try {
   }
   const resultText = current.text.find((entry) => entry.component_id.kind === 'result_row');
   if (!resultText) throw new Error(`result row text observation missing: ${JSON.stringify(current)}`);
-  const clipboardSentinel = 'polyorama-result-row-selection-remains-inert';
+  const clipboardSentinel = 'stobie-result-row-selection-remains-inert';
   await page.evaluate((value) => navigator.clipboard.writeText(value), clipboardSentinel);
   const resultSelectionY = (resultText.allocated_rect.min_y + resultText.allocated_rect.max_y) / 2;
   await page.mouse.move(resultText.allocated_rect.min_x + 1, resultSelectionY);

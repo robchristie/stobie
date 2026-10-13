@@ -11,7 +11,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultOptimiser = () => process.env.WASM_OPT || (existsSync(path.join(root, '.tools/browser/binaryen-version_131/bin/wasm-opt')) ? path.join(root, '.tools/browser/binaryen-version_131/bin/wasm-opt') : 'wasm-opt');
 export const DEFAULT_APPS = [
   { name: 'lab', directory: path.join(root, 'apps/analytical-workspace-lab/web') },
-  { name: 'gallery', directory: path.join(root, 'apps/polyorama-gallery/web') },
+  { name: 'gallery', directory: path.join(root, 'apps/stobie-gallery/web') },
   { name: 'viewer', directory: path.join(root, 'apps/emuella-viewer/web') },
 ];
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');

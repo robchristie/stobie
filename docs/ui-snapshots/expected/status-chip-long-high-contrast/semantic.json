@@ -36,16 +36,15 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.25394c4ea5d49ccb",
+      "id": "presentation.0bc286a041282c2c",
       "parent": "gallery.story",
       "role": "status_chip",
-      "name": "Überprüfung durch das regionale Forschungsteam ausstehend",
-      "description": "Awaiting review by the regional research team",
+      "name": "Scheduled",
       "rect": {
         "min_x": 732,
-        "min_y": 272,
-        "max_x": 837,
-        "max_y": 297
+        "min_y": 461,
+        "max_x": 815.15625,
+        "max_y": 486
       },
       "enabled": true,
       "focused": false,
@@ -54,7 +53,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.3d553916827103d0",
+      "id": "presentation.57f1f10b3b9acfc4",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Needs review",
@@ -72,7 +71,25 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.5cac3b4e50ca2584",
+      "id": "presentation.82ea14afdd8d975b",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Überprüfung durch das regionale Forschungsteam ausstehend",
+      "description": "Awaiting review by the regional research team",
+      "rect": {
+        "min_x": 732,
+        "min_y": 272,
+        "max_x": 837,
+        "max_y": 297
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.e7df875a307cb9e7",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Scheduled after collection validation and approval",
@@ -82,23 +99,6 @@
         "min_y": 312,
         "max_x": 787,
         "max_y": 337
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.93fdbbb1da7e3cbe",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Scheduled",
-      "rect": {
-        "min_x": 732,
-        "min_y": 461,
-        "max_x": 815.15625,
-        "max_y": 486
       },
       "enabled": true,
       "focused": false,

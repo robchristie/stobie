@@ -35,7 +35,7 @@ candidates. Select one coherent final configuration or reject unsupported change
 
 ## Closeout
 
-Delivery: [Polyorama PR #40](https://github.com/robchristie/polyorama/pull/40).
+Delivery: [Stobie PR #40](https://github.com/robchristie/stobie/pull/40).
 
 The selected final configuration retains unprocessed bindgen WASM with
 compressed/versioned delivery. All declared baseline regression gates and the

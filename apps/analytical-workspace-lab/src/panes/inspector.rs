@@ -1,6 +1,6 @@
 use eframe::egui;
-use polyorama_core::{AnnotationId, ImageIntent, PaneId, ResultId, result_at};
-use polyorama_ui_egui::{
+use stobie_core::{AnnotationId, ImageIntent, PaneId, ResultId, result_at};
+use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, UiNode, UiRole, property_row, section_heading,
 };
 

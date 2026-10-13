@@ -10,12 +10,12 @@ import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { focusNavigationDestination } from './navigation-browser-focus.mjs';
 
-const root = resolve('apps/polyorama-gallery/web');
-const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/navigation-browser');
+const root = resolve('apps/stobie-gallery/web');
+const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/navigation-browser');
 const assets = new Map([
   ['index.html', 'text/html'], ['styles.css', 'text/css'], ['bootstrap.js', 'text/javascript'],
-  ['browser-startup.js', 'text/javascript'], ['pkg/polyorama_gallery.js', 'text/javascript'],
-  ['pkg/polyorama_gallery_bg.wasm', 'application/wasm'],
+  ['browser-startup.js', 'text/javascript'], ['pkg/stobie_gallery.js', 'text/javascript'],
+  ['pkg/stobie_gallery_bg.wasm', 'application/wasm'],
 ]);
 const server = createServer(async (request, response) => {
   const name = new URL(request.url, 'http://local').pathname.slice(1) || 'index.html';
@@ -27,27 +27,27 @@ const server = createServer(async (request, response) => {
   } catch { response.writeHead(404); response.end(); }
 });
 await mkdir(evidence, { recursive: true });
-const profile = await mkdtemp(join(tmpdir(), 'polyorama-navigation-browser-'));
+const profile = await mkdtemp(join(tmpdir(), 'stobie-navigation-browser-'));
 const steps = [];
 const targets = [];
 const errors = [];
 let context, page, browser, url;
-const snapshot = () => page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
+const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'regular', ...overrides });
 async function story(id, config = configuration()) {
   const before = await snapshot();
   await page.evaluate(({ id, config }) => {
-    window.__POLYORAMA_GALLERY_HANDLE.set_configuration(config);
-    window.__POLYORAMA_GALLERY_HANDLE.select_story(id);
+    window.__STOBIE_GALLERY_HANDLE.set_configuration(config);
+    window.__STOBIE_GALLERY_HANDLE.select_story(id);
   }, { id, config });
   await page.waitForFunction(({ id, config, frame }) => {
-    const s = window.__POLYORAMA_GALLERY_HANDLE.snapshot();
+    const s = window.__STOBIE_GALLERY_HANDLE.snapshot();
     return s.frame > frame && s.story === id && Object.entries(config).every(([key, value]) => s.configuration[key] === value);
   }, { id, config, frame: before.frame });
 }
 async function fixture(expected) {
   await page.waitForFunction(expected => {
-    const fixture = window.__POLYORAMA_GALLERY_HANDLE.snapshot().navigation_fixture;
+    const fixture = window.__STOBIE_GALLERY_HANDLE.snapshot().navigation_fixture;
     return Object.entries(expected).every(([key, value]) => (fixture[key] ?? null) === value);
   }, expected, { timeout: 10000 });
 }
@@ -68,7 +68,7 @@ async function focus(destination) {
   return focusNavigationDestination(destination, {
     target,
     pressTab: () => page.keyboard.press('Tab'),
-    waitForTab: epoch => page.waitForFunction(epoch => window.__POLYORAMA_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
+    waitForTab: epoch => page.waitForFunction(epoch => window.__STOBIE_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
     wait: ms => page.waitForTimeout(ms),
   });
 }
@@ -86,8 +86,8 @@ async function record(name, expected = {}) {
   return after;
 }
 try {
-  if (process.env.POLYORAMA_NAVIGATION_PREVIEW_URL) {
-    const preview = new URL(process.env.POLYORAMA_NAVIGATION_PREVIEW_URL);
+  if (process.env.STOBIE_NAVIGATION_PREVIEW_URL) {
+    const preview = new URL(process.env.STOBIE_NAVIGATION_PREVIEW_URL);
     assert(preview.protocol === 'https:' && preview.pathname === '/gallery/' && !preview.username && !preview.password && !preview.search && !preview.hash);
     url = preview.href;
   } else {
@@ -96,14 +96,14 @@ try {
   }
   context = await chromium.launchPersistentContext(profile, {
     ...hostedLinuxWebGpuLaunchOptions(), viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1,
-    executablePath: process.env.POLYORAMA_CHROMIUM,
-    env: { ...process.env, LD_LIBRARY_PATH: process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1' ? process.env.LD_LIBRARY_PATH ?? '' : `${resolve('.tools/sysroot/usr/lib')}:${process.env.LD_LIBRARY_PATH ?? ''}` },
+    executablePath: process.env.STOBIE_CHROMIUM,
+    env: { ...process.env, LD_LIBRARY_PATH: process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1' ? process.env.LD_LIBRARY_PATH ?? '' : `${resolve('.tools/sysroot/usr/lib')}:${process.env.LD_LIBRARY_PATH ?? ''}` },
   });
   browser = context.browser(); page = await context.newPage();
   page.on('pageerror', error => errors.push(String(error)));
   const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
   assert(response?.ok(), `Gallery HTTP status ${response?.status()}`);
-  await page.waitForFunction(() => document.body.classList.contains('ready') && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0);
+  await page.waitForFunction(() => document.body.classList.contains('ready') && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0);
   await story('navigation/sidebar');
   await record('sidebar', { selected: 'home', activations: 0 });
   await focus('tasks');
@@ -171,7 +171,7 @@ try {
   await page.mouse.move(1400, 880);
   const idle = await observeWarmedIdle(async () => (await snapshot()).frame, ms => page.waitForTimeout(ms));
   assert.deepEqual(errors, []);
-  const report = { source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '', wasm_sha256: createHash('sha256').update(await readFile(join(root, 'pkg/polyorama_gallery_bg.wasm'))).digest('hex'), url, browser: browser.version(), steps, targets, idle, input_route: 'Physical Playwright mouse/keyboard; hooks only choose stories/appearance and read observations', errors };
+  const report = { source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '', wasm_sha256: createHash('sha256').update(await readFile(join(root, 'pkg/stobie_gallery_bg.wasm'))).digest('hex'), url, browser: browser.version(), steps, targets, idle, input_route: 'Physical Playwright mouse/keyboard; hooks only choose stories/appearance and read observations', errors };
   await writeFile(join(evidence, 'browser-workflow.json'), `${JSON.stringify(report, null, 2)}\n`);
   console.log('Navigation browser workflow passed: pointer, keyboard, disabled, caller-owned selection/count, appearances, clipping and idle');
 } catch (error) {

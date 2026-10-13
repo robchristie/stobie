@@ -92,11 +92,11 @@ files and their metadata.
 Exact capture commands were:
 
 ```text
-cargo build --release -p polyorama-gallery
-cargo build --release --target wasm32-unknown-unknown -p polyorama-gallery
-wasm-bindgen --target web --out-dir apps/polyorama-gallery/web/pkg target/wasm32-unknown-unknown/release/polyorama_gallery.wasm
-POLYORAMA_EVIDENCE_DIR=docs/design-agent-loop-evidence npm run gallery-browser-smoke
-POLYORAMA_EVIDENCE_DIR=docs/design-agent-loop-evidence bash tools/gallery-native-smoke.sh
+cargo build --release -p stobie-gallery
+cargo build --release --target wasm32-unknown-unknown -p stobie-gallery
+wasm-bindgen --target web --out-dir apps/stobie-gallery/web/pkg target/wasm32-unknown-unknown/release/stobie_gallery.wasm
+STOBIE_EVIDENCE_DIR=docs/design-agent-loop-evidence npm run gallery-browser-smoke
+STOBIE_EVIDENCE_DIR=docs/design-agent-loop-evidence bash tools/gallery-native-smoke.sh
 ```
 
 SHA-256 values:

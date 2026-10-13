@@ -9,7 +9,7 @@ impl RecordDeskApp {
             "Record Desk",
             BuildIdentity {
                 version: env!("CARGO_PKG_VERSION").into(),
-                source_revision: option_env!("POLYORAMA_BUILD_REVISION").map(str::to_owned),
+                source_revision: option_env!("STOBIE_BUILD_REVISION").map(str::to_owned),
             },
         )
     }
@@ -36,7 +36,7 @@ impl RecordDeskApp {
                 "Record Desk",
                 BuildIdentity {
                     version: env!("CARGO_PKG_VERSION").into(),
-                    source_revision: option_env!("POLYORAMA_BUILD_REVISION").map(str::to_owned),
+                    source_revision: option_env!("STOBIE_BUILD_REVISION").map(str::to_owned),
                 },
                 instance,
             )
@@ -81,7 +81,7 @@ impl RecordDeskApp {
                         self.desk.filter_revision()
                     ),
                     Action::Arrange => match &self.workspace.root {
-                        polyorama_core::DockNode::Split { axis, .. } => format!("{axis:?}"),
+                        stobie_core::DockNode::Split { axis, .. } => format!("{axis:?}"),
                         _ => "unsplit".into(),
                     },
                     _ => "stable".into(),
@@ -295,8 +295,8 @@ mod tests {
         present(&mut app, &context);
         let apply = target(&service, Action::Apply);
         app.action(Action::Search).unwrap();
-        polyorama_core::WorkspaceResize {
-            node: polyorama_core::DockNodeId(1),
+        stobie_core::WorkspaceResize {
+            node: stobie_core::DockNodeId(1),
             before: match &app.workspace.root {
                 DockNode::Split { fraction, .. } => *fraction,
                 _ => unreachable!(),
@@ -313,8 +313,8 @@ mod tests {
         present(&mut app, &context);
         let undo = target(&service, Action::Undo);
         app.action(Action::Search).unwrap();
-        polyorama_core::WorkspaceResize {
-            node: polyorama_core::DockNodeId(1),
+        stobie_core::WorkspaceResize {
+            node: stobie_core::DockNodeId(1),
             before: 0.45,
             after: 0.5,
         }

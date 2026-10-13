@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile Polyorama's closed SVG subset into dependency-free vector geometry."""
+"""Compile Stobie's closed SVG subset into dependency-free vector geometry."""
 import argparse
 from pathlib import Path
 import re
@@ -7,8 +7,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'crates/polyorama-ui-egui/assets/icons'
-OUTPUT = ROOT / 'crates/polyorama-ui-egui/src/generated_icons.rs'
+SOURCE = ROOT / 'crates/stobie-ui-egui/assets/icons'
+OUTPUT = ROOT / 'crates/stobie-ui-egui/src/generated_icons.rs'
 NS = '{http://www.w3.org/2000/svg}'
 
 

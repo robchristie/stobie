@@ -119,7 +119,7 @@ single prepared NITF representation on loopback for interactive inspection:
 
 ```sh
 export VIEWER_WEB_ROOT="$SCRATCH/viewer-web"
-POLYORAMA_VIEWER_WEB_DIR="$VIEWER_WEB_ROOT" cargo xtask build-viewer-web
+STOBIE_VIEWER_WEB_DIR="$VIEWER_WEB_ROOT" cargo xtask build-viewer-web
 
 # Terminal 1: leave this service running.
 cargo run --release -p emuella-viewer-tools -- serve \

@@ -1,6 +1,6 @@
 # Browser startup results
 
-Delivery: [Polyorama PR #40](https://github.com/robchristie/polyorama/pull/40).
+Delivery: [Stobie PR #40](https://github.com/robchristie/stobie/pull/40).
 
 The retained change is compressed, cache-aware, versioned delivery with finite
 startup observation and production artifact checks. The default is unprocessed
@@ -85,9 +85,9 @@ small differences. No further Cargo/profile tuning was investigated.
 
 | Final WASM | Raw bytes | Brotli bytes | gzip bytes |
 | --- | ---: | ---: | ---: |
-| gallery/polyorama_gallery_bg.wasm | 10453069 | 2691352 | 3745082 |
+| gallery/stobie_gallery_bg.wasm | 10453069 | 2691352 | 3745082 |
 | lab/analytical_workspace_lab_bg.wasm | 11328038 | 2842015 | 3991951 |
-| lab/polyorama_tile_worker_bg.wasm | 145682 | 43189 | 51034 |
+| lab/stobie_tile_worker_bg.wasm | 145682 | 43189 | 51034 |
 | viewer/emuella_viewer_bg.wasm | 11377181 | 2895289 | 4050753 |
 
 The reports retain browser resource transfer/encoded/decoded sizes, actual HTTP

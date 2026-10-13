@@ -15,7 +15,7 @@ export const FILES = ['tools/viewer-acceptance-browser-masks.mjs',
 export const FAILED_NAME = 'viewer-acceptance-browser-masks-fullscene-20260911t072423z';
 export const CHROME = { path: '/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
   bytes: 290614600, sha256: '0b20b130e7edd9dd51873be867761295fe0cfad490c2b9a64f95bd3cfc08fa71' };
-export const LD_PATH = '/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/polyorama/.tools/sysroot/usr/lib';
+export const LD_PATH = '/home/rob/.cache/ms-playwright/chromium-1234/chrome-linux64:/nvme/development/stobie/.tools/sysroot/usr/lib';
 export const BUDGET = { invocations: 1, browser_launches: 1, workers: 0, jobs: 0, services: 0,
   retries: 0, launch_ms: 60000, outer_seconds: 90 };
 const CORE_FILES = ['package.json', 'index.js', 'index.mjs', 'lib/bootstrap.js', 'lib/coreBundle.js', 'lib/utilsBundle.js'];

@@ -1,5 +1,5 @@
 schema_version = 1
-project = "polyorama-lab"
+project = "stobie-lab"
 command = ["python3", "tools/dev-preview.py"]
 cwd = "."
 

@@ -3,7 +3,7 @@
 Status: **prepared, unexecuted**. Main owns the commit and a later execution
 grant after the native owner stops. This preparation grants no launch. The
 question is whether one fresh blank persistent context exposes the previously
-lost launch stderr. Polyorama owns the helper, protocol and bounded result;
+lost launch stderr. Stobie owns the helper, protocol and bounded result;
 main owns cause assessment and any subsequent functional proof. Exit preparation
 with authored mock tests and these frozen bounds. No downstream agents, browser,
 application, service or hardware measurement is used in preparation.

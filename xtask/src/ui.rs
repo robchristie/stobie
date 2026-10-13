@@ -6,15 +6,15 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow, bail};
-use polyorama_gallery::{GalleryConfiguration, StoryId};
-use polyorama_ui_egui::TextAuditCoverage;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use stobie_gallery::{GalleryConfiguration, StoryId};
+use stobie_ui_egui::TextAuditCoverage;
 
 const FIXTURE_MANIFEST: &str = "docs/ui-snapshots/fixtures.json";
 const EXPECTED_ROOT: &str = "docs/ui-snapshots/expected";
 const SCHEMA_VERSION: u32 = 1;
-const OUTPUT_MARKER: &str = ".polyorama-ui-output-v1";
+const OUTPUT_MARKER: &str = ".stobie-ui-output-v1";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -495,7 +495,7 @@ fn audit_text(root: &Path, manifest: &FixtureManifest, arguments: &UiArguments) 
             "fixture_count": fixtures.len(),
             "failed_fixtures": failed,
             "capture_errors": errors,
-            "pass_meaning": "Every observed Polyorama text component passed.",
+            "pass_meaning": "Every observed Stobie text component passed.",
             "coverage": coverage
         }),
     )?;
@@ -520,7 +520,7 @@ fn capture(
     });
     let request_path = output_directory.join("request.json");
     write_json(&request_path, &request)?;
-    let web_package = root.join("apps/polyorama-gallery/web/pkg/polyorama_gallery.js");
+    let web_package = root.join("apps/stobie-gallery/web/pkg/stobie_gallery.js");
     if !web_package.is_file() {
         bail!("gallery web package is missing; run `cargo xtask build-web` before UI capture");
     }
@@ -809,7 +809,7 @@ fn recreate_owned_directory(root: &Path, path: &Path) -> Result<()> {
         }
         if marker.is_file() {
             let marker_value = fs::read_to_string(&marker)?;
-            if marker_value != "Polyorama deterministic UI output v1\n" {
+            if marker_value != "Stobie deterministic UI output v1\n" {
                 bail!("invalid UI output ownership marker: {}", marker.display());
             }
             fs::remove_dir_all(&path)
@@ -820,7 +820,7 @@ fn recreate_owned_directory(root: &Path, path: &Path) -> Result<()> {
         .with_context(|| format!("create UI evidence directory {}", path.display()))?;
     fs::write(
         path.join(OUTPUT_MARKER),
-        "Polyorama deterministic UI output v1\n",
+        "Stobie deterministic UI output v1\n",
     )?;
     Ok(())
 }

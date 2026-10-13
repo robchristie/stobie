@@ -15,7 +15,7 @@ inherits = "ci"
 
 [profile.workspace.junit]
 path = "junit.xml"
-report-name = "polyorama-workspace"
+report-name = "stobie-workspace"
 report-skipped = "all"
 
 [profile.ui-no-default]
@@ -23,5 +23,5 @@ inherits = "ci"
 
 [profile.ui-no-default.junit]
 path = "junit.xml"
-report-name = "polyorama-ui-no-default-features"
+report-name = "stobie-ui-no-default-features"
 report-skipped = "all"

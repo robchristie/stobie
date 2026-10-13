@@ -1,9 +1,9 @@
 //! The transport-neutral worker boundary. Codec work is called only by executors.
 use anyhow::{Result, ensure};
 use emuella_viewer_source::{ClientLimits, Manifest, Region, SharedClient};
-use polyorama_core::{RegionalFrame, RegionalPixels, RepresentationId, SampleLayout};
-use polyorama_runtime::RegionalRequest;
 use serde::{Deserialize, Serialize};
+use stobie_core::{RegionalFrame, RegionalPixels, RepresentationId, SampleLayout};
+use stobie_runtime::RegionalRequest;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub const HTTP_LIMIT: usize = 8 << 20;
@@ -371,8 +371,8 @@ impl Engine {
 #[cfg(test)]
 pub(crate) mod diagnostic_tests {
     use super::*;
-    use polyorama_core::{ImageRegion, RegionKey, SourceStage};
-    use polyorama_runtime::RequestToken;
+    use stobie_core::{ImageRegion, RegionKey, SourceStage};
+    use stobie_runtime::RequestToken;
     pub(crate) fn job() -> Job {
         let manifest: Manifest = serde_json::from_value(serde_json::json!({
             "target":"authored-rgb16", "tid":"", "identity":{

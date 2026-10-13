@@ -347,10 +347,10 @@ Inspect the existing repository before changing its structure. Adapt the followi
 
 ```text
 crates/
-  polyorama-core/
-  polyorama-runtime/
-  polyorama-render-wgpu/
-  polyorama-ui-egui/
+  stobie-core/
+  stobie-runtime/
+  stobie-render-wgpu/
+  stobie-ui-egui/
 
 apps/
   analytical-workspace-lab/
@@ -359,7 +359,7 @@ xtask/
 docs/
 ```
 
-## `polyorama-core`
+## `stobie-core`
 
 Owns:
 
@@ -382,7 +382,7 @@ It must not depend on:
 * `web-sys`;
 * or platform windowing crates.
 
-## `polyorama-runtime`
+## `stobie-runtime`
 
 Owns:
 
@@ -397,7 +397,7 @@ Owns:
 
 It must not depend on egui or direct UI concepts.
 
-## `polyorama-render-wgpu`
+## `stobie-render-wgpu`
 
 Owns:
 
@@ -412,7 +412,7 @@ Owns:
 
 It should depend on wgpu but not on egui.
 
-## `polyorama-ui-egui`
+## `stobie-ui-egui`
 
 Owns:
 
@@ -985,8 +985,8 @@ Keep JavaScript glue narrow and platform-oriented.
 
 Add an automated or documented check confirming:
 
-* `polyorama-core` has no egui, eframe, wgpu or browser dependency;
-* `polyorama-runtime` has no egui dependency;
+* `stobie-core` has no egui, eframe, wgpu or browser dependency;
+* `stobie-runtime` has no egui dependency;
 * domain reducers can run without a GPU;
 * pane UI APIs do not receive mutable access to the complete application model;
 * there is one canonical workspace tree;

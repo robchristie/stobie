@@ -1,7 +1,7 @@
 # Shared application inspection and exercise
 
 Status: complete
-Delivery: [PR #48](https://github.com/robchristie/polyorama/pull/48)
+Delivery: [PR #48](https://github.com/robchristie/stobie/pull/48)
 
 ## Outcome and boundaries
 

@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use eframe::egui;
-use polyorama_core::TileKey;
-use polyorama_runtime::RequestToken;
+use stobie_core::TileKey;
+use stobie_runtime::RequestToken;
 
 pub const THUMBNAIL_CACHE_BUDGET: usize = 4 * 1024 * 1024;
 const THUMBNAIL_SIDE: usize = 64;
@@ -125,7 +125,7 @@ impl ThumbnailCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polyorama_core::SourceId;
+    use stobie_core::SourceId;
 
     fn key(x: u32) -> TileKey {
         TileKey {

@@ -32,10 +32,10 @@ def independence():
     members = [packages[key]["name"] for key in metadata["workspace_members"]]
     if Path(metadata["workspace_root"]).resolve() != CONSUMER or members != ["record-desk"]:
         raise ValueError("consumer is not its own workspace")
-    framework = sorted(p["name"] for p in packages.values() if p["name"].startswith("polyorama-"))
-    if framework != ["polyorama-core", "polyorama-ui-egui"]:
+    framework = sorted(p["name"] for p in packages.values() if p["name"].startswith("stobie-"))
+    if framework != ["stobie-core", "stobie-ui-egui"]:
         raise ValueError(f"unnecessary framework dependencies: {framework}")
-    forbidden = {"analytical-workspace-lab", "polyorama-gallery", "emuella-viewer", "emuella-viewer-source", "emuella-viewer-tools", "polyorama-tile-worker"}
+    forbidden = {"analytical-workspace-lab", "stobie-gallery", "emuella-viewer", "emuella-viewer-source", "emuella-viewer-tools", "stobie-tile-worker"}
     if forbidden.intersection(p["name"] for p in packages.values()):
         raise ValueError("consumer depends on an application package")
     for source in (CONSUMER / "src").rglob("*.rs"):

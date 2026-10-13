@@ -12,12 +12,12 @@ import { interfaceSelection, assertInterfaceCoverage } from './application-inter
 
 const selection = interfaceSelection(process.argv.slice(2));
 
-const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/application-interface-evidence/application-interface');
+const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/application-interface-evidence/application-interface');
 await mkdir(evidence, { recursive: true });
 const revision = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const dirty = Boolean(execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim());
 const reports = [];
-const sliceOnly = process.env.POLYORAMA_INTERFACE_SLICE === '1';
+const sliceOnly = process.env.STOBIE_INTERFACE_SLICE === '1';
 const sleep = ms => new Promise(done => setTimeout(done, ms));
 const selector = capability => ({ capability });
 const fact = (key, value) => ({ condition: 'fact', key, value });
@@ -243,15 +243,15 @@ try {
     const socket = resolve('.tools/runtime', `ai-${randomUUID().slice(0, 8)}.sock`);
     const storage = await mkdtemp(resolve('.tools/runtime', 'ai-store-'));
     const runtime = await open(resolve(evidence, `${app}-native.log`), 'w');
-    const process = spawn(binary, [], { detached: true, stdio: ['ignore', runtime.fd, runtime.fd], env: { ...globalThis.process.env, POLYORAMA_AUTOMATION_SOCKET: socket, RECORD_DESK_STATE_PATH: resolve(storage, 'synthetic-unsaved.json'), XDG_DATA_HOME: resolve(storage, 'synthetic-lab-data') } });
+    const process = spawn(binary, [], { detached: true, stdio: ['ignore', runtime.fd, runtime.fd], env: { ...globalThis.process.env, STOBIE_AUTOMATION_SOCKET: socket, RECORD_DESK_STATE_PATH: resolve(storage, 'synthetic-unsaved.json'), XDG_DATA_HOME: resolve(storage, 'synthetic-lab-data') } });
     try {
       const transport = new SocketTransport(socket);
       const client = new ApplicationClient(transport);
       await until(() => client.hello(), value => value.kind === 'hello');
-      const xdo = globalThis.process.env.POLYORAMA_XDOTOOL ?? 'xdotool';
+      const xdo = globalThis.process.env.STOBIE_XDOTOOL ?? 'xdotool';
       const windows = await until(() => execFileSync(xdo, ['search', '--onlyvisible', '--pid', String(process.pid)], { encoding: 'utf8' }).trim(), value => Boolean(value));
       const window = windows.split('\n')[0];
-      await journey(app, 'native', client, new NativePhysicalAdapter(window, { xdotool: xdo, imageMagick: globalThis.process.env.POLYORAMA_IMPORT ?? 'import' }), { binary_sha256: await hash(binary) });
+      await journey(app, 'native', client, new NativePhysicalAdapter(window, { xdotool: xdo, imageMagick: globalThis.process.env.STOBIE_IMPORT ?? 'import' }), { binary_sha256: await hash(binary) });
     } finally {
       process.kill('SIGTERM');
       await new Promise(done => { if (process.exitCode !== null || process.signalCode !== null) done(); else process.once('exit', done); });

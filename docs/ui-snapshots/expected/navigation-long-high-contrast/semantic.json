@@ -35,45 +35,7 @@
       "actions": []
     },
     {
-      "id": "presentation.1a625849c07e38af",
-      "parent": "gallery.story",
-      "role": "navigation_item",
-      "name": "Home",
-      "description": "Open this destination; Current destination",
-      "rect": {
-        "min_x": 694,
-        "min_y": 184,
-        "max_x": 979,
-        "max_y": 226
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": true,
-      "actions": [
-        "gallery.navigation.home"
-      ]
-    },
-    {
-      "id": "presentation.9d82c6d319a0f2fa",
-      "parent": "gallery.story",
-      "role": "navigation_item",
-      "name": "Tasks awaiting review by the entire regional operations team",
-      "description": "Open this destination; 12500 outstanding tasks",
-      "rect": {
-        "min_x": 694,
-        "min_y": 231,
-        "max_x": 979,
-        "max_y": 273
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [
-        "gallery.navigation.tasks"
-      ]
-    },
-    {
-      "id": "presentation.b8b35c79d90be215",
+      "id": "presentation.1690d67814fb3a1e",
       "parent": "gallery.story",
       "role": "navigation_item",
       "name": "Needs attention",
@@ -92,7 +54,45 @@
       ]
     },
     {
-      "id": "presentation.d2912afd3436ed31",
+      "id": "presentation.716619e8ff96c0ef",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Tasks awaiting review by the entire regional operations team",
+      "description": "Open this destination; 12500 outstanding tasks",
+      "rect": {
+        "min_x": 694,
+        "min_y": 231,
+        "max_x": 979,
+        "max_y": 273
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.tasks"
+      ]
+    },
+    {
+      "id": "presentation.d2607015b17f178c",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Home",
+      "description": "Open this destination; Current destination",
+      "rect": {
+        "min_x": 694,
+        "min_y": 184,
+        "max_x": 979,
+        "max_y": 226
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.navigation.home"
+      ]
+    },
+    {
+      "id": "presentation.f9bd763e0b78e72c",
       "parent": "gallery.story",
       "role": "navigation_item",
       "name": "Activity",

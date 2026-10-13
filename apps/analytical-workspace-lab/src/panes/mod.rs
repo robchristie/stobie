@@ -3,11 +3,11 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use eframe::egui;
-use polyorama_core::*;
-use polyorama_render_wgpu::{
+use stobie_core::*;
+use stobie_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
-use polyorama_ui_egui::{
+use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionTarget,
     Availability, DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter,
     SemanticUiId, TextLayoutObservation, UiNode, UiRole, action_button, allocate_viewport,
@@ -259,7 +259,7 @@ impl FrameOutput {
             }
             let mut status_ui = root_ui.new_child(
                 egui::UiBuilder::new()
-                    .id_salt(("polyorama.image-status", status.pane))
+                    .id_salt(("stobie.image-status", status.pane))
                     .layer_id(status.layer_id)
                     .max_rect(status.rect),
             );
@@ -419,14 +419,14 @@ impl PanePresenter for PaneSurface<'_> {
             7 => self.inspector_pane(ui),
             8 => self.diagnostics_pane(ui),
             _ => {
-                polyorama_ui_egui::measured_content_label(
+                stobie_ui_egui::measured_content_label(
                     ui,
                     u64::from(pane.0),
                     "Unknown pane",
-                    polyorama_ui_egui::TextRole::Error,
-                    polyorama_ui_egui::TextOverflow::Wrap,
+                    stobie_ui_egui::TextRole::Error,
+                    stobie_ui_egui::TextOverflow::Wrap,
                     2,
-                    polyorama_ui_egui::TextInteraction::Selectable,
+                    stobie_ui_egui::TextInteraction::Selectable,
                     &self.tokens,
                     self.font_scale,
                     &mut self.outputs.ui_geometry.text_layouts,
@@ -546,7 +546,7 @@ mod tests {
     use super::*;
 
     struct RenderedWorkspace {
-        snapshot: polyorama_ui_egui::UiSnapshot,
+        snapshot: stobie_ui_egui::UiSnapshot,
         accesskit: egui::accesskit::TreeUpdate,
         virtualisation: VirtualisationMetrics,
     }
@@ -566,12 +566,12 @@ mod tests {
         let session = Session::default();
         let diagnostics = DiagnosticsSnapshot::default();
         let tokens = DesignTokens::resolve(
-            polyorama_ui_egui::ThemeVariant::Dark,
-            polyorama_ui_egui::DensityVariant::Comfortable,
+            stobie_ui_egui::ThemeVariant::Dark,
+            stobie_ui_egui::DensityVariant::Comfortable,
         );
         let mut gesture = None;
         let mut behaviour = UiBehaviour::default();
-        let mut dock_behaviour = polyorama_ui_egui::DockBehaviour::default();
+        let mut dock_behaviour = stobie_ui_egui::DockBehaviour::default();
         let mut virtualisation = VirtualisationMetrics::default();
         let mut thumbnail_cache = ThumbnailCache::default();
         let mut output = FrameOutput::with_ui_geometry(UiGeometry::new(root, 1.0));
@@ -664,12 +664,12 @@ mod tests {
                         outputs: &mut output,
                     },
                 );
-                let command = polyorama_ui_egui::dock_workspace(
+                let command = stobie_ui_egui::dock_workspace(
                     ui,
                     &mut fixture,
                     &mut dock_behaviour,
                     &mut surface,
-                    polyorama_ui_egui::DockTextContext {
+                    stobie_ui_egui::DockTextContext {
                         tokens,
                         font_scale: 1.0,
                     },
@@ -861,8 +861,8 @@ mod tests {
             selected_annotation: Some(annotation),
             hover: None,
             tokens: DesignTokens::resolve(
-                polyorama_ui_egui::ThemeVariant::Dark,
-                polyorama_ui_egui::DensityVariant::Comfortable,
+                stobie_ui_egui::ThemeVariant::Dark,
+                stobie_ui_egui::DensityVariant::Comfortable,
             ),
         });
         let release = GesturePreview::Vertex {
@@ -1092,9 +1092,9 @@ mod tests {
         }
         let mut virtualisation = VirtualisationMetrics::default();
         let mut thumbnail_cache = ThumbnailCache::default();
-        let tokens = polyorama_ui_egui::DesignTokens::resolve(
-            polyorama_ui_egui::ThemeVariant::Dark,
-            polyorama_ui_egui::DensityVariant::Comfortable,
+        let tokens = stobie_ui_egui::DesignTokens::resolve(
+            stobie_ui_egui::ThemeVariant::Dark,
+            stobie_ui_egui::DensityVariant::Comfortable,
         );
         let mut full_output = context.run_ui(
             egui::RawInput {
@@ -1150,9 +1150,9 @@ mod tests {
         assert!(thumbnail_nodes > 0 && thumbnail_nodes <= virtualisation.materialised_thumbnails);
         assert!(snapshot.nodes.len() < 256);
         assert!(
-            polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit).is_empty(),
+            stobie_ui_egui::audit_accesskit(&snapshot, &accesskit).is_empty(),
             "{:#?}",
-            polyorama_ui_egui::audit_accesskit(&snapshot, &accesskit)
+            stobie_ui_egui::audit_accesskit(&snapshot, &accesskit)
         );
     }
 
@@ -1171,9 +1171,9 @@ mod tests {
             snapshot.semantic_audit
         );
         assert!(
-            polyorama_ui_egui::audit_accesskit(snapshot, &rendered.accesskit).is_empty(),
+            stobie_ui_egui::audit_accesskit(snapshot, &rendered.accesskit).is_empty(),
             "{:#?}",
-            polyorama_ui_egui::audit_accesskit(snapshot, &rendered.accesskit)
+            stobie_ui_egui::audit_accesskit(snapshot, &rendered.accesskit)
         );
         assert!(snapshot.nodes.len() < 512);
         assert!(rendered.virtualisation.materialised_rows < 64);
@@ -1216,7 +1216,7 @@ mod tests {
         );
 
         let selected_result = snapshot
-            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .node(&SemanticUiId::new("stobie.result-row.0"))
             .expect("bounded selected result row");
         assert_eq!(selected_result.role, UiRole::ResultRow);
         assert!(selected_result.selected);
@@ -1249,7 +1249,7 @@ mod tests {
             SemanticUiId::new("action.undo"),
             SemanticUiId::tab(PaneId(1)),
             SemanticUiId::splitter(DockNodeId(1)),
-            SemanticUiId::new("polyorama.result-row.0"),
+            SemanticUiId::new("stobie.result-row.0"),
             SemanticUiId::new("pane.1.viewport"),
         ] {
             assert_eq!(
@@ -1291,11 +1291,11 @@ mod tests {
 
         let initial_result = initial
             .snapshot
-            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .node(&SemanticUiId::new("stobie.result-row.0"))
             .expect("initial result row");
         let updated_result = updated
             .snapshot
-            .node(&SemanticUiId::new("polyorama.result-row.0"))
+            .node(&SemanticUiId::new("stobie.result-row.0"))
             .expect("updated result row");
         assert!(!initial_result.selected);
         assert!(updated_result.selected);
@@ -1339,9 +1339,9 @@ mod tests {
             "selection and tool changes must update viewport context"
         );
         assert!(
-            polyorama_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit).is_empty(),
+            stobie_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit).is_empty(),
             "{:#?}",
-            polyorama_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit)
+            stobie_ui_egui::audit_accesskit(&updated.snapshot, &updated.accesskit)
         );
     }
 
@@ -1404,7 +1404,7 @@ mod tests {
         }
     }
 
-    fn focused_semantic_id(snapshot: &polyorama_ui_egui::UiSnapshot) -> Option<SemanticUiId> {
+    fn focused_semantic_id(snapshot: &stobie_ui_egui::UiSnapshot) -> Option<SemanticUiId> {
         snapshot
             .nodes
             .iter()
@@ -1417,7 +1417,7 @@ mod tests {
         let context = egui::Context::default();
         context.enable_accesskit();
         let workspace = Workspace::analytical_default();
-        let save_focus = egui::Id::new(("polyorama.action-button", "save_layout", None::<PaneId>));
+        let save_focus = egui::Id::new(("stobie.action-button", "save_layout", None::<PaneId>));
         context.memory_mut(|memory| memory.request_focus(save_focus));
 
         let initial = render_representative_workspace_frame(
@@ -1467,7 +1467,7 @@ mod tests {
         let save = position("action.save_layout");
         let reset = position("action.reset_workspace");
         let appearance = position("action.appearance_settings");
-        let tab = position("polyorama.dock.tab.1");
+        let tab = position("stobie.dock.tab.1");
         let viewport = position("pane.1.viewport");
         assert!(
             save < reset && reset < appearance && appearance < tab && tab < viewport,
@@ -1518,7 +1518,7 @@ mod tests {
         let context = egui::Context::default();
         context.enable_accesskit();
         let mut workspace = Workspace::analytical_default();
-        let tab_focus = egui::Id::new(("polyorama.dock.tab", 1_u32));
+        let tab_focus = egui::Id::new(("stobie.dock.tab", 1_u32));
         context.memory_mut(|memory| memory.request_focus(tab_focus));
 
         let before = render_representative_workspace_frame(
@@ -1551,9 +1551,9 @@ mod tests {
     fn active_pane_actions_have_one_semantic_and_physical_owner() {
         let context = egui::Context::default();
         let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(500.0, 160.0));
-        let tokens = polyorama_ui_egui::DesignTokens::resolve(
-            polyorama_ui_egui::ThemeVariant::Dark,
-            polyorama_ui_egui::DensityVariant::Comfortable,
+        let tokens = stobie_ui_egui::DesignTokens::resolve(
+            stobie_ui_egui::ThemeVariant::Dark,
+            stobie_ui_egui::DensityVariant::Comfortable,
         );
         let mut output = FrameOutput {
             ui_geometry: UiGeometry::new(root, 1.0),

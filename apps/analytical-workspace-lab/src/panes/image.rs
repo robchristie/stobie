@@ -514,7 +514,7 @@ impl PaneSurface<'_> {
             actions: available_actions
                 .iter()
                 .copied()
-                .map(polyorama_ui_egui::SemanticActionId::from_action)
+                .map(stobie_ui_egui::SemanticActionId::from_action)
                 .collect(),
             text_selectable: false,
             disabled_reason: None,
@@ -710,7 +710,7 @@ fn high_window_range(low: f32) -> std::ops::RangeInclusive<f32> {
 fn record_display_control(
     ui: &egui::Ui,
     pane: PaneId,
-    mut control: polyorama_ui_egui::SemanticControlOutput,
+    mut control: stobie_ui_egui::SemanticControlOutput,
     outputs: &mut FrameOutput,
 ) {
     let inside_root = outputs
@@ -763,8 +763,8 @@ mod tests {
                 |ui, state: &mut ImagePaneFixture| {
                     let root = ui.max_rect();
                     let tokens = DesignTokens::resolve(
-                        polyorama_ui_egui::ThemeVariant::Dark,
-                        polyorama_ui_egui::DensityVariant::Comfortable,
+                        stobie_ui_egui::ThemeVariant::Dark,
+                        stobie_ui_egui::DensityVariant::Comfortable,
                     );
                     state.output = FrameOutput::with_ui_geometry(UiGeometry::new(root, 1.0));
                     if state.hidden {
@@ -814,7 +814,7 @@ mod tests {
 
     #[test]
     fn polygon_discovery_matches_rendered_availability_after_the_third_vertex() {
-        use polyorama_ui_egui::{
+        use stobie_ui_egui::{
             CollectionMetadata, Inspection, InspectionOperation, InspectionRequest,
             InspectionResult, InspectionSelector,
         };

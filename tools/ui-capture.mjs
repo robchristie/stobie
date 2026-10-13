@@ -21,7 +21,7 @@ const logs = join(output, 'logs');
 await mkdir(logs, { recursive: true });
 
 const repositoryRoot = normalize(process.cwd());
-const webRoot = normalize(join(repositoryRoot, 'apps/polyorama-gallery/web'));
+const webRoot = normalize(join(repositoryRoot, 'apps/stobie-gallery/web'));
 const mime = new Map([
   ['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'],
   ['.wasm', 'application/wasm'], ['.png', 'image/png'],
@@ -55,15 +55,15 @@ let browserDiagnostics = '';
 let xvfbProcess;
 let xvfbDiagnostics = '';
 let x11TemporaryDirectory;
-const retainTemporary = process.env.POLYORAMA_RETAIN_UI_TEMP === '1';
+const retainTemporary = process.env.STOBIE_RETAIN_UI_TEMP === '1';
 
 async function launchBrowser() {
   if (process.platform !== 'linux') {
-    const headless = process.env.POLYORAMA_BROWSER_HEADFUL !== '1';
+    const headless = process.env.STOBIE_BROWSER_HEADFUL !== '1';
     browser = await chromium.launch({ headless, args: ['--enable-unsafe-webgpu'] });
     return;
   }
-  const useSystemLibraries = process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1';
+  const useSystemLibraries = process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1';
   const chromiumExecutable = chromium.executablePath();
   let executable = chromiumExecutable;
   let prefix = [];
@@ -75,7 +75,7 @@ async function launchBrowser() {
   let browserEnvironment = libraryEnvironment;
 
   if (useSystemLibraries) {
-    browserProfile = await mkdtemp(join(tmpdir(), 'polyorama-ui-chromium-'));
+    browserProfile = await mkdtemp(join(tmpdir(), 'stobie-ui-chromium-'));
   } else {
     x11TemporaryDirectory = await mkdtemp(join(repositoryRoot, '.tools/runtime/ui-x11-'));
     const socketDirectory = join(x11TemporaryDirectory, '.X11-unix');
@@ -278,15 +278,15 @@ try {
   });
   await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.body.classList.contains('ready')
-    && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
-  const before = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
+    && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
+  const before = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
   await page.evaluate(({ configuration, story }) => {
-    window.__POLYORAMA_GALLERY_HANDLE.set_configuration(configuration);
-    window.__POLYORAMA_GALLERY_HANDLE.select_story(story);
-    window.__POLYORAMA_GALLERY_HANDLE.request_test_repaint();
+    window.__STOBIE_GALLERY_HANDLE.set_configuration(configuration);
+    window.__STOBIE_GALLERY_HANDLE.select_story(story);
+    window.__STOBIE_GALLERY_HANDLE.request_test_repaint();
   }, { configuration: fixture.configuration, story: fixture.story });
   await page.waitForFunction(({ story, frame }) => {
-    const snapshot = window.__POLYORAMA_GALLERY_HANDLE.snapshot();
+    const snapshot = window.__STOBIE_GALLERY_HANDLE.snapshot();
     return snapshot.story === story && snapshot.frame > frame;
   }, { story: fixture.story, frame: before.frame }, { timeout: 10_000 });
   await page.waitForTimeout(200);
@@ -296,18 +296,18 @@ try {
   // on both local and CI browsers.
   for (let index = 0; index < 2; index += 1) {
     const frame = await page.evaluate(
-      () => window.__POLYORAMA_GALLERY_HANDLE.snapshot().frame,
+      () => window.__STOBIE_GALLERY_HANDLE.snapshot().frame,
     );
     await page.evaluate(
-      () => window.__POLYORAMA_GALLERY_HANDLE.request_test_repaint(),
+      () => window.__STOBIE_GALLERY_HANDLE.request_test_repaint(),
     );
     await page.waitForFunction(
-      (previousFrame) => window.__POLYORAMA_GALLERY_HANDLE.snapshot().frame > previousFrame,
+      (previousFrame) => window.__STOBIE_GALLERY_HANDLE.snapshot().frame > previousFrame,
       frame,
       { timeout: 10_000 },
     );
   }
-  const snapshot = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
+  const snapshot = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
   if (snapshot.story !== fixture.story) throw new Error(`story did not settle to ${fixture.story}`);
   if (runtimeErrors.length) throw new Error(runtimeErrors.join('\n'));
 

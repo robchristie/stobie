@@ -3,7 +3,7 @@
 Every `docs/*-plan.md` declares exactly one `Status: active` or
 `Status: complete`. An active plan has one non-empty `Next action:` field and
 keeps current phase and increment evidence concise. A completed plan has a
-`Delivery:` field linking to its owning Polyorama pull request and a short
+`Delivery:` field linking to its owning Stobie pull request and a short
 closeout where useful. An optional `Landed commit:` field contains a full
 commit ID when already known. Keep historical acceptance criteria and
 observations intact.

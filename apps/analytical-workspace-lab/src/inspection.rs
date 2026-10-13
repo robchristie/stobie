@@ -1,6 +1,6 @@
 //! Lab bindings retain domain validation and image commands in the application.
 use super::*;
-use polyorama_ui_egui::*;
+use stobie_ui_egui::*;
 
 pub(crate) fn inspection_bindings_for_state(
     session: &Session,
@@ -64,7 +64,7 @@ impl AnalyticalWorkspaceApp {
             APPLICATION_NAME,
             BuildIdentity {
                 version: env!("CARGO_PKG_VERSION").into(),
-                source_revision: option_env!("POLYORAMA_BUILD_REVISION").map(str::to_owned),
+                source_revision: option_env!("STOBIE_BUILD_REVISION").map(str::to_owned),
             },
         )
     }
@@ -91,7 +91,7 @@ impl AnalyticalWorkspaceApp {
                 APPLICATION_NAME,
                 BuildIdentity {
                     version: env!("CARGO_PKG_VERSION").into(),
-                    source_revision: option_env!("POLYORAMA_BUILD_REVISION").map(str::to_owned),
+                    source_revision: option_env!("STOBIE_BUILD_REVISION").map(str::to_owned),
                 },
                 instance,
             )

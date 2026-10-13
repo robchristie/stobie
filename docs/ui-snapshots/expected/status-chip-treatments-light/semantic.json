@@ -36,41 +36,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.103f029c0340f632",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Completed",
-      "rect": {
-        "min_x": 825.90625,
-        "min_y": 247.5,
-        "max_x": 883.5625,
-        "max_y": 264.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.18fc9bd86e24003d",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Paused",
-      "rect": {
-        "min_x": 899.1875,
-        "min_y": 133.5,
-        "max_x": 937.1875,
-        "max_y": 150.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.30524bf753429df2",
+      "id": "presentation.08a171bc41d9f761",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Scheduled",
@@ -87,15 +53,15 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.308802544b383400",
+      "id": "presentation.0dc19d3a174c4cad",
       "parent": "gallery.story",
       "role": "status_chip",
-      "name": "Scheduled",
+      "name": "Paused",
       "rect": {
-        "min_x": 586.65625,
-        "min_y": 133.5,
-        "max_x": 642.09375,
-        "max_y": 150.5
+        "min_x": 1004.1875,
+        "min_y": 247.5,
+        "max_x": 1042.1875,
+        "max_y": 264.5
       },
       "enabled": true,
       "focused": false,
@@ -104,7 +70,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.38ef19bd621e0183",
+      "id": "presentation.25a1de65d84b6f18",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Active",
@@ -121,14 +87,14 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.467f001ac0a6c140",
+      "id": "presentation.27996f4ed5de8487",
       "parent": "gallery.story",
       "role": "status_chip",
-      "name": "Active",
+      "name": "Paused",
       "rect": {
-        "min_x": 561,
+        "min_x": 1004.1875,
         "min_y": 190.5,
-        "max_x": 592.65625,
+        "max_x": 1042.1875,
         "max_y": 207.5
       },
       "enabled": true,
@@ -138,7 +104,41 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.493f0cc2ad0ed9f4",
+      "id": "presentation.2dc636f83b9e69a5",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 586.65625,
+        "min_y": 133.5,
+        "max_x": 642.09375,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.3f6dac9291319e13",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Completed",
+      "rect": {
+        "min_x": 825.90625,
+        "min_y": 247.5,
+        "max_x": 883.5625,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.58f706d1c2517caf",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Completed",
@@ -155,58 +155,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.4f67f7c3b91d83c5",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Needs review",
-      "rect": {
-        "min_x": 720.09375,
-        "min_y": 190.5,
-        "max_x": 789.90625,
-        "max_y": 207.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.5a768fda2cbc781c",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Needs review",
-      "rect": {
-        "min_x": 720.09375,
-        "min_y": 247.5,
-        "max_x": 789.90625,
-        "max_y": 264.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.624569a9dac419ef",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Active",
-      "rect": {
-        "min_x": 561,
-        "min_y": 247.5,
-        "max_x": 592.65625,
-        "max_y": 264.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.6dc780a25c81aef4",
+      "id": "presentation.60d0f4c4384f0026",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Needs review",
@@ -223,24 +172,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.81c476ad427db444",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Scheduled",
-      "rect": {
-        "min_x": 628.65625,
-        "min_y": 247.5,
-        "max_x": 684.09375,
-        "max_y": 264.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.9016fe446d286601",
+      "id": "presentation.76b62e12e2094ab9",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Completed",
@@ -257,7 +189,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.a80d73e5014d5746",
+      "id": "presentation.7a640bb212f0cb84",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Upload failed",
@@ -274,7 +206,75 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.ab0c6a612753a346",
+      "id": "presentation.7f639dc6dd5cbb48",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Paused",
+      "rect": {
+        "min_x": 899.1875,
+        "min_y": 133.5,
+        "max_x": 937.1875,
+        "max_y": 150.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.8fdea52beba0d671",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 720.09375,
+        "min_y": 190.5,
+        "max_x": 789.90625,
+        "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.956a3bdfed827bc8",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Scheduled",
+      "rect": {
+        "min_x": 628.65625,
+        "min_y": 247.5,
+        "max_x": 684.09375,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.a1911cff7dece890",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Needs review",
+      "rect": {
+        "min_x": 720.09375,
+        "min_y": 247.5,
+        "max_x": 789.90625,
+        "max_y": 264.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.c257df95d282af2c",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Upload failed",
@@ -291,24 +291,7 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.bf499ffd38eb0c45",
-      "parent": "gallery.story",
-      "role": "status_chip",
-      "name": "Paused",
-      "rect": {
-        "min_x": 1004.1875,
-        "min_y": 247.5,
-        "max_x": 1042.1875,
-        "max_y": 264.5
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [],
-      "text_selectable": true
-    },
-    {
-      "id": "presentation.d0806fb4ef2a18a1",
+      "id": "presentation.c2b91fdcb2b629b6",
       "parent": "gallery.story",
       "role": "status_chip",
       "name": "Upload failed",
@@ -325,15 +308,32 @@
       "text_selectable": true
     },
     {
-      "id": "presentation.f1c7b3767a6f2983",
+      "id": "presentation.d19ff91e02cf8710",
       "parent": "gallery.story",
       "role": "status_chip",
-      "name": "Paused",
+      "name": "Active",
       "rect": {
-        "min_x": 1004.1875,
+        "min_x": 561,
         "min_y": 190.5,
-        "max_x": 1042.1875,
+        "max_x": 592.65625,
         "max_y": 207.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.f641c6e9f5a9bd6d",
+      "parent": "gallery.story",
+      "role": "status_chip",
+      "name": "Active",
+      "rect": {
+        "min_x": 561,
+        "min_y": 247.5,
+        "max_x": 592.65625,
+        "max_y": 264.5
       },
       "enabled": true,
       "focused": false,

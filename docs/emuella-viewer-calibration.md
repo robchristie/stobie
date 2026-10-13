@@ -13,7 +13,7 @@ not load an independently encoded chip.
 The observation phase first asks whether the complete composed workload finishes
 within the established resource budgets on the selected local GPU. The smallest
 representative probe includes the whole large overview and all nine images.
-Polyorama owns application phases, presentation preparation and worker/resource
+Stobie owns application phases, presentation preparation and worker/resource
 instrumentation. The codec owns reconstruction work and quality evidence. A probe
 is retained or rejected from its actual result; failed directories are never reused.
 The exit condition is five independent successful native and browser baselines,

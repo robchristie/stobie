@@ -1,7 +1,7 @@
 # Deterministic UI snapshots
 
 [`fixtures.json`](fixtures.json) is the versioned, closed fixture manifest for
-Polyorama's selected visual, semantic and text baselines. Each fixture pins its
+Stobie's selected visual, semantic and text baselines. Each fixture pins its
 gallery story, viewport, data seed, appearance, contrast, density, font scale,
 width class, bundled font set and pinned browser-WebGPU/SwiftShader renderer
 contract.
@@ -33,7 +33,7 @@ fixture and states the bounded meaning of a pass. Missing coverage, failed compo
 inconsistent with the observations fail verification. Attempts are recorded
 independently of the visible observation subset, so filtering cannot erase a
 failed request. Empty findings mean
-“Every observed Polyorama text component passed”, not “Every visible string was
+“Every observed Stobie text component passed”, not “Every visible string was
 structurally audited”. Counts cover the submitted layout pass, including clipped
 controls and gallery chrome; ordinary labels remain excluded. See the
 [design language](../design-language.md) for the denominator and native-widget

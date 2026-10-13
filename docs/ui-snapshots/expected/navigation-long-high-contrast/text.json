@@ -4,32 +4,32 @@
     {
       "component_id": {
         "kind": "navigation_badge",
-        "instance": 4832341595188529
+        "instance": 1717338371440879
       },
       "parent_id": {
         "kind": "navigation_item",
-        "instance": 4832341595188529
+        "instance": 1717338371440879
       },
       "role": "caption",
       "horizontal_alignment": "end",
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 936.15625,
-        "min_y": 325,
+        "min_y": 231,
         "max_x": 963,
-        "max_y": 367
+        "max_y": 273
       },
       "painted_rect": {
-        "min_x": 954.0625,
-        "min_y": 334,
+        "min_x": 936.15625,
+        "min_y": 240,
         "max_x": 963,
-        "max_y": 358
+        "max_y": 264
       },
       "clip_rect": {
         "min_x": 936.15625,
-        "min_y": 325,
+        "min_y": 231,
         "max_x": 963,
-        "max_y": 367
+        "max_y": 273
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -40,11 +40,11 @@
     {
       "component_id": {
         "kind": "navigation_badge",
-        "instance": 5449702959735317
+        "instance": 4739410863798814
       },
       "parent_id": {
         "kind": "navigation_item",
-        "instance": 5449702959735317
+        "instance": 4739410863798814
       },
       "role": "caption",
       "horizontal_alignment": "end",
@@ -76,67 +76,31 @@
     {
       "component_id": {
         "kind": "navigation_badge",
-        "instance": 781559923798778
+        "instance": 8292783177131820
       },
       "parent_id": {
         "kind": "navigation_item",
-        "instance": 781559923798778
+        "instance": 8292783177131820
       },
       "role": "caption",
       "horizontal_alignment": "end",
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 936.15625,
-        "min_y": 231,
-        "max_x": 963,
-        "max_y": 273
-      },
-      "painted_rect": {
-        "min_x": 936.15625,
-        "min_y": 240,
-        "max_x": 963,
-        "max_y": 264
-      },
-      "clip_rect": {
-        "min_x": 936.15625,
-        "min_y": 231,
-        "max_x": 963,
-        "max_y": 273
-      },
-      "overflow": "ellipsis",
-      "interaction": "inert",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "navigation_label",
-        "instance": 4832341595188529
-      },
-      "parent_id": {
-        "kind": "navigation_item",
-        "instance": 4832341595188529
-      },
-      "role": "button_label",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 734,
         "min_y": 325,
-        "max_x": 922.15625,
+        "max_x": 963,
         "max_y": 367
       },
       "painted_rect": {
-        "min_x": 734,
-        "min_y": 333.5,
-        "max_x": 794.875,
-        "max_y": 358.5
+        "min_x": 954.0625,
+        "min_y": 334,
+        "max_x": 963,
+        "max_y": 358
       },
       "clip_rect": {
-        "min_x": 734,
+        "min_x": 936.15625,
         "min_y": 325,
-        "max_x": 922.15625,
+        "max_x": 963,
         "max_y": 367
       },
       "overflow": "ellipsis",
@@ -148,47 +112,11 @@
     {
       "component_id": {
         "kind": "navigation_label",
-        "instance": 5449702959735317
+        "instance": 123238474520460
       },
       "parent_id": {
         "kind": "navigation_item",
-        "instance": 5449702959735317
-      },
-      "role": "button_label",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 734,
-        "min_y": 278,
-        "max_x": 922.15625,
-        "max_y": 320
-      },
-      "painted_rect": {
-        "min_x": 734,
-        "min_y": 286.5,
-        "max_x": 862.46875,
-        "max_y": 311.5
-      },
-      "clip_rect": {
-        "min_x": 734,
-        "min_y": 278,
-        "max_x": 922.15625,
-        "max_y": 320
-      },
-      "overflow": "ellipsis",
-      "interaction": "inert",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "navigation_label",
-        "instance": 660023738775727
-      },
-      "parent_id": {
-        "kind": "navigation_item",
-        "instance": 660023738775727
+        "instance": 123238474520460
       },
       "role": "button_label",
       "horizontal_alignment": "start",
@@ -220,11 +148,11 @@
     {
       "component_id": {
         "kind": "navigation_label",
-        "instance": 781559923798778
+        "instance": 1717338371440879
       },
       "parent_id": {
         "kind": "navigation_item",
-        "instance": 781559923798778
+        "instance": 1717338371440879
       },
       "role": "button_label",
       "horizontal_alignment": "start",
@@ -255,8 +183,80 @@
     },
     {
       "component_id": {
+        "kind": "navigation_label",
+        "instance": 4739410863798814
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 4739410863798814
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 278,
+        "max_x": 922.15625,
+        "max_y": 320
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 286.5,
+        "max_x": 862.46875,
+        "max_y": 311.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 278,
+        "max_x": 922.15625,
+        "max_y": 320
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 8292783177131820
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 8292783177131820
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 325,
+        "max_x": 922.15625,
+        "max_y": 367
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 333.5,
+        "max_x": 794.875,
+        "max_y": 358.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 325,
+        "max_x": 922.15625,
+        "max_y": 367
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
         "kind": "section_heading",
-        "instance": 8145645772904548
+        "instance": 6016431095956211
       },
       "role": "section_heading",
       "horizontal_alignment": "start",

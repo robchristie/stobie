@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
   echo "using system Linux UI libraries"
   exit 0
 fi

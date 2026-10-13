@@ -1,11 +1,11 @@
 use eframe::egui;
-use polyorama_core::{DockNodeId, PaneId, ResultId};
-pub use polyorama_ui_egui::UiRect;
-use polyorama_ui_egui::{
+use serde::Serialize;
+use stobie_core::{DockNodeId, PaneId, ResultId};
+pub use stobie_ui_egui::UiRect;
+use stobie_ui_egui::{
     ActionButtonState, ActionTarget, Availability, SemanticUiId, TextAuditCoverage,
     TextAuditFinding, TextLayoutObservation, UiNode, UiRole, UiSnapshot, action_semantic_node,
 };
-use serde::Serialize;
 
 use crate::actions::LabAction;
 
@@ -53,7 +53,7 @@ pub struct UiGeometry {
     pub result_rows: Vec<ResultUiRect>,
     pub results_scroll: Option<UiRect>,
     pub thumbnail_scroll: Option<UiRect>,
-    /// Bounded observations for Polyorama-owned text components only.
+    /// Bounded observations for Stobie-owned text components only.
     pub text_layouts: Vec<TextLayoutObservation>,
     pub text_audit: Vec<TextAuditFinding>,
     pub text_audit_coverage: Option<TextAuditCoverage>,

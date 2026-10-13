@@ -1,11 +1,11 @@
 # Rust 1.98.1 maintenance
 
 Status: complete
-Delivery: [Polyorama PR #43](https://github.com/robchristie/polyorama/pull/43)
+Delivery: [Stobie PR #43](https://github.com/robchristie/stobie/pull/43)
 
 ## Outcome and scope
 
-Programme package `rust-1.98.1` / P1 selects exact Rust 1.98.1 for Polyorama
+Programme package `rust-1.98.1` / P1 selects exact Rust 1.98.1 for Stobie
 development, normal CI and the production browser compiler contract. The
 authorised maintenance includes selectors, maintained setup guidance, necessary
 compiler repairs and existing native/WASM/browser/viewer acceptance. It preserves
@@ -15,12 +15,12 @@ machine/default-toolchain change or other-project write is included.
 
 The starting product is `e1f31e11bc3210e763cea1b1cbd5f23c02356db4` (tree
 `d654955c046686dc6dbc270c6c42acfb4dcc3f53`), entered through the registered
-Polyorama workspace. The programme prerequisite is
+Stobie workspace. The programme prerequisite is
 [portfolio baseline PR #3](https://github.com/robchristie/portfolio-workspace/pull/3).
 [E1's completed owner plan](https://github.com/emuella/emuella-workspace/blob/9cb91a253e38111348b925c52f18debde8671aa4/docs/plans/completed/rust-1-98-1.md)
 and [terminal audit](https://github.com/emuella/emuella-workspace/pull/101#issuecomment-5911765234)
 establish the upstream migration. E1 requires no API or consumer-lock change;
-Polyorama retains codec revision `6586e3d50f95429b242cb2e3535742b002784f2d`.
+Stobie retains codec revision `6586e3d50f95429b242cb2e3535742b002784f2d`.
 
 ## Inventory and compatibility
 
@@ -49,7 +49,7 @@ benchmark/provenance references remain attributed to their original compilers.
 
 Dependency order is E1 terminal evidence → P1 compiler/compatibility qualification
 → viewer consumer proof → reviewed product landing → portfolio reconciliation.
-Polyorama owns every product write and long-running check/CI watcher.
+Stobie owns every product write and long-running check/CI watcher.
 
 ## Delivery and closeout
 

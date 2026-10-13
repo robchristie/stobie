@@ -38,7 +38,7 @@ pub fn all() -> Result<()> {
         run_stage(name)?;
     }
     println!(
-        "Polyorama verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
+        "Stobie verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
     );
     Ok(())
 }
@@ -49,11 +49,11 @@ pub fn run_stage(name: &str) -> Result<()> {
     println!("Verification stage: {name}");
     let evidence = env::current_dir()?.join(".tools/runtime/verification-evidence");
     fs::create_dir_all(evidence.join("typed-icons"))?;
-    let evidence_environment = [("POLYORAMA_EVIDENCE_DIR", evidence.as_path())];
+    let evidence_environment = [("STOBIE_EVIDENCE_DIR", evidence.as_path())];
     let icons = evidence.join("typed-icons");
-    let icon_environment = [("POLYORAMA_EVIDENCE_DIR", icons.as_path())];
+    let icon_environment = [("STOBIE_EVIDENCE_DIR", icons.as_path())];
     let interface = evidence.join(format!("interface-{name}"));
-    let interface_environment = [("POLYORAMA_EVIDENCE_DIR", interface.as_path())];
+    let interface_environment = [("STOBIE_EVIDENCE_DIR", interface.as_path())];
     match name {
         "checks" => {
             // Clear owned configurations before setup or compilation can fail.
@@ -86,9 +86,9 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "-p",
                     "analytical-workspace-lab",
                     "-p",
-                    "polyorama-gallery",
+                    "stobie-gallery",
                     "-p",
-                    "polyorama-tile-worker",
+                    "stobie-tile-worker",
                     "-p",
                     "emuella-viewer",
                     "--",
@@ -306,7 +306,7 @@ pub fn run_stage(name: &str) -> Result<()> {
 fn build_gallery_web() -> Result<()> {
     fs::copy(
         "tools/browser-startup.js",
-        "apps/polyorama-gallery/web/browser-startup.js",
+        "apps/stobie-gallery/web/browser-startup.js",
     )?;
     ensure_wasm_bindgen_version("0.2.127")?;
     run(
@@ -317,7 +317,7 @@ fn build_gallery_web() -> Result<()> {
             "--target",
             "wasm32-unknown-unknown",
             "-p",
-            "polyorama-gallery",
+            "stobie-gallery",
         ],
     )?;
     run(
@@ -326,8 +326,8 @@ fn build_gallery_web() -> Result<()> {
             "--target",
             "web",
             "--out-dir",
-            "apps/polyorama-gallery/web/pkg",
-            "target/wasm32-unknown-unknown/release/polyorama_gallery.wasm",
+            "apps/stobie-gallery/web/pkg",
+            "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
         ],
     )?;
     Ok(())

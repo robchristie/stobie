@@ -43,7 +43,7 @@ class LifecycleTests(unittest.TestCase):
                 script = '''
 set -euo pipefail
 ROOT="$1"
-POLYORAMA_USE_SYSTEM_UI_LIBS=1
+STOBIE_USE_SYSTEM_UI_LIBS=1
 source "$ROOT/tools/native-smoke-lifecycle.sh"
 owned_start APP_PID "$2" "$3" "$4" "$5" "$6"
 while [[ ! -f "$5" ]]; do sleep .02; done

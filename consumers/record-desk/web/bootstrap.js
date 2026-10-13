@@ -10,7 +10,7 @@ try {
   window.__RECORD_DESK = handle;
   if (new URL(location.href).searchParams.get('automation') === '1') {
     handle.enable_automation(crypto.randomUUID());
-    window.__POLYORAMA_AUTOMATION = Object.freeze({
+    window.__STOBIE_AUTOMATION = Object.freeze({
       request: json => handle.automation_request(json),
     });
   }

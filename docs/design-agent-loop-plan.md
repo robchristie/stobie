@@ -1,9 +1,9 @@
-# Polyorama design system and agent UI loop plan
+# Stobie design system and agent UI loop plan
 
 Status: complete
 Landed commit: `8ee58de87db9d704ea76b347014fbfa4603d17f2`
 
-Delivery: [PR #17](https://github.com/robchristie/polyorama/pull/17) landed.
+Delivery: [PR #17](https://github.com/robchristie/stobie/pull/17) landed.
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 

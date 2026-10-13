@@ -5,7 +5,7 @@ fn encode_message(value: &serde_json::Value) -> Result<JsValue, serde_wasm_bindg
     value.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
 }
 use crate::engine::{Event, Job, WorkerMetrics, pacing_now_ms};
-use polyorama_runtime::RegionalRequest;
+use stobie_runtime::RegionalRequest;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 
@@ -13,7 +13,7 @@ use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 struct TransferPixels {
     width: u32,
     height: u32,
-    layout: polyorama_core::SampleLayout,
+    layout: stobie_core::SampleLayout,
     precision: u8,
     #[serde(with = "serde_wasm_bindgen::preserve")]
     samples: js_sys::Uint16Array,
@@ -44,9 +44,9 @@ fn decode_event(value: JsValue) -> Result<Event, JsValue> {
         });
     }
     // Typed transfer plus one exact-sized WASM copy stays within the reserved pair.
-    let pixels = polyorama_core::RegionalFrame {
+    let pixels = stobie_core::RegionalFrame {
         validity: (c.pixels.validity.length() > 0).then(|| c.pixels.validity.to_vec()),
-        pixels: polyorama_core::RegionalPixels {
+        pixels: stobie_core::RegionalPixels {
             width: c.pixels.width,
             height: c.pixels.height,
             layout: c.pixels.layout,

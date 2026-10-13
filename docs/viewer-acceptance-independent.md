@@ -1,7 +1,7 @@
 # Frozen independent-encoder screen
 
 Status: **ready for coordinator commit; unmeasured**. This component is one
-bounded calibration cohort, owned by Polyorama. Its question is whether an
+bounded calibration cohort, owned by Stobie. Its question is whether an
 installed independent encoder can meet the same screened format and actual
 payload size, and whether its reconstruction passes the existing source-valid
 display gates. The evidence owner is the fresh attributed RarePlanes group
@@ -175,7 +175,7 @@ grant with the following fields (placeholders must be replaced):
 ```json
 {
   "schema": "viewer-acceptance-independent-grant/1",
-  "revision": "<exact 40-character Polyorama HEAD>",
+  "revision": "<exact 40-character Stobie HEAD>",
   "protocol_sha256": "<SHA-256 of docs/viewer-acceptance-independent.json>",
   "output_group": "viewer-acceptance-independent-cohort-01",
   "exclusive_measurement_window": true,
