@@ -18,7 +18,7 @@ CRATES = (
     "stobie-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["stobie-ui-egui"] = 4  # Composition, icon toolbar, navigation and status-chip consumers.
+EXPECTED_EXAMPLES["stobie-ui-egui"] = 5  # Composition, derived actions, icon toolbar, navigation and status-chip consumers.
 SOURCE_CONSUMERS = (
     "crates/stobie-core/src/lib.rs",
     "crates/stobie-core/src/data.rs",

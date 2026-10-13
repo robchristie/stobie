@@ -140,8 +140,9 @@ targets keep their visible bounds; invalid allocation evidence remains auditable
 `tests/workflow_ui.rs` audits the actual AccessKit tree at ordinary/narrow sizes
 with full records and open/closed options, and checks semantic/text observations
 from every startup presentation. Run it when adding interactive chrome.
-For an action, extend `Action`, its stable ID/specification, availability and the
-application action handler. Emit `Intent::Action`; route the registered shortcut
+For an action, add a variant to the derived `Action` enum with its label,
+description and optional shortcut, then extend availability and the
+application action handler. Its stable ID defaults to `record-desk.<kebab-case variant>`. Emit `Intent::Action`; route the registered shortcut
 through the same availability rule. Domain operations belong in `Desk`, not panes.
 If a new browser shortcut conflicts with a browser default, add its exact chord
 to the focus-scoped reservation in `web/bootstrap.js`; leave the event forwarding

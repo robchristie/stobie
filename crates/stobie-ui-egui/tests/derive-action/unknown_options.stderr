@@ -1,0 +1,23 @@
+error: unknown action attribute; expected label, description, compact, shortcut, scope, id or physical_only
+ --> tests/derive-action/unknown_options.rs:7:52
+  |
+7 |     #[action(label = "Save", description = "Save", tooltip = "Not an option")]
+  |                                                    ^^^^^^^
+
+error: duplicate `label`
+ --> tests/derive-action/unknown_options.rs:9:30
+  |
+9 |     #[action(label = "Open", label = "Again", description = "Open")]
+  |                              ^^^^^
+
+error: scope must be "application", "pane" or "active_pane"
+  --> tests/derive-action/unknown_options.rs:11:67
+   |
+11 |     #[action(label = "Fit", description = "Fit the view", scope = "window")]
+   |                                                                   ^^^^^^^^
+
+error: stable identities cannot contain whitespace or control characters
+  --> tests/derive-action/unknown_options.rs:13:57
+   |
+13 |     #[action(label = "Copy", description = "Copy", id = "test copy")]
+   |                                                         ^^^^^^^^^^^

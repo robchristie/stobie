@@ -1,9 +1,12 @@
 # Interactions
 
 Every user-visible capability has an entry in an application-owned enum that
-implements the framework `ActionKey` trait. Its generic `ActionSpec<A>`
-supplies the label, description, optional compact label, shortcut and scope;
-the key supplies the stable external ID. Controls, shortcut routing, semantic
+implements the framework `ActionKey` trait, normally through `#[derive(Action)]`.
+Its generic `ActionSpec<A>` supplies the label, description, optional compact
+label, shortcut and scope; the key supplies the stable external ID. The derive
+declares these once per variant, checks shortcuts and identities at compile
+time and lists every action in `ActionSet::ALL`. Actions are semantically
+invocable unless they declare `physical_only` with a reason. Controls, shortcut routing, semantic
 metadata, tests and physical targeting must share that typed identity; do not
 create a parallel string action name or add application capabilities to
 `stobie-ui-egui`.

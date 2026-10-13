@@ -1,0 +1,5 @@
+error: action variants cannot carry data; actions with arguments are not supported yet
+ --> tests/derive-action/data_variant.rs:8:9
+  |
+8 |     Open(u32),
+  |         ^^^^^
