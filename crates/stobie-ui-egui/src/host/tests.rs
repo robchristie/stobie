@@ -7,9 +7,10 @@ use stobie_core::{PaneId, Workspace, WorkspaceChange};
 
 use super::*;
 use crate::{
-    Action, CapabilityDescription, DensityVariant, DesignTokens, InspectionErrorCode,
-    InspectionOperation, InspectionResult, InspectionSelector, InvocationReceipt,
-    PresentationScope, ReceiptState, ResolvedTarget, ThemeVariant,
+    Action, CapabilityDescription, ContentTextSpec, DensityVariant, DesignTokens,
+    InspectionErrorCode, InspectionOperation, InspectionResult, InspectionSelector,
+    InvocationReceipt, PresentationScope, ReceiptState, ResolvedTarget, TextInteraction,
+    TextOverflow, TextRole, ThemeVariant,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -73,8 +74,12 @@ struct Counter {
     errors: Vec<String>,
     discard_first_pass: bool,
     rows: usize,
+    /// Present the rows inside an `observe_visible_only` region.
+    rows_visible_only: bool,
     duplicate: bool,
     non_finite: bool,
+    /// Present a node beyond the bottom of the window.
+    overflow: bool,
     animate: bool,
     workspace: Option<Workspace>,
     /// The count each completed pass presented.
@@ -174,19 +179,46 @@ impl Application for Counter {
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
         }
+        if self.overflow {
+            ui.add_space(2_000.0);
+            let below = ui.label("Below the window");
+            crate::observe_node(ui, node("below", UiRole::Status, below.rect));
+        }
         if self.rows > 0 {
-            let scroll = egui::ScrollArea::vertical()
-                .max_height(60.0)
-                .show(ui, |ui| {
-                    for row in 0..self.rows {
-                        let label = ui.label(format!("Row {row}"));
-                        crate::observe_node(
+            let rows = |ui: &mut Ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(60.0)
+                    .show(ui, |ui| {
+                        let mut p = frame.presentation(
                             ui,
-                            node(format!("row-{row}"), UiRole::ResultRow, label.rect),
+                            PresentationScope::new("rows"),
+                            SemanticUiId::root(),
                         );
-                    }
-                });
-            view.scroll_viewport = Some(scroll.inner_rect);
+                        for row in 0..self.rows {
+                            let label = p.content(
+                                ui,
+                                ("row", row),
+                                &format!("Row {row}"),
+                                ContentTextSpec {
+                                    role: TextRole::Body,
+                                    overflow: TextOverflow::Ellipsis,
+                                    max_lines: 1,
+                                    interaction: TextInteraction::Selectable,
+                                },
+                            );
+                            crate::observe_node(
+                                ui,
+                                node(format!("row-{row}"), UiRole::ResultRow, label.rect),
+                            );
+                        }
+                    })
+                    .inner_rect
+            };
+            view.scroll_viewport = Some(if self.rows_visible_only {
+                crate::observe_visible_only(ui, rows)
+            } else {
+                rows(ui)
+            });
         }
         if let Some(workspace) = &self.workspace {
             frame.dock(ui, workspace, &mut TestPanes);
@@ -254,6 +286,8 @@ struct Probe {
     host: Option<AppHost<Counter>>,
     /// I-key presses left in the input after the host's pass.
     unconsumed: usize,
+    /// The region the host was given in the latest pass.
+    root_rect: Option<Rect>,
 }
 
 fn harness(counter: Counter) -> Harness<'static, Probe> {
@@ -262,6 +296,7 @@ fn harness(counter: Counter) -> Harness<'static, Probe> {
         .build_ui_state(
             |ui, probe: &mut Probe| {
                 if let Some(host) = &mut probe.host {
+                    probe.root_rect = Some(ui.max_rect());
                     host.present(ui);
                 }
                 probe.unconsumed += ui.input(|input| {
@@ -386,6 +421,7 @@ fn observations_replace_discarded_passes_and_clip_to_their_region() {
     let mut harness = harness(Counter {
         discard_first_pass: true,
         rows: 30,
+        rows_visible_only: true,
         ..Default::default()
     });
     with_inspection(&mut harness);
@@ -440,6 +476,46 @@ fn observations_replace_discarded_passes_and_clip_to_their_region() {
 }
 
 #[test]
+fn observations_outside_a_visible_only_region_are_published_as_presented() {
+    let harness = harness(Counter {
+        rows: 30,
+        ..Default::default()
+    });
+    let host = host(&harness);
+    let snapshot = host.ui_snapshot();
+    let viewport = host.ui_state.scroll_viewport.unwrap();
+    let rows: Vec<_> = snapshot
+        .nodes
+        .iter()
+        .filter(|node| node.id.0.starts_with("row-"))
+        .collect();
+    assert_eq!(rows.len(), 30, "every row is published");
+    assert!(
+        rows.iter()
+            .any(|row| !viewport.contains_rect(Rect::from(row.rect))),
+        "rows keep their presented bounds"
+    );
+    // The audit sees the rows the short viewport clips.
+    let clipped = snapshot
+        .text_audit
+        .iter()
+        .filter(|finding| {
+            matches!(
+                finding,
+                crate::TextAuditFinding::TextOutsideClip { .. }
+                    | crate::TextAuditFinding::InvalidUsefulBounds { .. }
+            )
+        })
+        .count();
+    assert!(clipped > 0 && clipped < 30, "{:?}", snapshot.text_audit);
+    let row_text = snapshot
+        .text
+        .iter()
+        .filter(|text| text.component_id.kind == crate::TextComponentKind::ContentLabel);
+    assert_eq!(row_text.count(), 30, "every row's text is audited");
+}
+
+#[test]
 fn invalid_observations_are_audited_without_blocking_publication() {
     let mut harness = harness(Counter {
         duplicate: true,
@@ -470,6 +546,31 @@ fn invalid_observations_are_audited_without_blocking_publication() {
         panic!("observe failed: {:?}", reply.error);
     };
     assert_eq!(observation.snapshot.semantic_audit, snapshot.semantic_audit);
+}
+
+#[test]
+fn the_root_keeps_the_window_bounds_when_content_overflows() {
+    let harness = harness(Counter {
+        overflow: true,
+        ..Default::default()
+    });
+    let snapshot = host(&harness).ui_snapshot();
+    let window = harness.state().root_rect.unwrap();
+    assert_eq!(Rect::from(snapshot.nodes[0].rect), window);
+    // The overflowing node is published as presented and audited.
+    let below = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.id.0 == "below")
+        .expect("overflowing node is published");
+    assert!(Rect::from(below.rect).min.y > window.max.y);
+    assert!(
+        snapshot.semantic_audit.iter().any(
+            |finding| matches!(finding, SemanticAuditFinding::OutsideRoot { id } if id.0 == "below")
+        ),
+        "{:?}",
+        snapshot.semantic_audit
+    );
 }
 
 #[test]

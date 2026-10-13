@@ -29,6 +29,7 @@ use std::hash::Hash;
 use egui::{Rect, Response, Ui};
 use stobie_core::{PaneId, Workspace, WorkspaceChange};
 
+use crate::observation::Visibility;
 use crate::{
     ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey,
     ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme, Availability,
@@ -405,7 +406,7 @@ impl<A: ActionSet, I, P: Panes<A, I>> HostedPanes<'_, '_, '_, A, I, P> {
             &self.context,
             self.context.viewport_id(),
             pass,
-            [(node, Rect::EVERYTHING)],
+            [(node, Visibility::AsPresented)],
             [],
         );
     }
@@ -425,8 +426,11 @@ impl<A: ActionSet, I, P: Panes<A, I>> PanePresenter for HostedPanes<'_, '_, '_, 
         );
         node.name = self.panes.title(pane).into();
         node.pane = Some(pane);
-        crate::observe_node(ui, node);
-        self.panes.pane_ui(ui, pane, self.frame);
+        // Pane bodies scroll: publish only what each pane shows.
+        crate::observe_visible_only(ui, |ui| {
+            crate::observe_node(ui, node);
+            self.panes.pane_ui(ui, pane, self.frame);
+        });
     }
 
     fn record_tab_rect(&mut self, pane: PaneId, rect: Rect, selected: bool, focused: bool) {
@@ -450,7 +454,7 @@ impl<A: ActionSet, I, P: Panes<A, I>> PanePresenter for HostedPanes<'_, '_, '_, 
             self.context.viewport_id(),
             pass,
             [],
-            [observation],
+            [(observation, false)],
         );
     }
 
@@ -726,7 +730,7 @@ impl<A: Application> AppHost<A> {
                 repaint: &mut self.repaint,
                 tokens: self.theme.resolve(
                     self.preferences
-                        .theme_variant(root.style().visuals.dark_mode),
+                        .theme_variant(context.theme() == egui::Theme::Dark),
                     self.preferences.density_variant(),
                     TypographyProfile::Dense,
                 ),
@@ -996,7 +1000,7 @@ impl<A: Application> AppHost<A> {
         let mut identities = BTreeSet::from([SemanticUiId::root()]);
         let mut duplicates = Vec::new();
         let mut non_finite = Vec::new();
-        for (mut node, clip) in observed.nodes {
+        for (mut node, visibility) in observed.nodes {
             let rect = Rect::from(node.rect);
             // Non-finite geometry would make the whole publication invalid, so
             // report it as an audit finding instead of publishing the node.
@@ -1004,9 +1008,11 @@ impl<A: Application> AppHost<A> {
                 non_finite.push(node.id);
                 continue;
             }
-            // A valid allocation that is clipped away is not visible. Keep an
+            // Visible-only content that is clipped away is not shown. Keep an
             // empty allocation so the semantic audit reports it.
-            if rect.is_positive() {
+            if let Visibility::VisibleWithin(clip) = visibility
+                && rect.is_positive()
+            {
                 let visible = rect.intersect(clip);
                 if !visible.is_positive() {
                     continue;
@@ -1019,18 +1025,21 @@ impl<A: Application> AppHost<A> {
                 duplicates.push(node.id);
             }
         }
-        // Scroll surfaces can submit partially visible text. Audit measured
-        // successes only when complete; keep every failed attempt.
+        // Visible-only surfaces scroll, so they submit partially visible text.
+        // Audit their measured successes only when complete; keep every failed
+        // attempt and all other text as presented.
         let text: Vec<_> = observed
             .text
             .into_iter()
-            .filter(|text| {
-                text.layout_error.is_some()
+            .filter(|(text, visible_only)| {
+                !visible_only
+                    || text.layout_error.is_some()
                     || (text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
                         && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
                         && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
                         && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0)
             })
+            .map(|(text, _)| text)
             .collect();
         let mut snapshot = UiSnapshot {
             frame: self.passes,

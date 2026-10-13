@@ -130,8 +130,12 @@ shown, a dock drag is active or you call `Frame::request_repaint(reason)`. The
 `AppHost` rustdoc gives the exact contract.
 
 Presentation contexts, choice and range recipes, and the dock register their
-semantic nodes and measured text automatically. Each is clipped to the region
-it was drawn in, and a discarded layout pass is replaced rather than merged.
+semantic nodes and measured text automatically, and a discarded layout pass is
+replaced rather than merged. The host publishes them as presented, so the audits
+report clipped and overflowing content. Dock panes scroll, so inside a pane it
+publishes only what is visible: nodes are clipped to the region they were drawn
+in or omitted, and partly visible text is not audited. Wrap other scrolling
+content in `observe_visible_only`.
 For a custom widget, call `PresentationContext::observe_node` and
 `observe_text`, or the free `observe_node`, with the pane's semantic node as
 parent. Record native egui text fields with

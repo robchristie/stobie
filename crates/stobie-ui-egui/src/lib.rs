@@ -79,7 +79,7 @@ pub use components::*;
 pub use generated_tokens::*;
 pub use host::*;
 pub use inspection::*;
-pub use observation::{observe_node, observe_text};
+pub use observation::{observe_node, observe_text, observe_visible_only};
 pub use pane_content::*;
 pub use preferences::*;
 pub use preferences_control::*;

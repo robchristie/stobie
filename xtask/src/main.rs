@@ -320,14 +320,32 @@ fn architecture() -> Result<()> {
 
 /// An application declares its own action registry, by hand or with `#[derive(Action)]`.
 fn owns_action_registry(source: &str, action: &str) -> bool {
-    if source.contains(&format!("impl ActionKey for {action}")) {
+    let names_action = |text: &str, prefix: &str| {
+        text.match_indices(prefix)
+            .map(|(offset, _)| offset)
+            .find(|offset| {
+                text[offset + prefix.len()..]
+                    .chars()
+                    .next()
+                    .is_some_and(|next| !next.is_alphanumeric() && next != '_')
+            })
+    };
+    if names_action(source, &format!("impl ActionKey for {action}")).is_some() {
         return true;
     }
-    source
-        .find(&format!("pub enum {action} "))
-        .is_some_and(|start| {
-            let attributes = &source[source[..start].rfind("#[derive(").unwrap_or(start)..start];
-            attributes.contains("Action,") || attributes.contains("Action)")
+    let Some(start) = names_action(source, &format!("pub enum {action}")) else {
+        return false;
+    };
+    // The enum's own attributes run back to the end of the previous item.
+    let attributes = &source[source[..start].rfind(['}', ';']).map_or(0, |end| end + 1)..start];
+    attributes
+        .match_indices("#[derive(")
+        .any(|(offset, prefix)| {
+            let list = &attributes[offset + prefix.len()..];
+            list[..list.find(")]").unwrap_or(list.len())]
+                .split(',')
+                .map(str::trim)
+                .any(|path| path == "Action" || path.ends_with("::Action"))
         })
 }
 
@@ -495,6 +513,27 @@ mod architecture_tests {
             "Tool"
         ));
         assert!(!owns_action_registry("pub enum Other {", "Tool"));
+        assert!(owns_action_registry(
+            "#[derive(Clone, stobie_ui_egui::Action)]\npub enum Tool {",
+            "Tool"
+        ));
+        // Only the whole derive name counts, and only on the enum itself.
+        assert!(!owns_action_registry(
+            "#[derive(SemanticAction, Clone)]\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "#[derive(Action)]\npub enum Other {}\n\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "#[derive(Action)]\npub enum ToolKind {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "impl ActionKey for ToolKind {",
+            "Tool"
+        ));
     }
 
     #[test]

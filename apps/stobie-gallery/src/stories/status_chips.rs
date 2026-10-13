@@ -439,6 +439,8 @@ mod tests {
             scale: 1.5,
             clip: Some(clip),
             theme: stobie_ui_egui::ApplicationTheme::analytical(),
+            preferences: Default::default(),
+            heading: false,
         };
         let (snapshot, mut output) = super::super::probe::render(&context, probe, clip.size());
         let text = &snapshot.text;

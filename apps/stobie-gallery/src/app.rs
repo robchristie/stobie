@@ -415,13 +415,15 @@ impl Application for Gallery {
         target: ActionTarget<GalleryCommand>,
         view: &mut GalleryView,
     ) -> Result<bool, String> {
-        match target.action {
-            GalleryCommand::OpenWorkbench => view.workbench.open = true,
-        }
-        Ok(true)
+        Ok(match target.action {
+            GalleryCommand::OpenWorkbench => !std::mem::replace(&mut view.workbench.open, true),
+        })
     }
 
     fn report_error(&mut self, message: String) {
+        #[cfg(target_arch = "wasm32")]
+        log::warn!("Stobie gallery: {message}");
+        #[cfg(not(target_arch = "wasm32"))]
         eprintln!("Stobie gallery: {message}");
     }
 
@@ -689,6 +691,74 @@ mod tests {
         );
         assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 1);
         std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn automation_opens_the_workbench_through_its_semantic_action() {
+        use stobie_ui_egui::{
+            Inspection, InspectionOperation, InspectionReply, InspectionRequest, InspectionResult,
+            InspectionSelector, ReceiptState,
+        };
+        let context = egui::Context::default();
+        let mut host = AppHost::new(
+            &context,
+            Gallery::with(
+                StoryId::ReferenceApplicationShell,
+                GalleryConfiguration::default(),
+            ),
+        );
+        host.enable_inspection(Inspection::new(crate::APPLICATION_NAME));
+        let present = |host: &mut GalleryApp| {
+            let mut output = context.run_ui(Default::default(), |ui| host.present(ui));
+            output.textures_delta.clear();
+        };
+        present(&mut host);
+        let handle = |host: &GalleryApp, id: &str, operation| -> InspectionReply {
+            let inspection = host.inspection().unwrap();
+            inspection.handle(InspectionRequest {
+                version: 1,
+                request_id: id.into(),
+                instance: Some(inspection.instance()),
+                operation,
+            })
+        };
+        let selector = InspectionSelector {
+            capability: Some("gallery.open-workbench".into()),
+            ..Default::default()
+        };
+        let reply = handle(
+            &host,
+            "discover",
+            InspectionOperation::Discover {
+                selector: selector.clone(),
+                limit: 8,
+                cursor: None,
+            },
+        );
+        let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+            panic!("discovery failed: {:?}", reply.error);
+        };
+        assert_eq!(capabilities.len(), 1, "{capabilities:?}");
+        let invoke = InspectionOperation::Invoke {
+            selector,
+            expected: capabilities[0].target.clone(),
+            arguments: serde_json::Value::Null,
+        };
+        let receipt = |reply: InspectionReply| match reply.result {
+            Some(InspectionResult::Receipt { receipt }) => receipt.state,
+            _ => panic!("no receipt: {:?}", reply.error),
+        };
+        assert!(!host.ui_state().workbench.open);
+        assert_eq!(receipt(handle(&host, "open", invoke)), ReceiptState::Queued);
+        present(&mut host);
+        let lookup = InspectionOperation::Receipt {
+            request_id: "open".into(),
+        };
+        assert_eq!(
+            receipt(handle(&host, "lookup", lookup)),
+            ReceiptState::Completed
+        );
+        assert!(host.ui_state().workbench.open);
     }
 
     #[test]

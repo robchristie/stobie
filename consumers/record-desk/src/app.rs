@@ -220,53 +220,58 @@ impl Application for RecordDesk {
     }
 
     fn ui(&self, root: &mut Ui, view: &mut View, frame: &mut Frame<'_, Action, Intent>) {
-        egui::Panel::top("record-desk-bar").show(root, |ui| {
-            let scope = PresentationScope::new("record-desk.chrome");
-            let mut p = frame.presentation(ui, scope, SemanticUiId::root());
-            ui.horizontal_wrapped(|ui| p.heading(ui, "title", "Record Desk"));
-            ui.horizontal_wrapped(|ui| {
-                for action in [
-                    Action::Undo,
-                    Action::Redo,
-                    Action::Save,
-                    Action::Restore,
-                    Action::Arrange,
-                ] {
-                    frame.action(ui, &mut p, action, ActionEmphasis::Normal);
-                }
+        // As before hosting: publish only what is visible, including the top bar's
+        // first frame, which egui clips until the panel has measured its content.
+        stobie_ui_egui::observe_visible_only(root, |root| {
+            egui::Panel::top("record-desk-bar").show(root, |ui| {
+                let scope = PresentationScope::new("record-desk.chrome");
+                let mut p = frame.presentation(ui, scope, SemanticUiId::root());
+                ui.horizontal_wrapped(|ui| p.heading(ui, "title", "Record Desk"));
+                ui.horizontal_wrapped(|ui| {
+                    for action in [
+                        Action::Undo,
+                        Action::Redo,
+                        Action::Save,
+                        Action::Restore,
+                        Action::Arrange,
+                    ] {
+                        frame.action(ui, &mut p, action, ActionEmphasis::Normal);
+                    }
+                });
+                let state = format!(
+                    "{} · {} · {}",
+                    if self.desk.is_dirty() {
+                        "Editing draft"
+                    } else {
+                        "No draft changes"
+                    },
+                    if self.unsaved() {
+                        "Unsaved committed state/layout"
+                    } else {
+                        "Saved"
+                    },
+                    self.store.description()
+                );
+                p.content(ui, "state", &state, content_spec(TextRole::Secondary, 2));
             });
-            let state = format!(
-                "{} · {} · {}",
-                if self.desk.is_dirty() {
-                    "Editing draft"
-                } else {
-                    "No draft changes"
-                },
-                if self.unsaved() {
-                    "Unsaved committed state/layout"
-                } else {
-                    "Saved"
-                },
-                self.store.description()
-            );
-            p.content(ui, "state", &state, content_spec(TextRole::Secondary, 2));
+            egui::Panel::bottom("record-desk-status").show(root, |ui| {
+                let scope = PresentationScope::new("record-desk.feedback");
+                let mut p = frame.presentation(ui, scope, SemanticUiId::root());
+                p.status(ui, "message", &self.message, self.error);
+            });
+            let mut panes = RecordPanes {
+                records: self.desk.visible(),
+                total: self.desk.records().len(),
+                selected: self.desk.selected(),
+                draft: self.desk.draft(),
+                filters: self.desk.filters(),
+                dirty: self.desk.is_dirty(),
+                tokens: frame.tokens(),
+                focus_search: std::mem::take(&mut view.focus_search),
+            };
+            egui::CentralPanel::default()
+                .show(root, |ui| frame.dock(ui, &self.workspace, &mut panes));
         });
-        egui::Panel::bottom("record-desk-status").show(root, |ui| {
-            let scope = PresentationScope::new("record-desk.feedback");
-            let mut p = frame.presentation(ui, scope, SemanticUiId::root());
-            p.status(ui, "message", &self.message, self.error);
-        });
-        let mut panes = RecordPanes {
-            records: self.desk.visible(),
-            total: self.desk.records().len(),
-            selected: self.desk.selected(),
-            draft: self.desk.draft(),
-            filters: self.desk.filters(),
-            dirty: self.desk.is_dirty(),
-            tokens: frame.tokens(),
-            focus_search: std::mem::take(&mut view.focus_search),
-        };
-        egui::CentralPanel::default().show(root, |ui| frame.dock(ui, &self.workspace, &mut panes));
     }
 
     // Draft/filter outputs from a pass apply before a selection change and the

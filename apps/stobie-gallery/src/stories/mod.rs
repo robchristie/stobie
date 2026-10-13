@@ -239,7 +239,7 @@ pub(crate) mod probe {
     use serde::Serialize;
     use stobie_ui_egui::{
         Action, ActionTarget, AppHost, Application, ApplicationIdentity, ApplicationTheme,
-        Availability, Frame, UiSnapshot, application_identity,
+        Availability, Frame, UiPreferences, UiSnapshot, application_identity,
     };
 
     use super::*;
@@ -257,6 +257,9 @@ pub(crate) mod probe {
         pub(crate) scale: f32,
         pub(crate) clip: Option<egui::Rect>,
         pub(crate) theme: ApplicationTheme,
+        pub(crate) preferences: UiPreferences,
+        /// Present the story's heading and description, as the Gallery does.
+        pub(crate) heading: bool,
     }
 
     impl Application for StoryProbe {
@@ -276,6 +279,10 @@ pub(crate) mod probe {
             self.theme.clone()
         }
 
+        fn preferences(&self) -> UiPreferences {
+            self.preferences
+        }
+
         fn ui(
             &self,
             ui: &mut egui::Ui,
@@ -285,7 +292,11 @@ pub(crate) mod probe {
             if let Some(clip) = self.clip {
                 ui.set_clip_rect(clip);
             }
-            present_story(ui, self.story, state, &self.tokens, self.scale);
+            if self.heading {
+                render_story(ui, self.story, state, &self.tokens, self.scale);
+            } else {
+                present_story(ui, self.story, state, &self.tokens, self.scale);
+            }
         }
 
         fn apply(&mut self, _intent: (), _: &mut StoryState) -> Result<bool, String> {
@@ -326,10 +337,11 @@ pub(crate) mod probe {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{Gallery, GalleryConfiguration, GalleryWidth};
+    use super::probe::{self, StoryProbe};
+    use crate::app::{GalleryConfiguration, GalleryWidth};
     use crate::catalogue::{StoryId, story_definition};
     use eframe::egui;
-    use stobie_ui_egui::AppHost;
+    use stobie_ui_egui::ApplicationTheme;
 
     #[test]
     fn every_story_renders_through_production_components_without_text_audit_findings() {
@@ -355,25 +367,26 @@ mod tests {
             },
         ];
         for configuration in representative {
+            let preferences = configuration.preferences();
+            let tokens = preferences
+                .tokens(configuration.appearance == stobie_ui_egui::AppearancePreference::Dark);
             for story in StoryId::ALL {
                 let context = egui::Context::default();
-                let mut host = AppHost::new(&context, Gallery::with(story, configuration));
+                let probe = StoryProbe {
+                    story,
+                    tokens,
+                    scale: configuration.font_scale,
+                    clip: None,
+                    theme: ApplicationTheme::analytical(),
+                    preferences,
+                    heading: true,
+                };
+                // The story alone at the configured width, as a reviewer sees it.
                 let size = egui::vec2(
-                    configuration.width.points() + 600.0,
-                    f32::from(story_definition(story).recommended_viewport.height) + 200.0,
+                    configuration.width.points(),
+                    f32::from(story_definition(story).recommended_viewport.height),
                 );
-                // Fonts installed at startup take effect from the second pass.
-                for _ in 0..2 {
-                    let mut output = context.run_ui(
-                        egui::RawInput {
-                            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
-                            ..Default::default()
-                        },
-                        |ui| host.present(ui),
-                    );
-                    output.textures_delta.clear();
-                }
-                let snapshot = host.ui_snapshot();
+                let (snapshot, _) = probe::render(&context, probe, size);
                 assert!(
                     !snapshot.text.is_empty(),
                     "story {story} emitted no measured text"

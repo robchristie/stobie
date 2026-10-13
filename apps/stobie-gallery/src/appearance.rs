@@ -296,6 +296,8 @@ mod tests {
                     scale: 1.0,
                     clip: None,
                     theme: theme.clone(),
+                    preferences: Default::default(),
+                    heading: false,
                 };
                 let (snapshot, _) =
                     crate::stories::probe::render(&context, probe, egui::vec2(1100.0, 800.0));
