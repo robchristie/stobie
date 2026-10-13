@@ -258,8 +258,10 @@ Host the application with `AppHost` (see the
 `Inspection`, installs its completion hook, and starts the native socket when
 `STOBIE_AUTOMATION_SOCKET` is set. In the browser, `web_handle!` exposes
 `enable_automation` and `automation_request`. Each completed, non-discarded pass
-is published with one binding per rendered control for each action, or the
-action's default identity when no control is rendered. Facts come from
+is published with one binding per rendered control for each action. An
+application-scoped action with no rendered control keeps its default identity.
+A pane-scoped action is discoverable where its control is rendered with a pane,
+and in the panes `Application::action_panes` lists. Facts come from
 `Application::observe`. Queued invocations drain on the application thread
 before the UI runs. Bindings are recalculated before each one, and availability
 is rechecked immediately before `perform`. Reads never request a repaint.

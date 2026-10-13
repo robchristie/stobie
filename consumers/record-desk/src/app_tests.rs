@@ -157,6 +157,23 @@ fn draft_field_capabilities_are_hidden_without_a_selected_record() {
 }
 
 #[test]
+fn draft_and_filter_edits_apply_before_a_same_pass_selection() {
+    let directory = tempfile::tempdir().unwrap();
+    let desk = RecordDesk::with_store(Store::at_path(directory.path().join("r.json")));
+    let draft = desk.desk.draft().unwrap().clone();
+    let mut intents = vec![
+        Intent::Select(RecordId(1)),
+        Intent::Draft(draft),
+        Intent::Filters(Filters::default()),
+    ];
+    desk.order_intents(&mut intents);
+    assert!(matches!(
+        intents.as_slice(),
+        [Intent::Draft(_), Intent::Filters(_), Intent::Select(_)]
+    ));
+}
+
+#[test]
 fn reviewed_toggle_is_invocable_and_tracks_the_draft() {
     let directory = tempfile::tempdir().unwrap();
     let context = egui::Context::default();

@@ -124,8 +124,8 @@ shortcuts, then your `ui`. Shortcuts need exact modifiers and an available
 action. A shortcut without `Cmd` does not fire while a text field has focus, so
 give text-adjacent actions a `Cmd` chord. It
 publishes the completed observation and calls `completed`. Then it applies
-this pass's data intents in order, followed by its actions, rechecking each
-action's availability first. It repaints only when state changed, an error was
+this pass's data intents in emission order (`order_intents` can rearrange
+them), followed by its actions, rechecking each action's availability first. It repaints only when state changed, an error was
 shown, a dock drag is active or you call `Frame::request_repaint(reason)`. The
 `AppHost` rustdoc gives the exact contract.
 
@@ -146,6 +146,9 @@ them as `UiRole::TextInput`. Observe a selectable list row as
   and other UI-only state in `UiState`.
 - Derive presentation scopes and keys from stable domain IDs, never from labels,
   positions or counters.
+- Give a pane-scoped action (`scope = "pane"`) its pane by presenting it inside
+  `Frame::pane_presentation`, or pass `ActionTarget::pane(action, pane)`;
+  shortcuts reach it through `Application::active_pane`.
 - Override `meaning` when an action's effect depends on state an agent could
   have observed, such as a selection, a draft or history depth. A target
   discovered before that state changed is then rejected as stale. Leave focus,
@@ -169,8 +172,8 @@ changing counts in pane content.
 
 ## Run in the browser
 
-Put the application in `lib.rs`, with a thin `main.rs` that calls a native
-`run()`. Build the library as `crate-type = ["cdylib", "rlib"]` with a direct
+Put the application in `lib.rs`, with a thin `main.rs` that starts it with
+`run_native`. Build the library as `crate-type = ["cdylib", "rlib"]` with a direct
 `wasm-bindgen` dependency pinned to your bindgen CLI's version, then export a
 handle:
 

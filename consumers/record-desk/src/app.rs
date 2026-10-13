@@ -269,7 +269,12 @@ impl Application for RecordDesk {
         egui::CentralPanel::default().show(root, |ui| frame.dock(ui, &self.workspace, &mut panes));
     }
 
-    // Draft/filter outputs from a pass apply before actions that consume them.
+    // Draft/filter outputs from a pass apply before a selection change and the
+    // actions that consume them; the sort keeps emission order otherwise.
+    fn order_intents(&self, intents: &mut [Intent]) {
+        intents.sort_by_key(|intent| !matches!(intent, Intent::Draft(_) | Intent::Filters(_)));
+    }
+
     fn apply(&mut self, intent: Intent, _: &mut View) -> Result<bool, String> {
         match intent {
             Intent::Select(id) => self.desk.select(id)?,

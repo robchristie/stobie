@@ -17,8 +17,9 @@
 //! 4. [`Application::ui`] presents state and emits intents and action triggers.
 //! 5. The completed observation is published, and [`Application::completed`]
 //!    sees it together with the state it presented.
-//! 6. Data intents apply in emission order, then actions in trigger order, each
-//!    action rechecking its availability immediately before it runs.
+//! 6. Data intents apply in emission order (or as [`Application::order_intents`]
+//!    arranges them), then actions in trigger order, each action rechecking its
+//!    availability immediately before it runs.
 //! 7. A repaint is requested only for a recorded [`HostRepaint`]. Any state
 //!    change requests one, so the next pass presents and observes it.
 
@@ -32,10 +33,10 @@ use crate::{
     ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey,
     ActionScope, ActionSet, ActionTarget, ApplicationIdentity, Availability, CollectionMetadata,
     CollectionObservation, DesignTokens, DockBehaviour, DockTextContext, IconId, Inspection,
-    InspectionBinding, InspectionError, InspectionReply, InspectionRequest, ObservationValue,
-    PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding, SemanticUiId,
-    TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot, apply_design_system,
-    audit_text_layouts, text_audit_coverage,
+    InspectionBinding, InspectionError, InspectionReply, InspectionRequest, IntoActionTarget,
+    ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
+    SemanticUiId, TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot,
+    apply_design_system, audit_text_layouts, text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -96,6 +97,11 @@ pub trait Application: 'static {
     fn meaning(&self, _target: ActionTarget<Self::Action>) -> String {
         "stable".into()
     }
+
+    /// Reorder this pass's data intents before they apply. They apply in
+    /// emission order by default; an application might apply draft edits
+    /// before a selection change that depends on them.
+    fn order_intents(&self, _intents: &mut [Self::Intent]) {}
 
     /// Publish bounded application facts and collection metadata with each
     /// completed observation.
@@ -222,14 +228,15 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     }
 
     /// Queue an action through the same route as a click. It runs after this
-    /// pass's intents if it is still available.
-    pub fn trigger(&mut self, target: impl Into<ActionTarget<A>>) {
-        self.triggers.push(target.into());
+    /// pass's intents if it is still available. Pass an [`ActionTarget`] for a
+    /// pane-scoped action.
+    pub fn trigger(&mut self, target: impl IntoActionTarget<A>) {
+        self.triggers.push(target.into_target(None));
     }
 
     /// The application's current availability for a target.
-    pub fn availability(&self, target: impl Into<ActionTarget<A>>) -> Availability {
-        (self.availability)(target.into())
+    pub fn availability(&self, target: impl IntoActionTarget<A>) -> Availability {
+        (self.availability)(target.into_target(None))
     }
 
     /// Ask for another pass, for example while an animation runs.
@@ -238,15 +245,16 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     }
 
     /// Present an action button with its current availability, and trigger the
-    /// action when clicked. The action is the control's stable logical key.
+    /// action when clicked. The action is the control's stable logical key. A
+    /// pane-scoped action takes its pane from a [`Self::pane_presentation`].
     pub fn action(
         &mut self,
         ui: &mut Ui,
         presentation: &mut PresentationContext,
-        target: impl Into<ActionTarget<A>>,
+        target: impl IntoActionTarget<A>,
         emphasis: ActionEmphasis,
     ) -> Response {
-        let target = target.into();
+        let target = target.into_target(presentation.pane());
         self.button(
             ui,
             presentation,
@@ -263,11 +271,11 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         &mut self,
         ui: &mut Ui,
         presentation: &mut PresentationContext,
-        target: impl Into<ActionTarget<A>>,
+        target: impl IntoActionTarget<A>,
         icon: IconId,
         emphasis: ActionEmphasis,
     ) -> Response {
-        let target = target.into();
+        let target = target.into_target(presentation.pane());
         self.button(
             ui,
             presentation,
@@ -286,14 +294,15 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         ui: &mut Ui,
         presentation: &mut PresentationContext,
         key: impl Hash + std::fmt::Debug,
-        target: impl Into<ActionTarget<A>>,
+        target: impl IntoActionTarget<A>,
         pressed: bool,
     ) -> Response {
+        let target = target.into_target(presentation.pane());
         self.button(
             ui,
             presentation,
             key,
-            target.into(),
+            target,
             ActionButtonState::Toggle { pressed },
             ActionEmphasis::Normal,
             ActionButtonContent::Text,
@@ -681,6 +690,7 @@ impl<A: Application> AppHost<A> {
             snapshot: &self.snapshot,
             tab_presses: self.tab_presses,
         });
+        self.app.order_intents(&mut intents);
         for intent in intents {
             let outcome = self.app.apply(intent, &mut self.ui_state);
             self.settle(outcome);
@@ -699,8 +709,10 @@ impl<A: Application> AppHost<A> {
     pub fn dispatch(&mut self, request: InspectionRequest) -> Option<InspectionReply> {
         let inspection = self.inspection.clone()?;
         let bindings = self.bindings();
+        let reasons = self.repaint.len();
         let reply = inspection.dispatch(request, &bindings, |target| self.run_semantic(target));
-        if !self.repaint.is_empty() {
+        // Only a state change repaints; reads never do.
+        if self.repaint.len() > reasons {
             self.context.request_repaint();
         }
         Some(reply)
@@ -772,32 +784,48 @@ impl<A: Application> AppHost<A> {
         if shortcuts.is_empty() {
             return Vec::new();
         }
-        let mut triggered = Vec::new();
-        root.input_mut(|input| {
-            input.events.retain(|event| {
-                let egui::Event::Key {
-                    key,
-                    pressed: true,
-                    modifiers,
-                    ..
-                } = event
-                else {
-                    return true;
-                };
-                let Some((_, target)) = shortcuts.iter().find(|(shortcut, _)| {
-                    shortcut.key.egui() == *key
-                        && modifiers.matches_exact(shortcut.egui().modifiers)
-                }) else {
-                    return true;
-                };
-                if self.app.availability(*target).enabled() {
-                    triggered.push(*target);
-                    false
-                } else {
-                    true
-                }
-            });
+        let pressed: Vec<(usize, ActionTarget<A::Action>)> = root.input(|input| {
+            input
+                .events
+                .iter()
+                .enumerate()
+                .filter_map(|(index, event)| {
+                    let egui::Event::Key {
+                        key,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } = event
+                    else {
+                        return None;
+                    };
+                    shortcuts
+                        .iter()
+                        .find(|(shortcut, _)| {
+                            shortcut.key.egui() == *key
+                                && modifiers.matches_exact(shortcut.egui().modifiers)
+                        })
+                        .map(|(_, target)| (index, *target))
+                })
+                .collect()
         });
+        // Check availability outside egui's input lock: the application may
+        // read the context, and egui locks are not reentrant.
+        let (triggered, consumed): (Vec<_>, Vec<_>) = pressed
+            .into_iter()
+            .filter(|(_, target)| self.app.availability(*target).enabled())
+            .map(|(index, target)| (target, index))
+            .unzip();
+        if !consumed.is_empty() {
+            root.input_mut(|input| {
+                let mut index = 0;
+                input.events.retain(|_| {
+                    let keep = !consumed.contains(&index);
+                    index += 1;
+                    keep
+                });
+            });
+        }
         triggered
     }
 
@@ -913,11 +941,18 @@ impl<A: Application> AppHost<A> {
         let mut nodes = vec![root_node];
         let mut identities = BTreeSet::from([SemanticUiId::root()]);
         let mut duplicates = Vec::new();
+        let mut non_finite = Vec::new();
         for (mut node, clip) in observed.nodes {
             let rect = Rect::from(node.rect);
-            // A valid allocation that is clipped away is not visible. Keep
-            // invalid geometry so the semantic audit reports it.
-            if rect.is_finite() && rect.is_positive() {
+            // Non-finite geometry would make the whole publication invalid, so
+            // report it as an audit finding instead of publishing the node.
+            if !rect.is_finite() {
+                non_finite.push(node.id);
+                continue;
+            }
+            // A valid allocation that is clipped away is not visible. Keep an
+            // empty allocation so the semantic audit reports it.
+            if rect.is_positive() {
                 let visible = rect.intersect(clip);
                 if !visible.is_positive() {
                     continue;
@@ -957,7 +992,12 @@ impl<A: Application> AppHost<A> {
         snapshot.semantic_audit.extend(
             duplicates
                 .into_iter()
-                .map(|id| SemanticAuditFinding::DuplicateId { id }),
+                .map(|id| SemanticAuditFinding::DuplicateId { id })
+                .chain(
+                    non_finite
+                        .into_iter()
+                        .map(|id| SemanticAuditFinding::InvalidRect { id }),
+                ),
         );
         snapshot
     }

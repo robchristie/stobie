@@ -71,10 +71,13 @@ struct Counter {
     discard_first_pass: bool,
     rows: usize,
     duplicate: bool,
+    non_finite: bool,
     animate: bool,
     workspace: Option<Workspace>,
     /// The count each completed pass presented.
     presented: Vec<u64>,
+    /// A context that availability reads, as some applications do.
+    context: Option<egui::Context>,
 }
 
 fn tokens() -> DesignTokens {
@@ -107,12 +110,8 @@ impl Panes<Act, Intent> for TestPanes {
         p.heading(ui, "title", self.title(pane));
         if pane == PaneId(1) {
             p.status(ui, "status", "Pane ready", false);
-            frame.action(
-                ui,
-                &mut p,
-                ActionTarget::pane(Act::Fit, pane),
-                ActionEmphasis::Normal,
-            );
+            // A pane-scoped action takes its pane from the pane presentation.
+            frame.action(ui, &mut p, Act::Fit, ActionEmphasis::Normal);
         }
     }
 }
@@ -127,6 +126,10 @@ impl Application for Counter {
     }
 
     fn availability(&self, target: ActionTarget<Act>) -> Availability {
+        if let Some(context) = &self.context {
+            // Must not deadlock while shortcuts are being dispatched.
+            let _ = context.input(|input| input.modifiers);
+        }
         match target.action {
             Act::Reset if !self.reset_enabled => Availability::Disabled {
                 reason: "Nothing to reset".into(),
@@ -154,6 +157,10 @@ impl Application for Counter {
             ui,
             node(format!("pass-{pass}"), UiRole::Status, marker.rect),
         );
+        if self.non_finite {
+            let rect = Rect::from_min_size(egui::pos2(f32::NAN, 0.0), egui::vec2(4.0, 4.0));
+            crate::observe_node(ui, node("broken", UiRole::Status, rect));
+        }
         if self.duplicate {
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
@@ -413,25 +420,43 @@ fn observations_replace_discarded_passes_and_clip_to_their_region() {
 }
 
 #[test]
-fn duplicate_observations_are_kept_once_and_audited() {
-    let harness = harness(Counter {
+fn invalid_observations_are_audited_without_blocking_publication() {
+    let mut harness = harness(Counter {
         duplicate: true,
+        non_finite: true,
         ..Default::default()
     });
-    let snapshot = host(&harness).ui_snapshot();
+    with_inspection(&mut harness);
+    let host = host(&harness);
+    let snapshot = host.ui_snapshot();
     assert_eq!(ids(snapshot).iter().filter(|id| **id == "twice").count(), 1);
-    assert!(
-        snapshot
-            .semantic_audit
-            .contains(&SemanticAuditFinding::DuplicateId {
-                id: SemanticUiId::new("twice"),
-            })
-    );
+    assert!(!ids(snapshot).contains(&"broken"));
+    for finding in [
+        SemanticAuditFinding::DuplicateId {
+            id: SemanticUiId::new("twice"),
+        },
+        SemanticAuditFinding::InvalidRect {
+            id: SemanticUiId::new("broken"),
+        },
+    ] {
+        assert!(snapshot.semantic_audit.contains(&finding), "{finding:?}");
+    }
+    // The findings reach inspection clients instead of blocking publication.
+    let reply =
+        host.inspection()
+            .unwrap()
+            .handle(request(host, "observe", InspectionOperation::Observe));
+    let Some(InspectionResult::Observe { observation }) = reply.result else {
+        panic!("observe failed: {:?}", reply.error);
+    };
+    assert_eq!(observation.snapshot.semantic_audit, snapshot.semantic_audit);
 }
 
 #[test]
 fn shortcuts_dispatch_only_exact_available_chords() {
     let mut harness = harness(Counter::default());
+    let context = harness.ctx.clone();
+    host_mut(&mut harness).app_mut().context = Some(context);
     harness.key_press_modifiers(Modifiers::COMMAND, Key::I);
     harness.run();
     assert_eq!(host(&harness).app().count, 1);

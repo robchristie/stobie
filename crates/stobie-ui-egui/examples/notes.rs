@@ -51,9 +51,16 @@ impl From<WorkspaceChange> for NoteIntent {
     }
 }
 
-// 3. Application state. The UI only reads it.
+// 3. Application state. The UI only reads it. Notes keep stable IDs so their
+// controls keep their identity as the list changes.
+struct Note {
+    id: u64,
+    text: String,
+}
+
 struct Notes {
-    notes: Vec<String>,
+    notes: Vec<Note>,
+    next_id: u64,
     draft: String,
     status: String,
     workspace: Workspace,
@@ -61,14 +68,26 @@ struct Notes {
 
 impl Notes {
     fn new() -> Self {
-        let notes = vec!["Water the plants".to_owned(), "Call the library".to_owned()];
-        let status = format!("{} notes", notes.len());
-        Self {
-            notes,
+        let mut notes = Self {
+            notes: Vec::new(),
+            next_id: 1,
             draft: String::new(),
-            status,
+            status: String::new(),
             workspace: Workspace::with_tabs(&[NOTES_PANE]),
+        };
+        for text in ["Water the plants", "Call the library"] {
+            notes.add(text.to_owned());
         }
+        notes
+    }
+
+    fn add(&mut self, text: String) {
+        self.notes.push(Note {
+            id: self.next_id,
+            text,
+        });
+        self.next_id += 1;
+        self.status = format!("{} notes", self.notes.len());
     }
 }
 
@@ -117,9 +136,8 @@ impl Application for Notes {
     fn perform(&mut self, target: ActionTarget<NoteAction>, _: &mut ()) -> Result<bool, String> {
         match target.action {
             NoteAction::Add => {
-                self.notes
-                    .push(std::mem::take(&mut self.draft).trim().to_owned());
-                self.status = format!("{} notes", self.notes.len());
+                let text = std::mem::take(&mut self.draft).trim().to_owned();
+                self.add(text);
             }
             NoteAction::RemoveLast => {
                 self.notes.pop();
@@ -153,7 +171,7 @@ impl Application for Notes {
 
 // 4. The pane: borrowed fields, the frame for output.
 struct NotePanes<'a> {
-    notes: &'a [String],
+    notes: &'a [Note],
     draft: &'a str,
     status: &'a str,
 }
@@ -204,8 +222,8 @@ impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
             max_lines: 3,
             interaction: TextInteraction::Selectable,
         };
-        for (index, note) in self.notes.iter().enumerate() {
-            p.content(ui, ("note", index), note, text);
+        for note in self.notes {
+            p.content(ui, ("note", note.id), &note.text, text);
         }
         // A status line agents can wait for with the `status` condition.
         p.status(ui, "status", self.status, false);

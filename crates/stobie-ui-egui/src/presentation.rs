@@ -169,6 +169,11 @@ impl PresentationContext {
         self.node_clips.push(ui.clip_rect());
     }
 
+    /// The pane this context's nodes are associated with, if any.
+    pub fn pane(&self) -> Option<stobie_core::PaneId> {
+        self.pane
+    }
+
     /// Associate this context's nodes with a pane, so pane queries find them.
     /// Nodes that already name a pane keep it.
     pub fn with_pane(mut self, pane: stobie_core::PaneId) -> Self {
