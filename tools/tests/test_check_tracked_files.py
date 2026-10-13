@@ -39,7 +39,8 @@ class TrackedFilePolicyTests(unittest.TestCase):
     def test_raw_evidence_is_rejected_whatever_its_format(self):
         for path in ("docs/example-evidence/capture.png",
                      "docs/example-evidence/run/observations.json",
-                     "docs/example-evidence/runtime.log"):
+                     "docs/example-evidence/runtime.log",
+                     "docs/example-evidence.json"):
             with self.subTest(path=path):
                 self.add(path)
                 self.assertTrue(any(v.startswith(path + ": raw evidence") for v in self.violations()))

@@ -83,7 +83,7 @@ class ScopeTests(unittest.TestCase):
 
     def test_nonallowlisted_paths(self):
         for path in ("AGENTS.md", "docs/AGENTS.md", "Cargo.lock", "tools/check.py",
-                     ".github/workflows/verify.yml", "docs/ui-snapshots/README.md",
+                     ".github/workflows/verify.yml", "tests/ui-snapshots/README.md",
                      "docs/example-evidence/result.md", "docs/qualification-report.md",
                      "new.rs", "docs/ui-evaluation-seed.md"):
             with self.subTest(path=path):

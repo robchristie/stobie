@@ -4,7 +4,7 @@
 Raw captures (screenshots, logs, JSON observations) belong in ignored
 `.tools/runtime/` output or the evidence archive described in
 docs/evidence-archive.md. Tracked `docs/*-evidence/` directories keep only
-their Markdown summaries.
+their Markdown summaries, and `docs/*-evidence.json` captures stay archived.
 """
 
 from pathlib import Path
@@ -28,7 +28,8 @@ BINARY_SUFFIXES = {
     ".pdf", ".png", ".profraw", ".tar", ".tgz", ".tif", ".tiff", ".ttf", ".wasm",
     ".webm", ".webp", ".woff", ".woff2", ".xz", ".zip", ".zst",
 }
-EVIDENCE_DIRECTORY = re.compile(r"docs/[^/]+-evidence/")
+# Raw captures: anything but Markdown in docs/*-evidence/, and docs/*-evidence.json.
+EVIDENCE = re.compile(r"docs/[^/]+-evidence(/.*(?<!\.md)|\.json)")
 
 
 def tracked(root):
@@ -56,8 +57,8 @@ def violations(root, paths):
         if size > limit:
             kind = "binary" if is_binary else "text"
             found.append(f"{path}: {size} bytes exceeds the {limit}-byte {kind} limit")
-        if EVIDENCE_DIRECTORY.match(path) and not path.endswith(".md"):
-            found.append(f"{path}: raw evidence; keep only Markdown summaries under docs/*-evidence/")
+        if EVIDENCE.fullmatch(path):
+            found.append(f"{path}: raw evidence; archive it in stobie-evidence")
         elif is_binary and not path.startswith(BINARY_ROOTS):
             found.append(f"{path}: binary file outside {', '.join(BINARY_ROOTS)}")
     return found

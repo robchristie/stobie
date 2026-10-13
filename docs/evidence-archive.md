@@ -11,7 +11,8 @@ captures live in the append-only
 
 - Markdown reports and summaries, including those under `docs/*-evidence/`.
 - Small qualification protocols, build receipts and result summaries that
-  tools read or write at fixed paths, such as `docs/viewer-acceptance-*.json`.
+  tools read or write at fixed paths or reports cite, such as
+  `docs/viewer-acceptance-*.json`.
 - Reviewed binary sources: UI baselines in `tests/ui-snapshots/expected/`,
   documentation images in `docs/images/` and bundled fonts.
 
@@ -19,6 +20,7 @@ captures live in the append-only
 verification stage. It rejects:
 
 - anything other than Markdown under `docs/*-evidence/`
+- `docs/*-evidence.json` captures
 - binaries outside the reviewed roots
 - binaries larger than 512 KiB
 - text files larger than 1 MiB

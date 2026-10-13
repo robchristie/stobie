@@ -40,8 +40,8 @@
 - Never commit raw captures such as screenshots, logs or runtime observation
   dumps. Write them under ignored `.tools/runtime/`, archive durable ones in
   stobie-evidence and keep conclusions and permalinks in Markdown. Only small
-  protocols, receipts and result summaries that tools use may stay tracked. See
-  [docs/evidence-archive.md](docs/evidence-archive.md).
+  protocols, receipts and result summaries that tools use or reports cite may
+  stay tracked. See [docs/evidence-archive.md](docs/evidence-archive.md).
 - Do not allocate the complete raster, one million result rows, or one hundred
   thousand thumbnail widgets.
 
