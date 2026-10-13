@@ -119,13 +119,11 @@ pub(super) fn button_story(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn disabled_story(
     ui: &mut egui::Ui,
     tokens: &DesignTokens,
     font_scale: f32,
-    observations: &mut Vec<TextLayoutObservation>,
-    semantic_nodes: &mut Vec<UiNode>,
+    report: &mut super::StoryReport,
 ) {
     let mut presentation = stobie_ui_egui::PresentationContext::new(
         ui,
@@ -147,7 +145,5 @@ pub(super) fn disabled_story(
             compact: false,
         },
     );
-    let rendered = presentation.finish(ui);
-    observations.extend(rendered.text_layouts);
-    semantic_nodes.extend(rendered.semantic_nodes);
+    report.presented(&presentation.finish(ui));
 }

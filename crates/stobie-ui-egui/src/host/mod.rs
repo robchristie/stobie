@@ -31,12 +31,13 @@ use stobie_core::{PaneId, Workspace, WorkspaceChange};
 
 use crate::{
     ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey,
-    ActionScope, ActionSet, ActionTarget, ApplicationIdentity, Availability, CollectionMetadata,
-    CollectionObservation, DesignTokens, DockBehaviour, DockTextContext, IconId, Inspection,
-    InspectionBinding, InspectionError, InspectionReply, InspectionRequest, IntoActionTarget,
-    ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
-    SemanticUiId, TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot,
-    apply_design_system, audit_text_layouts, text_audit_coverage,
+    ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme, Availability,
+    CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour, DockTextContext,
+    IconId, Inspection, InspectionBinding, InspectionError, InspectionReply, InspectionRequest,
+    IntoActionTarget, ObservationValue, PanePresenter, PresentationContext, PresentationScope,
+    SemanticAuditFinding, SemanticUiId, TextLayoutObservation, TypographyProfile, UiNode,
+    UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
+    text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -113,12 +114,19 @@ pub trait Application: 'static {
         UiPreferences::default()
     }
 
+    /// The colour theme the design system and [`Frame::tokens`] resolve,
+    /// Stobie's analytical theme by default. The host reapplies it on change.
+    fn theme(&self) -> ApplicationTheme {
+        ApplicationTheme::analytical()
+    }
+
     /// Adapt state before the UI runs, for example to the viewport size.
     fn prepare(&mut self, _pass: &mut PassContext<'_>) {}
 
-    /// Inspect the completed pass with the state it presented, before this
-    /// pass's intents and actions apply. Geometry and state therefore agree.
-    fn completed(&mut self, _pass: &CompletedPass<'_>) {}
+    /// Inspect the completed pass with the state it presented, including UI
+    /// state, before this pass's intents and actions apply. Geometry and state
+    /// therefore agree.
+    fn completed(&mut self, _pass: &CompletedPass<'_>, _state: &Self::UiState) {}
 
     /// The pane that receives pane-scoped shortcuts. Without one, pane and
     /// active-pane shortcuts do not dispatch.
@@ -539,6 +547,8 @@ pub struct CompletedPass<'a> {
     pub snapshot: &'a UiSnapshot,
     /// Tab key presses observed so far, counted once per input frame.
     pub tab_presses: u64,
+    /// The egui context, for example to read this pass's input.
+    pub context: &'a egui::Context,
 }
 
 /// Owns an [`Application`] and runs its per-pass lifecycle.
@@ -556,6 +566,11 @@ pub struct AppHost<A: Application> {
     tab_frame: Option<u64>,
     repaint: Vec<HostRepaint>,
     preferences: UiPreferences,
+    theme: ApplicationTheme,
+}
+
+fn apply_appearance(context: &egui::Context, preferences: UiPreferences, theme: &ApplicationTheme) {
+    apply_design_system_with_theme(context, preferences, TypographyProfile::Dense, theme);
 }
 
 impl<A: Application> AppHost<A> {
@@ -566,7 +581,8 @@ impl<A: Application> AppHost<A> {
         crate::observation::enable(context);
         let identity = app.identity();
         let preferences = app.preferences();
-        apply_design_system(context, preferences);
+        let theme = app.theme();
+        apply_appearance(context, preferences, &theme);
         #[allow(unused_mut)]
         let mut host = Self {
             app,
@@ -582,6 +598,7 @@ impl<A: Application> AppHost<A> {
             tab_frame: None,
             repaint: Vec::new(),
             preferences,
+            theme,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();
@@ -639,6 +656,31 @@ impl<A: Application> AppHost<A> {
         &self.snapshot
     }
 
+    /// Ask for another pass from outside one, for example from a page hook.
+    pub fn request_repaint(&mut self, reason: &'static str) {
+        self.repaint.push(HostRepaint::Application(reason));
+        self.context.request_repaint();
+    }
+
+    /// The application's UI-only state, for tests and read-only page hooks.
+    pub fn ui_state(&self) -> &A::UiState {
+        &self.ui_state
+    }
+
+    /// Apply an intent from outside a pass, such as a page hook or a test,
+    /// through the same handler as the UI's intents. An error reaches
+    /// [`Application::report_error`]. Returns whether it asked for a repaint.
+    pub fn submit(&mut self, intent: A::Intent) -> bool {
+        let reasons = self.repaint.len();
+        let outcome = self.app.apply(intent, &mut self.ui_state);
+        self.settle(outcome);
+        let repaint = self.repaint.len() > reasons;
+        if repaint {
+            self.context.request_repaint();
+        }
+        repaint
+    }
+
     /// Tab key presses observed so far, counted once per input frame.
     pub fn tab_presses(&self) -> u64 {
         self.tab_presses
@@ -652,13 +694,17 @@ impl<A: Application> AppHost<A> {
     /// Run one UI pass of the hosted application over `root`.
     pub fn present(&mut self, root: &mut Ui) {
         let context = root.ctx().clone();
+        // The root node covers the viewport, not content that overflowed it.
+        let root_rect = root.max_rect();
         self.repaint.clear();
         self.count_tab_presses(&context);
         let preferences = self.app.preferences();
-        if preferences != self.preferences {
+        let theme = self.app.theme();
+        if preferences != self.preferences || theme != self.theme {
             // New fonts and styles take effect from the next pass.
-            apply_design_system(&context, preferences);
+            apply_appearance(&context, preferences, &theme);
             self.preferences = preferences;
+            self.theme = theme;
             self.repaint.push(HostRepaint::Appearance);
         }
         let mut prepare = PassContext {
@@ -678,18 +724,27 @@ impl<A: Application> AppHost<A> {
                 triggers: &mut triggers,
                 availability: &availability,
                 repaint: &mut self.repaint,
-                tokens: self.preferences.tokens(root.style().visuals.dark_mode),
+                tokens: self.theme.resolve(
+                    self.preferences
+                        .theme_variant(root.style().visuals.dark_mode),
+                    self.preferences.density_variant(),
+                    TypographyProfile::Dense,
+                ),
                 font_scale: self.preferences.font_scale,
             };
             app.ui(root, &mut self.ui_state, &mut frame);
         }
         self.passes += 1;
-        self.snapshot = self.collect(root);
+        self.snapshot = self.collect(root.ctx(), root_rect);
         self.publish(&context);
-        self.app.completed(&CompletedPass {
-            snapshot: &self.snapshot,
-            tab_presses: self.tab_presses,
-        });
+        self.app.completed(
+            &CompletedPass {
+                snapshot: &self.snapshot,
+                tab_presses: self.tab_presses,
+                context: &context,
+            },
+            &self.ui_state,
+        );
         self.app.order_intents(&mut intents);
         for intent in intents {
             let outcome = self.app.apply(intent, &mut self.ui_state);
@@ -928,14 +983,13 @@ impl<A: Application> AppHost<A> {
         bindings
     }
 
-    fn collect(&self, root: &Ui) -> UiSnapshot {
-        let context = root.ctx();
+    fn collect(&self, context: &egui::Context, root_rect: Rect) -> UiSnapshot {
         let observed = crate::observation::take(context);
         let mut root_node = UiNode::container(
             SemanticUiId::root(),
             None,
             UiRole::Application,
-            root.max_rect().into(),
+            root_rect.into(),
         );
         root_node.name = self.identity.name.clone();
         let mut nodes = vec![root_node];

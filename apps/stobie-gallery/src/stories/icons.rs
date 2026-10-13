@@ -6,10 +6,11 @@ use stobie_core::PaneId;
 use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionTarget, Availability,
     ContentTextSpec, DesignTokens, IconId, PresentationContext, PresentationScope, SemanticUiId,
-    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, UiNode, icon_size,
+    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, icon_size,
     measured_content_label, paint_icon,
 };
 
+use super::StoryReport;
 use crate::{app::GalleryAction, catalogue::StoryId};
 
 /// Fixed logical controls used by the physical input qualification.
@@ -68,6 +69,9 @@ pub struct IconFixtureState {
     pub pointer_down: Option<IconControl>,
     pub linked: bool,
     pub selected_tool: IconControl,
+    /// An activation this pass needs another pass to present.
+    #[serde(skip)]
+    changed: bool,
 }
 
 impl Default for IconFixtureState {
@@ -88,6 +92,7 @@ impl Default for IconFixtureState {
             .map(|control| (control, 0))
             .collect(),
             targets: BTreeMap::new(),
+            changed: false,
             last_activated: None,
             hovered: None,
             pointer_down: None,
@@ -117,7 +122,7 @@ impl IconFixtureState {
                 IconControl::Navigate | IconControl::Polygon => self.selected_tool = control,
                 _ => {}
             }
-            response.ctx.request_repaint();
+            self.changed = true;
         }
     }
 }
@@ -190,15 +195,13 @@ fn spec(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn actions(
     ui: &mut egui::Ui,
     story: StoryId,
     tokens: &DesignTokens,
     scale: f32,
-    observations: &mut Vec<TextLayoutObservation>,
-    semantic_nodes: &mut Vec<UiNode>,
     state: &mut IconFixtureState,
+    report: &mut StoryReport,
 ) {
     state.hovered = None;
     state.pointer_down = None;
@@ -412,7 +415,8 @@ pub(super) fn actions(
             interaction: TextInteraction::Inert,
         },
     );
-    let rendered = presentation.finish(ui);
-    observations.extend(rendered.text_layouts);
-    semantic_nodes.extend(rendered.semantic_nodes);
+    report.presented(&presentation.finish(ui));
+    if std::mem::take(&mut state.changed) {
+        report.repaint = Some("icon fixture activated");
+    }
 }

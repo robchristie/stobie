@@ -376,7 +376,7 @@ impl Application for RecordDesk {
         observation.counted_collection("records", UiRole::ResultRow, total);
     }
 
-    fn completed(&mut self, pass: &CompletedPass<'_>) {
+    fn completed(&mut self, pass: &CompletedPass<'_>, _: &View) {
         self.snapshot = Snapshot {
             tab_input_epoch: pass.tab_presses,
             ui: pass.snapshot.clone(),

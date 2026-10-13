@@ -10,7 +10,7 @@
 //!
 //! The lower-level path ([`dock_workspace`], [`PanePresenter`] and manually
 //! merged [`PresentationObservations`]) serves applications that wire their
-//! own pass. The Lab and Gallery use it only until they move to the host. Keep hover, focus and
+//! own pass. The Lab uses it until it moves to the host. Keep hover, focus and
 //! [`DockBehaviour`] here; durable data and transient session state remain in
 //! core. Panes own content/layout and local scrolling, not GPU devices or the
 //! complete mutable application/runtime.

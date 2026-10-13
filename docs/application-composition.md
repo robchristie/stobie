@@ -157,6 +157,8 @@ them as `UiRole::TextInput`. Observe a selectable list row as
   integers and text, and `counted_collection` for lists. Facts have no null;
   use an empty string for "none". Never publish whole collections.
 - Never request an unconditional repaint.
+- Override `preferences` and `theme` to change appearance; the host reapplies
+  the design system when they change and resolves `Frame::tokens` from them.
 
 ## Grow to several panes
 
@@ -186,7 +188,10 @@ The page creates `new WebHandle()` and awaits `start(canvas)`. With
 `?automation=1` in its URL, it calls `enable_automation(crypto.randomUUID())`
 and exposes `automation_request` as `window.__STOBIE_AUTOMATION.request`.
 Record Desk's [`web/bootstrap.js`](../consumers/record-desk/web/bootstrap.js)
-and `build-web.sh` are a working template. The
+and `build-web.sh` are a working template. For page hooks beyond these, write
+the handle around `WebHost` yourself: `with_host` reads the running host and
+`with_host_mut(|host| host.submit(intent))` sends an intent through `apply`.
+The component Gallery's `lib.rs` is an example. The
 [browser startup guide](browser-startup.md) covers packaging.
 
 ## Choose dependencies

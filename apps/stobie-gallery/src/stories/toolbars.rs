@@ -46,7 +46,8 @@ pub(super) fn toolbar_story(
         }
         let parent = SemanticUiId::new("gallery.story");
         let mut map = 0_u8;
-        let map = choice_control(
+        // Choice and range recipes observe their own nodes.
+        choice_control(
             ui,
             SemanticUiId::new("gallery.image-toolbar.display-map"),
             parent.clone(),
@@ -56,9 +57,8 @@ pub(super) fn toolbar_story(
             GalleryAction::DisplaySettings,
             tokens,
         );
-        semantic_nodes.push(map.node);
         let mut low = 0.1;
-        let low = range_control(
+        range_control(
             ui,
             SemanticUiId::new("gallery.image-toolbar.low"),
             parent.clone(),
@@ -68,9 +68,8 @@ pub(super) fn toolbar_story(
             GalleryAction::DisplaySettings,
             tokens,
         );
-        semantic_nodes.push(low.node);
         let mut high = 0.9;
-        let high = range_control(
+        range_control(
             ui,
             SemanticUiId::new("gallery.image-toolbar.high"),
             parent,
@@ -80,7 +79,6 @@ pub(super) fn toolbar_story(
             GalleryAction::DisplaySettings,
             tokens,
         );
-        semantic_nodes.push(high.node);
     });
     ui.add_space(tokens.spacing.section.0);
     status_badge(

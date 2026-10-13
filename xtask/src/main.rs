@@ -304,24 +304,31 @@ fn architecture() -> Result<()> {
             bail!("egui action framework retains the legacy ActionId registry");
         }
     }
-    for (path, implementation) in [
-        (
-            "apps/analytical-workspace-lab/src/actions.rs",
-            "impl ActionKey for LabAction",
-        ),
-        (
-            "apps/stobie-gallery/src/app.rs",
-            "impl ActionKey for GalleryAction",
-        ),
+    for (path, action) in [
+        ("apps/analytical-workspace-lab/src/actions.rs", "LabAction"),
+        ("apps/stobie-gallery/src/app.rs", "GalleryAction"),
     ] {
-        if !fs::read_to_string(path)?.contains(implementation) {
-            bail!("application-owned action registry is missing: {implementation}");
+        if !owns_action_registry(&fs::read_to_string(path)?, action) {
+            bail!("application-owned action registry is missing: {action}");
         }
     }
     println!(
         "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
+}
+
+/// An application declares its own action registry, by hand or with `#[derive(Action)]`.
+fn owns_action_registry(source: &str, action: &str) -> bool {
+    if source.contains(&format!("impl ActionKey for {action}")) {
+        return true;
+    }
+    source
+        .find(&format!("pub enum {action} "))
+        .is_some_and(|start| {
+            let attributes = &source[source[..start].rfind("#[derive(").unwrap_or(start)..start];
+            attributes.contains("Action,") || attributes.contains("Action)")
+        })
 }
 
 // Compiled rustdoc consumers may demonstrate application-owned action enums.
@@ -475,7 +482,20 @@ fn build_viewer_web() -> Result<()> {
 
 #[cfg(test)]
 mod architecture_tests {
-    use super::{has_action_key_implementation, workspace_definition_count};
+    use super::{has_action_key_implementation, owns_action_registry, workspace_definition_count};
+
+    #[test]
+    fn applications_own_registries_by_hand_or_by_derive() {
+        assert!(owns_action_registry("impl ActionKey for Tool {", "Tool"));
+        let derived =
+            "#[derive(\n    Action, Clone, Copy,\n)]\n#[action(prefix = \"x\")]\npub enum Tool {";
+        assert!(owns_action_registry(derived, "Tool"));
+        assert!(!owns_action_registry(
+            "#[derive(Clone)]\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry("pub enum Other {", "Tool"));
+    }
 
     #[test]
     fn action_ownership_guard_allows_rustdoc_consumers_and_rejects_production_registries() {

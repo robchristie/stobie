@@ -46,6 +46,7 @@ enum Act {
 
 enum Intent {
     Layout(WorkspaceChange),
+    Theme(Box<ApplicationTheme>),
 }
 
 impl From<WorkspaceChange> for Intent {
@@ -57,6 +58,8 @@ impl From<WorkspaceChange> for Intent {
 #[derive(Default)]
 struct View {
     passes: u64,
+    /// Frame tokens resolved for the latest pass.
+    tokens: Option<DesignTokens>,
     trigger_reset: bool,
     scroll_viewport: Option<Rect>,
 }
@@ -78,6 +81,9 @@ struct Counter {
     presented: Vec<u64>,
     /// A context that availability reads, as some applications do.
     context: Option<egui::Context>,
+    /// UI passes counted by `UiState`, as `completed` saw them.
+    presented_passes: u64,
+    theme: Option<ApplicationTheme>,
 }
 
 fn tokens() -> DesignTokens {
@@ -148,7 +154,10 @@ impl Application for Counter {
             frame.trigger(Act::Reset);
         }
         let mut p = frame.presentation(ui, PresentationScope::new("counter"), SemanticUiId::root());
-        assert_eq!(frame.tokens(), tokens());
+        if self.theme.is_none() {
+            assert_eq!(frame.tokens(), tokens());
+        }
+        view.tokens = Some(frame.tokens());
         for action in [Act::Increment, Act::Reset, Act::Explode] {
             frame.action(ui, &mut p, action, ActionEmphasis::Normal);
         }
@@ -190,6 +199,10 @@ impl Application for Counter {
     fn apply(&mut self, intent: Intent, _: &mut View) -> Result<bool, String> {
         match intent {
             Intent::Layout(change) => change.apply(self.workspace.as_mut().expect("dock")),
+            Intent::Theme(theme) => {
+                self.theme = Some(*theme);
+                Ok(true)
+            }
         }
     }
 
@@ -224,8 +237,15 @@ impl Application for Counter {
         self.active_pane
     }
 
-    fn completed(&mut self, _pass: &CompletedPass<'_>) {
+    fn completed(&mut self, _pass: &CompletedPass<'_>, view: &View) {
         self.presented.push(self.count);
+        self.presented_passes = view.passes;
+    }
+
+    fn theme(&self) -> ApplicationTheme {
+        self.theme
+            .clone()
+            .unwrap_or_else(ApplicationTheme::analytical)
     }
 }
 
@@ -615,6 +635,37 @@ fn completed_sees_the_presented_state_before_intents_apply() {
     assert_eq!((counter.count, counter.presented.last()), (1, Some(&0)));
     harness.step();
     assert_eq!(host(&harness).app().presented.last(), Some(&1));
+}
+
+#[test]
+fn submitted_intents_and_application_themes_reach_the_pass() {
+    let mut harness = harness(Counter::default());
+    let geometry = crate::ApplicationGeometry {
+        application_bar_height: 40.0,
+        control_height: 36.0,
+        control_radius: 6.0,
+    };
+    let theme = ApplicationTheme::analytical()
+        .with_geometry(geometry)
+        .unwrap();
+    // An intent from outside a pass, as a page hook sends, applies and repaints.
+    assert!(host_mut(&mut harness).submit(Intent::Theme(Box::new(theme))));
+    assert_eq!(
+        host(&harness).repaint_reasons(),
+        [HostRepaint::StateChanged]
+    );
+    harness.step();
+    assert!(
+        host(&harness)
+            .repaint_reasons()
+            .contains(&HostRepaint::Appearance)
+    );
+    harness.run();
+    let tokens = host(&harness).ui_state().tokens.unwrap();
+    assert_eq!(tokens.geometry.control_height.0, 36.0);
+    // `completed` sees the UI state the pass presented.
+    let host = host(&harness);
+    assert_eq!(host.app().presented_passes, host.ui_state().passes);
 }
 
 #[test]

@@ -87,6 +87,19 @@ mod web {
             Ok(read(&host))
         }
 
+        /// Change the running host from a page hook, for example with
+        /// [`AppHost::submit`]. Runs on the application thread between passes.
+        pub fn with_host_mut<R>(
+            &self,
+            change: impl FnOnce(&mut AppHost<A>) -> R,
+        ) -> Result<R, JsValue> {
+            let mut host = self
+                .runner
+                .app_mut::<AppHost<A>>()
+                .ok_or_else(|| JsValue::from_str("the application is not running"))?;
+            Ok(change(&mut host))
+        }
+
         /// Enable the fixed automation dispatcher with a fresh per-startup nonce,
         /// such as `crypto.randomUUID()`.
         pub fn enable_automation(&self, instance: &str) -> Result<(), JsValue> {
