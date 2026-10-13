@@ -1,123 +1,84 @@
 use serde::Serialize;
-use stobie_ui_egui::{ActionKey, ActionScope, ActionShortcut, ActionSpec, ShortcutKey};
+use stobie_ui_egui::Action;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
+#[derive(Action, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
+#[action(prefix = "record-desk")]
 pub enum Action {
+    #[action(
+        label = "Apply",
+        description = "Validate and commit this draft as one undoable change",
+        shortcut = "Cmd+Enter"
+    )]
     Apply,
+    #[action(
+        label = "Cancel edits",
+        description = "Discard the draft and keep the committed record",
+        shortcut = "Cmd+Shift+Enter"
+    )]
     Cancel,
+    #[action(
+        label = "Undo",
+        description = "Reverse the last committed record change",
+        shortcut = "Cmd+Z"
+    )]
     Undo,
+    #[action(
+        label = "Redo",
+        description = "Reapply the last undone record change",
+        shortcut = "Cmd+Shift+Z"
+    )]
     Redo,
+    #[action(
+        label = "Save",
+        description = "Save committed records and layout locally; drafts are excluded",
+        shortcut = "Cmd+S"
+    )]
     Save,
+    #[action(
+        label = "Restore",
+        description = "Reload saved records and layout; unavailable with unsaved changes",
+        shortcut = "Cmd+Shift+R"
+    )]
     Restore,
+    #[action(
+        label = "Search",
+        description = "Focus record search",
+        shortcut = "Cmd+F"
+    )]
     Search,
+    #[action(
+        label = "Reset filters",
+        description = "Clear search, category and review filters while keeping selection and draft",
+        shortcut = "Cmd+Shift+F"
+    )]
     ResetFilters,
+    #[action(
+        label = "Arrange panes",
+        description = "Switch between stacked and side-by-side panes",
+        shortcut = "Cmd+L"
+    )]
     Arrange,
+    #[action(
+        label = "Reviewed",
+        description = "Change the draft's reviewed state; Apply commits it"
+    )]
     ToggleReviewed,
+    #[action(
+        label = "Category filter",
+        description = "Limit the list by category",
+        physical_only = "Chooses a category; actions with arguments are not supported yet"
+    )]
     FilterCategory,
+    #[action(
+        label = "Review filter",
+        description = "Limit the list by review state",
+        physical_only = "Chooses a review state; actions with arguments are not supported yet"
+    )]
     FilterReview,
+    #[action(
+        label = "Record category",
+        description = "Change the draft's category",
+        physical_only = "Chooses a category; actions with arguments are not supported yet"
+    )]
     EditCategory,
-}
-
-impl Action {
-    pub const ALL: [Self; 13] = [
-        Self::Apply,
-        Self::Cancel,
-        Self::Undo,
-        Self::Redo,
-        Self::Save,
-        Self::Restore,
-        Self::Search,
-        Self::ResetFilters,
-        Self::Arrange,
-        Self::ToggleReviewed,
-        Self::FilterCategory,
-        Self::FilterReview,
-        Self::EditCategory,
-    ];
-}
-
-impl ActionKey for Action {
-    fn stable_id(self) -> &'static str {
-        match self {
-            Self::Apply => "record-desk.apply",
-            Self::Cancel => "record-desk.cancel",
-            Self::Undo => "record-desk.undo",
-            Self::Redo => "record-desk.redo",
-            Self::Save => "record-desk.save",
-            Self::Restore => "record-desk.restore",
-            Self::Search => "record-desk.search",
-            Self::ResetFilters => "record-desk.reset-filters",
-            Self::Arrange => "record-desk.arrange",
-            Self::ToggleReviewed => "record-desk.toggle-reviewed",
-            Self::FilterCategory => "record-desk.filter-category",
-            Self::FilterReview => "record-desk.filter-review",
-            Self::EditCategory => "record-desk.edit-category",
-        }
-    }
-
-    fn specification(self) -> ActionSpec<Self> {
-        let (label, description, shortcut) = match self {
-            Self::Apply => (
-                "Apply",
-                "Validate and commit this draft as one undoable change",
-                Some(ActionShortcut::command(ShortcutKey::Enter)),
-            ),
-            Self::Cancel => (
-                "Cancel edits",
-                "Discard the draft and keep the committed record",
-                Some(ActionShortcut::command_shift(ShortcutKey::Enter)),
-            ),
-            Self::Undo => (
-                "Undo",
-                "Reverse the last committed record change",
-                Some(ActionShortcut::command(ShortcutKey::Z)),
-            ),
-            Self::Redo => (
-                "Redo",
-                "Reapply the last undone record change",
-                Some(ActionShortcut::command_shift(ShortcutKey::Z)),
-            ),
-            Self::Save => (
-                "Save",
-                "Save committed records and layout locally; drafts are excluded",
-                Some(ActionShortcut::command(ShortcutKey::S)),
-            ),
-            Self::Restore => (
-                "Restore",
-                "Reload saved records and layout; unavailable with unsaved changes",
-                Some(ActionShortcut::command_shift(ShortcutKey::R)),
-            ),
-            Self::Search => (
-                "Search",
-                "Focus record search",
-                Some(ActionShortcut::command(ShortcutKey::F)),
-            ),
-            Self::ResetFilters => (
-                "Reset filters",
-                "Clear search, category and review filters while keeping selection and draft",
-                Some(ActionShortcut::command_shift(ShortcutKey::F)),
-            ),
-            Self::Arrange => (
-                "Arrange panes",
-                "Switch between stacked and side-by-side panes",
-                Some(ActionShortcut::command(ShortcutKey::L)),
-            ),
-            Self::ToggleReviewed => (
-                "Reviewed",
-                "Change the draft's reviewed state; Apply commits it",
-                None,
-            ),
-            Self::FilterCategory => ("Category filter", "Limit the list by category", None),
-            Self::FilterReview => ("Review filter", "Limit the list by review state", None),
-            Self::EditCategory => ("Record category", "Change the draft's category", None),
-        };
-        ActionSpec {
-            id: self,
-            label,
-            description,
-            compact_label: None,
-            shortcut,
-            scope: ActionScope::Application,
-        }
-    }
 }

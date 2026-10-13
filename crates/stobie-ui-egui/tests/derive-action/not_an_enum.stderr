@@ -1,0 +1,5 @@
+error: #[derive(Action)] supports only enums of unit variants
+ --> tests/derive-action/not_an_enum.rs:5:8
+  |
+5 | struct NotAnEnum;
+  |        ^^^^^^^^^

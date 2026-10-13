@@ -1,0 +1,23 @@
+error: `Unannotated` needs `label`: #[action(label = "…", description = "…")]
+ --> tests/derive-action/missing_metadata.rs:7:5
+  |
+7 |     Unannotated,
+  |     ^^^^^^^^^^^
+
+error: `NoDescription` needs `description`: #[action(label = "…", description = "…")]
+ --> tests/derive-action/missing_metadata.rs:9:5
+  |
+9 |     NoDescription,
+  |     ^^^^^^^^^^^^^
+
+error: `label` cannot be blank
+  --> tests/derive-action/missing_metadata.rs:10:22
+   |
+10 |     #[action(label = " ", description = "Blank labels are rejected")]
+   |                      ^^^
+
+error: add #[action(prefix = "…")] to the enum or give this variant an explicit `id`
+  --> tests/derive-action/missing_metadata.rs:17:5
+   |
+17 |     Save,
+   |     ^^^^

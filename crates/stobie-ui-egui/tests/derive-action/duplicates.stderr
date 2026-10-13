@@ -1,0 +1,11 @@
+error: shortcut `Cmd+Z` is already bound to `Undo`
+ --> tests/derive-action/duplicates.rs:9:79
+  |
+9 |     #[action(label = "Revert", description = "Same chord as Undo", shortcut = "Ctrl+z")]
+  |                                                                               ^^^^^^^^
+
+error: stable ID `test.undo` is already used by `Undo`
+  --> tests/derive-action/duplicates.rs:11:70
+   |
+11 |     #[action(label = "Reset", description = "Reset the layout", id = "test.undo")]
+   |                                                                      ^^^^^^^^^^^

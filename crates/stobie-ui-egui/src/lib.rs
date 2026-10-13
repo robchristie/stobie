@@ -33,6 +33,9 @@
 //! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
 //! and its small native consumer and presenter variation.
 
+// Derived code names `::stobie_ui_egui`; this alias lets the crate's own tests use it.
+extern crate self as stobie_ui_egui;
+
 mod actions;
 mod application_theme;
 mod virtual_grid;
@@ -64,6 +67,51 @@ pub use preferences_control::*;
 pub use presentation::*;
 pub use responsive::*;
 pub use semantics::*;
+/// Declare an application's actions once and derive [`ActionKey`] and [`ActionSet`].
+///
+/// The enum needs the [`ActionKey`] supertraits and `#[action(prefix = "…")]`.
+/// Each variant declares a `label` and `description`, and optionally a
+/// `compact` label, a `shortcut`, a `scope` (`"application"`, `"pane"` or
+/// `"active_pane"`), an explicit stable `id` and `physical_only = "reason"`.
+/// The stable ID defaults to `<prefix>.<kebab-case variant>`. Shortcuts are
+/// modifiers then one key: `Cmd` (or `Ctrl`, the platform command modifier),
+/// `Shift` and `Alt`, then a letter, digit, named key or `F1`–`F12`. Tab is
+/// reserved for focus traversal. Unknown keys, repeated IDs or chords, blank
+/// values and data-carrying variants are compile errors at the offending span.
+///
+/// Every action is semantically invocable by default. Declare `physical_only`
+/// with a reason when physical input is required, for example because the
+/// action chooses a value (actions with arguments are not supported yet).
+///
+/// ```
+/// use serde::Serialize;
+/// use stobie_ui_egui::{Action, ActionInvocation, ActionKey, ActionScope, ActionSet, ShortcutKey};
+///
+/// #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+/// #[action(prefix = "notes")]
+/// enum NoteAction {
+///     #[action(label = "Save", description = "Save every note", shortcut = "Cmd+S")]
+///     Save,
+///     #[action(label = "Redo", description = "Reapply the last undone edit", shortcut = "Cmd+Shift+Z")]
+///     Redo,
+///     #[action(label = "Fit view", compact = "Fit", description = "Fit the note in its pane",
+///              scope = "pane", shortcut = "F", id = "notes.fit")]
+///     FitView,
+///     #[action(label = "Colour", description = "Choose the note colour",
+///              physical_only = "Chooses a value; actions with arguments are not supported yet")]
+///     ChooseColour,
+/// }
+///
+/// assert_eq!(NoteAction::ALL.len(), 4);
+/// assert_eq!(NoteAction::Redo.stable_id(), "notes.redo");
+/// assert_eq!(NoteAction::FitView.stable_id(), "notes.fit");
+/// let redo = NoteAction::Redo.specification().shortcut.unwrap();
+/// assert!(redo.command && redo.shift && redo.key == ShortcutKey::Z);
+/// assert_eq!(NoteAction::FitView.specification().scope, ActionScope::Pane);
+/// assert!(NoteAction::Save.invocation().semantic());
+/// assert!(matches!(NoteAction::ChooseColour.invocation(), ActionInvocation::PhysicalOnly { .. }));
+/// ```
+pub use stobie_ui_egui_derive::Action;
 pub use style::*;
 pub use text::*;
 pub use text_coverage::*;

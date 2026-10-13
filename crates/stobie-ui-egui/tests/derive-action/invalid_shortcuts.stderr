@@ -1,0 +1,35 @@
+error: unknown key `Banana`; use A–Z, 0–9, Enter, Escape, Space, Backspace, Delete, Insert, Home, End, PageUp, PageDown, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Comma, Period, Minus, Equals, Slash or F1–F12
+ --> tests/derive-action/invalid_shortcuts.rs:7:69
+  |
+7 |     #[action(label = "One", description = "Unknown key", shortcut = "Cmd+Banana")]
+  |                                                                     ^^^^^^^^^^^^
+
+error: Tab is reserved for keyboard focus traversal
+ --> tests/derive-action/invalid_shortcuts.rs:9:73
+  |
+9 |     #[action(label = "Two", description = "Tab is reserved", shortcut = "Shift+Tab")]
+  |                                                                         ^^^^^^^^^^^
+
+error: shortcut `Cmd+Shift` needs a key after its modifiers
+  --> tests/derive-action/invalid_shortcuts.rs:11:73
+   |
+11 |     #[action(label = "Three", description = "Modifier only", shortcut = "Cmd+Shift")]
+   |                                                                         ^^^^^^^^^^^
+
+error: `Z` is not a modifier; use Cmd (or Ctrl), Shift and Alt before one key
+  --> tests/derive-action/invalid_shortcuts.rs:13:77
+   |
+13 |     #[action(label = "Four", description = "Modifier after key", shortcut = "Z+Cmd")]
+   |                                                                             ^^^^^^^
+
+error: `Ctrl` repeats a modifier; Cmd and Ctrl both name the platform command modifier
+  --> tests/derive-action/invalid_shortcuts.rs:15:76
+   |
+15 |     #[action(label = "Five", description = "Repeated modifier", shortcut = "Cmd+Ctrl+Z")]
+   |                                                                            ^^^^^^^^^^^^
+
+error: shortcut `Cmd++` has an empty part; write modifiers then one key, such as "Cmd+Shift+Z"
+  --> tests/derive-action/invalid_shortcuts.rs:17:68
+   |
+17 |     #[action(label = "Six", description = "Empty part", shortcut = "Cmd++")]
+   |                                                                    ^^^^^^^
