@@ -102,8 +102,10 @@ pub struct PresentationObservations {
 /// context, viewport or pass is rejected, including publication after a retry.
 ///
 /// In a hosted application ([`AppHost`](crate::AppHost)) the context registers
-/// its observations with the pass's collector when it is finished or dropped,
-/// each node clipped to the region it was presented in; no merging is needed.
+/// its observations with the pass's collector when it is finished or dropped;
+/// no merging is needed. A context created inside
+/// [`observe_visible_only`](crate::observe_visible_only), such as one for a
+/// dock pane, publishes only what is visible; any other publishes as presented.
 pub struct PresentationContext {
     context: egui::Context,
     viewport: egui::ViewportId,
@@ -118,6 +120,8 @@ pub struct PresentationContext {
     semantic_nodes: Vec<UiNode>,
     /// The clip rectangle each semantic node was presented under.
     node_clips: Vec<egui::Rect>,
+    /// Publish only visible content, from the policy in force at creation.
+    visible_only: bool,
     raw_presentations: Vec<RawPresentation>,
 }
 
@@ -157,6 +161,7 @@ impl PresentationContext {
             text_layouts: Vec::new(),
             semantic_nodes: Vec::new(),
             node_clips: Vec::new(),
+            visible_only: crate::observation::is_visible_only(ui.ctx()),
             raw_presentations: Vec::new(),
         }
     }
@@ -181,15 +186,25 @@ impl PresentationContext {
         self
     }
 
-    /// Hand observations to the enabled hosted collector with their clips.
+    /// Hand observations to the enabled hosted collector under this
+    /// context's visibility policy.
     fn register(&mut self, nodes: Vec<UiNode>, text: Vec<TextLayoutObservation>) {
+        use crate::observation::Visibility;
         let clips = std::mem::take(&mut self.node_clips);
+        let visible_only = self.visible_only;
         crate::observation::record(
             &self.context,
             self.viewport,
             self.pass,
-            nodes.into_iter().zip(clips),
-            text,
+            nodes.into_iter().zip(clips).map(|(node, clip)| {
+                let visibility = if visible_only {
+                    Visibility::VisibleWithin(clip)
+                } else {
+                    Visibility::AsPresented
+                };
+                (node, visibility)
+            }),
+            text.into_iter().map(|text| (text, visible_only)),
         );
     }
 
@@ -227,6 +242,7 @@ impl PresentationContext {
         );
         child.domain_reference = self.domain_reference.clone();
         child.pane = self.pane;
+        child.visible_only = self.visible_only;
         let result = render(ui, &mut child);
         child.check_pass(ui);
         // The parent publishes the child's observations; the child registers nothing.

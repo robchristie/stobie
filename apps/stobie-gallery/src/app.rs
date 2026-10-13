@@ -1,137 +1,126 @@
 use std::str::FromStr;
-use stobie_ui_egui::{NativeTextControlKind, record_native_text_control};
 
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 use stobie_ui_egui::{
-    ActionKey, ActionScope, ActionShortcut, ActionSpec, AppearancePreference, ContrastPreference,
-    DensityPreference, DesignTokens, SemanticUiId, ShortcutKey, TextAuditFinding, TextInteraction,
+    Action, ActionTarget, AppHost, AppearancePreference, Application, ApplicationIdentity,
+    ApplicationTheme, Availability, CompletedPass, ContrastPreference, DensityPreference,
+    DesignTokens, Frame, NativeTextControlKind, Observation, SemanticUiId, TextAuditFinding,
     TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot, application_bar_frame,
-    application_bar_height, apply_design_system, audit_text_layouts,
+    application_bar_height, application_identity, observe_node, record_native_text_control,
 };
 
 use crate::{
+    appearance::AppearanceWorkbench,
     catalogue::{STORIES, StoryId, story_definition},
     stories::{
-        DockSceneState, IconFixtureState, NavigationFixtureState, StatusChipFixtureState,
-        render_story,
+        IconFixtureState, NavigationFixtureState, StatusChipFixtureState, StoryState, render_story,
     },
 };
 
 /// Gallery-owned fixture actions used to demonstrate the generic controls.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+/// Stories present them; the Gallery itself does not perform them.
+#[derive(
+    Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum GalleryAction {
+    #[action(
+        id = "undo",
+        label = "Undo",
+        description = "Undo the most recent change",
+        shortcut = "Cmd+Z"
+    )]
     Undo,
+    #[action(
+        id = "save_layout",
+        label = "Save layout",
+        compact = "Save",
+        description = "Persist the current workspace layout",
+        shortcut = "Cmd+S"
+    )]
     SaveLayout,
+    #[action(
+        id = "reset_workspace",
+        label = "Reset workspace",
+        compact = "Reset",
+        description = "Restore the default workspace, cameras and tools"
+    )]
     ResetWorkspace,
+    #[action(
+        id = "fit_view",
+        label = "Fit view",
+        compact = "Fit",
+        description = "Fit the complete image into the active viewport",
+        scope = "pane",
+        shortcut = "F"
+    )]
     FitView,
+    #[action(
+        id = "link_views",
+        label = "Link views",
+        compact = "Link A",
+        description = "Link or unlink this camera with camera group A",
+        scope = "pane",
+        shortcut = "L"
+    )]
     LinkViews,
+    #[action(
+        id = "navigate_tool",
+        label = "Navigate",
+        description = "Pan and zoom the active viewport",
+        scope = "pane",
+        shortcut = "1"
+    )]
     NavigateTool,
+    #[action(
+        id = "polygon_tool",
+        label = "Polygon",
+        description = "Create a polygon annotation",
+        scope = "pane",
+        shortcut = "2"
+    )]
     PolygonTool,
+    #[action(
+        id = "edit_vertices_tool",
+        label = "Edit vertices",
+        compact = "Edit",
+        description = "Move vertices of the selected polygon",
+        scope = "pane",
+        shortcut = "3"
+    )]
     EditVerticesTool,
+    #[action(
+        id = "display_settings",
+        label = "Display",
+        description = "Adjust the image colour map and scalar window",
+        scope = "pane"
+    )]
     DisplaySettings,
+    #[action(
+        id = "export_selection",
+        label = "Export the selected annotations and their complete supporting evidence",
+        description = "Export the selected annotations and their supporting evidence to a local file"
+    )]
     ExportSelection,
 }
 
-impl ActionKey for GalleryAction {
-    fn stable_id(self) -> &'static str {
-        match self {
-            Self::Undo => "undo",
-            Self::SaveLayout => "save_layout",
-            Self::ResetWorkspace => "reset_workspace",
-            Self::FitView => "fit_view",
-            Self::LinkViews => "link_views",
-            Self::NavigateTool => "navigate_tool",
-            Self::PolygonTool => "polygon_tool",
-            Self::EditVerticesTool => "edit_vertices_tool",
-            Self::DisplaySettings => "display_settings",
-            Self::ExportSelection => "export_selection",
-        }
-    }
+/// The Gallery's own actions, which the host presents to agents.
+#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[action(prefix = "gallery")]
+pub enum GalleryCommand {
+    #[action(
+        label = "Appearance workbench",
+        description = "Open the workbench that previews authored theme colours on the selected story"
+    )]
+    OpenWorkbench,
+}
 
-    fn specification(self) -> ActionSpec<Self> {
-        let (label, description, compact_label, shortcut, scope) = match self {
-            Self::Undo => (
-                "Undo",
-                "Undo the most recent change",
-                None,
-                Some(ActionShortcut::command(ShortcutKey::Z)),
-                ActionScope::Application,
-            ),
-            Self::SaveLayout => (
-                "Save layout",
-                "Persist the current workspace layout",
-                Some("Save"),
-                Some(ActionShortcut::command(ShortcutKey::S)),
-                ActionScope::Application,
-            ),
-            Self::ResetWorkspace => (
-                "Reset workspace",
-                "Restore the default workspace, cameras and tools",
-                Some("Reset"),
-                None,
-                ActionScope::Application,
-            ),
-            Self::FitView => (
-                "Fit view",
-                "Fit the complete image into the active viewport",
-                Some("Fit"),
-                Some(ActionShortcut::new(ShortcutKey::F)),
-                ActionScope::Pane,
-            ),
-            Self::LinkViews => (
-                "Link views",
-                "Link or unlink this camera with camera group A",
-                Some("Link A"),
-                Some(ActionShortcut::new(ShortcutKey::L)),
-                ActionScope::Pane,
-            ),
-            Self::NavigateTool => (
-                "Navigate",
-                "Pan and zoom the active viewport",
-                None,
-                Some(ActionShortcut::new(ShortcutKey::One)),
-                ActionScope::Pane,
-            ),
-            Self::PolygonTool => (
-                "Polygon",
-                "Create a polygon annotation",
-                None,
-                Some(ActionShortcut::new(ShortcutKey::Two)),
-                ActionScope::Pane,
-            ),
-            Self::EditVerticesTool => (
-                "Edit vertices",
-                "Move vertices of the selected polygon",
-                Some("Edit"),
-                Some(ActionShortcut::new(ShortcutKey::Three)),
-                ActionScope::Pane,
-            ),
-            Self::DisplaySettings => (
-                "Display",
-                "Adjust the image colour map and scalar window",
-                None,
-                None,
-                ActionScope::Pane,
-            ),
-            Self::ExportSelection => (
-                "Export the selected annotations and their complete supporting evidence",
-                "Export the selected annotations and their supporting evidence to a local file",
-                None,
-                None,
-                ActionScope::Application,
-            ),
-        };
-        ActionSpec {
-            id: self,
-            label,
-            description,
-            compact_label,
-            shortcut,
-            scope,
-        }
-    }
+/// Changes the Gallery's chrome emits.
+pub enum GalleryIntent {
+    Select(StoryId),
+    Configure(GalleryConfiguration),
+    Theme(Box<ApplicationTheme>),
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -235,25 +224,27 @@ pub struct GallerySnapshot {
     pub status_chip_fixture: StatusChipFixtureState,
 }
 
-pub struct GalleryApp {
-    context: egui::Context,
-    workbench: crate::appearance::AppearanceWorkbench,
+/// The hosted Gallery: the selected story, its configuration and theme, and
+/// the read-only snapshot that smokes and UI captures consume.
+pub struct Gallery {
     selected: StoryId,
     configuration: GalleryConfiguration,
-    applied_configuration: Option<GalleryConfiguration>,
-    dock: DockSceneState,
-    frame: u64,
-    tab_input_epoch: u64,
-    tab_input_frame: Option<u64>,
+    theme: ApplicationTheme,
     snapshot: GallerySnapshot,
-    focus_story: Option<StoryId>,
-    icon_fixture: IconFixtureState,
-    navigation_fixture: NavigationFixtureState,
-    status_chip_fixture: StatusChipFixtureState,
 }
 
-impl GalleryApp {
-    pub fn new(creation: &eframe::CreationContext<'_>) -> Self {
+/// UI-only Gallery state: the workbench window and the story fixtures.
+#[derive(Default)]
+pub struct GalleryView {
+    workbench: AppearanceWorkbench,
+    story: StoryState,
+    story_rect: GalleryRect,
+}
+
+pub type GalleryApp = AppHost<Gallery>;
+
+impl Gallery {
+    pub fn new(_creation: &eframe::CreationContext<'_>) -> Self {
         let selected = std::env::var("STOBIE_GALLERY_STORY")
             .ok()
             .and_then(|value| StoryId::from_str(&value).ok())
@@ -263,17 +254,14 @@ impl GalleryApp {
             .and_then(|value| serde_json::from_str::<GalleryConfiguration>(&value).ok())
             .map(GalleryConfiguration::validated)
             .unwrap_or_default();
-        apply_design_system(&creation.egui_ctx, configuration.preferences());
+        Self::with(selected, configuration)
+    }
+
+    pub fn with(selected: StoryId, configuration: GalleryConfiguration) -> Self {
         Self {
-            context: creation.egui_ctx.clone(),
-            workbench: Default::default(),
             selected,
             configuration,
-            applied_configuration: Some(configuration),
-            dock: DockSceneState::new(selected),
-            frame: 0,
-            tab_input_epoch: 0,
-            tab_input_frame: None,
+            theme: ApplicationTheme::analytical(),
             snapshot: GallerySnapshot {
                 tab_input_epoch: 0,
                 frame: 0,
@@ -289,105 +277,60 @@ impl GalleryApp {
                 navigation_fixture: NavigationFixtureState::default(),
                 status_chip_fixture: StatusChipFixtureState::default(),
             },
-            focus_story: None,
-            icon_fixture: IconFixtureState::default(),
-            navigation_fixture: NavigationFixtureState::default(),
-            status_chip_fixture: StatusChipFixtureState::default(),
         }
-    }
-
-    pub fn select_story(&mut self, story: StoryId) {
-        if self.selected != story {
-            self.selected = story;
-            self.dock = DockSceneState::new(story);
-            self.focus_story = None;
-            self.icon_fixture = IconFixtureState::default();
-            self.navigation_fixture = NavigationFixtureState::default();
-            self.status_chip_fixture = StatusChipFixtureState::default();
-            self.context.request_repaint();
-        }
-    }
-
-    pub fn set_configuration(&mut self, configuration: GalleryConfiguration) {
-        let configuration = configuration.validated();
-        if self.configuration != configuration {
-            self.configuration = configuration;
-            self.context.request_repaint();
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) fn request_test_repaint(&self) {
-        self.context.request_repaint();
     }
 
     pub fn snapshot(&self) -> GallerySnapshot {
         self.snapshot.clone()
     }
-
-    fn update_style(&mut self) {
-        if self.applied_configuration != Some(self.configuration) {
-            stobie_ui_egui::apply_design_system_with_theme(
-                &self.context,
-                self.configuration.preferences(),
-                stobie_ui_egui::TypographyProfile::Dense,
-                &self.workbench.effective_theme(),
-            );
-            self.applied_configuration = Some(self.configuration);
-        }
-    }
 }
 
-impl eframe::App for GalleryApp {
-    fn ui(&mut self, root_ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let context = root_ui.ctx().clone();
-        self.update_style();
-        self.frame += 1;
-        let input_frame = context.cumulative_frame_nr();
-        // Discarded layout passes replay input; acknowledge each frame once.
-        if self.tab_input_frame != Some(input_frame) {
-            self.tab_input_epoch += context.input(|input| {
-                input
-                    .events
-                    .iter()
-                    .filter(|event| {
-                        matches!(
-                            event,
-                            egui::Event::Key {
-                                key: egui::Key::Tab,
-                                pressed: true,
-                                ..
-                            }
-                        )
-                    })
-                    .count()
-            }) as u64;
-            self.tab_input_frame = Some(input_frame);
+impl Application for Gallery {
+    type Action = GalleryCommand;
+    type Intent = GalleryIntent;
+    type UiState = GalleryView;
+
+    fn identity(&self) -> ApplicationIdentity {
+        application_identity!(crate::APPLICATION_NAME)
+    }
+
+    fn availability(&self, _target: ActionTarget<GalleryCommand>) -> Availability {
+        Availability::Enabled
+    }
+
+    fn preferences(&self) -> UiPreferences {
+        self.configuration.preferences()
+    }
+
+    fn theme(&self) -> ApplicationTheme {
+        self.theme.clone()
+    }
+
+    fn ui(
+        &self,
+        root: &mut egui::Ui,
+        view: &mut GalleryView,
+        frame: &mut Frame<'_, GalleryCommand, GalleryIntent>,
+    ) {
+        let context = root.ctx().clone();
+        let tokens = frame.tokens();
+        if let Some(configuration) = gallery_bar(root, self.configuration, &tokens) {
+            frame.emit(GalleryIntent::Configure(configuration));
         }
-        let root_rect = root_ui.max_rect();
-        let preferences = self.configuration.preferences();
-        let variant = preferences.theme_variant(context.theme() == egui::Theme::Dark);
-        let tokens = self.workbench.effective_theme().resolve(
-            variant,
-            preferences.density_variant(),
-            stobie_ui_egui::TypographyProfile::Dense,
-        );
-        let mut observations = Vec::new();
-        let mut semantic_nodes = vec![UiNode::container(
-            SemanticUiId::root(),
-            None,
-            UiRole::Application,
-            root_rect.into(),
-        )];
-        gallery_bar(root_ui, self, &tokens);
-        story_navigation(root_ui, self);
-        let story_rect = egui::CentralPanel::default()
+        let (story, open_workbench) = story_navigation(root, self.selected);
+        if let Some(story) = story {
+            frame.emit(GalleryIntent::Select(story));
+        }
+        if open_workbench {
+            frame.trigger(GalleryCommand::OpenWorkbench);
+        }
+        view.story_rect = egui::CentralPanel::default()
             .frame(
                 egui::Frame::new()
                     .fill(tokens.colours.surface_canvas.into())
                     .inner_margin(egui::Margin::same(16)),
             )
-            .show(root_ui, |ui| {
+            .show(root, |ui| {
                 let available = ui.available_rect_before_wrap();
                 let width = self.configuration.width.points().min(available.width());
                 let definition = story_definition(self.selected);
@@ -412,84 +355,114 @@ impl eframe::App for GalleryApp {
                         .layout(egui::Layout::top_down(egui::Align::Min)),
                 );
                 story_ui.set_clip_rect(content_rect);
-                render_story(
+                let report = render_story(
                     &mut story_ui,
                     self.selected,
-                    &mut self.dock,
+                    &mut view.story,
                     &tokens,
                     self.configuration.font_scale,
-                    &mut observations,
-                    &mut semantic_nodes,
-                    &mut self.focus_story,
-                    &mut self.icon_fixture,
-                    &mut self.navigation_fixture,
-                    &mut self.status_chip_fixture,
                 );
+                let mut story_node = UiNode::container(
+                    SemanticUiId::new("gallery.story"),
+                    Some(SemanticUiId::root()),
+                    UiRole::Pane,
+                    rect.into(),
+                );
+                story_node.name = self.selected.as_str().to_owned();
+                story_node.text_selectable = report.selectable;
+                observe_node(ui, story_node);
+                if let Some(reason) = report.repaint {
+                    frame.request_repaint(reason);
+                }
                 rect
             })
-            .inner;
-        if self.workbench.show(&context, variant) {
-            self.applied_configuration = None;
-            context.request_repaint();
+            .inner
+            .into();
+        let preferences = self.configuration.preferences();
+        let variant = preferences.theme_variant(context.theme() == egui::Theme::Dark);
+        if view.workbench.show(&context, variant) {
+            let theme = Box::new(view.workbench.effective_theme());
+            frame.emit(GalleryIntent::Theme(theme));
         }
-        let text_audit = audit_text_layouts(&observations);
-        let text_audit_coverage =
-            Some(stobie_ui_egui::text_audit_coverage(&context, &observations));
-        let story_id = SemanticUiId::new("gallery.story");
-        let mut story_node = UiNode::container(
-            story_id,
-            Some(SemanticUiId::root()),
-            UiRole::Pane,
-            story_rect.into(),
-        );
-        story_node.name = self.selected.as_str().to_owned();
-        story_node.text_selectable = observations
-            .iter()
-            .any(|text| text.interaction == TextInteraction::Selectable);
-        semantic_nodes.push(story_node);
-        let mut ui_snapshot = UiSnapshot {
-            frame: self.frame,
-            pixels_per_point: context.pixels_per_point(),
-            root: SemanticUiId::root(),
-            nodes: semantic_nodes,
-            text: observations.clone(),
-            text_audit: text_audit.clone(),
-            text_audit_coverage: text_audit_coverage.clone(),
-            semantic_audit: Vec::new(),
-        };
-        ui_snapshot.semantic_audit = ui_snapshot.audit();
+    }
+
+    fn apply(&mut self, intent: GalleryIntent, view: &mut GalleryView) -> Result<bool, String> {
+        Ok(match intent {
+            GalleryIntent::Select(story) => {
+                let changed = self.selected != story;
+                if changed {
+                    self.selected = story;
+                    view.story = StoryState::default();
+                }
+                changed
+            }
+            GalleryIntent::Configure(configuration) => {
+                let configuration = configuration.validated();
+                let changed = self.configuration != configuration;
+                self.configuration = configuration;
+                changed
+            }
+            GalleryIntent::Theme(theme) => {
+                let changed = self.theme != *theme;
+                self.theme = *theme;
+                changed
+            }
+        })
+    }
+
+    fn perform(
+        &mut self,
+        target: ActionTarget<GalleryCommand>,
+        view: &mut GalleryView,
+    ) -> Result<bool, String> {
+        Ok(match target.action {
+            GalleryCommand::OpenWorkbench => !std::mem::replace(&mut view.workbench.open, true),
+        })
+    }
+
+    fn report_error(&mut self, message: String) {
+        #[cfg(target_arch = "wasm32")]
+        log::warn!("Stobie gallery: {message}");
+        #[cfg(not(target_arch = "wasm32"))]
+        eprintln!("Stobie gallery: {message}");
+    }
+
+    fn observe(&self, observation: &mut Observation<'_>) {
+        observation.fact("story", self.selected.as_str());
+        observation.fact("story_count", STORIES.len());
+    }
+
+    fn completed(&mut self, pass: &CompletedPass<'_>, view: &GalleryView) {
+        let ui_snapshot = pass.snapshot.clone();
         self.snapshot = GallerySnapshot {
-            tab_input_epoch: self.tab_input_epoch,
-            frame: self.frame,
+            tab_input_epoch: pass.tab_presses,
+            frame: ui_snapshot.frame,
             story: self.selected,
             configuration: self.configuration,
             story_count: STORIES.len(),
-            story_rect: story_rect.into(),
-            text: observations,
-            text_audit,
-            text_audit_coverage,
+            story_rect: view.story_rect,
+            text: ui_snapshot.text.clone(),
+            text_audit: ui_snapshot.text_audit.clone(),
+            text_audit_coverage: ui_snapshot.text_audit_coverage.clone(),
             ui_snapshot,
-            icon_fixture: self.icon_fixture.clone(),
-            navigation_fixture: self.navigation_fixture.clone(),
-            status_chip_fixture: self.status_chip_fixture.clone(),
+            icon_fixture: view.story.icon.clone(),
+            navigation_fixture: view.story.navigation.clone(),
+            status_chip_fixture: view.story.status_chip.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]
         crate::startup_frame(true);
 
         #[cfg(not(target_arch = "wasm32"))]
-        if (root_ui.input(|input| input.key_pressed(egui::Key::F12))
+        if (pass
+            .context
+            .input(|input| input.key_pressed(egui::Key::F12))
             || std::env::var("STOBIE_GALLERY_SNAPSHOT_CONTINUOUS").as_deref() == Ok("1"))
             && let Ok(path) = std::env::var("STOBIE_GALLERY_SNAPSHOT_PATH")
             && let Ok(json) = serde_json::to_vec_pretty(&self.snapshot)
         {
             let _ = publish_snapshot(std::path::Path::new(&path), &json);
         }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
-        Some(self)
     }
 }
 
@@ -521,25 +494,31 @@ fn publish_snapshot(path: &std::path::Path, json: &[u8]) -> std::io::Result<()> 
     result
 }
 
-fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignTokens) {
+/// Present the configuration controls; returns an edited configuration.
+fn gallery_bar(
+    root_ui: &mut egui::Ui,
+    configuration: GalleryConfiguration,
+    tokens: &DesignTokens,
+) -> Option<GalleryConfiguration> {
+    let mut edited = configuration;
     egui::Panel::top("stobie.gallery.application-bar")
-        .exact_size(application_bar_height(tokens, app.configuration.font_scale))
+        .exact_size(application_bar_height(tokens, configuration.font_scale))
         .frame(application_bar_frame(tokens))
         .show(root_ui, |ui| {
             ui.horizontal_centered(|ui| {
                 ui.strong("Stobie component gallery");
                 ui.separator();
                 let combo = egui::ComboBox::from_id_salt("gallery.appearance")
-                    .selected_text(format!("{:?}", app.configuration.appearance))
+                    .selected_text(format!("{:?}", edited.appearance))
                     .show_ui(ui, |ui| {
                         let option = ui.selectable_value(
-                            &mut app.configuration.appearance,
+                            &mut edited.appearance,
                             AppearancePreference::Light,
                             "Light",
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                         let option = ui.selectable_value(
-                            &mut app.configuration.appearance,
+                            &mut edited.appearance,
                             AppearancePreference::Dark,
                             "Dark",
                         );
@@ -547,16 +526,16 @@ fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignToke
                     });
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.contrast")
-                    .selected_text(format!("{:?}", app.configuration.contrast))
+                    .selected_text(format!("{:?}", edited.contrast))
                     .show_ui(ui, |ui| {
                         let option = ui.selectable_value(
-                            &mut app.configuration.contrast,
+                            &mut edited.contrast,
                             ContrastPreference::Standard,
                             "Standard contrast",
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                         let option = ui.selectable_value(
-                            &mut app.configuration.contrast,
+                            &mut edited.contrast,
                             ContrastPreference::High,
                             "High contrast",
                         );
@@ -564,16 +543,16 @@ fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignToke
                     });
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.density")
-                    .selected_text(format!("{:?}", app.configuration.density))
+                    .selected_text(format!("{:?}", edited.density))
                     .show_ui(ui, |ui| {
                         let option = ui.selectable_value(
-                            &mut app.configuration.density,
+                            &mut edited.density,
                             DensityPreference::Compact,
                             "Compact",
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                         let option = ui.selectable_value(
-                            &mut app.configuration.density,
+                            &mut edited.density,
                             DensityPreference::Comfortable,
                             "Comfortable",
                         );
@@ -581,14 +560,11 @@ fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignToke
                     });
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.scale")
-                    .selected_text(format!(
-                        "{}%",
-                        (app.configuration.font_scale * 100.0) as u16
-                    ))
+                    .selected_text(format!("{}%", (edited.font_scale * 100.0) as u16))
                     .show_ui(ui, |ui| {
                         for scale in [1.0, 1.25, 1.5] {
                             let option = ui.selectable_value(
-                                &mut app.configuration.font_scale,
+                                &mut edited.font_scale,
                                 scale,
                                 format!("{}%", (scale * 100.0) as u16),
                             );
@@ -597,30 +573,25 @@ fn gallery_bar(root_ui: &mut egui::Ui, app: &mut GalleryApp, tokens: &DesignToke
                     });
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.width")
-                    .selected_text(format!("{:?}", app.configuration.width))
+                    .selected_text(format!("{:?}", edited.width))
                     .show_ui(ui, |ui| {
-                        let option = ui.selectable_value(
-                            &mut app.configuration.width,
-                            GalleryWidth::Narrow,
-                            "Narrow",
-                        );
+                        let option =
+                            ui.selectable_value(&mut edited.width, GalleryWidth::Narrow, "Narrow");
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                         let option = ui.selectable_value(
-                            &mut app.configuration.width,
+                            &mut edited.width,
                             GalleryWidth::Regular,
                             "Regular",
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
-                        let option = ui.selectable_value(
-                            &mut app.configuration.width,
-                            GalleryWidth::Wide,
-                            "Wide",
-                        );
+                        let option =
+                            ui.selectable_value(&mut edited.width, GalleryWidth::Wide, "Wide");
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
             });
         });
+    (edited != configuration).then_some(edited)
 }
 
 /// Keep the development entry within the catalogue at enlarged text sizes.
@@ -632,15 +603,17 @@ fn catalogue_heading(ui: &mut egui::Ui) -> egui::Response {
     response
 }
 
-fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
+/// Present the catalogue; returns a newly chosen story and whether the
+/// workbench entry was clicked.
+fn story_navigation(root_ui: &mut egui::Ui, selected: StoryId) -> (Option<StoryId>, bool) {
+    let mut chosen = None;
+    let mut open_workbench = false;
     egui::Panel::left("stobie.gallery.catalogue")
         .exact_size(244.0)
         .resizable(false)
         .show(root_ui, |ui| {
             ui.add_space(8.0);
-            if catalogue_heading(ui).clicked() {
-                app.workbench.open = true;
-            }
+            open_workbench = catalogue_heading(ui).clicked();
             ui.add_space(4.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let mut group = None;
@@ -655,14 +628,15 @@ fn story_navigation(root_ui: &mut egui::Ui, app: &mut GalleryApp) {
                         );
                     }
                     let option =
-                        ui.selectable_label(app.selected == definition.id, definition.id.as_str());
+                        ui.selectable_label(selected == definition.id, definition.id.as_str());
                     record_native_text_control(&option, NativeTextControlKind::Selectable);
                     if option.clicked() {
-                        app.select_story(definition.id);
+                        chosen = Some(definition.id);
                     }
                 }
             });
         });
+    (chosen, open_workbench)
 }
 
 #[cfg(test)]
@@ -720,6 +694,74 @@ mod tests {
     }
 
     #[test]
+    fn automation_opens_the_workbench_through_its_semantic_action() {
+        use stobie_ui_egui::{
+            Inspection, InspectionOperation, InspectionReply, InspectionRequest, InspectionResult,
+            InspectionSelector, ReceiptState,
+        };
+        let context = egui::Context::default();
+        let mut host = AppHost::new(
+            &context,
+            Gallery::with(
+                StoryId::ReferenceApplicationShell,
+                GalleryConfiguration::default(),
+            ),
+        );
+        host.enable_inspection(Inspection::new(crate::APPLICATION_NAME));
+        let present = |host: &mut GalleryApp| {
+            let mut output = context.run_ui(Default::default(), |ui| host.present(ui));
+            output.textures_delta.clear();
+        };
+        present(&mut host);
+        let handle = |host: &GalleryApp, id: &str, operation| -> InspectionReply {
+            let inspection = host.inspection().unwrap();
+            inspection.handle(InspectionRequest {
+                version: 1,
+                request_id: id.into(),
+                instance: Some(inspection.instance()),
+                operation,
+            })
+        };
+        let selector = InspectionSelector {
+            capability: Some("gallery.open-workbench".into()),
+            ..Default::default()
+        };
+        let reply = handle(
+            &host,
+            "discover",
+            InspectionOperation::Discover {
+                selector: selector.clone(),
+                limit: 8,
+                cursor: None,
+            },
+        );
+        let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+            panic!("discovery failed: {:?}", reply.error);
+        };
+        assert_eq!(capabilities.len(), 1, "{capabilities:?}");
+        let invoke = InspectionOperation::Invoke {
+            selector,
+            expected: capabilities[0].target.clone(),
+            arguments: serde_json::Value::Null,
+        };
+        let receipt = |reply: InspectionReply| match reply.result {
+            Some(InspectionResult::Receipt { receipt }) => receipt.state,
+            _ => panic!("no receipt: {:?}", reply.error),
+        };
+        assert!(!host.ui_state().workbench.open);
+        assert_eq!(receipt(handle(&host, "open", invoke)), ReceiptState::Queued);
+        present(&mut host);
+        let lookup = InspectionOperation::Receipt {
+            request_id: "open".into(),
+        };
+        assert_eq!(
+            receipt(handle(&host, "lookup", lookup)),
+            ReceiptState::Completed
+        );
+        assert!(host.ui_state().workbench.open);
+    }
+
+    #[test]
     fn workbench_entry_fits_catalogue_at_enlarged_text_and_records_native_coverage() {
         for font_scale in [1.0, 1.25, 1.5] {
             let context = egui::Context::default();
@@ -730,7 +772,7 @@ mod tests {
                 density: DensityPreference::Compact,
                 ..Default::default()
             };
-            apply_design_system(&context, preferences);
+            stobie_ui_egui::apply_design_system(&context, preferences);
             let mut button_id = egui::Id::NULL;
             let mut bounds = egui::Rect::NOTHING;
             let mut output = context.run_ui(

@@ -1,7 +1,7 @@
 # Framework-owned application host and derived actions
 
 Status: active
-Next action: Migrate the Gallery onto AppHost, then the Lab after moving its gesture previews out of Session (increment 3).
+Next action: Move the Lab's gesture previews out of Session, then migrate the Lab (increment 3b).
 
 ## Outcome and boundaries
 
@@ -37,9 +37,10 @@ Checked against Record Desk, the Lab and the Gallery before implementation.
   `request_repaint(reason)` and `dock(...)`. The dock takes `&Workspace` and
   emits a core `WorkspaceChange` intent.
 - Recipes register observations in a per-viewport, per-pass collector stored in
-  egui context data, with each node's clip rectangle. The collector is enabled
-  only by a host. A new pass replaces the previous pass's observations, so
-  discarded passes never accumulate.
+  egui context data. The collector is enabled only by a host. A new pass
+  replaces the previous pass's observations, so discarded passes never
+  accumulate. Observations made inside `observe_visible_only`, which wraps each
+  dock pane, carry their clip rectangle and are published only where visible.
 - Entry points: `AppHost<A>` (egui), `run_native` and a `web_handle!` macro
   over `WebHost<A>`, behind the default `eframe` feature.
 
@@ -65,14 +66,24 @@ Checked against Record Desk, the Lab and the Gallery before implementation.
   in which a smoke clicked stale coordinates after Reset filters, which failed
   increment 1's first post-merge native run. Every state change repaints, so the
   next pass observes it.
+- **Publish as presented; filter only scrolling regions.** Clipping every
+  observation to its region hid real defects from the audits, such as text
+  outside its clip or allocation and nodes outside the root. Across 540 Gallery
+  renders it changed the published text in 66 and the nodes in 47 (found in
+  review of PR #65). The host therefore filters only inside
+  `observe_visible_only` regions, where scrolled-out rows are expected. Dock
+  panes are such regions. Record Desk wraps its whole UI, which keeps its
+  pre-host behaviour: its top bar is clipped on the first frame until the panel
+  has measured its content.
 
 ## Increments
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | 1. Derive macro and Record Desk actions | Landed | [PR #63](https://github.com/robchristie/stobie/pull/63): compile-fail and expansion tests; Record Desk tests and smokes unchanged |
-| 2. Host, collector, Record Desk migration, composition guide and authoring probe | Complete | Eight host kittests; Record Desk 31 tests and native, browser and interface smokes; glue 962 to 521 lines; probe below |
-| 3. Lab and Gallery migrations | Planned | Lab and Gallery smokes |
+| 2. Host, collector, Record Desk migration, composition guide and authoring probe | Landed | [PR #64](https://github.com/robchristie/stobie/pull/64): host kittests; Record Desk tests and smokes; glue 962 to 526 lines, accepted by the user; probe below |
+| 3a. Gallery migration | Landed | [PR #65](https://github.com/robchristie/stobie/pull/65): Gallery tests, deterministic UI snapshots and Gallery-driven smokes; published snapshots equal base's in 540 renders apart from the root name |
+| 3b. Lab migration | Planned | Lab smokes and the application-interface smoke |
 
 ## Authoring probe
 
@@ -110,12 +121,35 @@ Recorded for later work:
 - marking shortcuts that text focus blocks in discovery;
 - action arguments, without which agents cannot fill a draft.
 
-## Lab and Gallery follow-up
+## Gallery migration
+
+- The Gallery's model is the selected story, its configuration and the
+  effective theme. Story fixtures, the dock scene, keyboard-focus state and the
+  appearance workbench are UI state, because they exist to demonstrate
+  components. The chrome emits `Select`, `Configure` and `Theme` intents.
+- Stories keep their low-level recipe vectors, which the dispatcher registers
+  against the story area. Presentation contexts and choice and range recipes
+  register themselves, so stories no longer merge them. Stories report
+  selectable text and fixture repaints through a `StoryReport`.
+- `GalleryAction` stays a demonstration-only key, now derived with its IDs
+  unchanged. The hosted action set is `GalleryCommand::OpenWorkbench`.
+- The host gained:
+  - `Application::theme` for custom themes, which the Gallery's workbench uses;
+  - UI state in `completed`, for the Gallery's fixture snapshot;
+  - `AppHost::submit` and `request_repaint`, plus `WebHost::with_host_mut`, for
+    page hooks;
+  - a root node fixed to the viewport, even when content overflows.
+- Equivalence: 30 stories, 9 configurations and 2 window sizes, each after 4
+  passes, publish the same nodes, text, audits and coverage as base, apart from
+  the root's name (now the application name) and publication order. The
+  Gallery's own unit test renders each story alone at its configured width, as
+  before.
+
+## Lab follow-up
 
 The Lab needs pane-scoped availability and meaning (already part of the target
 signature), `action_panes` for its eight panes, and a pre-pass hook with context
 access for worker polling and texture upload. It also needs gesture previews
 moved out of `Session` into UI state or intents before `ui` can borrow the
 application immutably. Its in-pass render-plan submission can run at the end of
-`ui` from UI-owned outputs. The Gallery's stories mutate fixtures inline and
-need intents first.
+`ui` from UI-owned outputs.

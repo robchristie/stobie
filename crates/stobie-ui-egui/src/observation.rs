@@ -3,29 +3,46 @@
 //! An [`AppHost`](crate::AppHost) enables a collector in egui context data for
 //! each viewport. [`PresentationContext`](crate::PresentationContext), the dock
 //! and the choice and range recipes then register their semantic nodes and
-//! measured text as they present, together with the clip rectangle each node
-//! was drawn under. A new UI pass replaces the previous pass's observations, so
-//! a discarded layout pass never accumulates. Without a host the collector is
-//! disabled and recording does nothing.
+//! measured text as they present. A new UI pass replaces the previous pass's
+//! observations, so a discarded layout pass never accumulates. Without a host
+//! the collector is disabled and recording does nothing.
+//!
+//! Observations are published as presented, so the text and semantic audits
+//! report content that is clipped or overflows. Content presented inside
+//! [`observe_visible_only`], which the host applies to each dock pane, is
+//! published only where it is visible.
 
 use egui::{Context, Id, Rect, Ui, ViewportId};
 
 use crate::{TextLayoutObservation, UiNode};
 
+/// How the host treats an observation's visibility.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Visibility {
+    /// Publish as presented, so the audits report clipping and overflow.
+    AsPresented,
+    /// Scrolling content: clip a node to the bounds it was drawn within, omit
+    /// it when scrolled out of view, and audit successful text only when it is
+    /// fully visible.
+    VisibleWithin(Rect),
+}
+
 #[derive(Clone, Default)]
 struct Collector {
     enabled: bool,
     pass: u64,
-    nodes: Vec<(UiNode, Rect)>,
-    text: Vec<TextLayoutObservation>,
+    /// Depth of nested [`observe_visible_only`] regions being presented.
+    visible_only: u32,
+    nodes: Vec<(UiNode, Visibility)>,
+    text: Vec<(TextLayoutObservation, bool)>,
 }
 
 /// Observations registered during one UI pass.
 #[derive(Default)]
 pub(crate) struct PassObservations {
-    /// Each node with the clip rectangle it was presented under.
-    pub nodes: Vec<(UiNode, Rect)>,
-    pub text: Vec<TextLayoutObservation>,
+    pub nodes: Vec<(UiNode, Visibility)>,
+    /// Text, and whether only its fully visible successes are audited.
+    pub text: Vec<(TextLayoutObservation, bool)>,
 }
 
 fn collector_id(viewport: ViewportId) -> Id {
@@ -44,14 +61,55 @@ pub(crate) fn is_enabled(context: &Context, viewport: ViewportId) -> bool {
     })
 }
 
+/// Whether observations made now are inside an [`observe_visible_only`] region.
+pub(crate) fn is_visible_only(context: &Context) -> bool {
+    let id = collector_id(context.viewport_id());
+    context.data(|data| {
+        data.get_temp::<Collector>(id)
+            .is_some_and(|collector| collector.enabled && collector.visible_only > 0)
+    })
+}
+
+/// The visibility policy for a node observed now under `ui`'s clip.
+pub(crate) fn visibility(ui: &Ui) -> Visibility {
+    if is_visible_only(ui.ctx()) {
+        Visibility::VisibleWithin(ui.clip_rect())
+    } else {
+        Visibility::AsPresented
+    }
+}
+
+/// Publish only the visible part of what `add_contents` presents, for content
+/// that scrolls: each node is clipped to the region it was drawn in and
+/// omitted once scrolled out of view, and measured text is audited only when
+/// fully visible or failed. Everything else is published as presented, so the
+/// audits report clipping and overflow. The host already applies this to each
+/// dock pane; presentation contexts take the policy in force when created.
+pub fn observe_visible_only<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> R {
+    struct Region(Context, Id);
+    impl Drop for Region {
+        fn drop(&mut self) {
+            self.0.data_mut(|data| {
+                let collector = data.get_temp_mut_or_default::<Collector>(self.1);
+                collector.visible_only = collector.visible_only.saturating_sub(1);
+            });
+        }
+    }
+    let context = ui.ctx().clone();
+    let id = collector_id(context.viewport_id());
+    context.data_mut(|data| data.get_temp_mut_or_default::<Collector>(id).visible_only += 1);
+    let _region = Region(context, id);
+    add_contents(ui)
+}
+
 /// Register observations made during `pass` of `viewport`. Observations from
 /// an earlier pass than the collector's current one are stale and ignored.
 pub(crate) fn record(
     context: &Context,
     viewport: ViewportId,
     pass: u64,
-    nodes: impl IntoIterator<Item = (UiNode, Rect)>,
-    text: impl IntoIterator<Item = TextLayoutObservation>,
+    nodes: impl IntoIterator<Item = (UiNode, Visibility)>,
+    text: impl IntoIterator<Item = (TextLayoutObservation, bool)>,
 ) {
     context.data_mut(|data| {
         let collector = data.get_temp_mut_or_default::<Collector>(collector_id(viewport));
@@ -96,16 +154,16 @@ pub(crate) fn observe_recipe_node(ui: &Ui, node: &UiNode) {
 }
 
 /// Observe an application-owned semantic node, such as a custom row, in a
-/// hosted application. Its visible bounds are clipped to `ui`'s clip rectangle.
-/// Recipes and [`PresentationContext`](crate::PresentationContext) already
-/// observe their own nodes; do not observe those again.
+/// hosted application. Inside [`observe_visible_only`] it is published only
+/// where visible within `ui`'s clip rectangle. Recipes and presentation
+/// contexts already observe their own nodes; do not observe those again.
 pub fn observe_node(ui: &Ui, node: UiNode) {
     let context = ui.ctx();
     record(
         context,
         context.viewport_id(),
         context.cumulative_pass_nr(),
-        [(node, ui.clip_rect())],
+        [(node, visibility(ui))],
         [],
     );
 }
@@ -118,7 +176,7 @@ pub fn observe_text(ui: &Ui, observation: TextLayoutObservation) {
         context.viewport_id(),
         context.cumulative_pass_nr(),
         [],
-        [observation],
+        [(observation, is_visible_only(context))],
     );
 }
 
@@ -156,6 +214,69 @@ mod tests {
                 .collect();
             assert_eq!(ids, ["second-pass"]);
             assert!(take(ui.ctx()).nodes.is_empty());
+        });
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn only_observations_inside_a_visible_only_region_are_filtered() {
+        let context = Context::default();
+        let mut output = context.run_ui(Default::default(), |ui| {
+            enable(ui.ctx());
+            let clip = ui.clip_rect();
+            let text = |instance| {
+                use crate::{TextComponentId, TextComponentKind, TextRect};
+                let rect = TextRect::from(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(10.0, 10.0),
+                ));
+                crate::TextLayoutObservation {
+                    component_id: TextComponentId::new(TextComponentKind::ResultRow, instance),
+                    parent_id: None,
+                    role: crate::TextRole::Body,
+                    horizontal_alignment: crate::HorizontalTextAlignment::Start,
+                    vertical_alignment: crate::VerticalTextAlignment::Top,
+                    allocated_rect: rect,
+                    painted_rect: rect,
+                    clip_rect: rect,
+                    baseline: None,
+                    overflow: crate::TextOverflow::Ellipsis,
+                    interaction: Default::default(),
+                    declared_max_lines: 1,
+                    line_count: 1,
+                    truncated: false,
+                    layout_error: None,
+                }
+            };
+            observe_node(ui, node("presented"));
+            observe_text(ui, text(1));
+            observe_visible_only(ui, |ui| {
+                observe_visible_only(ui, |ui| observe_node(ui, node("nested")));
+                observe_node(ui, node("visible"));
+                observe_text(ui, text(2));
+            });
+            observe_node(ui, node("after"));
+            let taken = take(ui.ctx());
+            let nodes: Vec<_> = taken
+                .nodes
+                .iter()
+                .map(|(node, visibility)| (node.id.0.as_str(), *visibility))
+                .collect();
+            assert_eq!(
+                nodes,
+                [
+                    ("presented", Visibility::AsPresented),
+                    ("nested", Visibility::VisibleWithin(clip)),
+                    ("visible", Visibility::VisibleWithin(clip)),
+                    ("after", Visibility::AsPresented),
+                ]
+            );
+            let text: Vec<_> = taken
+                .text
+                .iter()
+                .map(|(text, visible_only)| (text.component_id.instance, *visible_only))
+                .collect();
+            assert_eq!(text, [(1, false), (2, true)]);
         });
         output.textures_delta.clear();
     }

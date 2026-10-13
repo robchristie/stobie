@@ -7,6 +7,7 @@ use stobie_ui_egui::{
     measure_component_text, paint_measured_text,
 };
 
+use super::StoryReport;
 use crate::catalogue::StoryId;
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -91,18 +92,12 @@ fn fully_visible_text(layout: &TextLayoutObservation) -> bool {
     a.min_x >= c.min_x && a.min_y >= c.min_y && a.max_x <= c.max_x && a.max_y <= c.max_y
 }
 
-fn publish(
-    mut p: PresentationContext,
-    ui: &mut egui::Ui,
-    text: &mut Vec<TextLayoutObservation>,
-    nodes: &mut Vec<UiNode>,
-) {
+fn publish(mut p: PresentationContext, ui: &mut egui::Ui, report: &mut StoryReport) {
     p.retain_visible_text(ui, fully_visible_text);
-    let observed = p.finish(ui);
-    text.extend(observed.text_layouts);
-    nodes.extend(observed.semantic_nodes);
+    report.presented(&p.finish(ui));
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn story(
     ui: &mut egui::Ui,
     story: StoryId,
@@ -111,6 +106,7 @@ pub(super) fn story(
     text: &mut Vec<TextLayoutObservation>,
     nodes: &mut Vec<UiNode>,
     state: &mut StatusChipFixtureState,
+    report: &mut StoryReport,
 ) {
     let root = SemanticUiId::new("gallery.story");
     let scope = PresentationScope::new("gallery.status-chip");
@@ -170,7 +166,7 @@ pub(super) fn story(
             },
         );
         ui.add_space(tokens.spacing.section.0);
-        publish(p, ui, text, nodes);
+        publish(p, ui, report);
         let mut chosen = None;
         for (id, name, label, tone, icon) in TASKS {
             let icon = if id == 1 && state.completed {
@@ -303,7 +299,7 @@ pub(super) fn story(
                     ..StatusChipSpec::new(label, tone)
                 },
             );
-            publish(p, &mut child, text, nodes);
+            publish(p, &mut child, report);
             if row.hovered() {
                 state.hovered_task = Some(id);
             }
@@ -315,7 +311,7 @@ pub(super) fn story(
         if let Some(id) = chosen {
             state.selected_task = id;
             state.activations += 1;
-            ui.ctx().request_repaint();
+            report.repaint = Some("status chip fixture changed");
         }
         let mut p = PresentationContext::new(ui, *tokens, scale, scope, root.clone());
         let complete = p.action(
@@ -329,10 +325,10 @@ pub(super) fn story(
                 compact: false,
             },
         );
-        publish(p, ui, text, nodes);
+        publish(p, ui, report);
         if complete.clicked() {
             state.completed = !state.completed;
-            ui.ctx().request_repaint();
+            report.repaint = Some("status chip fixture changed");
         }
     } else {
         let mut p = PresentationContext::new(ui, *tokens, scale, scope, root);
@@ -420,7 +416,7 @@ pub(super) fn story(
                     }
                 });
         }
-        publish(p, ui, text, nodes);
+        publish(p, ui, report);
     }
 }
 
@@ -432,49 +428,37 @@ mod tests {
     fn narrow_enlarged_task_rows_publish_only_current_clipped_owners() {
         let context = egui::Context::default();
         context.enable_accesskit();
-        stobie_ui_egui::apply_design_system(&context, stobie_ui_egui::UiPreferences::default());
         let tokens = DesignTokens::resolve(
             stobie_ui_egui::ThemeVariant::DarkHighContrast,
             stobie_ui_egui::DensityVariant::Comfortable,
         );
-        let mut text = Vec::new();
-        let mut nodes = Vec::new();
-        let mut coverage = None;
         let clip = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(320.0, 240.0));
-        let mut output = context.run_ui(
-            egui::RawInput {
-                screen_rect: Some(clip),
-                ..Default::default()
-            },
-            |ui| {
-                ui.set_clip_rect(clip);
-                story(
-                    ui,
-                    StoryId::StatusChipTasks,
-                    &tokens,
-                    1.5,
-                    &mut text,
-                    &mut nodes,
-                    &mut StatusChipFixtureState::default(),
-                );
-                coverage = Some(stobie_ui_egui::text_audit_coverage(ui.ctx(), &text));
-            },
-        );
-        output.textures_delta.clear();
+        let probe = super::super::probe::StoryProbe {
+            story: StoryId::StatusChipTasks,
+            tokens,
+            scale: 1.5,
+            clip: Some(clip),
+            theme: stobie_ui_egui::ApplicationTheme::analytical(),
+            preferences: Default::default(),
+            heading: false,
+        };
+        let (snapshot, mut output) = super::super::probe::render(&context, probe, clip.size());
+        let text = &snapshot.text;
+        let nodes = &snapshot.nodes;
         assert!(
-            stobie_ui_egui::audit_text_layouts(&text).is_empty(),
+            stobie_ui_egui::audit_text_layouts(text).is_empty(),
             "{:?}",
-            stobie_ui_egui::audit_text_layouts(&text)
+            stobie_ui_egui::audit_text_layouts(text)
         );
         assert!(nodes.iter().any(|n| n.role == UiRole::ResultRow));
-        assert!(nodes.iter().all(|n| n.rect.max_y <= clip.bottom()));
-        let coverage = coverage.unwrap();
+        let outside: Vec<_> = nodes
+            .iter()
+            .filter(|n| n.rect.max_y > clip.bottom())
+            .collect();
+        assert!(outside.is_empty(), "{outside:#?}");
+        let coverage = snapshot.text_audit_coverage.clone().unwrap();
         assert!(coverage.attempted_components > coverage.measured_components);
         let update = output.platform_output.accesskit_update.take().unwrap();
-        let snapshot = stobie_ui_egui::UiSnapshot {
-            nodes,
-            ..Default::default()
-        };
         let findings = stobie_ui_egui::audit_accesskit(&snapshot, &update);
         assert!(findings.is_empty(), "{findings:?}");
         for (_, native) in &update.nodes {

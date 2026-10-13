@@ -2,8 +2,8 @@
 
 The shared application interface lets a client read current semantics and text,
 discover typed capabilities, dispatch a validated action, wait for an observed
-result and exercise the same host through physical input. Record Desk and
-Analytical Workspace Lab expose the same version 1 JSON contract on an explicitly
+result and exercise the same host through physical input. Record Desk, the
+component Gallery and Analytical Workspace Lab expose the same version 1 JSON contract on an explicitly
 enabled local Unix socket or browser page. Rust types in
 [`inspection.rs`](../crates/stobie-ui-egui/src/inspection.rs) are authoritative;
 the JavaScript client does not maintain a separate action registry or schema.

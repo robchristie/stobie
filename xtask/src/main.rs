@@ -304,24 +304,49 @@ fn architecture() -> Result<()> {
             bail!("egui action framework retains the legacy ActionId registry");
         }
     }
-    for (path, implementation) in [
-        (
-            "apps/analytical-workspace-lab/src/actions.rs",
-            "impl ActionKey for LabAction",
-        ),
-        (
-            "apps/stobie-gallery/src/app.rs",
-            "impl ActionKey for GalleryAction",
-        ),
+    for (path, action) in [
+        ("apps/analytical-workspace-lab/src/actions.rs", "LabAction"),
+        ("apps/stobie-gallery/src/app.rs", "GalleryAction"),
     ] {
-        if !fs::read_to_string(path)?.contains(implementation) {
-            bail!("application-owned action registry is missing: {implementation}");
+        if !owns_action_registry(&fs::read_to_string(path)?, action) {
+            bail!("application-owned action registry is missing: {action}");
         }
     }
     println!(
         "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
+}
+
+/// An application declares its own action registry, by hand or with `#[derive(Action)]`.
+fn owns_action_registry(source: &str, action: &str) -> bool {
+    let names_action = |text: &str, prefix: &str| {
+        text.match_indices(prefix)
+            .map(|(offset, _)| offset)
+            .find(|offset| {
+                text[offset + prefix.len()..]
+                    .chars()
+                    .next()
+                    .is_some_and(|next| !next.is_alphanumeric() && next != '_')
+            })
+    };
+    if names_action(source, &format!("impl ActionKey for {action}")).is_some() {
+        return true;
+    }
+    let Some(start) = names_action(source, &format!("pub enum {action}")) else {
+        return false;
+    };
+    // The enum's own attributes run back to the end of the previous item.
+    let attributes = &source[source[..start].rfind(['}', ';']).map_or(0, |end| end + 1)..start];
+    attributes
+        .match_indices("#[derive(")
+        .any(|(offset, prefix)| {
+            let list = &attributes[offset + prefix.len()..];
+            list[..list.find(")]").unwrap_or(list.len())]
+                .split(',')
+                .map(str::trim)
+                .any(|path| path == "Action" || path.ends_with("::Action"))
+        })
 }
 
 // Compiled rustdoc consumers may demonstrate application-owned action enums.
@@ -475,7 +500,41 @@ fn build_viewer_web() -> Result<()> {
 
 #[cfg(test)]
 mod architecture_tests {
-    use super::{has_action_key_implementation, workspace_definition_count};
+    use super::{has_action_key_implementation, owns_action_registry, workspace_definition_count};
+
+    #[test]
+    fn applications_own_registries_by_hand_or_by_derive() {
+        assert!(owns_action_registry("impl ActionKey for Tool {", "Tool"));
+        let derived =
+            "#[derive(\n    Action, Clone, Copy,\n)]\n#[action(prefix = \"x\")]\npub enum Tool {";
+        assert!(owns_action_registry(derived, "Tool"));
+        assert!(!owns_action_registry(
+            "#[derive(Clone)]\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry("pub enum Other {", "Tool"));
+        assert!(owns_action_registry(
+            "#[derive(Clone, stobie_ui_egui::Action)]\npub enum Tool {",
+            "Tool"
+        ));
+        // Only the whole derive name counts, and only on the enum itself.
+        assert!(!owns_action_registry(
+            "#[derive(SemanticAction, Clone)]\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "#[derive(Action)]\npub enum Other {}\n\npub enum Tool {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "#[derive(Action)]\npub enum ToolKind {",
+            "Tool"
+        ));
+        assert!(!owns_action_registry(
+            "impl ActionKey for ToolKind {",
+            "Tool"
+        ));
+    }
 
     #[test]
     fn action_ownership_guard_allows_rustdoc_consumers_and_rejects_production_registries() {

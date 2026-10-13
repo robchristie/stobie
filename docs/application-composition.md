@@ -130,8 +130,12 @@ shown, a dock drag is active or you call `Frame::request_repaint(reason)`. The
 `AppHost` rustdoc gives the exact contract.
 
 Presentation contexts, choice and range recipes, and the dock register their
-semantic nodes and measured text automatically. Each is clipped to the region
-it was drawn in, and a discarded layout pass is replaced rather than merged.
+semantic nodes and measured text automatically, and a discarded layout pass is
+replaced rather than merged. The host publishes them as presented, so the audits
+report clipped and overflowing content. Dock panes scroll, so inside a pane it
+publishes only what is visible: nodes are clipped to the region they were drawn
+in or omitted, and partly visible text is not audited. Wrap other scrolling
+content in `observe_visible_only`.
 For a custom widget, call `PresentationContext::observe_node` and
 `observe_text`, or the free `observe_node`, with the pane's semantic node as
 parent. Record native egui text fields with
@@ -157,6 +161,8 @@ them as `UiRole::TextInput`. Observe a selectable list row as
   integers and text, and `counted_collection` for lists. Facts have no null;
   use an empty string for "none". Never publish whole collections.
 - Never request an unconditional repaint.
+- Override `preferences` and `theme` to change appearance; the host reapplies
+  the design system when they change and resolves `Frame::tokens` from them.
 
 ## Grow to several panes
 
@@ -186,7 +192,10 @@ The page creates `new WebHandle()` and awaits `start(canvas)`. With
 `?automation=1` in its URL, it calls `enable_automation(crypto.randomUUID())`
 and exposes `automation_request` as `window.__STOBIE_AUTOMATION.request`.
 Record Desk's [`web/bootstrap.js`](../consumers/record-desk/web/bootstrap.js)
-and `build-web.sh` are a working template. The
+and `build-web.sh` are a working template. For page hooks beyond these, write
+the handle around `WebHost` yourself: `with_host` reads the running host and
+`with_host_mut(|host| host.submit(intent))` sends an intent through `apply`.
+The component Gallery's `lib.rs` is an example. The
 [browser startup guide](browser-startup.md) covers packaging.
 
 ## Choose dependencies
