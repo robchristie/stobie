@@ -205,7 +205,10 @@ recipes retain their previous identities and appearance. Low-level action caller
 can opt into `action_button_with_identity` and its matching
 `action_semantic_node_with_identity` without migrating to the adapter.
 
-Construct and finish inside each pass. Replace the latest publication for its
+In a hosted application (`AppHost`), a context registers its observations
+with the pass's collector when it is finished or dropped, so no merging is
+needed and the steps below do not apply. Without a host, construct and finish
+inside each pass. Replace the latest publication for its
 viewport on a repeated layout pass; do not append an earlier pass's publication.
 Reusing or publishing an adapter in a different context, viewport or pass fails
 immediately. A publication's measured count covers its retained local layouts;

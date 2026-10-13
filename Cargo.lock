@@ -3649,15 +3649,21 @@ dependencies = [
 name = "stobie-ui-egui"
 version = "0.1.6"
 dependencies = [
+ "console_error_panic_hook",
+ "eframe",
  "egui",
  "egui-wgpu",
  "egui_kittest",
+ "js-sys",
  "serde",
  "serde_json",
  "stobie-core",
  "stobie-render-wgpu",
  "stobie-ui-egui-derive",
  "trybuild",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
  "wgpu",
 ]
 

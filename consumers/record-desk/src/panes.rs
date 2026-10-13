@@ -1,34 +1,13 @@
-use egui::{Rect, Ui};
-use serde::Serialize;
-use stobie_core::{DockNodeId, PaneId};
+use egui::Ui;
+use stobie_core::PaneId;
 use stobie_ui_egui::*;
 
-use crate::{actions::Action, model::*};
+use crate::{actions::Action, app::Intent, model::*};
 
-pub enum Intent {
-    Select(RecordId),
-    Filters(Filters),
-    Draft(Record),
-    Action(Action),
-}
+type PaneFrame<'f, 'a> = &'f mut Frame<'a, Action, Intent>;
 
-#[derive(Clone, Serialize)]
-pub struct Control {
-    pub name: String,
-    pub id: String,
-    pub rect: UiRect,
-    pub focused: bool,
-}
-
-#[derive(Default)]
-pub struct PaneOutput {
-    pub intents: Vec<Intent>,
-    pub nodes: Vec<UiNode>,
-    pub text: Vec<TextLayoutObservation>,
-    pub controls: Vec<Control>,
-}
-
-// These are the entire pane inputs: read views, resolved appearance and outputs.
+// These are the entire pane inputs: read views and resolved appearance. Panes
+// emit intents and actions through the frame; they never see the application.
 pub struct RecordPanes<'a> {
     pub records: Vec<&'a Record>,
     pub total: usize,
@@ -36,32 +15,8 @@ pub struct RecordPanes<'a> {
     pub draft: Option<&'a Record>,
     pub filters: &'a Filters,
     pub dirty: bool,
-    pub apply: Availability,
-    pub cancel: Availability,
-    pub reset_filters: Availability,
     pub tokens: DesignTokens,
     pub focus_search: bool,
-    pub output: &'a mut PaneOutput,
-}
-
-pub fn button(
-    action: Action,
-    pane: Option<PaneId>,
-    availability: Availability,
-    emphasis: ActionEmphasis,
-) -> ActionButtonSpec<Action> {
-    ActionButtonSpec {
-        target: match action.specification().scope {
-            ActionScope::Application => ActionTarget::application(action),
-            ActionScope::Pane | ActionScope::ActivePane => {
-                ActionTarget::pane(action, pane.expect("pane-scoped action target"))
-            }
-        },
-        availability,
-        state: ActionButtonState::Momentary,
-        emphasis,
-        compact: false,
-    }
 }
 
 pub fn content_spec(role: TextRole, lines: u8) -> ContentTextSpec {
@@ -74,7 +29,7 @@ pub fn content_spec(role: TextRole, lines: u8) -> ContentTextSpec {
 }
 
 impl RecordPanes<'_> {
-    fn list(&mut self, ui: &mut Ui, p: &mut PresentationContext) {
+    fn list(&mut self, ui: &mut Ui, p: &mut PresentationContext, frame: PaneFrame) {
         let mut filters = self.filters.clone();
         p.content(
             ui,
@@ -90,7 +45,6 @@ impl RecordPanes<'_> {
             &mut filters.query,
             false,
             None,
-            self.output,
         );
         if self.focus_search {
             search.request_focus();
@@ -99,7 +53,8 @@ impl RecordPanes<'_> {
         ui.horizontal_wrapped(|ui| {
             let mut options = vec![(None, "All categories")];
             options.extend(Category::ALL.iter().map(|c| (Some(*c), c.label())));
-            let category = choice_control_with_options(
+            // Choice recipes observe their control and popup options themselves.
+            choice_control_with_options(
                 ui,
                 SemanticUiId::new("record-desk.filter-category"),
                 SemanticUiId::pane(LIST_PANE),
@@ -109,12 +64,8 @@ impl RecordPanes<'_> {
                 Action::FilterCategory,
                 &self.tokens,
             );
-            p.observe_node(ui, category.control.node);
-            for node in category.options {
-                p.observe_node(ui, node);
-            }
             let options: Vec<_> = ReviewFilter::ALL.iter().map(|r| (*r, r.label())).collect();
-            let review = choice_control_with_options(
+            choice_control_with_options(
                 ui,
                 SemanticUiId::new("record-desk.filter-review"),
                 SemanticUiId::pane(LIST_PANE),
@@ -124,31 +75,12 @@ impl RecordPanes<'_> {
                 Action::FilterReview,
                 &self.tokens,
             );
-            p.observe_node(ui, review.control.node);
-            for node in review.options {
-                p.observe_node(ui, node);
-            }
         });
         if filters != *self.filters {
-            self.output.intents.push(Intent::Filters(filters));
+            frame.emit(Intent::Filters(filters));
         }
         ui.horizontal(|ui| {
-            if p.action(
-                ui,
-                Action::ResetFilters,
-                button(
-                    Action::ResetFilters,
-                    None,
-                    self.reset_filters.clone(),
-                    ActionEmphasis::Normal,
-                ),
-            )
-            .clicked()
-            {
-                self.output
-                    .intents
-                    .push(Intent::Action(Action::ResetFilters));
-            }
+            frame.action(ui, p, Action::ResetFilters, ActionEmphasis::Normal);
             p.content(
                 ui,
                 "count",
@@ -186,14 +118,14 @@ impl RecordPanes<'_> {
                 |ui| record_row(ui, record, selected, &self.tokens),
             );
             p.observe_node(ui, node);
-            self.output.text.push(observation);
+            p.observe_text(ui, observation);
             if response.clicked() {
-                self.output.intents.push(Intent::Select(record.id));
+                frame.emit(Intent::Select(record.id));
             }
         }
     }
 
-    fn detail(&mut self, ui: &mut Ui, p: &mut PresentationContext) {
+    fn detail(&mut self, ui: &mut Ui, p: &mut PresentationContext, frame: PaneFrame) {
         let Some(record) = self.draft else {
             p.heading(ui, "empty", "Choose a record");
             p.content(
@@ -229,7 +161,6 @@ impl RecordPanes<'_> {
             &mut draft.title,
             false,
             Some(record.id),
-            self.output,
         );
         p.content(
             ui,
@@ -238,7 +169,7 @@ impl RecordPanes<'_> {
             content_spec(TextRole::Secondary, 1),
         );
         let options: Vec<_> = Category::ALL.iter().map(|c| (*c, c.label())).collect();
-        let category = choice_control_with_options(
+        choice_control_with_options(
             ui,
             SemanticUiId::new(format!("record-desk.category.{}", record.id.0)),
             SemanticUiId::pane(DETAIL_PANE),
@@ -248,29 +179,7 @@ impl RecordPanes<'_> {
             Action::EditCategory,
             &self.tokens,
         );
-        p.observe_node(ui, category.control.node);
-        for node in category.options {
-            p.observe_node(ui, node);
-        }
-        if p.action(
-            ui,
-            "reviewed",
-            ActionButtonSpec {
-                state: ActionButtonState::Toggle {
-                    pressed: draft.reviewed,
-                },
-                ..button(
-                    Action::ToggleReviewed,
-                    Some(DETAIL_PANE),
-                    Availability::Enabled,
-                    ActionEmphasis::Normal,
-                )
-            },
-        )
-        .clicked()
-        {
-            draft.reviewed = !draft.reviewed;
-        }
+        frame.toggle(ui, p, "reviewed", Action::ToggleReviewed, draft.reviewed);
         p.content(
             ui,
             "notes-label",
@@ -285,7 +194,6 @@ impl RecordPanes<'_> {
             &mut draft.notes,
             true,
             Some(record.id),
-            self.output,
         );
         if let Err(error) = validate_record(&draft) {
             p.content(ui, "validation", &error, content_spec(TextRole::Error, 2));
@@ -301,20 +209,8 @@ impl RecordPanes<'_> {
             content_spec(TextRole::Secondary, 2),
         );
         ui.horizontal_wrapped(|ui| {
-            for (action, availability, emphasis) in [
-                (Action::Apply, self.apply.clone(), ActionEmphasis::Primary),
-                (Action::Cancel, self.cancel.clone(), ActionEmphasis::Normal),
-            ] {
-                if p.action(
-                    ui,
-                    action,
-                    button(action, Some(DETAIL_PANE), availability, emphasis),
-                )
-                .clicked()
-                {
-                    self.output.intents.push(Intent::Action(action));
-                }
-            }
+            frame.action(ui, p, Action::Apply, ActionEmphasis::Primary);
+            frame.action(ui, p, Action::Cancel, ActionEmphasis::Normal);
         });
         p.content(
             ui,
@@ -323,12 +219,12 @@ impl RecordPanes<'_> {
             content_spec(TextRole::Caption, 3),
         );
         if draft != *record {
-            self.output.intents.push(Intent::Draft(draft));
+            frame.emit(Intent::Draft(draft));
         }
     }
 }
 
-impl PanePresenter for RecordPanes<'_> {
+impl Panes<Action, Intent> for RecordPanes<'_> {
     fn title(&self, pane: PaneId) -> &'static str {
         if pane == LIST_PANE {
             "Records"
@@ -336,30 +232,15 @@ impl PanePresenter for RecordPanes<'_> {
             "Detail"
         }
     }
-    fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, rect: Rect) {
-        let node_start = self.output.nodes.len();
-        let control_start = self.output.controls.len();
-        let clip = ui.clip_rect();
-        let mut node = UiNode::container(
-            SemanticUiId::pane(pane),
-            Some(SemanticUiId::root()),
-            UiRole::Pane,
-            rect.into(),
-        );
-        node.name = self.title(pane).into();
-        node.pane = Some(pane);
-        self.output.nodes.push(node);
-        let mut p = PresentationContext::new(
-            ui,
-            self.tokens,
-            1.0,
-            PresentationScope::new(("record-desk.pane", pane)).child(if pane == DETAIL_PANE {
-                self.selected
-            } else {
-                None
-            }),
-            SemanticUiId::pane(pane),
-        );
+
+    fn pane_ui(&mut self, ui: &mut Ui, pane: PaneId, frame: PaneFrame) {
+        let record = if pane == DETAIL_PANE {
+            self.selected
+        } else {
+            None
+        };
+        let scope = PresentationScope::new(("record-desk.pane", pane)).child(record);
+        let mut p = frame.pane_presentation(ui, scope, pane);
         if pane == DETAIL_PANE
             && let Some(id) = self.selected
         {
@@ -371,75 +252,11 @@ impl PanePresenter for RecordPanes<'_> {
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
                 if pane == LIST_PANE {
-                    self.list(ui, &mut p);
+                    self.list(ui, &mut p, frame);
                 } else {
-                    self.detail(ui, &mut p);
+                    self.detail(ui, &mut p, frame);
                 }
             });
-        let observed = p.finish(ui);
-        self.output.nodes.extend(observed.semantic_nodes);
-        self.output.text.extend(observed.text_layouts);
-        self.output.nodes[node_start..].iter_mut().for_each(|node| {
-            let r = Rect::from_min_max(
-                egui::pos2(node.rect.min_x, node.rect.min_y),
-                egui::pos2(node.rect.max_x, node.rect.max_y),
-            );
-            if node.role != UiRole::RadioButton {
-                node.rect = r.intersect(clip).into();
-            }
-        });
-        self.output.nodes.retain(|node| node.rect.is_positive());
-        self.output.controls[control_start..]
-            .iter_mut()
-            .for_each(|control| {
-                let r = Rect::from_min_max(
-                    egui::pos2(control.rect.min_x, control.rect.min_y),
-                    egui::pos2(control.rect.max_x, control.rect.max_y),
-                );
-                control.rect = r.intersect(clip).into();
-            });
-        self.output
-            .controls
-            .retain(|control| control.rect.is_positive());
-    }
-    fn record_tab_rect(&mut self, pane: PaneId, rect: Rect, selected: bool, focused: bool) {
-        let mut node = UiNode::container(
-            SemanticUiId::tab(pane),
-            Some(SemanticUiId::root()),
-            UiRole::Tab,
-            rect.into(),
-        );
-        node.name = self.title(pane).into();
-        node.pane = Some(pane);
-        node.selected = selected;
-        node.focused = focused;
-        self.output.nodes.push(node);
-    }
-    fn record_text_layout(&mut self, observation: TextLayoutObservation) {
-        self.output.text.push(observation);
-    }
-    fn record_splitter_rect(
-        &mut self,
-        id: DockNodeId,
-        rect: Rect,
-        horizontal: bool,
-        focused: bool,
-    ) {
-        let mut node = UiNode::container(
-            SemanticUiId::splitter(id),
-            Some(SemanticUiId::root()),
-            UiRole::Splitter,
-            rect.into(),
-        );
-        node.name = if horizontal {
-            "Vertical splitter"
-        } else {
-            "Horizontal splitter"
-        }
-        .into();
-        node.description = Some("Resize adjacent dock panes".into());
-        node.focused = focused;
-        self.output.nodes.push(node);
     }
 }
 
@@ -462,7 +279,6 @@ fn set_visible_bounds(node: &mut egui::accesskit::Node, response: &egui::Respons
 }
 
 // Keep the native control's identity and observation inputs explicit.
-#[allow(clippy::too_many_arguments)]
 fn text_input(
     ui: &mut Ui,
     p: &mut PresentationContext,
@@ -471,7 +287,6 @@ fn text_input(
     value: &mut String,
     multiline: bool,
     record: Option<RecordId>,
-    output: &mut PaneOutput,
 ) -> egui::Response {
     let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
         let edit = if multiline {
@@ -489,12 +304,6 @@ fn text_input(
             set_visible_bounds(node, &response);
         });
         (response, ())
-    });
-    output.controls.push(Control {
-        name: name.into(),
-        id: id.into(),
-        rect: response.rect.into(),
-        focused: response.has_focus(),
     });
     let mut node = UiNode::container(
         SemanticUiId::new(id),

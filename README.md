@@ -18,13 +18,15 @@ They run natively and in the browser from Rust application code.
 The project is under active development. Its APIs remain concrete and driven
 by the example applications; it is not yet a stable general-purpose framework.
 
-For a first application, use [Record Desk](consumers/record-desk/README.md) and
-the [public composition guide](docs/application-composition.md). Record Desk is
-its own Cargo workspace: find/edit/review synthetic records, Apply one validated
-transaction, undo/redo and save committed records/layout across native restarts
-and browser reloads. It imports only public core/UI APIs and owns its domain
-rules. The guide also explains the four framework owners, retains a minimal
-triangle example and links local rustdoc generation.
+For a first application, start with the
+[composition guide](docs/application-composition.md) and its compiled `notes`
+example: an application declares state, actions, UI and intent handling, and
+the framework host owns observation, shortcuts, agent inspection and repaint.
+[Record Desk](consumers/record-desk/README.md) is the larger reference
+consumer, in its own Cargo workspace: find/edit/review synthetic records, Apply
+one validated transaction, undo/redo and save committed records/layout across
+native restarts and browser reloads. It imports only public core/UI APIs and
+owns its domain rules.
 
 ![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/images/analytical-workspace-lab-dark.webp)
 
@@ -238,8 +240,10 @@ does not update them automatically.
 ## Documentation
 
 - [Working rules](AGENTS.md): architectural boundaries and contribution expectations.
-- [Application composition](docs/application-composition.md): four-crate lifecycle,
-  local rustdoc, a minimal native consumer and a public presenter variation.
+- [Application composition](docs/application-composition.md): the hosted
+  application path, derived actions, panes, browser entry and local rustdoc.
+- [Image application composition](docs/image-application-composition.md): the
+  four-crate GPU image lifecycle, a minimal triangle consumer and a presenter variation.
 - [Application inspection and exercise](docs/application-interface.md): shared
   native/browser client, typed discovery and invocation, bounded queries and
   waits, physical targeting and capture provenance.

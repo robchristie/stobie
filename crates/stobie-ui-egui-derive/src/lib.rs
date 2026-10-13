@@ -6,8 +6,8 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, quote_spanned};
 use syn::{
-    Data, DeriveInput, Error, Fields, Ident, LitStr, Path, Variant, meta::ParseNestedMeta,
-    parse_macro_input,
+    Data, DeriveInput, Error, Fields, Ident, LitStr, Path, Variant, ext::IdentExt,
+    meta::ParseNestedMeta, parse_macro_input,
 };
 
 /// Implement `ActionKey` and `ActionSet` for an enum of unit variants.
@@ -213,7 +213,11 @@ fn action_variant(variant: &Variant, prefix: Option<&LitStr>) -> syn::Result<Act
     let description = options.description.ok_or_else(|| missing("description"))?;
     let id = match (&options.id, prefix) {
         (Some(id), _) => id.value(),
-        (None, Some(prefix)) => format!("{}.{}", prefix.value(), kebab(&variant.ident.to_string())),
+        (None, Some(prefix)) => format!(
+            "{}.{}",
+            prefix.value(),
+            kebab(&variant.ident.unraw().to_string())
+        ),
         (None, None) => {
             return Err(Error::new_spanned(
                 &variant.ident,
@@ -408,6 +412,11 @@ const KEYS: &[(&str, &[&str])] = &[
     ("F12", &["f12"]),
 ];
 
+const SHIFTED_CHARACTERS: &[&str] = &[
+    "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Comma",
+    "Period", "Minus", "Equals", "Slash",
+];
+
 fn parse_shortcut(literal: &LitStr) -> syn::Result<Shortcut> {
     let error = |message: String| Error::new(literal.span(), message);
     let value = literal.value();
@@ -465,6 +474,13 @@ fn parse_shortcut(literal: &LitStr) -> syn::Result<Shortcut> {
                 "unknown key `{key}`; use A–Z, 0–9, Enter, Escape, Space, Backspace, Delete, Insert, Home, End, PageUp, PageDown, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Comma, Period, Minus, Equals, Slash or F1–F12"
             ))
         })?;
+    // egui matches the logical key, and Shift changes the character these keys
+    // produce on common layouts, so such a chord would never fire.
+    if shortcut.shift && SHIFTED_CHARACTERS.contains(&shortcut.key) {
+        return Err(error(format!(
+            "Shift changes the character `{key}` produces, so this chord never reaches the application; bind a letter or named key instead"
+        )));
+    }
     Ok(shortcut)
 }
 
@@ -558,7 +574,7 @@ fn generate(name: &Ident, krate: &Path, variants: &[ActionVariant]) -> TokenStre
 
 #[cfg(test)]
 mod tests {
-    use super::kebab;
+    use super::{Ident, IdentExt, kebab};
 
     #[test]
     fn kebab_case_splits_words_acronyms_and_underscores() {
@@ -568,5 +584,7 @@ mod tests {
         assert_eq!(kebab("OpenHTTPLink"), "open-http-link");
         assert_eq!(kebab("Tool2Mode"), "tool2-mode");
         assert_eq!(kebab("Snake_Case"), "snake-case");
+        let raw: Ident = syn::parse_quote!(r#Move);
+        assert_eq!(kebab(&raw.unraw().to_string()), "move");
     }
 }

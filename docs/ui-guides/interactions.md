@@ -6,8 +6,9 @@ Its generic `ActionSpec<A>` supplies the label, description, optional compact
 label, shortcut and scope; the key supplies the stable external ID. The derive
 declares these once per variant, checks shortcuts and identities at compile
 time and lists every action in `ActionSet::ALL`. Actions are semantically
-invocable unless they declare `physical_only` with a reason. Controls, shortcut routing, semantic
-metadata, tests and physical targeting must share that typed identity; do not
+invocable unless they declare `physical_only` with a reason. Controls, shortcut
+routing, semantic metadata, tests and physical targeting must share that typed
+identity; do not
 create a parallel string action name or add application capabilities to
 `stobie-ui-egui`.
 
@@ -23,7 +24,10 @@ not silently consume an unavailable action.
 ## Keyboard and pointer behaviour
 
 Use the registered shortcut only in its valid scope. Pane shortcuts require an
-active pane and non-command shortcuts yield to egui text input. Tabs support
+active pane and non-command shortcuts yield to egui text input. A hosted
+application's shortcuts dispatch through `AppHost`: modifiers must match
+exactly, and an unavailable shortcut leaves its key press unconsumed, so a
+Shift chord never falls through to its plain counterpart. Tabs support
 roving Left/Right/Home/End plus Enter/Space activation. Splitters expose the
 same 0.05 adjustment through keyboard and semantic increment/decrement paths
 as they do through the gesture command path.

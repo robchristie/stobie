@@ -27,7 +27,7 @@ pub trait ActionKey: Copy + Eq + Hash + Ord + Serialize {
 
 /// The complete, closed set of an application's actions, used to discover,
 /// dispatch and audit every capability without a hand-maintained list.
-pub trait ActionSet: ActionKey + 'static {
+pub trait ActionSet: ActionKey + std::fmt::Debug + 'static {
     /// Every action, in declaration order.
     const ALL: &'static [Self];
 }
@@ -268,20 +268,49 @@ pub struct ActionTarget<A: ActionKey> {
     pub pane: Option<PaneId>,
 }
 
+/// An action, or an explicit target, resolved against the pane it is presented
+/// in. Hosted frames accept either: an application-scoped action is its own
+/// target, and a pane-scoped action takes the pane of its pane presentation.
+pub trait IntoActionTarget<A: ActionKey> {
+    /// Resolve the target. Panics for a pane-scoped action without a pane.
+    fn into_target(self, pane: Option<PaneId>) -> ActionTarget<A>;
+}
+
+impl<A: ActionKey> IntoActionTarget<A> for A {
+    fn into_target(self, pane: Option<PaneId>) -> ActionTarget<A> {
+        match (self.specification().scope, pane) {
+            (ActionScope::Application, _) => ActionTarget::application(self),
+            (_, Some(pane)) => ActionTarget::pane(self, pane),
+            (_, None) => panic!(
+                "`{}` is pane-scoped: present it inside Frame::pane_presentation or pass ActionTarget::pane",
+                self.stable_id()
+            ),
+        }
+    }
+}
+
+impl<A: ActionKey> IntoActionTarget<A> for ActionTarget<A> {
+    fn into_target(self, _pane: Option<PaneId>) -> ActionTarget<A> {
+        self
+    }
+}
+
 impl<A: ActionKey> ActionTarget<A> {
     pub fn application(action: A) -> Self {
-        assert!(matches!(
-            action.specification().scope,
-            ActionScope::Application
-        ));
+        assert!(
+            matches!(action.specification().scope, ActionScope::Application),
+            "`{}` is pane-scoped; use ActionTarget::pane",
+            action.stable_id()
+        );
         Self { action, pane: None }
     }
 
     pub fn pane(action: A, pane: PaneId) -> Self {
-        assert!(!matches!(
-            action.specification().scope,
-            ActionScope::Application
-        ));
+        assert!(
+            !matches!(action.specification().scope, ActionScope::Application),
+            "`{}` is application-scoped; use ActionTarget::application",
+            action.stable_id()
+        );
         Self {
             action,
             pane: Some(pane),
