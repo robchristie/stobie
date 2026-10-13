@@ -1,7 +1,7 @@
 # Rename the project to Stobie
 
-Status: active
-Next action: Verify saved-state compatibility and the renamed native/browser packages, inspect current snapshot changes, then complete review and landing.
+Status: complete
+Delivery: [PR #60](https://github.com/robchristie/stobie/pull/60)
 
 ## Outcome and scope
 
@@ -31,8 +31,28 @@ observations retain their original bytes and attribution.
 - Pass `cargo xtask verify`, independent review of the final revision, and
   applicable pull-request and post-merge CI.
 
-## Current phase
+## Verified outcome
 
-Active identifiers and paths are renamed. Saved-state fallback and native and
-browser migration regressions are implemented. Verification and snapshot
-inspection remain in progress.
+Active identifiers and paths use Stobie. Saved-state migration, current-state
+precedence and malformed-state preservation passed native and same-origin
+browser regressions. All eight canonical verification stages passed: checks,
+native-lab, native-other, browser, gallery-browser, production, ui and
+record-desk. The first five passed through `cargo xtask verify`; the remaining
+surface used the same stage commands and assertions with the local UI sysroot
+and scoped Xvfb where needed. Production packaging and response-header checks
+were retained from the successful build; startup smoke and its one-pair local
+benchmark then passed under the working headful configuration. The unsupported
+headless attempt's GPU allocation failure remains diagnostic evidence, not a
+passing run.
+
+All 14 current snapshots passed at zero tolerance after inspection. Pixel
+changes are confined to the Gallery branding row; metadata is unchanged, and
+semantic/text changes follow namespace-derived identities and ordering. All
+165 matching archived artefacts remain byte-exact. The first source candidate
+also passed [CI 38329426420](https://github.com/robchristie/stobie/actions/runs/38329426420).
+
+The renamed private preview reached launcher readiness. This host's browser
+received HTTP 403, so private-preview browser qualification was not established.
+The local native/browser journeys above establish the product checks. Exact
+final-revision review, pull-request CI, merge and post-merge CI belong to the
+pull request's delivery record.

@@ -173,6 +173,10 @@ Native uses `$XDG_STATE_HOME/stobie-record-desk/state.json`, falling back to
 sync a temporary file in the same directory then atomically replace the state.
 Browser uses the current origin's `localStorage` key
 `stobie.record-desk.v1`. Keeping the same origin/port preserves local state.
+When the new location is absent, existing state from the former project name
+remains readable; Save uses the new location and retains the former copy.
+An explicit state path disables this fallback. See the
+[project rename guide](../../docs/project-rename.md) for migration details.
 
 Missing saved data starts the synthetic collection. Malformed, unsupported,
 unreadable or oversized state reports an error and blocks Save. Existing state
