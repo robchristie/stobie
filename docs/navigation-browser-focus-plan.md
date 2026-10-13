@@ -58,7 +58,7 @@ on actual Rust 1.99.0 in 331.15 seconds, clean before and after. The new Node
 regression runs through the existing explicit xtask list; the complete committed
 physical browser workflow also passes.
 
-[Applicability proof](navigation-browser-focus-evidence/browser-focus-applicability.json)
+[Applicability proof](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/browser-focus-applicability.json)
 hashes all 135 relevant Rust/Cargo/minimum/lock/toolchain inputs. Only xtask's
 explicit new Node-test filename differs; application/crate source remains.
 All twenty-seven raw production assets, every HTML entry and the actual

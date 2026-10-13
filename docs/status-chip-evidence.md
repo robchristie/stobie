@@ -42,16 +42,16 @@ There is no new interaction, workflow enum or announcement policy.
 - [Task rows and detail heading](ui-snapshots/expected/status-chip-tasks-dark/visual.png).
 - [Light compact tones and parent surfaces](ui-snapshots/expected/status-chip-treatments-light/visual.png).
 - [Narrow high-contrast localised labels at 150%](ui-snapshots/expected/status-chip-long-high-contrast/visual.png).
-- [Actual hovered task row](status-chip-evidence/browser-row-hover.png) and
-  [selected task/detail](status-chip-evidence/browser-row-selected.png).
-- [Current status update](status-chip-evidence/browser-updated.png).
-- [Dark high contrast](status-chip-evidence/browser-dark-high-contrast.png) and
-  [light high contrast at 150% on all three parents](status-chip-evidence/browser-light-high-contrast-150.png).
-- [Selected elided localised text](status-chip-evidence/browser-long-copy.png) and
-  [scrolled current observations](status-chip-evidence/browser-scrolled.png).
-- [Native task/status update](status-chip-evidence/native-status-chips.png).
+- [Actual hovered task row](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-row-hover.png) and
+  [selected task/detail](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-row-selected.png).
+- [Current status update](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-updated.png).
+- [Dark high contrast](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-dark-high-contrast.png) and
+  [light high contrast at 150% on all three parents](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-light-high-contrast-150.png).
+- [Selected elided localised text](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-long-copy.png) and
+  [scrolled current observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-scrolled.png).
+- [Native task/status update](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/native-status-chips.png).
 
-[Browser observations](status-chip-evidence/browser-workflow.json) retain physical
+[Browser observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/browser-workflow.json) retain physical
 mouse/keyboard targets, full clipboard assertions, state updates, configurations,
 WASM/image hashes, browser version and settled idle proof. Hooks only select
 fixed stories/appearance and read current observations; they do not activate
@@ -61,7 +61,7 @@ parent through the same path, with a visible token focus ring. Returning
 to the first task and applying the separate consumer action changes Active to
 Completed at its unchanged logical identity, without stale Active observations.
 
-[Native observations](status-chip-evidence/native-workflow.json) retain actual
+[Native observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/status-chip-evidence/native-workflow.json) retain actual
 xdotool selection/Copy input, inert parent activation, selected detail, consumer
 status update, binary/image hashes and settled idle proof. The native journey
 exercises clipboard input; full native label-copy output is asserted directly

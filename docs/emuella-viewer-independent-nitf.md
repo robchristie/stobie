@@ -8,7 +8,7 @@ protected imagery, or derivative input is permitted.
 
 The selected 43,008 by 43,008 U11 mono NITF has SHA-256
 `dcf61436814d33c75c876b173f2dc87fcbd61571be7e766489dd884ab9891c07`.
-Its [creation record](emuella-viewer-evidence/nitf-calibration/source-43008-provenance.json)
+Its [creation record](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/emuella-viewer-evidence/nitf-calibration/source-43008-provenance.json)
 identifies `NITF02.10`, `IC=C8`, `ABPP=11`, UInt16 storage and 11 meaningful
 unsigned bits. First profiles are native U11 mono, U16 grey, and RGB8/RGB16
 small fixtures; the large frozen profile is U11 mono only.
@@ -23,7 +23,7 @@ owner revisions are codec `2568f1c40c83a40f527c7ee8f1600af511e046d0`, plugin
 `f5e21e5b9bdd9ffab95f19299e2ceb81a18fee84`, maintained GDAL
 `1af54d99959f3b62ba10451a357a969075374663`, and testdata
 `2d519ddaf019f10b9e409ea3338d395438486647`; hashes and build-record bindings
-are retained in [build-attestation.json](emuella-viewer-evidence/nitf-calibration/build-attestation.json).
+are retained in [build-attestation.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/emuella-viewer-evidence/nitf-calibration/build-attestation.json).
 
 Use a new registered scratch child for every generation and measurement. Set
 `TESTDATA_REPO`, `GENERATION_GDAL_LIBRARY`, `GENERATION_LD_LIBRARY_PATH`,

@@ -107,9 +107,9 @@ for selected artefacts. Principal proof includes:
 - the increment 8 dark, light, high-contrast/150%, narrow, display-control,
   long-text, loading and error captures;
 - final browser application observations in
-  [increment-9-browser-performance.json](design-agent-loop-evidence/increment-9-browser-performance.json);
+  [increment-9-browser-performance.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/design-agent-loop-evidence/increment-9-browser-performance.json);
 - final browser gallery observations in
-  [increment-9-gallery-browser-evidence.json](design-agent-loop-evidence/increment-9-gallery-browser-evidence.json);
+  [increment-9-gallery-browser-evidence.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/design-agent-loop-evidence/increment-9-gallery-browser-evidence.json);
 - final application semantic evidence for native and browser in the increment
   8 files; and
 - focused component, pane, interaction, token, accessibility and review guides

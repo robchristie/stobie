@@ -41,7 +41,7 @@ idle, native/browser evidence and all 41 mandatory criteria are reconciled in
 - idle: browser warmed frame counter stopped and repaint reason was `None`;
 - environment: cargo 1.97.1, rustc 1.97.1, Node 25.8.2, npm 11.11.1,
   wasm-bindgen 0.2.127, egui/eframe 0.36.1, wgpu 30.0.1;
-- existing captures: [vertical-slice-evidence](vertical-slice-evidence).
+- existing captures: [vertical-slice-evidence](https://github.com/robchristie/stobie/tree/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence).
 
 Baseline verification overwrote several tracked evidence files with
 run-dependent timings. Increment 3 corrected the canonical verifier to route
@@ -80,7 +80,7 @@ now publishes that ignored evidence only when CI fails.
 | 4 | Reusable AccessKit-semantic shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
-| 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](design-agent-loop-evidence/increment-7-ui-verification.json) |
+| 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/design-agent-loop-evidence/increment-7-ui-verification.json) |
 | 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Landed | PR #16 and [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
 | 9 | Final performance/idle/native/browser hardening and report | 8 | Landed | PR #17 and [final report](design-agent-loop-report.md) |
 

@@ -26,7 +26,7 @@ and browser reloads. It imports only public core/UI APIs and owns its domain
 rules. The guide also explains the four framework owners, retains a minimal
 triangle example and links local rustdoc generation.
 
-![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/design-agent-loop-evidence/increment-8-browser-dark.png)
+![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/images/analytical-workspace-lab-dark.webp)
 
 *Browser capture from the [design-system verification evidence](docs/design-agent-loop-evidence/README.md).*
 
@@ -199,7 +199,9 @@ and runs application/gallery browser smokes and deterministic UI snapshots.
 Explicit Record Desk checks cover its excluded Cargo workspace, dependency
 independence, tests, native/WASM lint/build and physical native/browser workflows.
 On Linux it also runs native interaction smokes. Generated evidence goes to
-the ignored `.tools/runtime/verification-evidence/` directory.
+the ignored `.tools/runtime/verification-evidence/` directory; raw evidence is
+never committed. The [evidence archive](docs/evidence-archive.md) explains what
+stays tracked and how to retrieve archived captures.
 
 Full verification requires the browser build tools above, Rust's `rustfmt` and
 `clippy` components, Node.js/npm and the platform's browser/graphics libraries.

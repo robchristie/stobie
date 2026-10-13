@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/nvme/development/emuella/worktrees/polyorama-proof/polyorama/tools/viewer-composed-journey.py", line 301, in <module>
-    raise SystemExit(main())
-                     ~~~~^^
-  File "/nvme/development/emuella/worktrees/polyorama-proof/polyorama/tools/viewer-composed-journey.py", line 200, in main
-    final = recovery.get('states', [{}])[-1].get('snapshot', {})
-            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
-IndexError: list index out of range

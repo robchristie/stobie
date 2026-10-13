@@ -22,7 +22,7 @@ rich-text painting behaviour.
 
 ## Verification result
 
-[Canonical verification](canonical-verification.log) passed governance,
+[Canonical verification](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/canonical-verification.log) passed governance,
 formatting, generated-token drift, native and Wasm Clippy, workspace tests,
 architecture boundaries, release native/Wasm builds and both browser smokes.
 The gallery has 9 passing tests and the UI crate has 61. The new gallery test
@@ -36,26 +36,26 @@ the native workbench entry: 26 native controls instead of 25, and the explicit
 `native_button_text` exclusion. This deliberate coverage delta also requires
 baseline acceptance, supplied explicitly by the user on 2026-09-07. The accepted
 images and text coverage records now replace those five files pairs under
-`docs/ui-snapshots/expected/`. The [summary](summary.json)
-records pixel counts and the exact Wasm identity; [artefact hashes](artefact-hashes.json)
+`docs/ui-snapshots/expected/`. The [summary](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/summary.json)
+records pixel counts and the exact Wasm identity; [artefact hashes](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/artefact-hashes.json)
 bind the retained evidence files.
 
 The canonical command stops before native smokes when visual baselines fail.
 Both native smokes ran separately and passed at the preceding `ab86d64`
-checkpoint: [native verification](native-verification.log). The affected gallery
+checkpoint: [native verification](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/native-verification.log). The affected gallery
 native smoke ran again at `a3eb846` and passed:
-[entry repair native verification](entry-native-verification.log),
-[current native gallery capture](gallery-native.png). These establish Linux GL/llvmpipe
+[entry repair native verification](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/entry-native-verification.log),
+[current native gallery capture](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/gallery-native.png). These establish Linux GL/llvmpipe
 functional behaviour, not physical-GPU performance or additional assistive
 technology qualification.
 
 | Fixture | Candidate | Difference | Expected |
 | --- | --- | --- | --- |
-| Application shell | [Actual](snapshots/application-shell-dark/actual.png) | [Diff](snapshots/application-shell-dark/diff.png) | [Approved](../ui-snapshots/expected/application-shell-dark/visual.png) |
-| Diagnostics high contrast | [Actual](snapshots/diagnostics-high-contrast/actual.png) | [Diff](snapshots/diagnostics-high-contrast/diff.png) | [Approved](../ui-snapshots/expected/diagnostics-high-contrast/visual.png) |
-| Narrow tabs | [Actual](snapshots/tabs-narrow-wide/actual.png) | [Diff](snapshots/tabs-narrow-wide/diff.png) | [Approved](../ui-snapshots/expected/tabs-narrow-wide/visual.png) |
-| Splitter states | [Actual](snapshots/splitter-states/actual.png) | [Diff](snapshots/splitter-states/diff.png) | [Approved](../ui-snapshots/expected/splitter-states/visual.png) |
-| Keyboard focus | [Actual](snapshots/button-keyboard-focus/actual.png) | [Diff](snapshots/button-keyboard-focus/diff.png) | [Approved](../ui-snapshots/expected/button-keyboard-focus/visual.png) |
+| Application shell | [Actual](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/application-shell-dark/actual.png) | [Diff](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/application-shell-dark/diff.png) | [Approved](../ui-snapshots/expected/application-shell-dark/visual.png) |
+| Diagnostics high contrast | [Actual](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/diagnostics-high-contrast/actual.png) | [Diff](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/diagnostics-high-contrast/diff.png) | [Approved](../ui-snapshots/expected/diagnostics-high-contrast/visual.png) |
+| Narrow tabs | [Actual](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/tabs-narrow-wide/actual.png) | [Diff](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/tabs-narrow-wide/diff.png) | [Approved](../ui-snapshots/expected/tabs-narrow-wide/visual.png) |
+| Splitter states | [Actual](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/splitter-states/actual.png) | [Diff](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/splitter-states/diff.png) | [Approved](../ui-snapshots/expected/splitter-states/visual.png) |
+| Keyboard focus | [Actual](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/button-keyboard-focus/actual.png) | [Diff](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/button-keyboard-focus/diff.png) | [Approved](../ui-snapshots/expected/button-keyboard-focus/visual.png) |
 
 The differences include the workbench entry control, token-derived native
 foregrounds and fills, and corrected primary/pressed treatment. The user accepted these
@@ -75,17 +75,17 @@ honest native-button inventory; it does not change authoring or export behaviour
 
 The journey opened the workbench, selected Neutral graphite, edited its dark
 decorative border from `#333338` to `#2B2B2E`, and copied the complete four-mode
-[ThemeColours JSON](workbench/exported-theme.json) from the actual browser
+[ThemeColours JSON](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/workbench/exported-theme.json) from the actual browser
 clipboard. An invalid near-white primary foreground on its near-white primary
 background then failed at 1.09:1: the preview retained the last valid identity
 and the export button became disabled. The journey also toggled the analytical
 reference comparison, selected Warm paper in light mode, and returned to
 Neutral graphite on the production button story.
 
-- [Graphite on production buttons](workbench/graphite-components.png)
-- [Rejected edit and disabled export](workbench/invalid-edit.png)
-- [Analytical reference comparison](workbench/reference-comparison.png)
-- [Warm paper on the same reference shell](workbench/warm-light.png)
+- [Graphite on production buttons](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/workbench/graphite-components.png)
+- [Rejected edit and disabled export](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/workbench/invalid-edit.png)
+- [Analytical reference comparison](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/workbench/reference-comparison.png)
+- [Warm paper on the same reference shell](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/workbench/warm-light.png)
 
 ## Enlarged-text entry repair
 
@@ -97,7 +97,7 @@ remain within the 228-point sidebar content area, the label is not elided, and
 AccessKit retains the complete button name. The native-button inventory remains
 explicitly outside structural text measurement.
 
-The regenerated [150% high-contrast candidate](snapshots/diagnostics-high-contrast/actual.png)
+The regenerated [150% high-contrast candidate](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-identity-evidence/snapshots/diagnostics-high-contrast/actual.png)
 shows the complete entry within the sidebar. All five candidate bundles were
 regenerated from the `a3eb846` release Wasm, rather than reusing the earlier
 images. Their unchanged text observations and intentional inventory delta are

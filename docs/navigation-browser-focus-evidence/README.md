@@ -9,12 +9,12 @@ failed a separate browser observer. The new repair's canonical source is clean
 `cf563a43ba320ea69db7987e1e9f52b0c97a83ed`. Later documentation commits do not
 relabel that build or its production manifest.
 
-[observations.tar.gz](observations.tar.gz) contains twenty-five files, including
+[observations.tar.gz](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/observations.tar.gz) contains twenty-five files, including
 the complete failing merge-CI log, structured failure and opened capture,
 actual-source fail-before probe, seven production-function cases, focused and
 committed canonical browser reports/captures, complete canonical log/receipt,
 production manifest, actual helper/caller/test/xtask source and applicability
-proof. [archive-index.json](archive-index.json) binds every member's size/SHA-256
+proof. [archive-index.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/archive-index.json) binds every member's size/SHA-256
 and archive SHA-256 `b3648dee83ca2fcd8753ede9e44b3097830df8c00ae8f619ca1b3fc4b5478b8f`.
 No input payload, executable, profile, cookie or protected material is included.
 
@@ -57,17 +57,17 @@ The focused capture was opened. These observations are retained with their
 original attribution; the committed canonical run supplies the clean-source
 integration proof.
 
-[Canonical receipt](browser-focus-canonical.json) binds clean committed `c3aa…`,
+[Canonical receipt](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/browser-focus-canonical.json) binds clean committed `c3aa…`,
 actual rustc/Cargo 1.99.0 and the recorded four-job Linux/bundled-library/font
 environment: complete `cargo xtask verify`, exit zero in 331.15 seconds.
 Formatting, native/WASM lint/tests/releases, architecture/API documentation,
 fourteen snapshots, every native/browser workflow and independent Record Desk
 pass. The new seven cases run through xtask's explicit Node list. The committed
 browser report and opened capture again show Tasks focused with Home selected.
-[Production manifest](browser-focus-production-manifest.json) keeps the actual
+[Production manifest](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/browser-focus-production-manifest.json) keeps the actual
 canonical commit rather than a later evidence head.
 
-[Applicability](browser-focus-applicability.json) hashes all 135 relevant Rust,
+[Applicability](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-browser-focus-evidence/browser-focus-applicability.json) hashes all 135 relevant Rust,
 Cargo/minimum/lock/toolchain inputs against initial application qualification.
 Only `xtask/src/main.rs` differs: its sole change adds the new Node test filename.
 Application/crate Rust and Cargo inputs remain unchanged. All twenty-seven raw

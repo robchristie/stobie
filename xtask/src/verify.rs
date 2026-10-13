@@ -62,6 +62,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                 "python3",
                 &["-m", "unittest", "discover", "-s", "tools/tests"],
             )?;
+            run("python3", &["tools/check-tracked-files.py"])?;
             plans::check(Path::new("."))?;
             tokens::check(Path::new("."))?;
             run("cargo", &["fmt", "--all", "--check"])?;

@@ -84,7 +84,7 @@ observations inform the coordinator's later choice, without an optimisation here
 **Reject the existing HT profile for the frozen real-scene display criteria.**
 No common development rate passes PAN16 and RGB16. These are full original
 scenes, not substituted crops; only the predeclared quality observations are
-regional. The [numerical evidence](real-scene-viewing-evidence.json) binds source,
+regional. The [numerical evidence](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/real-scene-viewing-evidence.json) binds source,
 binaries, preparation, traces, complete references and protected evidence hashes.
 
 | Development product | Rate (bpp) | Preparation wall (s) | Payload + descriptors (bytes) | Worst display RMSE / p99 (U8) | Result |

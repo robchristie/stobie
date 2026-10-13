@@ -37,6 +37,9 @@
 - Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 - Full verification is `cargo xtask verify`. It must retain formatting, lint,
   tests, release native build, WASM build, architecture checks and browser smoke.
+- Never commit raw evidence such as screenshots, logs or JSON captures. Write it
+  under ignored `.tools/runtime/` and keep the conclusions and SHA-256 hashes in
+  Markdown, as described in [docs/evidence-archive.md](docs/evidence-archive.md).
 - Do not allocate the complete raster, one million result rows, or one hundred
   thousand thumbnail widgets.
 

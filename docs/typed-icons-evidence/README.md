@@ -76,17 +76,17 @@ records remain in ignored `.tools/runtime/`; they are not accepted evidence.
 
 ## Inspected artefacts
 
-- [Dark toolbar](browser-toolbar-dark.png) and [light compact toolbar](browser-toolbar-light-compact.png).
-- [Hover](browser-hover.png), [held press](browser-pressed.png),
-  [keyboard focus](browser-keyboard-focus.png), [focused press](browser-focused-pressed.png)
-  and [disabled explanation](browser-disabled-tooltip.png).
-- [Dark high-contrast narrow/150%](browser-long-narrow-high-contrast.png), plus the
+- [Dark toolbar](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-toolbar-dark.png) and [light compact toolbar](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-toolbar-light-compact.png).
+- [Hover](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-hover.png), [held press](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-pressed.png),
+  [keyboard focus](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-keyboard-focus.png), [focused press](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-focused-pressed.png)
+  and [disabled explanation](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-disabled-tooltip.png).
+- [Dark high-contrast narrow/150%](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-long-narrow-high-contrast.png), plus the
   [light high-contrast baseline](../ui-snapshots/expected/icon-long-high-contrast/visual.png).
-- [Vocabulary](browser-vocabulary.png), [1.25 display scale](browser-vocabulary-display-1.25.png)
-  and [2 display scale](browser-vocabulary-display-2.png), plus the
+- [Vocabulary](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-vocabulary.png), [1.25 display scale](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-vocabulary-display-1.25.png)
+  and [2 display scale](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-vocabulary-display-2.png), plus the
   [light compact baseline](../ui-snapshots/expected/icon-vocabulary-light/visual.png).
 
-The [browser observations](browser-observations.json) retain fixture/configuration,
+The [browser observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-observations.json) retain fixture/configuration,
 input feedback, audits, coverage, actual display scale, rendered pixel statistics,
 image hashes and warmed idle evidence. PNGs were opened and inspected, including
 simultaneous focus/press and all display-scale captures. Hover/press differ within
@@ -95,9 +95,9 @@ not merely in unrelated page pixels. Native observations and captures accompany
 this record. These visual probes identify their provisional source/build explicitly;
 the owning PR retains exact committed-candidate canonical/CI and landing evidence.
 
-Native [presentations](native-presentations.png), [toolbar](native-toolbar.png)
-and [narrow high-contrast](native-narrow-high-contrast.png) captures have their
-[observations](native-observations.json) retained separately. The narrow probe
+Native [presentations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/native-presentations.png), [toolbar](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/native-toolbar.png)
+and [narrow high-contrast](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/native-narrow-high-contrast.png) captures have their
+[observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/native-observations.json) retained separately. The narrow probe
 predates the shared state-outline repair; its label/artwork layout and input path
 are unchanged. Presentations/toolbar were recaptured after that repair. The
 common icon-size token is generated behind `DesignTokens::icon_size()` so existing

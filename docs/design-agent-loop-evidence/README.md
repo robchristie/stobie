@@ -163,7 +163,7 @@ semantic snapshots, text observations and PNGs are owned by
 [`../ui-snapshots/`](../ui-snapshots/); they pin viewport, data seed,
 preferences, bundled fonts and renderer contract.
 
-[`increment-7-ui-verification.json`](increment-7-ui-verification.json) records
+[`increment-7-ui-verification.json`](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/design-agent-loop-evidence/increment-7-ui-verification.json) records
 the exact environment, command, fixture hashes and four negative probes. A
 one-field mismatch emitted complete expected/actual/diff evidence; browser
 launch failure retained per-fixture unavailable evidence and logs plus the root

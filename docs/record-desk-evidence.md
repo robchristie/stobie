@@ -4,7 +4,7 @@ The [execution plan](record-desk-plan.md) owns acceptance and the short design
 contract. The [consumer README](../consumers/record-desk/README.md) owns executable
 commands, lifecycle, extension and persistence. Detailed generated logs,
 metadata, step snapshots and captures stay in ignored runtime evidence.
-The [qualification manifest](record-desk-evidence/qualification.json) records
+The [qualification manifest](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/qualification.json) records
 source/build/capture hashes. [PR #47](https://github.com/robchristie/stobie/pull/47)
 owns exact-head review, candidate and post-merge CI, and terminal landing evidence.
 
@@ -143,12 +143,12 @@ stacked list. The final review found no blocking overlap, truncation or hierarch
 defect in these states. The captures below are opened inspection artefacts rather
 than new golden-image compatibility requirements:
 
-- [Native ordinary](record-desk-evidence/native-ordinary.png) and
-  [native narrow](record-desk-evidence/native-narrow.png).
-- [Browser ordinary](record-desk-evidence/browser-ordinary.png) and
-  [browser narrow](record-desk-evidence/browser-narrow.png).
-- [No matching records](record-desk-evidence/browser-no-results.png) and
-  [protected malformed state](record-desk-evidence/browser-error.png).
+- [Native ordinary](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/native-ordinary.png) and
+  [native narrow](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/native-narrow.png).
+- [Browser ordinary](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/browser-ordinary.png) and
+  [browser narrow](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/browser-narrow.png).
+- [No matching records](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/browser-no-results.png) and
+  [protected malformed state](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/record-desk-evidence/browser-error.png).
 
 Lantern's fixed live adapter currently targets Gallery. This consumer uses its
 maintained physical harness and shared semantic/text audits; attempts to consume

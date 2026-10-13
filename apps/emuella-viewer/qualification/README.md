@@ -80,7 +80,7 @@ from an observed cold OS source, and 440 seconds uninstrumented from a warm OS
 source. Both retain the 64 MiB encoder RSS, 64 KiB tile-index, 555 MB encoded and
 1% descriptor caps, plus exact tile/sample counts. Observer source syscalls are
 capped at 24 GB and 5.5 million reads, including hashing and rereads. These are
-not physical-device/NFS limits. The [NITF calibration records](../../../docs/emuella-viewer-evidence/nitf-calibration/manifest.json)
+not physical-device/NFS limits. The [NITF calibration records](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/emuella-viewer-evidence/nitf-calibration/manifest.json)
 bind the smaller baselines and merged-owner confirmations used before freeze.
 See the [qualified observations](../../../docs/emuella-viewer-qualification.md)
 for actual results and limitations.

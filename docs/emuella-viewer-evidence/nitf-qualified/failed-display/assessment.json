@@ -1,5 +1,0 @@
-{
-  "qualified": false,
-  "cause": "The supplied DISPLAY=:97 no longer had a live X server (Xvfb session exit137); native XOpenDisplay failed and browser could not create a GPU surface. Recovery also did not start.",
-  "disposition": "Retained all three failed admissions/logs; restored a fresh Xvfb display:98 and reran in new output with identical application/native/static binaries, representations and frozen limits. No cause for the Xvfb exit is inferred."
-}

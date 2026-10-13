@@ -9,7 +9,7 @@ import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/stobie-gallery/web'));
 const evidenceRoot = normalize(process.env.STOBIE_EVIDENCE_DIR
-  ?? join(process.cwd(), 'docs/design-agent-loop-evidence'));
+  ?? join(process.cwd(), '.tools/runtime/gallery-smoke-evidence'));
 await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
 const server = createServer(async (request, response) => {
