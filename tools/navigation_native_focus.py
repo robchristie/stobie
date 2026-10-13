@@ -9,6 +9,7 @@ def _observation(state):
     fixture_ids = {target["id"] for target in fixture["targets"]}
     return {
         "frame": state["frame"],
+        "tab_input_epoch": state["tab_input_epoch"],
         "focused_ids": focused,
         "fixture_focus_ids": sorted(set(focused) & fixture_ids),
         "selected": fixture["selected"],
@@ -22,10 +23,11 @@ def focus_navigation_target(
 ):
     """Keep one traversal deadline and stop after failed dispatch/observation.
 
-    The Gallery publishes during presentation. A newer frame alone may still
-    expose the previous fixture focus. Once fixture focus is observable, wait
-    for different observable focus before issuing another Tab. Earlier chrome
-    traversal retains a limited frame barrier, not an input/GPU acknowledgement.
+    The Gallery publishes during presentation. A newer frame alone does not
+    acknowledge a Tab: the previous key's release can present first, and two
+    presses received in one input frame move focus only once. Wait for the
+    application's `tab_input_epoch` receipt before issuing another Tab. Once
+    fixture focus is observable, also wait for different observable focus.
     """
     deadline = monotonic() + timeout_seconds
     state = snapshot()
@@ -54,7 +56,7 @@ def focus_navigation_target(
             return state
         transition = {"action": action, "target_id": target_id, "before": before,
                       "after": None, "observations": [before], "dispatch": "pending",
-                      "barrier": "fixture_focus_progress" if before["fixture_focus_ids"] else "limited_chrome_frame"}
+                      "barrier": "tab_receipt_and_fixture_focus_progress" if before["fixture_focus_ids"] else "tab_receipt"}
         transitions.append(transition)
         try:
             press_tab()
@@ -65,14 +67,19 @@ def focus_navigation_target(
         while True:
             state = snapshot()
             after = observe(state, transition)
+            received = after["tab_input_epoch"] > before["tab_input_epoch"]
             if monotonic() >= deadline:
-                transition["error"] = ("presentation did not advance" if after["frame"] <= before["frame"]
-                                       else "observable fixture focus did not progress")
+                if after["frame"] <= before["frame"]:
+                    transition["error"] = "presentation did not advance"
+                elif not received:
+                    transition["error"] = "Tab was not received"
+                else:
+                    transition["error"] = "observable fixture focus did not progress"
                 raise TimeoutError(f"native navigation {transition['error']} after Tab {action}")
             # Examine every observation, including the final permitted action.
             if target_id in after["focused_ids"]:
                 return state
-            if after["frame"] > before["frame"]:
+            if received and after["frame"] > before["frame"]:
                 if not before["fixture_focus_ids"]:
                     break
                 if after["fixture_focus_ids"] and after["fixture_focus_ids"] != before["fixture_focus_ids"]:
