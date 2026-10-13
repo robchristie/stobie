@@ -32,7 +32,7 @@ class TrackedFilePolicyTests(unittest.TestCase):
         self.add("docs/example-evidence.md")
         self.add("docs/results.json", b"{}\n")
         self.add("docs/images/overview.webp", b"RIFF\0WEBP")
-        self.add("docs/ui-snapshots/expected/story/visual.png", b"\x89PNG\0")
+        self.add("tests/ui-snapshots/expected/story/visual.png", b"\x89PNG\0")
         self.add("crates/stobie-ui-egui/assets/fonts/Face.ttf", b"\0\1\0\0")
         self.assertEqual(self.violations(), [])
 

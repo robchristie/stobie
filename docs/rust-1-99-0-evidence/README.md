@@ -17,9 +17,9 @@ merge-CI browser observation and bounded continuation are owned by
 [browser final-action evidence](../navigation-browser-focus-evidence/README.md).
 The original qualification and three archives below retain their attribution.
 
-[observations.tar.gz](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/observations.tar.gz) retains 306 actual receipts, complete
+[observations.tar.gz](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/observations.tar.gz) retains 306 actual receipts, complete
 logs, public fixture recipes/hashes, native/browser snapshots, canonical
-structured observations and selected opened captures. [archive-index.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/archive-index.json)
+structured observations and selected opened captures. [archive-index.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/archive-index.json)
 binds each file's size/SHA-256 and the archive digest. Extract into an inspection
 directory with `tar -xzf docs/rust-1-99-0-evidence/observations.tar.gz -C <directory>`.
 No fixture payload, executable, browser profile, cookie or protected input is
@@ -28,13 +28,13 @@ process environment; they are observations, not a new maintained runner.
 
 | Requirement | Actual result | Full retained evidence |
 |---|---|---|
-| Actual compiler | rustc/Cargo 1.99.0; rustc `b940084d7eb6a299eb4bfeb8e34901bc051e7ac4`, Linux x86-64; four Cargo jobs, Node 25.8.2, npm 11.11.1, bindgen 0.2.127 | [canonical receipt](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/canonical-headful.json), `canonical-headful.log` |
+| Actual compiler | rustc/Cargo 1.99.0; rustc `b940084d7eb6a299eb4bfeb8e34901bc051e7ac4`, Linux x86-64; four Cargo jobs, Node 25.8.2, npm 11.11.1, bindgen 0.2.127 | [canonical receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/canonical-headful.json), `canonical-headful.log` |
 | Complete owner contract | `cargo xtask verify`, exit 0, 334.615 seconds; native/WASM lint/tests/releases, architecture/API docs, startup, 14 UI snapshots and native/browser physical workflows, including independent Record Desk | `canonical-headful.log`, `canonical-generated/` |
 | Exact production guard | Actual Rust 1.98.1 rejected before staging by `RUSTUP_TOOLCHAIN=1.98.1 target/debug/xtask build-browser-production`; the xtask binary is the new candidate. Actual 1.99.0 production packaging and response/startup tests pass | `guard-negative.log`, `production-manifest.json`, canonical log |
-| Immutable public inputs | All nine reproduced manifests/payloads/descriptors, 754 immutable files, match the prior retained hashes exactly. Preparation timing/RSS receipts are newly measured | [comparison](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/fixture-comparison.json), `fixtures/generation.json` |
+| Immutable public inputs | All nine reproduced manifests/payloads/descriptors, 754 immutable files, match the prior retained hashes exactly. Preparation timing/RSS receipts are newly measured | [comparison](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/fixture-comparison.json), `fixtures/generation.json` |
 | Native viewer | Nine original mixed grey/RGB identities; all 30 stages settle, desired = ready, no in-flight work/errors; Mesa llvmpipe/OpenGL | `repaired-native-viewer/identity.json`, `native.json`, `native.json.stages.json`, `native.log` |
 | Unchanged full browser gate | Frozen six-image cohort retains original indices 0,1,3,5,7,8 and immutable identities; 16 ordinary states, one actual Worker, rendered regions, stretch reuse/bookmarks/comparison; pressure gate: 62 GPU evictions, four representation evictions, two aborts, one interrupted actual JPP transfer | `pressure-cohort.json`, `viewer-browser/identity.json`, `viewer-browser/browser/viewer-browser.json`, `viewer-browser-pressure.json`, complete logs |
-| Private preview | Exact run/readiness and all nine fetched asset hashes/MIME/no-store matched; Chrome 154.0.8037.95, Apple Metal-3, secure context, opened 1440×900 useful pixels; physical 70×40 drag moved both linked camera centres from (65536,65536) to (47616,55296) | [bounded receipt](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/private-preview-receipt.json), `mac-lab-before.png`, `mac-lab-panned.png` |
+| Private preview | Exact run/readiness and all nine fetched asset hashes/MIME/no-store matched; Chrome 154.0.8037.95, Apple Metal-3, secure context, opened 1440×900 useful pixels; physical 70×40 drag moved both linked camera centres from (65536,65536) to (47616,55296) | [bounded receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/private-preview-receipt.json), `mac-lab-before.png`, `mac-lab-panned.png` |
 
 The constrained final browser has 388 completions, no errors, GPU peak
 16,777,216 bytes (16 MiB cap), decoded peak 3,145,728 bytes (4 MiB cap), 104
@@ -112,8 +112,8 @@ acknowledge GPU completion or prove individual input consumption. All original
 focus/no-selection/activation/disabled/pointer/audit/idle expectations remain.
 Failure retention preserves the original exception even if capture/report fails.
 
-[ci-repair-observations.tar.gz](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/ci-repair-observations.tar.gz), with
-[ci-repair-index.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/ci-repair-index.json), contains the complete failed CI log,
+[ci-repair-observations.tar.gz](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/ci-repair-observations.tar.gz), with
+[ci-repair-index.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/ci-repair-index.json), contains the complete failed CI log,
 failed capture/report, fourteen actual production-loop/scanner regression cases,
 focused physical navigation/icon reports and opened captures, source hashes,
 new committed canonical log and changed native guard observations. Delayed
@@ -124,14 +124,14 @@ log and unavailable/failing scanner. Physical navigation reaches Home on action
 37 and Tasks on 38, retaining selection/activation; all eight interaction states
 and idle pass. The icon workflow also passes the changed guard.
 
-The [repaired canonical receipt](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/ci-repair-canonical.json) binds clean committed
+The [repaired canonical receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/ci-repair-canonical.json) binds clean committed
 `ae1a5344e5249160d42575b922e939d3b389b7d3`, actual Rust 1.99.0 and the same
 installed environment: complete `cargo xtask verify`, exit zero, 331.774 seconds,
 including all new regressions, fourteen snapshots, every native guard and the
 complete consumer/native/browser workflows. Its production manifest keeps that
 actual source identity; initial manifests are not relabelled.
 
-[Applicability proof](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/ci-repair-applicability.json) compares every relevant Rust,
+[Applicability proof](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/ci-repair-applicability.json) compares every relevant Rust,
 Cargo/minimum/lock/toolchain input, all twenty-seven production raw assets and
 all HTML entries, and the actual viewer/service/Gallery native hashes. They are
 unchanged from initial Rust 1.99.0 qualification. Native-nine/browser-six inputs,
@@ -167,8 +167,8 @@ key. There is one ten-second traversal deadline and at most forty physical
 Tabs. No production repaint/input/model change, longer sleep, frame arithmetic,
 resource/action limit change or predicate relaxation was introduced.
 
-[focus-progress-observations.tar.gz](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/focus-progress-observations.tar.gz) and
-[focus-progress-index.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/focus-progress-index.json) retain twenty-five files:
+[focus-progress-observations.tar.gz](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/focus-progress-observations.tar.gz) and
+[focus-progress-index.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/focus-progress-index.json) retain twenty-five files:
 complete second CI failure log/report/capture, actual production-function
 fail-before/pass-after logs, exact helper/test source, focused physical and
 committed canonical navigation reports/captures, complete canonical log/receipt,
@@ -182,13 +182,13 @@ checked directly. Fourteen navigation and seven unchanged guard cases pass.
 
 Complete physical navigation passes all eight original states/audits/idle with
 Home/action 37 and Tasks/action 38, with unchanged selection/activation during
-focus. The [current canonical receipt](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/focus-progress-canonical.json) binds clean
+focus. The [current canonical receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/focus-progress-canonical.json) binds clean
 committed `9497023f30a959733ced5028599299d8b9e2670f`, actual Rust 1.99.0,
 same recorded environment, complete `cargo xtask verify`, exit zero in 331.431
 seconds, twenty-one new focused cases, fourteen snapshots and every native/browser/
 consumer workflow. Production identity records that actual canonical source.
 
-[Current applicability](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/rust-1-99-0-evidence/focus-progress-applicability.json) confirms unchanged
+[Current applicability](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-1-99-0-evidence/focus-progress-applicability.json) confirms unchanged
 Rust/Cargo/minimum/lock/toolchain inputs, all twenty-seven raw production assets
 and every HTML entry, and the exact viewer/service/Gallery native hashes.
 Native-nine/browser-six bytes, environment and predicates remain applicable with

@@ -231,7 +231,7 @@ cargo xtask ui list --output-dir .tools/runtime/ui-list
 ```
 
 UI rendering and snapshot checks require built browser packages. See the
-[snapshot guide](docs/ui-snapshots/README.md) for exact capture, inspection and
+[snapshot guide](tests/ui-snapshots/README.md) for exact capture, inspection and
 verification commands. Baselines are reviewed source artefacts; verification
 does not update them automatically.
 

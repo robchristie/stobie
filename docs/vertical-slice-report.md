@@ -367,7 +367,7 @@ The Linux verification bootstrap downloads pinned user-space UI/X11 packages int
 
 ## Performance observations
 
-These values are directly measured application-side CPU frame samples from the release Wasm build in headless Chromium at a primary viewport of 1440×900. They are not GPU execution timings. The committed [`browser-performance.json`](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-performance.json) is the structured source.
+These values are directly measured application-side CPU frame samples from the release Wasm build in headless Chromium at a primary viewport of 1440×900. They are not GPU execution timings. The committed [`browser-performance.json`](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-performance.json) is the structured source.
 
 | Scenario | Median | p95 | Direct observation |
 | --- | ---: | ---: | --- |
@@ -392,39 +392,39 @@ GPU timestamp queries were unavailable on both captured capability profiles. The
 
 ### Default workspaces
 
-![Native default workspace](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/native-default.png)
+![Native default workspace](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/native-default.png)
 
-![Browser default workspace](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-default.png)
+![Browser default workspace](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-default.png)
 
 ### Camera-derived scalar rendering
 
-![Browser scalar tiles before camera pan](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-pan-before.png)
+![Browser scalar tiles before camera pan](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-pan-before.png)
 
-![Browser scalar tiles after linked camera pan](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-pan-after.png)
+![Browser scalar tiles after linked camera pan](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-pan-after.png)
 
 ### Dock rearrangement and restoration
 
-![Browser rearranged dock](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-rearranged-dock.png)
+![Browser rearranged dock](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-rearranged-dock.png)
 
-![Native restored dock layout](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/native-restored-layout.png)
+![Native restored dock layout](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/native-restored-layout.png)
 
 ### Progressive data and virtualisation
 
-![Native diagnostics for tiles, workers, cache, uploads and virtualisation](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/native-diagnostics.png)
+![Native diagnostics for tiles, workers, cache, uploads and virtualisation](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/native-diagnostics.png)
 
-![Browser progressive thumbnail gallery](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-thumbnails.png)
+![Browser progressive thumbnail gallery](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-thumbnails.png)
 
 ### Vector editing
 
-![Native linked world-coordinate polygon](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/native-polygon.png)
+![Native linked world-coordinate polygon](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/native-polygon.png)
 
-![Browser linked world-coordinate polygon](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-polygon.png)
+![Browser linked world-coordinate polygon](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-polygon.png)
 
 ### Responsive restore probes
 
-![Browser restored at 1280 by 720](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-1280x720.png)
+![Browser restored at 1280 by 720](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-1280x720.png)
 
-![Browser restored at a narrow 900 by 700](https://raw.githubusercontent.com/robchristie/stobie/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/vertical-slice-evidence/browser-narrow.png)
+![Browser restored at a narrow 900 by 700](https://raw.githubusercontent.com/robchristie/stobie-evidence/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/vertical-slice-evidence/browser-narrow.png)
 
 ## Known issues and deferred work
 

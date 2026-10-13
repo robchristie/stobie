@@ -4,8 +4,8 @@ The selected candidate implements the dense tool scale and an optional reading
 profile with real Source Sans 3 regular and semibold faces, content-sized labels,
 explicit fixed slots, and observable failed layout requests. The complete
 question, probe, exit condition, fixture identities, results and decisions live
-in [calibration.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/text-hierarchy-evidence/calibration.json). The runtime source and browser artefact
-identities are in [source-manifest.json](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/text-hierarchy-evidence/source-manifest.json); this is a
+in [calibration.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/text-hierarchy-evidence/calibration.json). The runtime source and browser artefact
+identities are in [source-manifest.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/text-hierarchy-evidence/source-manifest.json); this is a
 calibration checkpoint, with final exact-head qualification owned by the
 coordinating landing change.
 
@@ -25,8 +25,8 @@ semantic headings use the same resolved font, line height and emphasis.
 
 | Accepted visual | Treatment |
 | --- | --- |
-| [Reading at 100%](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/text-hierarchy-evidence/reading-dark-100.png) | 21-point title, 18-point pane title, 15-point section, 14-point body and 12.5-point metadata |
-| [Reading at 150%, narrow high contrast](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/text-hierarchy-evidence/reading-high-contrast-150-narrow.png) | The same roles scaled together, with bounded wrapping |
+| [Reading at 100%](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/text-hierarchy-evidence/reading-dark-100.png) | 21-point title, 18-point pane title, 15-point section, 14-point body and 12.5-point metadata |
+| [Reading at 150%, narrow high contrast](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/text-hierarchy-evidence/reading-high-contrast-150-narrow.png) | The same roles scaled together, with bounded wrapping |
 
 Each retained text JSON has all seven required components, zero findings and
 attempted/successful/failed counts of 7/7/0. Native controls remain explicitly

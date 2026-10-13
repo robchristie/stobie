@@ -4,7 +4,7 @@
 
 Task and reference: navigate Home, Tasks, Needs attention, Activity and Settings
 with application-owned counts, selection and destination content. Compare the
-[shared analytical icon/action reference](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/typed-icons-evidence/browser-toolbar-dark.png).
+[shared analytical icon/action reference](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/typed-icons-evidence/browser-toolbar-dark.png).
 The candidate retains planar chrome, aligned artwork and labels, small secondary
 counts and one strong current-destination cue.
 
@@ -37,21 +37,21 @@ regression proves unchanged current semantics.
 
 ## Inspected rendered evidence
 
-- [Native states and count update](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/native-states.png)
-  with [native observations](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/native-observations.json).
-- [Ordinary dark sidebar](ui-snapshots/expected/navigation-sidebar-dark/visual.png).
-- [Light compact disabled/zero states](ui-snapshots/expected/navigation-states-light-compact/visual.png).
-- [Light high-contrast narrow/150%](ui-snapshots/expected/navigation-long-high-contrast/visual.png).
-- [Keyboard focus before activation](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-focus.png),
-  [current hover](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-selected-hover.png) and
-  [current, held press and focus](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-selected-pressed.png).
-- [Unselected hover](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-unselected-hover.png),
-  [unselected held press](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-unselected-pressed.png)
-  and [independent count update](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-count-update.png).
-- [Dark high contrast](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-dark-high-contrast.png)
-  and [narrow 150% scrolled badge elision](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-light-high-contrast-150-scrolled.png).
+- [Native states and count update](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/native-states.png)
+  with [native observations](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/native-observations.json).
+- [Ordinary dark sidebar](../tests/ui-snapshots/expected/navigation-sidebar-dark/visual.png).
+- [Light compact disabled/zero states](../tests/ui-snapshots/expected/navigation-states-light-compact/visual.png).
+- [Light high-contrast narrow/150%](../tests/ui-snapshots/expected/navigation-long-high-contrast/visual.png).
+- [Keyboard focus before activation](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-focus.png),
+  [current hover](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-selected-hover.png) and
+  [current, held press and focus](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-selected-pressed.png).
+- [Unselected hover](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-unselected-hover.png),
+  [unselected held press](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-unselected-pressed.png)
+  and [independent count update](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-count-update.png).
+- [Dark high contrast](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-dark-high-contrast.png)
+  and [narrow 150% scrolled badge elision](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-light-high-contrast-150-scrolled.png).
 
-The [browser observation record](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/navigation-item-evidence/browser-observations.json)
+The [browser observation record](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/navigation-item-evidence/browser-observations.json)
 retains source context, WASM hash, renderer, fixed configuration, semantic targets,
 counts, audit coverage, input steps and image hashes. It identifies the local
 pre-commit capture context; final qualification and exact reviewed/merged revision

@@ -20,7 +20,7 @@ BINARY_LIMIT_BYTES = 512 * 1024
 BINARY_ROOTS = (
     "crates/stobie-ui-egui/assets/fonts/",
     "docs/images/",
-    "docs/ui-snapshots/expected/",
+    "tests/ui-snapshots/expected/",
 )
 BINARY_SUFFIXES = {
     ".7z", ".avif", ".bin", ".bmp", ".br", ".gif", ".gz", ".ico", ".j2k", ".jp2",

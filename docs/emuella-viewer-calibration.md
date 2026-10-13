@@ -166,7 +166,7 @@ Screenshots support appearance inspection; they do not establish numerical pixel
 identity or codec quality tolerances.
 
 The fixed retained calibration corpus is indexed in
-[`emuella-viewer-evidence/index.json`](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/emuella-viewer-evidence/index.json).
+[`emuella-viewer-evidence/index.json`](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/index.json).
 It preserves the exact ten original baseline contract traces, five additional
 browser process-memory traces, selected raw recovery observations and failed-probe
 records. Intermediate high-frequency browser snapshots and executables are

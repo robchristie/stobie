@@ -65,7 +65,7 @@ are retained in `.tools/runtime/application-interface-usability/`.
 
 ## Qualification state
 
-The [qualification manifest](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-interface-evidence/qualification.json)
+The [qualification manifest](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/application-interface-evidence/qualification.json)
 binds all four journeys to clean source checkpoint
 `60c286a8fe7b5e81dbbc69d3cd86f114cce131c5`, executable/WASM hashes, application
 instances, observation identities, input receipts and capture timing/hashes.
@@ -114,10 +114,10 @@ pane with its logical collection size. No overlapping primary controls or new
 presentation defect was found in these ordinary fixtures. Geometry/parity checks
 own the clipped-row claim; screenshots do not prove exact frame correspondence.
 
-- [Record Desk native](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-interface-evidence/record-desk-native.png)
-  and [browser](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-interface-evidence/record-desk-browser.png).
-- [Lab native](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-interface-evidence/lab-native.png)
-  and [browser](https://github.com/robchristie/stobie/blob/03ad5c5c3a125e453ec96554a078dda9d6ad4f64/docs/application-interface-evidence/lab-browser.png).
+- [Record Desk native](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/application-interface-evidence/record-desk-native.png)
+  and [browser](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/application-interface-evidence/record-desk-browser.png).
+- [Lab native](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/application-interface-evidence/lab-native.png)
+  and [browser](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/application-interface-evidence/lab-browser.png).
 
 ## Capture and host limits
 
