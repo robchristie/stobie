@@ -49,7 +49,7 @@ were actually measured. Their recorded hashes and commit IDs are not evidence
 for newly built Stobie binaries.
 
 Maintained documentation and navigation use the current name. The live
-`docs/ui-snapshots/expected/` regression baselines follow the current semantic
+`tests/ui-snapshots/expected/` regression baselines follow the current semantic
 identifiers and reviewed branding, through the existing snapshot process.
 Remaining Polyorama references therefore identify either historical evidence
 or explicit saved-state compatibility, rather than active product branding.

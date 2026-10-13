@@ -84,7 +84,7 @@ observations inform the coordinator's later choice, without an optimisation here
 **Reject the existing HT profile for the frozen real-scene display criteria.**
 No common development rate passes PAN16 and RGB16. These are full original
 scenes, not substituted crops; only the predeclared quality observations are
-regional. The [numerical evidence](real-scene-viewing-evidence.json) binds source,
+regional. The [numerical evidence](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/real-scene-viewing-evidence.json) binds source,
 binaries, preparation, traces, complete references and protected evidence hashes.
 
 | Development product | Rate (bpp) | Preparation wall (s) | Payload + descriptors (bytes) | Worst display RMSE / p99 (U8) | Result |
@@ -246,7 +246,7 @@ Browser cross-realm timestamps invert by up to 0.1003 ms in 1–15 warm samples
 per run; strict aggregate rejection remains visible. All 24 warm request samples
 are retained with zero ring drops. Their same-realm UI receipt-to-frame wait is
 295.10–310.90 ms; precise browser cross-realm delivery totals are not established.
-[The C evidence](real-scene-viewing-c-evidence.json) retains every baseline.
+[The C evidence](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/real-scene-viewing-c-evidence.json) retains every baseline.
 
 The historical freeze selected exactly one **native-only opt-in** candidate: `--present-mode auto-no-vsync`
 changes only the WGPU surface present mode to `AutoNoVsync`, keeping the existing
@@ -334,7 +334,7 @@ Cargo.lock, commands and every runtime hash. Report consolidation follows these
 journeys with unchanged application and harness source; these binaries are not
 claimed to have been built at the later report commit.
 
-[Final numerical evidence](real-scene-viewing-final-evidence.json) records one
+[Final numerical evidence](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/real-scene-viewing-final-evidence.json) records one
 development native journey, one actual hardware-browser journey, and explicit
 development/Boca PAN pressure journeys. All four complete and pass their unchanged
 benchmark-owner limits. Native reports RTX 3090/Vulkan; Chromium 151.0.7922.34

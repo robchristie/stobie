@@ -12,7 +12,7 @@ import { assertFrozenResultTarget, firstResultRowTarget, resolveResultRowTarget,
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
 const evidenceRoot = normalize(process.env.STOBIE_EVIDENCE_DIR
-  ?? join(process.cwd(), 'docs/vertical-slice-evidence'));
+  ?? join(process.cwd(), '.tools/runtime/lab-smoke-evidence'));
 await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
 const server = createServer(async (request, response) => {

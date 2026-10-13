@@ -10,7 +10,7 @@ worker architecture or application test-export feature change remains.
 The actual starting checkout was `dc7d3d6a89de0f070eade59bf7da7522de8b57f8`.
 The baseline added instrumentation before optimisation; its source revision,
 working-diff hash, input/final artifact hashes and flags are retained in the raw
-reports. Final artifact identity is in [the manifest](browser-startup-evidence/final-manifest.json);
+reports. Final artifact identity is in [the manifest](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/browser-startup-evidence/final-manifest.json);
 the eventual merge revision and exact-head verification are recorded on the PR.
 
 ## Measured outcome
@@ -115,7 +115,7 @@ assets; `pre-review-*.json.gz` preserves the earlier successful cohorts.
 
 ## Verification and reproduction
 
-`cargo xtask verify` passed locally; [verification identity](browser-startup-evidence/verification.json)
+`cargo xtask verify` passed locally; [verification identity](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/browser-startup-evidence/verification.json)
 records the environment and artifact match. The canonical surface includes
 native/WASM builds, lint/tests, architecture, unchanged UI snapshots and existing
 browser/native smoke. It additionally checks final production packaging, startup
@@ -135,7 +135,7 @@ cancellation and bounds. Its pressure eviction assertions fail for baseline and
 candidate alike because these small fixtures do not fill the 1 MiB compressed
 or 16 MiB GPU caches. The assertions and fixtures were not changed. This is a
 qualification limit, not passing eviction evidence; see
-[fixture smoke details](browser-startup-evidence/fixture-smoke.json).
+[fixture smoke details](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/browser-startup-evidence/fixture-smoke.json).
 
 ```sh
 bash tools/install-binaryen.sh

@@ -7,7 +7,7 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 
 | Stage | Required surface |
 | --- | --- |
-| `checks` | Tool regressions, plans/tokens, formatting, native/WASM lint, workspace tests, rendered API documentation and selected doctests, native/WASM example compilation, architecture, no-default-feature UI tests and browser-tool regressions |
+| `checks` | Tool regressions, tracked-file policy, plans/tokens, formatting, native/WASM lint, workspace tests, rendered API documentation and selected doctests, native/WASM example compilation, architecture, no-default-feature UI tests and browser-tool regressions |
 | `native-lab` | Lab library/binary and minimal example in one release invocation; Lab and minimal native smokes; Lab/native interface journey |
 | `native-other` | Every remaining workspace release library/binary; Gallery, icon, navigation and status-chip native smokes |
 | `browser` | Development Lab/Gallery/Worker/Viewer release WASM and bindgen packages; Lab browser smoke; Lab/browser interface journey |

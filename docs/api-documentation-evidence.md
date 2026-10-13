@@ -12,10 +12,10 @@ Independent public fresh-reader acceptance also succeeds on
 [PR #45](https://github.com/robchristie/stobie/pull/45) retains separate final
 exact-head source review, required CI, merge and cleanup observations.
 
-The [retained archive](api-documentation-evidence/observations.tar.gz) contains
+The [retained archive](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/api-documentation-evidence/observations.tar.gz) contains
 100 files: actual receipts, complete command logs, runtime snapshots, nine
 rendered API captures and inspection recipes. The
-[index](api-documentation-evidence/archive-index.json) records each file's size
+[index](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/api-documentation-evidence/archive-index.json) records each file's size
 and SHA-256 plus the compressed archive hash. Extract with
 `tar -xzf docs/api-documentation-evidence/observations.tar.gz -C <inspection-directory>`.
 Generated HTML is excluded. Archive path names below are relative to the extracted

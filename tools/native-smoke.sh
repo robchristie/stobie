@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
-EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/docs/vertical-slice-evidence}"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/lab-smoke-evidence}"
 
 command -v import >/dev/null
 IMPORT="$(command -v import)"

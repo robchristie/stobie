@@ -36,7 +36,7 @@ failed request. Empty findings mean
 “Every observed Stobie text component passed”, not “Every visible string was
 structurally audited”. Counts cover the submitted layout pass, including clipped
 controls and gallery chrome; ordinary labels remain excluded. See the
-[design language](../design-language.md) for the denominator and native-widget
+[design language](../../docs/design-language.md) for the denominator and native-widget
 boundary.
 
 The verifier is deliberately read-only with respect to `expected/`. It has no

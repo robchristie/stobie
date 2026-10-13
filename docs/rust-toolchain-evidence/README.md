@@ -10,10 +10,10 @@ review, PR CI, actual merge and post-merge CI are recorded by the owning PR.
 
 ## Retained proof
 
-[observations.tar.gz](observations.tar.gz) contains 237 actual receipts, complete
+[observations.tar.gz](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/observations.tar.gz) contains 237 actual receipts, complete
 command logs, structured runtime observations, fixture manifests and generation
 recipes, baseline discriminators, temporary wrappers and the final browser
-screenshots. [archive-index.json](archive-index.json) records each uncompressed
+screenshots. [archive-index.json](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/archive-index.json) records each uncompressed
 file's SHA-256 and size plus the archive digest. Extract it with
 `tar -xzf docs/rust-toolchain-evidence/observations.tar.gz -C <inspection-directory>`.
 The wrappers describe this host's isolated bundled-library process environment;
@@ -23,13 +23,13 @@ profiles; their complete hashes are retained without duplicating binary data.
 
 | Requirement | Actual observation | Receipt / archived full proof |
 | --- | --- | --- |
-| Exact dispatch | rustc/Cargo 1.98.1; rustc full revision `48a229ceaefd4985c50990b14116b6d856af0985`; Rustfmt/Clippy/WASM target | [canonical receipt](canonical-headful.json), `delivery/canonical-headful.log` |
+| Exact dispatch | rustc/Cargo 1.98.1; rustc full revision `48a229ceaefd4985c50990b14116b6d856af0985`; Rustfmt/Clippy/WASM target | [canonical receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/canonical-headful.json), `delivery/canonical-headful.log` |
 | Complete owner contract | `cargo xtask verify`, clean committed source, exit 0, 196.920 seconds; native/WASM lint, tests, architecture, release builds, browser startup, deterministic UI snapshots and native smoke | `delivery/canonical-headful.log`, `canonical-generated/` |
-| Retained minimum | rustc 1.97.1 `8bab26f4f68e0e26f0bb7960be334d5b520ea452`; locked native workspace/all-target/all-feature check, established WASM app/worker check and all 13 viewer-source tests pass | [compatibility receipt](repaired-compatibility.json), `delivery/repaired-compatibility.log`, `delivery/run_compatibility.py` |
+| Retained minimum | rustc 1.97.1 `8bab26f4f68e0e26f0bb7960be334d5b520ea452`; locked native workspace/all-target/all-feature check, established WASM app/worker check and all 13 viewer-source tests pass | [compatibility receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/repaired-compatibility.json), `delivery/repaired-compatibility.log`, `delivery/run_compatibility.py` |
 | Compiler guard | 1.97.1 production command rejects with the new exact-compiler diagnostic before staging/build; 1.98.1 production build succeeds | `delivery/guard-negative.log`, `delivery/repaired-viewer-build.*`, `delivery/repaired-browser-manifest.json` |
-| Native viewer | Original nine mixed grey/RGB inputs; all 30 workload stages settle, desired = ready, no in-flight work or errors; OpenGL Mesa llvmpipe | [runtime receipt](repaired-native-runtime.json), `delivery/repaired-native-viewer/identity.json`, `native.json`, `native.json.stages.json`, `native.log` |
+| Native viewer | Original nine mixed grey/RGB inputs; all 30 workload stages settle, desired = ready, no in-flight work or errors; OpenGL Mesa llvmpipe | [runtime receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/repaired-native-runtime.json), `delivery/repaired-native-viewer/identity.json`, `native.json`, `native.json.stages.json`, `native.log` |
 | Ordinary browser viewer | Original nine mixed inputs; all 16 states, one real Worker, rendering, stretch reuse, bookmarks and distinct-image comparison; no application/console errors | `delivery/repaired-viewer-browser/browser/viewer-browser.json` |
-| Complete browser gate | Six frozen existing representations; entire unchanged smoke passes, including 62 GPU evictions, four representation evictions, two worker aborts and one interrupted actual JPP transfer | [browser receipt](browser-runtime.json), `delivery/pressure-subset-browser/browser/viewer-browser.json`, `viewer-browser-pressure.json`, `browser.log` |
+| Complete browser gate | Six frozen existing representations; entire unchanged smoke passes, including 62 GPU evictions, four representation evictions, two worker aborts and one interrupted actual JPP transfer | [browser receipt](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/browser-runtime.json), `delivery/pressure-subset-browser/browser/viewer-browser.json`, `viewer-browser-pressure.json`, `browser.log` |
 
 The final constrained browser snapshot has 32/32 ready demands, no in-flight
 work or errors, 388 completions, GPU peak 16,777,216 bytes (limit 16 MiB),
@@ -70,7 +70,7 @@ proved cancellation/representation eviction but correctly failed GPU eviction: i
 observation is retained under `delivery/repaired-viewer-browser/`. An attempted
 argument-order adjustment stopped at the catalogue identity guard before browser
 execution: the service's `BTreeMap` sorts targets (`delivery/pressure-viewer-browser/`).
-The final [six-input cohort](pressure-subset-cohort.json) uses original indices
+The final [six-input cohort](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/rust-toolchain-evidence/pressure-subset-cohort.json) uses original indices
 `0,1,3,5,7,8`, naturally sorted, placing existing RGB images at pressure-visited
 indices 1–4 while retaining both grey inputs. Every representation keeps its
 original bytes, profile and immutable identity; no fixture is regenerated.
