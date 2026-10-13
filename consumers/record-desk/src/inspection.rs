@@ -50,7 +50,8 @@ impl RecordDeskApp {
 
     fn inspection_bindings(&self, snapshot: &UiSnapshot) -> Vec<InspectionBinding<Action>> {
         Action::ALL
-            .into_iter()
+            .iter()
+            .copied()
             .flat_map(|action| {
                 let invocable = matches!(
                     action,

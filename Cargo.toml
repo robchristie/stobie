@@ -4,6 +4,7 @@ members = [
     "crates/stobie-runtime",
     "crates/stobie-render-wgpu",
     "crates/stobie-ui-egui",
+    "crates/stobie-ui-egui-derive",
     "apps/analytical-workspace-lab",
     "apps/stobie-gallery",
     "apps/tile-worker",

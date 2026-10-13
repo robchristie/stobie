@@ -2800,6 +2800,16 @@ dependencies = [
  "serde",
  "serde_json",
  "stobie-core",
+ "stobie-ui-egui-derive",
+]
+
+[[package]]
+name = "stobie-ui-egui-derive"
+version = "0.1.6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
