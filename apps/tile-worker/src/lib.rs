@@ -1,4 +1,4 @@
-use polyorama_runtime::{DecodeRequest, prepare_and_decode};
+use stobie_runtime::{DecodeRequest, prepare_and_decode};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

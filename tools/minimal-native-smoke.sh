@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
-EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/.tools/runtime/minimal-native-evidence}"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/minimal-native-evidence}"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 SYSROOT="$ROOT/.tools/sysroot"
 IMPORT="$(command -v import)"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
   XDO="$(command -v xdotool)"
   XVFB="$(command -v Xvfb)"
 else
@@ -31,7 +31,7 @@ owned_start XVFB_PID "$XVFB" "$DISPLAY_NUMBER" \
   -screen 0 900x700x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/minimal-native-xvfb.log" 2>&1
 rm -f "$SNAPSHOT"
 sleep 1
-DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl POLYORAMA_MINIMAL_SNAPSHOT="$SNAPSHOT" \
+DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl STOBIE_MINIMAL_SNAPSHOT="$SNAPSHOT" \
   owned_start APP_PID target/release/examples/minimal-workspace >"$APP_LOG" 2>&1
 
 wait_snapshot() {
@@ -56,7 +56,7 @@ wait_snapshot() {
 wait_snapshot 0
 WINDOW_ID=""
 for _ in {1..100}; do
-  WINDOW_ID="$(xdo search --onlyvisible --name 'Polyorama Minimal Workspace' | head -n 1 || true)"
+  WINDOW_ID="$(xdo search --onlyvisible --name 'Stobie Minimal Workspace' | head -n 1 || true)"
   [[ -n "$WINDOW_ID" ]] && break
   kill -0 "$APP_PID"
   sleep 0.1

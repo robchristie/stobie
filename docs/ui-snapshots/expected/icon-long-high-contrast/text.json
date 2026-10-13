@@ -4,39 +4,7 @@
     {
       "component_id": {
         "kind": "action_button",
-        "instance": 129551010377644
-      },
-      "role": "button_label",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 726,
-        "min_y": 191,
-        "max_x": 987,
-        "max_y": 227
-      },
-      "painted_rect": {
-        "min_x": 726,
-        "min_y": 196.5,
-        "max_x": 980.0625,
-        "max_y": 221.5
-      },
-      "clip_rect": {
-        "min_x": 726,
-        "min_y": 191,
-        "max_x": 987,
-        "max_y": 227
-      },
-      "overflow": "ellipsis",
-      "interaction": "inert",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": true
-    },
-    {
-      "component_id": {
-        "kind": "action_button",
-        "instance": 7960908261725867
+        "instance": 2786026464035492
       },
       "role": "button_label",
       "horizontal_alignment": "start",
@@ -67,8 +35,40 @@
     },
     {
       "component_id": {
+        "kind": "action_button",
+        "instance": 4277494749957552
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 726,
+        "min_y": 191,
+        "max_x": 987,
+        "max_y": 227
+      },
+      "painted_rect": {
+        "min_x": 726,
+        "min_y": 196.5,
+        "max_x": 980.0625,
+        "max_y": 221.5
+      },
+      "clip_rect": {
+        "min_x": 726,
+        "min_y": 191,
+        "max_x": 987,
+        "max_y": 227
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
         "kind": "content_label",
-        "instance": 3346959972444519
+        "instance": 7153707795741369
       },
       "role": "secondary",
       "horizontal_alignment": "start",

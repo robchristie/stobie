@@ -81,7 +81,7 @@ The checks and Record Desk stages install the checksum-verified pre-built Nextes
 disabled. `.config/nextest.toml` enforces that minimum before test compilation.
 Both local and hosted canonical checks use `tools/test-rust.py`: the `workspace`
 selection retains the workspace's default packages, targets and features, and
-`ui-no-default` separately tests `polyorama-ui-egui --no-default-features`.
+`ui-no-default` separately tests `stobie-ui-egui --no-default-features`.
 Record Desk retains its independent workspace's locked default selection and
 portable Nextest configuration. Each runs Cargo doctests afterwards with the
 same selection. The selected API documentation doctest coverage remains required.

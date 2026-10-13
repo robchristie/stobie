@@ -18,7 +18,7 @@ class IconCompilerTests(unittest.TestCase):
         guide = (ICONS.ROOT / 'docs/ui-guides/components.md').read_text()
         toolbar = guide.split('## Typed icons and action presentations\n', 1)[1]
         example = toolbar.split('```rust\n', 1)[1].split('```', 1)[0].strip()
-        source = (ICONS.ROOT / 'crates/polyorama-ui-egui/src/presentation.rs').read_text()
+        source = (ICONS.ROOT / 'crates/stobie-ui-egui/src/presentation.rs').read_text()
         doc = source.split('    /// ```\n')[1].split('    /// ```')[0]
         self.assertEqual(example, '\n'.join(line.removeprefix('    ///').removeprefix(' ') for line in doc.splitlines()).strip())
 

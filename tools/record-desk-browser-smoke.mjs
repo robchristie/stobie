@@ -10,7 +10,7 @@ import { waitForClickTarget } from './record-desk-target.mjs';
 import { focusByTab } from './browser-keyboard-focus.mjs';
 
 const root = resolve('consumers/record-desk/web');
-const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/record-desk-evidence/record-desk');
+const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/record-desk-evidence/record-desk');
 await mkdir(evidence, { recursive: true });
 const server = createServer(async (req, res) => {
   const path = resolve(root, req.url === '/' ? 'index.html' : `.${new URL(req.url, 'http://local').pathname}`);
@@ -26,7 +26,7 @@ const steps = [];
 const pointerTargets = [];
 const errors = [];
 let page;
-const storageKey = 'polyorama.record-desk.v1';
+const storageKey = 'stobie.record-desk.v1';
 const snapshot = () => page.evaluate(() => JSON.parse(window.__RECORD_DESK.snapshot()));
 async function wait(predicate) {
   await page.waitForFunction(`window.__RECORD_DESK && (${predicate})(JSON.parse(window.__RECORD_DESK.snapshot()))`, null, { timeout: 15000 });
@@ -142,8 +142,8 @@ try {
   await page.keyboard.press('Control+Shift+z');
   await wait('s => s.undo_entries === 1 && s.redo_entries === 0 && s.records[1].title === "Review agenda updated"');
   await record('redo');
-  await clickNode('polyorama.dock.splitter.1');
-  await wait('s => s.ui.nodes.some(n => n.id === "polyorama.dock.splitter.1" && n.focused)');
+  await clickNode('stobie.dock.splitter.1');
+  await wait('s => s.ui.nodes.some(n => n.id === "stobie.dock.splitter.1" && n.focused)');
   await page.keyboard.press('ArrowRight');
   await wait('s => s.workspace.root.Split.fraction > 0.36');
   const savedLayout = (await snapshot()).workspace;
@@ -160,6 +160,58 @@ try {
   await wait('s => s.records[1].title === "Review agenda updated" && s.undo_entries === 0 && !s.draft_dirty && !s.unsaved');
   assert.deepEqual((await snapshot()).workspace, savedLayout);
   await record('reload-restored');
+  // Rename fixtures use this same origin; storage setup is not physical input.
+  const legacyKey = 'polyorama.record-desk.v1';
+  const originalSaved = await page.evaluate(({ storageKey, legacyKey }) => {
+    const value = localStorage.getItem(storageKey);
+    localStorage.setItem(legacyKey, value);
+    localStorage.removeItem(storageKey);
+    return value;
+  }, { storageKey, legacyKey });
+  await page.reload();
+  await ready();
+  await wait('s => s.records[1].title === "Review agenda updated" && !s.save_blocked');
+  assert.deepEqual((await snapshot()).workspace, savedLayout);
+  await page.keyboard.press('Control+s');
+  await page.waitForFunction(key => localStorage.getItem(key) !== null, storageKey);
+  await wait('s => !s.unsaved && !s.error');
+  assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), storageKey), saved);
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyKey), originalSaved);
+  await record('legacy-migrated');
+  await page.evaluate(key => {
+    const value = JSON.parse(localStorage.getItem(key));
+    value.records[1].title = 'Current Stobie state';
+    localStorage.setItem(key, JSON.stringify(value));
+  }, storageKey);
+  await page.reload();
+  await ready();
+  await wait('s => s.records[1].title === "Current Stobie state"');
+  await record('current-preferred');
+  await page.evaluate(key => localStorage.setItem(key, '{broken'), storageKey);
+  await page.reload();
+  await ready();
+  await wait('s => s.save_blocked && s.error');
+  await page.keyboard.press('Control+s');
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), storageKey), '{broken');
+  await record('current-malformed-no-fallback');
+  await page.evaluate(({ storageKey, legacyKey }) => {
+    localStorage.removeItem(storageKey);
+    localStorage.setItem(legacyKey, '{broken');
+  }, { storageKey, legacyKey });
+  await page.reload();
+  await ready();
+  await wait('s => s.save_blocked && s.error');
+  await page.keyboard.press('Control+s');
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), storageKey), null);
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyKey), '{broken');
+  await record('legacy-malformed-preserved');
+  await page.evaluate(({ storageKey, legacyKey, originalSaved }) => {
+    localStorage.setItem(storageKey, originalSaved);
+    localStorage.removeItem(legacyKey);
+  }, { storageKey, legacyKey, originalSaved });
+  await page.reload();
+  await ready();
+  await wait('s => s.records[1].title === "Review agenda updated" && !s.save_blocked');
   await page.waitForTimeout(1000); // Settle startup and egui hover/animation deadlines.
   const idleFrame = (await snapshot()).ui.frame;
   await page.waitForTimeout(350);

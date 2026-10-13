@@ -34,7 +34,7 @@ The baseline screenshots used for comparison are:
 
 - Global direct styling: `apps/analytical-workspace-lab/src/app.rs`.
 - Dock tab sizing, painting and splitters:
-  `crates/polyorama-ui-egui/src/lib.rs`.
+  `crates/stobie-ui-egui/src/lib.rs`.
 - Pane toolbar/status styling:
   `apps/analytical-workspace-lab/src/panes/image.rs` and `panes/mod.rs`.
 - Result and thumbnail geometry:

@@ -91,7 +91,7 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(self.request(ADAPTER.READINESS_PATH)[0], 200)
 
     def gallery_assets(self):
-        web = self.worktree / "apps/polyorama-gallery/web"
+        web = self.worktree / "apps/stobie-gallery/web"
         (web / "pkg").mkdir(parents=True)
         for name in ADAPTER.GALLERY_ASSETS:
             (web / name).write_bytes(b"\x00asm\x01\x00\x00\x00" if name.endswith(".wasm")
@@ -124,23 +124,23 @@ class PreviewTests(unittest.TestCase):
     def test_gallery_route_rejects_missing_invalid_and_symlink_assets(self):
         web = self.gallery_assets()
         self.wait_ready(self.start())
-        wasm = web / "pkg/polyorama_gallery_bg.wasm"
+        wasm = web / "pkg/stobie_gallery_bg.wasm"
         for contents in (None, b"", b"not WASM"):
             with self.subTest(contents=contents):
                 wasm.unlink(missing_ok=True)
                 if contents is not None:
                     wasm.write_bytes(contents)
-                self.assertEqual(self.request("/gallery/pkg/polyorama_gallery_bg.wasm")[0], 404)
+                self.assertEqual(self.request("/gallery/pkg/stobie_gallery_bg.wasm")[0], 404)
         wasm.unlink()
         os.mkfifo(wasm)
-        self.assertEqual(self.request("/gallery/pkg/polyorama_gallery_bg.wasm")[0], 404)
+        self.assertEqual(self.request("/gallery/pkg/stobie_gallery_bg.wasm")[0], 404)
         asset = web / "bootstrap.js"
         asset.unlink()
         asset.symlink_to(self.web / "bootstrap.js")
         self.assertEqual(self.request("/gallery/bootstrap.js")[0], 404)
         shutil.rmtree(web / "pkg")
         (web / "pkg").symlink_to(self.web / "pkg", target_is_directory=True)
-        self.assertEqual(self.request("/gallery/pkg/polyorama_gallery.js")[0], 404)
+        self.assertEqual(self.request("/gallery/pkg/stobie_gallery.js")[0], 404)
         shutil.rmtree(web)
         web.symlink_to(self.web, target_is_directory=True)
         self.assertEqual(self.request("/gallery/bootstrap.js")[0], 404)
@@ -308,7 +308,7 @@ class PreviewTests(unittest.TestCase):
         bootstrap = (root / "apps/analytical-workspace-lab/web/bootstrap.js").read_text()
         worker = (root / "apps/analytical-workspace-lab/web/worker.js").read_text()
         self.assertIn("new URL('./worker.js', import.meta.url)", bootstrap)
-        self.assertIn("'./worker-pkg/polyorama_tile_worker.js'", worker)
+        self.assertIn("'./worker-pkg/stobie_tile_worker.js'", worker)
 
 
 if __name__ == "__main__":

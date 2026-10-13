@@ -1,6 +1,6 @@
 # Tokens
 
-[`design/tokens/polyorama.tokens.json`](../../design/tokens/polyorama.tokens.json)
+[`design/tokens/stobie.tokens.json`](../../design/tokens/stobie.tokens.json)
 is the authored analytical reference token source. It supports the repository's bounded
 DTCG-style subset: typed scalar leaves, complete aliases, four named theme
 variants and two density variants. Runtime UI selects generated

@@ -9,7 +9,7 @@ The bounded public composition journeys are qualified on executable candidate
 Independent public fresh-reader acceptance also succeeds on
 `34a6cfc533ca85647761b7d72f413fa9e4d2e439`, tree
 `8eff8f7c930cac04c2da8c44f1fd75a9f6913a1e`; its executable inputs are unchanged.
-[PR #45](https://github.com/robchristie/polyorama/pull/45) retains separate final
+[PR #45](https://github.com/robchristie/stobie/pull/45) retains separate final
 exact-head source review, required CI, merge and cleanup observations.
 
 The [retained archive](api-documentation-evidence/observations.tar.gz) contains

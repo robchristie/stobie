@@ -11,7 +11,7 @@ source array, lossy-data repair or workload is selected.
 Preparation question: can an isolated `/tmp` bind preserve approved physical
 backing and reject an unmapped or mismatched alias? The representative probe is
 an authored directory bind with device/inode and effective mount-ID checks, a
-synthetic marker write, retained provenance and unchanged host `/tmp`. Polyorama
+synthetic marker write, retained provenance and unchanged host `/tmp`. Stobie
 owns the code and this evidence; main owns the implementation decision, committed
 candidate and execution grant. Exit preparation when these filesystem checks
 pass. They prove the mapping mechanism, not Chromium startup or browser masks.
@@ -142,7 +142,7 @@ Run only authored checks in this no-browser/no-service window:
 ```sh
 node --check tools/viewer-acceptance-browser-masks.mjs
 node --check tools/tests/viewer-acceptance-browser-masks.test.mjs
-POLYORAMA_TEST_PRIVATE_MOUNT=1 node --test --test-skip-pattern='authored real HTTP|proxy rejects' tools/tests/viewer-acceptance-browser-masks.test.mjs
+STOBIE_TEST_PRIVATE_MOUNT=1 node --test --test-skip-pattern='authored real HTTP|proxy rejects' tools/tests/viewer-acceptance-browser-masks.test.mjs
 node --test tools/tests/viewer-acceptance-browser-launch.test.mjs
 ```
 

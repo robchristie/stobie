@@ -16,7 +16,7 @@ export function swiftShaderWebGpuFlags() {
 }
 
 export function hostedLinuxWebGpuLaunchOptions() {
-  const headless = process.env.POLYORAMA_BROWSER_HEADFUL !== '1';
+  const headless = process.env.STOBIE_BROWSER_HEADFUL !== '1';
   const args = ['--no-sandbox', ...swiftShaderWebGpuFlags()];
   if (!headless) args.push('--ozone-platform=x11');
   return { headless, args };

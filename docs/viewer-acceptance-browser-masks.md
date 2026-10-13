@@ -18,7 +18,7 @@ The bounded preparation question is whether the unchanged actual browser WASM
 worker and HTTP mask path can be checked against retained native request, sample
 and mask identities without accumulating decoded arrays. The representative
 preparation probe is authored parser/comparison/HTTP-fault testing without a
-browser. Polyorama owns this protocol and later protected comparison evidence;
+browser. Stobie owns this protocol and later protected comparison evidence;
 the coordinator owns acceptance selection. Exit preparation with tested authored
 code and the fixed budget below. Browser execution requires a later committed
 candidate and its exact grant.

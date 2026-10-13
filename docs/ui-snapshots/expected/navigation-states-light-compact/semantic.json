@@ -35,45 +35,26 @@
       "actions": []
     },
     {
-      "id": "presentation.1a625849c07e38af",
+      "id": "presentation.1690d67814fb3a1e",
       "parent": "gallery.story",
       "role": "navigation_item",
-      "name": "Home",
-      "description": "Open this destination; Current destination",
+      "name": "Needs attention",
+      "description": "Open this destination; 3 items needing attention",
       "rect": {
         "min_x": 530,
-        "min_y": 105,
+        "min_y": 175,
         "max_x": 770,
-        "max_y": 137
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": true,
-      "actions": [
-        "gallery.navigation.home"
-      ]
-    },
-    {
-      "id": "presentation.7de0a4140e890d90",
-      "parent": "gallery.story",
-      "role": "button",
-      "name": "Complete a demo task",
-      "description": "Reduce the fixture's outstanding task count",
-      "rect": {
-        "min_x": 775,
-        "min_y": 149.5,
-        "max_x": 929.25,
-        "max_y": 181.5
+        "max_y": 207
       },
       "enabled": true,
       "focused": false,
       "selected": false,
       "actions": [
-        "gallery.navigation.complete_task"
+        "gallery.navigation.needs_attention"
       ]
     },
     {
-      "id": "presentation.98737c608d6ccd2f",
+      "id": "presentation.580273c46902d3b3",
       "parent": "gallery.story",
       "role": "navigation_item",
       "name": "Settings",
@@ -93,7 +74,7 @@
       "disabled_reason": "Administrator access required"
     },
     {
-      "id": "presentation.9d82c6d319a0f2fa",
+      "id": "presentation.716619e8ff96c0ef",
       "parent": "gallery.story",
       "role": "navigation_item",
       "name": "Tasks",
@@ -112,26 +93,45 @@
       ]
     },
     {
-      "id": "presentation.b8b35c79d90be215",
+      "id": "presentation.887ae35dc5422175",
       "parent": "gallery.story",
-      "role": "navigation_item",
-      "name": "Needs attention",
-      "description": "Open this destination; 3 items needing attention",
+      "role": "button",
+      "name": "Complete a demo task",
+      "description": "Reduce the fixture's outstanding task count",
       "rect": {
-        "min_x": 530,
-        "min_y": 175,
-        "max_x": 770,
-        "max_y": 207
+        "min_x": 775,
+        "min_y": 149.5,
+        "max_x": 929.25,
+        "max_y": 181.5
       },
       "enabled": true,
       "focused": false,
       "selected": false,
       "actions": [
-        "gallery.navigation.needs_attention"
+        "gallery.navigation.complete_task"
       ]
     },
     {
-      "id": "presentation.d2912afd3436ed31",
+      "id": "presentation.d2607015b17f178c",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Home",
+      "description": "Open this destination; Current destination",
+      "rect": {
+        "min_x": 530,
+        "min_y": 105,
+        "max_x": 770,
+        "max_y": 137
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.navigation.home"
+      ]
+    },
+    {
+      "id": "presentation.f9bd763e0b78e72c",
       "parent": "gallery.story",
       "role": "navigation_item",
       "name": "Activity",

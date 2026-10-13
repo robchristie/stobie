@@ -17,10 +17,10 @@ web-time.workspace = true
 wgpu.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-polyorama-core = { path = "../../crates/polyorama-core" }
-polyorama-runtime = { path = "../../crates/polyorama-runtime" }
-polyorama-render-wgpu = { path = "../../crates/polyorama-render-wgpu" }
-polyorama-ui-egui = { path = "../../crates/polyorama-ui-egui" }
+stobie-core = { path = "../../crates/stobie-core" }
+stobie-runtime = { path = "../../crates/stobie-runtime" }
+stobie-render-wgpu = { path = "../../crates/stobie-render-wgpu" }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui" }
 emuella-viewer-source = { path = "../../crates/emuella-viewer-source" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

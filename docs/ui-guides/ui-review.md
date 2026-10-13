@@ -86,7 +86,7 @@ exercise.
   action and pane/domain references without enumerating virtualised data?
 - Do AccessKit parity and text-layout audits have no unexplained findings?
 - Does text evidence retain coverage counts and exclusions? An empty text audit
-  certifies only observed Polyorama components, not every visible string. Check
+  certifies only observed Stobie components, not every visible string. Check
   native response recording when adding a control or popup option.
 - Do pointer, keyboard and—where relevant—physical native/browser paths use
   the same current semantic target?

@@ -1,12 +1,12 @@
 # Compact status chip
 
 Status: complete
-Delivery: [PR #53](https://github.com/robchristie/polyorama/pull/53)
+Delivery: [PR #53](https://github.com/robchristie/stobie/pull/53)
 
 ## Outcome and boundaries
 
 Applications own workflow states, transitions, labels, localisation and explicit
-semantic tones. Polyorama owns one compact informational recipe, its measured
+semantic tones. Stobie owns one compact informational recipe, its measured
 text, geometry, theme treatment and observations. Preserve wrapping status_badge,
 PresentationContext::badge and navigation badge contracts. Bokkie integration,
 filter/selection/removal controls and live announcements are separate work.

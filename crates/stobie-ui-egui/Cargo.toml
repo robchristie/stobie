@@ -1,0 +1,22 @@
+[package]
+name = "stobie-ui-egui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["image-rendering"]
+image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
+
+[dependencies]
+egui.workspace = true
+egui-wgpu = { workspace = true, optional = true }
+wgpu = { workspace = true, optional = true }
+stobie-core = { path = "../stobie-core" }
+stobie-render-wgpu = { path = "../stobie-render-wgpu", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+egui_kittest.workspace = true

@@ -1,6 +1,6 @@
 # Analytical Workspace Lab private development preview
 
-The root `.dev-preview.toml` identifies this application as `polyorama-lab` and
+The root `.dev-preview.toml` identifies this application as `stobie-lab` and
 launches it through an installed gateway's version 1 inherited-socket contract.
 The identifier follows that contract's lower-case, maximum-31-character grammar.
 Python 3.11 or later is sufficient for the adapter and its verification tests.

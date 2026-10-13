@@ -1,5 +1,5 @@
 import { installWorkerStartup } from './browser-startup.js';
-import init, { decode_request } from './worker-pkg/polyorama_tile_worker.js';
+import init, { decode_request } from './worker-pkg/stobie_tile_worker.js';
 
 const startup = installWorkerStartup();
 startup.mark('wasm_init_begin');

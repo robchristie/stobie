@@ -1,4 +1,4 @@
-# Polyorama design system and agent UI loop
+# Stobie design system and agent UI loop
 
 Status: active normative goal
 
@@ -6,7 +6,7 @@ Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
 ## Outcome
 
-Build the first design and agent-control plane for Polyorama. The result must
+Build the first design and agent-control plane for Stobie. The result must
 make dense analytical UI calm, precise, legible, keyboard-operable,
 semantically observable and deterministically reviewable while remaining a
 layer above egui and wgpu.
@@ -18,7 +18,7 @@ The goal includes:
 - persisted appearance, contrast, density, font-scale and motion preferences;
 - measured text roles and explicit wrapping, truncation and overflow policy;
 - reusable production shell components and a native/browser component gallery;
-- AccessKit-aligned semantics, stable Polyorama IDs and current geometry;
+- AccessKit-aligned semantics, stable Stobie IDs and current geometry;
 - one action registry shared by controls, shortcuts, tests and inspection;
 - deterministic story rendering, semantic inspection and text-layout audits;
 - CI evidence artefacts, focused agent guides and a seed UI evaluation suite;
@@ -32,7 +32,7 @@ belongs in `docs/design-agent-loop-report.md`.
 
 ## Visual thesis
 
-Polyorama should look like a precise analytical instrument: dense but not
+Stobie should look like a precise analytical instrument: dense but not
 cramped, technically capable without looking unfinished, and visually quiet
 enough that imagery, data and current selection remain dominant.
 
@@ -47,10 +47,10 @@ restrained, with motion used only for continuity and reduced-motion honoured.
 
 ## Architectural constraints
 
-- `polyorama-core` remains independent of egui, eframe, wgpu and browser APIs.
-- `polyorama-runtime` remains independent of egui and wgpu.
-- `polyorama-render-wgpu` owns persistent GPU resources and typed render work.
-- `polyorama-ui-egui` is the sole framework crate that understands egui.
+- `stobie-core` remains independent of egui, eframe, wgpu and browser APIs.
+- `stobie-runtime` remains independent of egui and wgpu.
+- `stobie-render-wgpu` owns persistent GPU resources and typed render work.
+- `stobie-ui-egui` is the sole framework crate that understands egui.
 - The serialisable `Workspace` remains the only authoritative dock tree.
 - Panes continue to use narrow read models and feature output sinks.
 - Durable changes continue through intents and validated commands.
@@ -58,7 +58,7 @@ restrained, with motion used only for continuity and reduced-motion honoured.
 - Tokens constrain styling; they do not form a runtime stylesheet or UI DSL.
 - Egui font layout is the only authority for production text measurement.
 - Egui/AccessKit role, name and state are the semantic source where available;
-  Polyorama augments them with stable IDs, geometry, actions and domain data.
+  Stobie augments them with stable IDs, geometry, actions and domain data.
 - Complete result and thumbnail collections must never be materialised.
 
 ## Required visual grammar
@@ -105,7 +105,7 @@ overflow controls, or a deliberate minimum-state presentation.
 
 ### Gallery, semantics and actions
 
-- [ ] `polyorama-gallery` runs natively and in a browser.
+- [ ] `stobie-gallery` runs natively and in a browser.
 - [ ] Stable typed stories cover required states, themes, densities, font
       scales, widths and composed application scenes without a runtime UI DSL.
 - [ ] Every custom interactive control exposes role, name, state, actions,

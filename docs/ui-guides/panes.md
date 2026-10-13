@@ -1,6 +1,6 @@
 # Panes
 
-The serialisable `polyorama_core::Workspace` is the sole dock tree. The dock
+The serialisable `stobie_core::Workspace` is the sole dock tree. The dock
 owns workspace layout; each pane owns only its local content and scrolling.
 Do not introduce a second docking state or let a pane allocate GPU resources.
 

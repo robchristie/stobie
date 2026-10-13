@@ -31,7 +31,7 @@ All commands ran from the archived `source` directory with
 ```sh
 cargo build --offline --locked --release -p emuella-viewer
 cargo build --offline --locked --release --target wasm32-unknown-unknown -p emuella-viewer
-POLYORAMA_VIEWER_WEB_DIR="$FREEZE/web-built" \
+STOBIE_VIEWER_WEB_DIR="$FREEZE/web-built" \
   cargo run --offline --locked --package xtask -- build-viewer-web
 ```
 

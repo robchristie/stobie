@@ -13,7 +13,7 @@ The exploration question is whether actual current RSS stabilises across ten
 explicit display-cache release/revisit cycles, and what the available lifetime
 and mapping evidence can explain about the retained native ceiling failure.
 The smallest declared probe is the entire fixed five-start cohort below.
-Polyorama owns detailed evidence in the approved store. The workspace
+Stobie owns detailed evidence in the approved store. The workspace
 `docs/plans/active/viewer-acceptance.md` owns disposition. Exit preparation when
 this protocol, external runner and authored checks are ready for main's commit;
 exit the later measurement phase only after all five outcomes, actual native

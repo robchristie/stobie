@@ -47,7 +47,7 @@ runs:
       run: bash tools/normalise-ci-toolchain.sh
     - uses: Swatinem/rust-cache@v2
       with:
-        prefix-key: v1-polyorama
+        prefix-key: v1-stobie
         shared-key: qualification-${{ inputs.stage == 'docs' && 'checks' || inputs.stage == 'gallery-browser' && 'ui' || inputs.stage }}
         workspaces: |
           . -> target

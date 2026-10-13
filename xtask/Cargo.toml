@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-polyorama-gallery = { path = "../apps/polyorama-gallery" }
-polyorama-ui-egui = { path = "../crates/polyorama-ui-egui" }
+stobie-gallery = { path = "../apps/stobie-gallery" }
+stobie-ui-egui = { path = "../crates/stobie-ui-egui" }
 serde.workspace = true
 serde_json.workspace = true

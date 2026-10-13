@@ -1,12 +1,12 @@
 # Independent Record Desk consumer
 
 Status: complete
-Delivery: [Polyorama PR #47](https://github.com/robchristie/polyorama/pull/47)
+Delivery: [Stobie PR #47](https://github.com/robchristie/stobie/pull/47)
 
 ## Outcome and scope
 
 Deliver a maintained independent Cargo workspace in `consumers/record-desk`
-using public Polyorama APIs for a useful record review/edit workflow on native
+using public Stobie APIs for a useful record review/edit workflow on native
 and browser. Deliver its demonstrated framework boundary repairs, documentation,
 regression and runtime evidence, one fresh-context extension probe and reviewed
 PR landing. No backend, image pipeline, publication, general application

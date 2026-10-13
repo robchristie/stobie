@@ -2,7 +2,7 @@
 
 Status: complete
 
-Delivery: [PR #56](https://github.com/robchristie/polyorama/pull/56)
+Delivery: [PR #56](https://github.com/robchristie/stobie/pull/56)
 
 ## Outcome and acceptance
 
@@ -82,7 +82,7 @@ regressions passed locally.
 The complete changed-source warm workflow on
 `3049309088429a224a2e58d9cf12986a682e6651` passed in **4m34s**. An unchanged
 fresh-runner repeat passed in **4m47s**. Both are
-[run 37870954298](https://github.com/robchristie/polyorama/actions/runs/37870954298),
+[run 37870954298](https://github.com/robchristie/stobie/actions/runs/37870954298),
 attempts 1 and 2. The metric spans `run_started_at` through terminal `verify`
 completion and includes scheduling, setup, qualification, uploads and post
 steps. The documentation job is deliberately skipped on this full route.
@@ -119,7 +119,7 @@ Regressions cover hover-induced pose changes and slow pointer preparation.
 The repaired eight-stage source
 `edd16a292349713e70d9a9cff6925761eb35370e` passed the complete changed-source
 warm workflow in **4m28s** and its unchanged fresh-runner repeat in **4m43s**
-([run 37874654782](https://github.com/robchristie/polyorama/actions/runs/37874654782),
+([run 37874654782](https://github.com/robchristie/stobie/actions/runs/37874654782),
 attempts 1 and 2). Both include scheduling, setup, all eight qualification
 stages, uploads/post steps and terminal `verify`. All required checks passed.
 The Gallery browser lane reused the exact compatible UI archive, with no

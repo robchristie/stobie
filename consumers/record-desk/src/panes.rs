@@ -1,7 +1,7 @@
 use egui::{Rect, Ui};
-use polyorama_core::{DockNodeId, PaneId};
-use polyorama_ui_egui::*;
 use serde::Serialize;
+use stobie_core::{DockNodeId, PaneId};
+use stobie_ui_egui::*;
 
 use crate::{actions::Action, model::*};
 

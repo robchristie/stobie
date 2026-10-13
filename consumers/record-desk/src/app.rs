@@ -1,7 +1,7 @@
 use egui::Ui;
-use polyorama_core::{DockNode, SplitAxis, Workspace};
-use polyorama_ui_egui::*;
 use serde::Serialize;
+use stobie_core::{DockNode, SplitAxis, Workspace};
+use stobie_ui_egui::*;
 
 use crate::{actions::Action, model::*, panes::*, store::Store};
 

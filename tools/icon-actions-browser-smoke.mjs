@@ -10,12 +10,12 @@ import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { focusByTab } from './browser-keyboard-focus.mjs';
 
-const root = resolve('apps/polyorama-gallery/web');
-const evidence = resolve(process.env.POLYORAMA_EVIDENCE_DIR ?? '.tools/runtime/icons-browser');
+const root = resolve('apps/stobie-gallery/web');
+const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/icons-browser');
 const assets = new Map([
   ['index.html', 'text/html'], ['styles.css', 'text/css'], ['bootstrap.js', 'text/javascript'],
-  ['browser-startup.js', 'text/javascript'], ['pkg/polyorama_gallery.js', 'text/javascript'],
-  ['pkg/polyorama_gallery_bg.wasm', 'application/wasm'],
+  ['browser-startup.js', 'text/javascript'], ['pkg/stobie_gallery.js', 'text/javascript'],
+  ['pkg/stobie_gallery_bg.wasm', 'application/wasm'],
 ]);
 const server = createServer(async (request, response) => {
   const name = new URL(request.url, 'http://local').pathname.slice(1) || 'index.html';
@@ -27,7 +27,7 @@ const server = createServer(async (request, response) => {
   } catch { response.writeHead(404); response.end(); }
 });
 await mkdir(evidence, { recursive: true });
-const profile = await mkdtemp(join(tmpdir(), 'polyorama-icons-browser-'));
+const profile = await mkdtemp(join(tmpdir(), 'stobie-icons-browser-'));
 const steps = [];
 const targets = [];
 const errors = [];
@@ -37,28 +37,28 @@ let browser;
 let url;
 let serverStarted = false;
 let pressedComparison;
-const snapshot = () => page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot());
+const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'regular', ...overrides });
 
 async function ready() {
   await page.waitForFunction(() => document.body.classList.contains('ready')
-    && window.__POLYORAMA_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
+    && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
 }
 async function story(id, config = configuration()) {
   const before = await snapshot();
   await page.evaluate(({ id, config }) => {
-    window.__POLYORAMA_GALLERY_HANDLE.set_configuration(config);
-    window.__POLYORAMA_GALLERY_HANDLE.select_story(id);
+    window.__STOBIE_GALLERY_HANDLE.set_configuration(config);
+    window.__STOBIE_GALLERY_HANDLE.select_story(id);
   }, { id, config });
   await page.waitForFunction(({ id, config, frame }) => {
-    const s = window.__POLYORAMA_GALLERY_HANDLE.snapshot();
+    const s = window.__STOBIE_GALLERY_HANDLE.snapshot();
     return s.frame > frame && s.story === id && Object.entries(config).every(([key, value]) => s.configuration[key] === value);
   }, { id, config, frame: before.frame });
   await page.waitForTimeout(100);
 }
 async function waitFixture(expected) {
   await page.waitForFunction((expected) => {
-    const fixture = window.__POLYORAMA_GALLERY_HANDLE.snapshot().icon_fixture;
+    const fixture = window.__STOBIE_GALLERY_HANDLE.snapshot().icon_fixture;
     return Object.entries(expected).every(([key, value]) => key.startsWith('count:')
       ? fixture.activations[key.slice(6)] === value : (fixture[key] ?? null) === value);
   }, expected, { timeout: 10_000 });
@@ -87,7 +87,7 @@ async function focus(controlId) {
   return focusByTab(controlId, {
     target: control,
     pressTab: () => page.keyboard.press('Tab'),
-    waitForTab: epoch => page.waitForFunction(epoch => window.__POLYORAMA_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
+    waitForTab: epoch => page.waitForFunction(epoch => window.__STOBIE_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
     wait: ms => page.waitForTimeout(ms),
     maxTabs: 40,
   });
@@ -143,7 +143,7 @@ async function record(name, capture = true, expectedFixture = {}, expectedFocuse
       return { minimum, maximum };
     }, png.toString('base64'));
     assert(pixels.maximum > 0 && pixels.minimum !== pixels.maximum,
-      `${name}: screenshot has no rendered pixels; use the configured POLYORAMA_BROWSER_HEADFUL=1 DISPLAY route`);
+      `${name}: screenshot has no rendered pixels; use the configured STOBIE_BROWSER_HEADFUL=1 DISPLAY route`);
     image = { path: `browser-${name}.png`, width: png.readUInt32BE(16), height: png.readUInt32BE(20), sha256: createHash('sha256').update(png).digest('hex'), pixels };
   }
   steps.push({ name, state: s, device_scale_factor: await page.evaluate(() => devicePixelRatio), image, capture_bracket: captureBracket });
@@ -202,11 +202,11 @@ function observeErrors(page) {
 }
 
 try {
-  if (process.env.POLYORAMA_ICON_PREVIEW_URL) {
-    const preview = new URL(process.env.POLYORAMA_ICON_PREVIEW_URL);
+  if (process.env.STOBIE_ICON_PREVIEW_URL) {
+    const preview = new URL(process.env.STOBIE_ICON_PREVIEW_URL);
     assert(preview.protocol === 'https:' && preview.pathname === '/gallery/'
       && !preview.username && !preview.password && !preview.search && !preview.hash,
-    'POLYORAMA_ICON_PREVIEW_URL must be the private HTTPS /gallery/ URL');
+    'STOBIE_ICON_PREVIEW_URL must be the private HTTPS /gallery/ URL');
     url = preview.href;
   } else {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -215,8 +215,8 @@ try {
   }
   context = await chromium.launchPersistentContext(profile, {
     ...hostedLinuxWebGpuLaunchOptions(), viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1,
-    executablePath: process.env.POLYORAMA_CHROMIUM,
-    env: { ...process.env, LD_LIBRARY_PATH: process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1'
+    executablePath: process.env.STOBIE_CHROMIUM,
+    env: { ...process.env, LD_LIBRARY_PATH: process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1'
       ? process.env.LD_LIBRARY_PATH ?? '' : `${resolve('.tools/sysroot/usr/lib')}:${process.env.LD_LIBRARY_PATH ?? ''}` },
   });
   browser = context.browser();
@@ -224,7 +224,7 @@ try {
   observeErrors(page);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await ready();
-  const manifest = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.manifest());
+  const manifest = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.manifest());
   const requiredStories = ['icons/vocabulary', 'icons/action-presentations', 'icons/toolbar', 'icons/long-narrow'];
   assert(requiredStories.every(id => manifest.some(story => story.id === id)), 'typed icon stories registered');
   assert.equal(new Set(manifest.map(story => story.id)).size, manifest.length);
@@ -321,7 +321,7 @@ try {
   const report = {
     source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
     dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '',
-    wasm_sha256: createHash('sha256').update(await readFile(resolve(root, 'pkg/polyorama_gallery_bg.wasm'))).digest('hex'),
+    wasm_sha256: createHash('sha256').update(await readFile(resolve(root, 'pkg/stobie_gallery_bg.wasm'))).digest('hex'),
     url, browser: browser.version(), launch: hostedLinuxWebGpuLaunchOptions(), manifest, steps, targets, pressed_comparison: pressedComparison, idle, errors,
     input_route: 'Playwright physical mouse/keyboard; hooks select fixed stories/configurations and read state/geometry',
   };

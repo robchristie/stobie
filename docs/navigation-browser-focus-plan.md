@@ -1,15 +1,15 @@
 # Browser navigation final-action observation
 
 Status: complete
-Delivery: [PR #55](https://github.com/robchristie/polyorama/pull/55)
+Delivery: [PR #55](https://github.com/robchristie/stobie/pull/55)
 
 ## Outcome and scope
 
 Portfolio Rust 1.99.0 package P1 remains open after
-[compiler PR #54](https://github.com/robchristie/polyorama/pull/54) landed at
+[compiler PR #54](https://github.com/robchristie/stobie/pull/54) landed at
 `e7691e2d457c2db2c7146dbcc33509e2758df88c`. Its reviewed/landed tree matches,
 and its exact-head CI passed, but required
-[merge CI 37758099129](https://github.com/robchristie/polyorama/actions/runs/37758099129)
+[merge CI 37758099129](https://github.com/robchristie/stobie/actions/runs/37758099129)
 failed the separate browser navigation focus helper. Ordinary defensive
 verification repair and reviewed landing continue under the original authority;
 this is not a new product/platform/performance programme.

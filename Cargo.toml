@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "crates/polyorama-core",
-    "crates/polyorama-runtime",
-    "crates/polyorama-render-wgpu",
-    "crates/polyorama-ui-egui",
+    "crates/stobie-core",
+    "crates/stobie-runtime",
+    "crates/stobie-render-wgpu",
+    "crates/stobie-ui-egui",
     "apps/analytical-workspace-lab",
-    "apps/polyorama-gallery",
+    "apps/stobie-gallery",
     "apps/tile-worker",
     "apps/emuella-viewer",
     "crates/emuella-viewer-source",
@@ -20,7 +20,7 @@ version = "0.1.6"
 edition = "2024"
 rust-version = "1.97.1"
 license = "Apache-2.0"
-repository = "https://github.com/robchristie/polyorama"
+repository = "https://github.com/robchristie/stobie"
 
 [workspace.dependencies]
 anyhow = "1.0.100"

@@ -3,19 +3,19 @@ use crate::{
     engine::{Event, Job, WorkerMetrics, pacing_now_ms, representation},
 };
 use emuella_viewer_source::Manifest;
-use polyorama_core::{
+use serde::{Deserialize, Serialize};
+use stobie_core::{
     DemandPriority, ImageRegion, PaneId, RegionConsumerId, RegionDemand, RegionKey, SourceStage,
     layout_virtual_grid,
 };
-use polyorama_render_wgpu::{
+use stobie_render_wgpu::{
     PixelRect, RegionalDisplaySettings, RegionalDraw, RegionalGpuLimits, RegionalRenderer,
 };
-use polyorama_runtime::{RegionalRuntime, RegionalRuntimeLimits};
-use polyorama_ui_egui::{
+use stobie_runtime::{RegionalRuntime, RegionalRuntimeLimits};
+use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
     ActionTarget, Availability, UiPreferences, action_button, apply_design_system,
 };
-use serde::{Deserialize, Serialize};
 use web_time::{Duration, Instant};
 
 const LOGICAL_DETECTIONS: usize = 10_000;
@@ -123,7 +123,7 @@ pub struct WorkEvent {
     pub kind: String,
     pub at_ms: f64,
     pub key: RegionKey,
-    pub token: polyorama_runtime::RequestToken,
+    pub token: stobie_runtime::RequestToken,
     pub accounted_decoded_bytes: usize,
     #[serde(default)]
     pub pacing: Option<PacingSample>,
@@ -210,7 +210,7 @@ pub struct DiagnosticBoundary {
     pub clock_ms: f64,
     pub frame: u64,
     pub phase: String,
-    pub token: Option<polyorama_runtime::RequestToken>,
+    pub token: Option<stobie_runtime::RequestToken>,
     pub worker_reserved_bytes: usize,
     pub decoded_bytes: usize,
     pub upload_bytes: usize,
@@ -327,7 +327,7 @@ pub struct ViewerApp {
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     script_output: Option<String>,
     last_demands: Vec<RegionDemand>,
-    pacing_dispatch: Option<(polyorama_runtime::RequestToken, f64)>,
+    pacing_dispatch: Option<(stobie_runtime::RequestToken, f64)>,
     pacing_receipt: Option<f64>,
     diagnostic: crate::DiagnosticOptions,
     authored_workload_admitted: bool,
@@ -655,7 +655,7 @@ impl ViewerApp {
         #[cfg(target_arch = "wasm32")]
         let _ = kind;
     }
-    fn boundary(&mut self, kind: &str, token: Option<polyorama_runtime::RequestToken>) {
+    fn boundary(&mut self, kind: &str, token: Option<stobie_runtime::RequestToken>) {
         if !self.diagnostic.enabled {
             return;
         }
@@ -675,15 +675,10 @@ impl ViewerApp {
             upload_bytes: m.upload_bytes,
         });
     }
-    fn work_event(&mut self, kind: &str, request: &polyorama_runtime::RegionalRequest) {
+    fn work_event(&mut self, kind: &str, request: &stobie_runtime::RegionalRequest) {
         self.resource_event(kind, &request.key, request.token);
     }
-    fn resource_event(
-        &mut self,
-        kind: &str,
-        key: &RegionKey,
-        token: polyorama_runtime::RequestToken,
-    ) {
+    fn resource_event(&mut self, kind: &str, key: &RegionKey, token: stobie_runtime::RequestToken) {
         if self.snapshot.events.len() == 128 {
             self.snapshot.events.remove(0);
             self.snapshot.events_dropped += 1;

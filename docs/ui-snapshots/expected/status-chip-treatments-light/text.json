@@ -4,123 +4,27 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 122822897309857
+        "instance": 1017902373059400
       },
       "role": "status",
       "horizontal_alignment": "start",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 919.5625,
-        "min_y": 190.5,
-        "max_x": 989.1875,
-        "max_y": 207.5
-      },
-      "painted_rect": {
-        "min_x": 919.5625,
-        "min_y": 190.5,
-        "max_x": 989.1875,
-        "max_y": 207.5
-      },
-      "clip_rect": {
-        "min_x": 919.5625,
-        "min_y": 190.5,
-        "max_x": 989.1875,
-        "max_y": 207.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 1256386423796804
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 628.65625,
-        "min_y": 247.5,
-        "max_x": 684.09375,
-        "max_y": 264.5
-      },
-      "painted_rect": {
-        "min_x": 628.65625,
-        "min_y": 247.5,
-        "max_x": 683.65625,
-        "max_y": 264.5
-      },
-      "clip_rect": {
-        "min_x": 628.65625,
-        "min_y": 247.5,
-        "max_x": 684.09375,
-        "max_y": 264.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 1523553124227567
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 561,
-        "min_y": 247.5,
-        "max_x": 592.65625,
-        "max_y": 264.5
-      },
-      "painted_rect": {
-        "min_x": 561,
-        "min_y": 247.5,
-        "max_x": 592.65625,
-        "max_y": 264.5
-      },
-      "clip_rect": {
-        "min_x": 561,
-        "min_y": 247.5,
-        "max_x": 592.65625,
-        "max_y": 264.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 2111759662034676
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 657.09375,
+        "min_x": 899.1875,
         "min_y": 133.5,
-        "max_x": 726.90625,
+        "max_x": 937.1875,
         "max_y": 150.5
       },
       "painted_rect": {
-        "min_x": 657.09375,
+        "min_x": 899.1875,
         "min_y": 133.5,
-        "max_x": 726.90625,
+        "max_x": 937.1875,
         "max_y": 150.5
       },
       "clip_rect": {
-        "min_x": 657.09375,
+        "min_x": 899.1875,
         "min_y": 133.5,
-        "max_x": 726.90625,
+        "max_x": 937.1875,
         "max_y": 150.5
       },
       "overflow": "ellipsis",
@@ -132,28 +36,28 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 2167646278592899
+        "instance": 1138759356697476
       },
       "role": "status",
       "horizontal_alignment": "start",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 1004.1875,
-        "min_y": 190.5,
-        "max_x": 1042.1875,
-        "max_y": 207.5
+        "min_x": 814.5625,
+        "min_y": 133.5,
+        "max_x": 884.1875,
+        "max_y": 150.5
       },
       "painted_rect": {
-        "min_x": 1004.1875,
-        "min_y": 190.5,
-        "max_x": 1042.1875,
-        "max_y": 207.5
+        "min_x": 814.5625,
+        "min_y": 133.5,
+        "max_x": 884.1875,
+        "max_y": 150.5
       },
       "clip_rect": {
-        "min_x": 1004.1875,
-        "min_y": 190.5,
-        "max_x": 1042.1875,
-        "max_y": 207.5
+        "min_x": 814.5625,
+        "min_y": 133.5,
+        "max_x": 884.1875,
+        "max_y": 150.5
       },
       "overflow": "ellipsis",
       "interaction": "selectable",
@@ -164,39 +68,7 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 2242744833377221
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 720.09375,
-        "min_y": 190.5,
-        "max_x": 789.90625,
-        "max_y": 207.5
-      },
-      "painted_rect": {
-        "min_x": 720.09375,
-        "min_y": 190.5,
-        "max_x": 789.90625,
-        "max_y": 207.5
-      },
-      "clip_rect": {
-        "min_x": 720.09375,
-        "min_y": 190.5,
-        "max_x": 789.90625,
-        "max_y": 207.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 2254360876168192
+        "instance": 1749289640290725
       },
       "role": "status",
       "horizontal_alignment": "start",
@@ -228,27 +100,27 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 2709184720866373
+        "instance": 2880582715603912
       },
       "role": "status",
       "horizontal_alignment": "start",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 1004.1875,
+        "min_x": 628.65625,
         "min_y": 247.5,
-        "max_x": 1042.1875,
+        "max_x": 684.09375,
         "max_y": 264.5
       },
       "painted_rect": {
-        "min_x": 1004.1875,
+        "min_x": 628.65625,
         "min_y": 247.5,
-        "max_x": 1042.1875,
+        "max_x": 683.65625,
         "max_y": 264.5
       },
       "clip_rect": {
-        "min_x": 1004.1875,
+        "min_x": 628.65625,
         "min_y": 247.5,
-        "max_x": 1042.1875,
+        "max_x": 684.09375,
         "max_y": 264.5
       },
       "overflow": "ellipsis",
@@ -260,27 +132,27 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 3494665224692550
+        "instance": 3848920198389267
       },
       "role": "status",
       "horizontal_alignment": "start",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 919.5625,
+        "min_x": 825.90625,
         "min_y": 247.5,
-        "max_x": 989.1875,
+        "max_x": 883.5625,
         "max_y": 264.5
       },
       "painted_rect": {
-        "min_x": 919.5625,
+        "min_x": 825.90625,
         "min_y": 247.5,
-        "max_x": 989.1875,
+        "max_x": 883.5625,
         "max_y": 264.5
       },
       "clip_rect": {
-        "min_x": 919.5625,
+        "min_x": 825.90625,
         "min_y": 247.5,
-        "max_x": 989.1875,
+        "max_x": 883.5625,
         "max_y": 264.5
       },
       "overflow": "ellipsis",
@@ -292,71 +164,7 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 3786602103789382
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 814.5625,
-        "min_y": 133.5,
-        "max_x": 884.1875,
-        "max_y": 150.5
-      },
-      "painted_rect": {
-        "min_x": 814.5625,
-        "min_y": 133.5,
-        "max_x": 884.1875,
-        "max_y": 150.5
-      },
-      "clip_rect": {
-        "min_x": 814.5625,
-        "min_y": 133.5,
-        "max_x": 884.1875,
-        "max_y": 150.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 4250425836306819
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 540,
-        "min_y": 133.5,
-        "max_x": 571.65625,
-        "max_y": 150.5
-      },
-      "painted_rect": {
-        "min_x": 540,
-        "min_y": 133.5,
-        "max_x": 571.65625,
-        "max_y": 150.5
-      },
-      "clip_rect": {
-        "min_x": 540,
-        "min_y": 133.5,
-        "max_x": 571.65625,
-        "max_y": 150.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 5150075206671858
+        "instance": 406528349304673
       },
       "role": "status",
       "horizontal_alignment": "start",
@@ -388,7 +196,71 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 6350616703825948
+        "instance": 454347801250989
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 1004.1875,
+        "min_y": 247.5,
+        "max_x": 1042.1875,
+        "max_y": 264.5
+      },
+      "painted_rect": {
+        "min_x": 1004.1875,
+        "min_y": 247.5,
+        "max_x": 1042.1875,
+        "max_y": 264.5
+      },
+      "clip_rect": {
+        "min_x": 1004.1875,
+        "min_y": 247.5,
+        "max_x": 1042.1875,
+        "max_y": 264.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 4772723222839334
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 657.09375,
+        "min_y": 133.5,
+        "max_x": 726.90625,
+        "max_y": 150.5
+      },
+      "painted_rect": {
+        "min_x": 657.09375,
+        "min_y": 133.5,
+        "max_x": 726.90625,
+        "max_y": 150.5
+      },
+      "clip_rect": {
+        "min_x": 657.09375,
+        "min_y": 133.5,
+        "max_x": 726.90625,
+        "max_y": 150.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 4816958258997392
       },
       "role": "status",
       "horizontal_alignment": "start",
@@ -420,123 +292,27 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 6472019330229761
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 825.90625,
-        "min_y": 190.5,
-        "max_x": 883.5625,
-        "max_y": 207.5
-      },
-      "painted_rect": {
-        "min_x": 825.90625,
-        "min_y": 190.5,
-        "max_x": 883.5625,
-        "max_y": 207.5
-      },
-      "clip_rect": {
-        "min_x": 825.90625,
-        "min_y": 190.5,
-        "max_x": 883.5625,
-        "max_y": 207.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 8052653210992701
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 899.1875,
-        "min_y": 133.5,
-        "max_x": 937.1875,
-        "max_y": 150.5
-      },
-      "painted_rect": {
-        "min_x": 899.1875,
-        "min_y": 133.5,
-        "max_x": 937.1875,
-        "max_y": 150.5
-      },
-      "clip_rect": {
-        "min_x": 899.1875,
-        "min_y": 133.5,
-        "max_x": 937.1875,
-        "max_y": 150.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 8725839179333952
+        "instance": 500183127932269
       },
       "role": "status",
       "horizontal_alignment": "start",
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 561,
-        "min_y": 190.5,
-        "max_x": 592.65625,
-        "max_y": 207.5
-      },
-      "painted_rect": {
-        "min_x": 561,
-        "min_y": 190.5,
-        "max_x": 592.65625,
-        "max_y": 207.5
-      },
-      "clip_rect": {
-        "min_x": 561,
-        "min_y": 190.5,
-        "max_x": 592.65625,
-        "max_y": 207.5
-      },
-      "overflow": "ellipsis",
-      "interaction": "selectable",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false
-    },
-    {
-      "component_id": {
-        "kind": "status_chip",
-        "instance": 8728593370773042
-      },
-      "role": "status",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "centre",
-      "allocated_rect": {
-        "min_x": 825.90625,
         "min_y": 247.5,
-        "max_x": 883.5625,
+        "max_x": 592.65625,
         "max_y": 264.5
       },
       "painted_rect": {
-        "min_x": 825.90625,
+        "min_x": 561,
         "min_y": 247.5,
-        "max_x": 883.5625,
+        "max_x": 592.65625,
         "max_y": 264.5
       },
       "clip_rect": {
-        "min_x": 825.90625,
+        "min_x": 561,
         "min_y": 247.5,
-        "max_x": 883.5625,
+        "max_x": 592.65625,
         "max_y": 264.5
       },
       "overflow": "ellipsis",
@@ -548,7 +324,71 @@
     {
       "component_id": {
         "kind": "status_chip",
-        "instance": 8739754544650740
+        "instance": 526003978596120
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 540,
+        "min_y": 133.5,
+        "max_x": 571.65625,
+        "max_y": 150.5
+      },
+      "painted_rect": {
+        "min_x": 540,
+        "min_y": 133.5,
+        "max_x": 571.65625,
+        "max_y": 150.5
+      },
+      "clip_rect": {
+        "min_x": 540,
+        "min_y": 133.5,
+        "max_x": 571.65625,
+        "max_y": 150.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 6243108124183225
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 825.90625,
+        "min_y": 190.5,
+        "max_x": 883.5625,
+        "max_y": 207.5
+      },
+      "painted_rect": {
+        "min_x": 825.90625,
+        "min_y": 190.5,
+        "max_x": 883.5625,
+        "max_y": 207.5
+      },
+      "clip_rect": {
+        "min_x": 825.90625,
+        "min_y": 190.5,
+        "max_x": 883.5625,
+        "max_y": 207.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 6481422442396847
       },
       "role": "status",
       "horizontal_alignment": "start",
@@ -570,6 +410,166 @@
         "min_y": 133.5,
         "max_x": 799.5625,
         "max_y": 150.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 6719759039246124
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 919.5625,
+        "min_y": 247.5,
+        "max_x": 989.1875,
+        "max_y": 264.5
+      },
+      "painted_rect": {
+        "min_x": 919.5625,
+        "min_y": 247.5,
+        "max_x": 989.1875,
+        "max_y": 264.5
+      },
+      "clip_rect": {
+        "min_x": 919.5625,
+        "min_y": 247.5,
+        "max_x": 989.1875,
+        "max_y": 264.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 7071907169315254
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 919.5625,
+        "min_y": 190.5,
+        "max_x": 989.1875,
+        "max_y": 207.5
+      },
+      "painted_rect": {
+        "min_x": 919.5625,
+        "min_y": 190.5,
+        "max_x": 989.1875,
+        "max_y": 207.5
+      },
+      "clip_rect": {
+        "min_x": 919.5625,
+        "min_y": 190.5,
+        "max_x": 989.1875,
+        "max_y": 207.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 7159258804028551
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 1004.1875,
+        "min_y": 190.5,
+        "max_x": 1042.1875,
+        "max_y": 207.5
+      },
+      "painted_rect": {
+        "min_x": 1004.1875,
+        "min_y": 190.5,
+        "max_x": 1042.1875,
+        "max_y": 207.5
+      },
+      "clip_rect": {
+        "min_x": 1004.1875,
+        "min_y": 190.5,
+        "max_x": 1042.1875,
+        "max_y": 207.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 8625857356682865
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 720.09375,
+        "min_y": 190.5,
+        "max_x": 789.90625,
+        "max_y": 207.5
+      },
+      "painted_rect": {
+        "min_x": 720.09375,
+        "min_y": 190.5,
+        "max_x": 789.90625,
+        "max_y": 207.5
+      },
+      "clip_rect": {
+        "min_x": 720.09375,
+        "min_y": 190.5,
+        "max_x": 789.90625,
+        "max_y": 207.5
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "status_chip",
+        "instance": 8999631569520400
+      },
+      "role": "status",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 561,
+        "min_y": 190.5,
+        "max_x": 592.65625,
+        "max_y": 207.5
+      },
+      "painted_rect": {
+        "min_x": 561,
+        "min_y": 190.5,
+        "max_x": 592.65625,
+        "max_y": 207.5
+      },
+      "clip_rect": {
+        "min_x": 561,
+        "min_y": 190.5,
+        "max_x": 592.65625,
+        "max_y": 207.5
       },
       "overflow": "ellipsis",
       "interaction": "selectable",

@@ -1,6 +1,6 @@
 # Emuella image viewer
 
-This application composes the Emuella regional source with Polyorama's shared
+This application composes the Emuella regional source with Stobie's shared
 runtime and integer GPU renderer. The existing Analytical Workspace Lab and
 component Gallery retain their separate synthetic demonstration paths.
 
@@ -33,7 +33,7 @@ Build a complete static root in registered campaign scratch and serve that exact
 root through `emuella-viewer-tools serve --web`:
 
 ```sh
-POLYORAMA_VIEWER_WEB_DIR="$CAMPAIGN_SCRATCH/viewer-web" cargo xtask build-viewer-web
+STOBIE_VIEWER_WEB_DIR="$CAMPAIGN_SCRATCH/viewer-web" cargo xtask build-viewer-web
 ```
 
 The static root contains local HTML, JavaScript and WASM, with no CDN assets.
@@ -77,7 +77,7 @@ cargo run --release -p emuella-viewer -- \
   --script-output "$CAMPAIGN_SCRATCH/viewer-native.json"
 
 EMUELLA_VIEWER_URL=http://127.0.0.1:8088 \
-POLYORAMA_EVIDENCE_DIR="$CAMPAIGN_SCRATCH/viewer-browser" \
+STOBIE_EVIDENCE_DIR="$CAMPAIGN_SCRATCH/viewer-browser" \
 cargo xtask viewer-smoke
 ```
 

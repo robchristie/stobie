@@ -10,10 +10,10 @@ is qualified at clean `9497023f30a959733ced5028599299d8b9e2670f`, tree
 production static bytes remain identical; the intervening delta includes CI/harness
 code, as described below. Later documentation-only commits preserve this repaired
 qualification surface. Production manifests retain their actual build
-revision; they do not relabel an earlier build. [PR #54](https://github.com/robchristie/polyorama/pull/54)
+revision; they do not relabel an earlier build. [PR #54](https://github.com/robchristie/stobie/pull/54)
 owns its exact-head review, applicable public CI and merge. Its failed actual
 merge-CI browser observation and bounded continuation are owned by
-[PR #55](https://github.com/robchristie/polyorama/pull/55) and the
+[PR #55](https://github.com/robchristie/stobie/pull/55) and the
 [browser final-action evidence](../navigation-browser-focus-evidence/README.md).
 The original qualification and three archives below retain their attribution.
 
@@ -93,7 +93,7 @@ release, package/data publication or protected-resource operation is included.
 
 ## CI verification repair
 
-[CI 37734771653](https://github.com/robchristie/polyorama/actions/runs/37734771653)
+[CI 37734771653](https://github.com/robchristie/stobie/actions/runs/37734771653)
 failed on previously reviewed `24ba90da0dab7e22140dcea736bd496044cabb96`
 after the native navigation focus helper exhausted forty Tabs. Its capture and
 report lack after-Tab state, so slow CI presentation is a hypothesis and no
@@ -144,7 +144,7 @@ is claimed.
 
 ## Semantic focus progress
 
-[CI 37741675597](https://github.com/robchristie/polyorama/actions/runs/37741675597)
+[CI 37741675597](https://github.com/robchristie/stobie/actions/runs/37741675597)
 failed on independently reviewed `db135e3ce50541df44e8e8560a0c90dd2c78a8c6`
 after 50m51s. Compiler/release/startup/snapshot/browser and earlier native gates,
 ripgrep and the fail-closed icon guard passed. New native transitions show Home

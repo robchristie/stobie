@@ -42,7 +42,7 @@ observation filter cannot erase its failed-attempt count. This is the library
 bounded-label contract; the consumer owns a scrollable evidence reader and its
 long-fixture end-content regression.
 
-The [bundled-font record](../../crates/polyorama-ui-egui/assets/fonts/README.md)
+The [bundled-font record](../../crates/stobie-ui-egui/assets/fonts/README.md)
 retains the upstream revision, SHA-256 identities, copyright and SIL Open Font
 Licence. Defaults retain egui's existing proportional fallback font chain.
 

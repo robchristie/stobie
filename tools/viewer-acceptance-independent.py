@@ -399,7 +399,7 @@ def execute_product(product, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--revision', required=True, help='Exact committed Polyorama protocol HEAD')
+    parser.add_argument('--revision', required=True, help='Exact committed Stobie protocol HEAD')
     parser.add_argument('--timing-grant', required=True, type=Path)
     args = parser.parse_args()
     protocol = json.loads(PROTOCOL.read_text())

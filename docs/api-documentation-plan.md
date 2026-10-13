@@ -1,7 +1,7 @@
 # Application composition documentation
 
 Status: complete
-Delivery: [Polyorama PR #45](https://github.com/robchristie/polyorama/pull/45)
+Delivery: [Stobie PR #45](https://github.com/robchristie/stobie/pull/45)
 
 ## Outcome and scope
 

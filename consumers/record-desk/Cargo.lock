@@ -2297,25 +2297,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polyorama-core"
-version = "0.1.6"
-dependencies = [
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "polyorama-ui-egui"
-version = "0.1.6"
-dependencies = [
- "egui",
- "polyorama-core",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2445,10 +2426,10 @@ dependencies = [
  "eframe",
  "egui",
  "egui_kittest",
- "polyorama-core",
- "polyorama-ui-egui",
  "serde",
  "serde_json",
+ "stobie-core",
+ "stobie-ui-egui",
  "tempfile",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -2801,6 +2782,25 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "stobie-core"
+version = "0.1.6"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "stobie-ui-egui"
+version = "0.1.6"
+dependencies = [
+ "egui",
+ "serde",
+ "serde_json",
+ "stobie-core",
+]
 
 [[package]]
 name = "syn"

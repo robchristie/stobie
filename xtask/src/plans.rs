@@ -40,7 +40,7 @@ fn field<'a>(source: &'a str, prefix: &str) -> Result<&'a str> {
 fn delivery_reference(source: &str) -> Result<()> {
     let delivery = field(source, "Delivery:")?;
     let number = delivery
-        .split_once("](https://github.com/robchristie/polyorama/pull/")
+        .split_once("](https://github.com/robchristie/stobie/pull/")
         .and_then(|(_, rest)| rest.split_once(')'))
         .map(|(number, _)| number);
     if !number.is_some_and(|number| {
@@ -48,7 +48,7 @@ fn delivery_reference(source: &str) -> Result<()> {
             && !number.starts_with('0')
             && number.bytes().all(|byte| byte.is_ascii_digit())
     }) {
-        bail!("Delivery must link to the owning Polyorama pull request");
+        bail!("Delivery must link to the owning Stobie pull request");
     }
     Ok(())
 }
@@ -129,7 +129,7 @@ fn validate(source: &str) -> Result<()> {
 mod tests {
     use super::{check, validate};
 
-    const COMPLETE: &str = "Status: complete\nDelivery: [PR #28](https://github.com/robchristie/polyorama/pull/28)\nLanded commit: `0123456789abcdef0123456789abcdef01234567`\n";
+    const COMPLETE: &str = "Status: complete\nDelivery: [PR #28](https://github.com/robchristie/stobie/pull/28)\nLanded commit: `0123456789abcdef0123456789abcdef01234567`\n";
 
     #[test]
     fn accepts_explicit_lifecycle_states_and_historical_evidence() {
@@ -144,12 +144,15 @@ mod tests {
 
     #[test]
     fn accepts_completed_candidate_before_its_merge_identity_exists() {
-        validate("Status: complete\nDelivery: [PR #29](https://github.com/robchristie/polyorama/pull/29)\n").unwrap();
+        validate(
+            "Status: complete\nDelivery: [PR #29](https://github.com/robchristie/stobie/pull/29)\n",
+        )
+        .unwrap();
         for delivery in [
             "",
             "Delivery: PR pending",
             "Delivery: [PR](https://example.com/pull/29)",
-            "Delivery: [PR](https://github.com/robchristie/polyorama/pull/pending)",
+            "Delivery: [PR](https://github.com/robchristie/stobie/pull/pending)",
         ] {
             assert!(validate(&format!("Status: complete\n{delivery}\n")).is_err());
         }

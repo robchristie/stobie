@@ -55,7 +55,7 @@ await writeFile(join(output, 'manifest.json'), manifestBytes);
 
 async function visibleInput(page, app, prefix) {
   // Let startup work settle before readback; this wait is outside all startup timestamps.
-  if (app === 'lab') await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS?.runtime.in_flight === 0);
+  if (app === 'lab') await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS?.runtime.in_flight === 0);
   if (app === 'viewer') await page.waitForFunction(() => window.emuellaViewer?.snapshot().in_flight === 0);
   await page.mouse.move(1400, 880);
   const before = await page.screenshot({ path: `${prefix}-before.png` });
@@ -67,8 +67,8 @@ async function visibleInput(page, app, prefix) {
     // First catalogue story is button/default. Physical click, no action hook.
     await page.mouse.move(95, 150);
     await page.mouse.down(); await page.waitForTimeout(80); await page.mouse.up();
-    await page.waitForFunction(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot().story === 'button/default');
-    semantic = await page.evaluate(() => window.__POLYORAMA_GALLERY_HANDLE.snapshot().story);
+    await page.waitForFunction(() => window.__STOBIE_GALLERY_HANDLE.snapshot().story === 'button/default');
+    semantic = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot().story);
   } else {
     // Physical wheel zoom in the main image viewport, with generation acknowledgement.
     const generation = await page.evaluate(() => window.emuellaViewer.snapshot().generation);
@@ -120,7 +120,7 @@ try {
     const origin = `http://127.0.0.1:${server.address().port}`;
     try {
       for (const app of apps) for (let pair = 0; pair < pairs; pair++) {
-        const userDataDir = await mkdtemp(join(tmpdir(), 'polyorama-startup-'));
+        const userDataDir = await mkdtemp(join(tmpdir(), 'stobie-startup-'));
         const context = await chromium.launchPersistentContext(userDataDir, { ...launch, viewport });
         const browserSession = await context.browser().newBrowserCDPSession();
         report.browser.version = (await browserSession.send('Browser.getVersion')).product;
@@ -154,10 +154,10 @@ try {
             report.samples.push(sample);
             await page.goto(sample.url, { waitUntil: 'domcontentloaded' });
             await page.waitForFunction(() => {
-              const s = window.__POLYORAMA_STARTUP;
+              const s = window.__STOBIE_STARTUP;
               return s?.failure || (s?.milestones.rendering_opportunity_proxy && s?.milestones.first_useful_content);
             }, null, { timeout: 120_000 });
-            sample.startup = await page.evaluate(() => window.__POLYORAMA_STARTUP);
+            sample.startup = await page.evaluate(() => window.__STOBIE_STARTUP);
             assert(!sample.startup.failure, JSON.stringify(sample.startup.failure));
             assert(sample.startup.milestones.workspace_frame_submitted, 'actual queue submission observation required');
             assert.equal(sample.startup.instantiateStreaming.completed, 1, 'generated page loader must complete streaming WASM init');
@@ -170,7 +170,7 @@ try {
             sample.navigation = await page.evaluate(() => performance.getEntriesByType('navigation').map(entry => entry.toJSON()));
             sample.adapters = await page.evaluate(() => window.__startupAdapters);
             sample.input = await visibleInput(page, app, join(output, `${app}-${profile}-${pair}-${visit}`));
-            sample.diagnostics = await page.evaluate(app => app === 'lab' ? window.__POLYORAMA_DIAGNOSTICS : app === 'viewer' ? (({ completed, cancelled, stale, decoded_peak_bytes, gpu_peak_bytes, worker, errors, gpu_adapter }) => ({ completed, cancelled, stale, decoded_peak_bytes, gpu_peak_bytes, worker, errors, gpu_adapter }))(window.emuellaViewer.snapshot()) : { story: window.__POLYORAMA_GALLERY_HANDLE.snapshot().story }, app);
+            sample.diagnostics = await page.evaluate(app => app === 'lab' ? window.__STOBIE_DIAGNOSTICS : app === 'viewer' ? (({ completed, cancelled, stale, decoded_peak_bytes, gpu_peak_bytes, worker, errors, gpu_adapter }) => ({ completed, cancelled, stale, decoded_peak_bytes, gpu_peak_bytes, worker, errors, gpu_adapter }))(window.emuellaViewer.snapshot()) : { story: window.__STOBIE_GALLERY_HANDLE.snapshot().story }, app);
             if (app === 'lab') {
               const runtime = sample.diagnostics.runtime;
               assert.equal(runtime.failed, 0); assert.equal(runtime.worker_failures, 0);
