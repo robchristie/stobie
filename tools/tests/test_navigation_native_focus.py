@@ -16,8 +16,10 @@ class Clock:
         self.now += seconds
 
 
-def state(frame, focused):
-    return {"frame": frame, "navigation_fixture": {"selected": "home", "activations": 0, "targets": [{"id": value} for value in ["home", "tasks", "activity"]]},
+def state(frame, focused, epoch=None):
+    """By default every presentation follows a received Tab."""
+    return {"frame": frame, "tab_input_epoch": frame if epoch is None else epoch,
+            "navigation_fixture": {"selected": "home", "activations": 0, "targets": [{"id": value} for value in ["home", "tasks", "activity"]]},
             "ui_snapshot": {"nodes": [{"id": focused, "focused": True}]}}
 
 
@@ -43,6 +45,46 @@ class NavigationNativeFocusTests(unittest.TestCase):
         self.assertEqual(result["frame"], 2)
         self.assertGreaterEqual(presses[1] - presses[0], 0.2)
         self.assertEqual([t["after"]["frame"] for t in transitions], [1, 2])
+
+    def test_chrome_traversal_waits_for_tab_receipt_not_a_newer_frame(self):
+        # A frame presented before the Tab is received, such as the previous
+        # key's release, must not release another Tab: two presses received in
+        # one input frame move focus only once.
+        clock, transitions, presses = Clock(), [], []
+        order = ["chrome-a", "chrome-b", "tasks"]
+
+        def snapshot():
+            if not presses:
+                return state(10, "chrome-a", epoch=3)
+            count = len(presses)
+            if clock.now < presses[-1] + 0.06:
+                return state(10 + 2 * count - 1, order[count - 1], epoch=2 + count)
+            return state(10 + 2 * count, order[count], epoch=3 + count)
+
+        def press():
+            if presses:
+                self.assertGreaterEqual(clock.now, presses[-1] + 0.06, "Tab sent before the prior Tab was received")
+            presses.append(clock.now)
+
+        result = focus_navigation_target(snapshot, press, "tasks", transitions,
+            monotonic=clock.monotonic, sleep=clock.sleep)
+        self.assertEqual(len(presses), 2)
+        self.assertEqual(result["tab_input_epoch"], 5)
+        self.assertEqual([t["barrier"] for t in transitions], ["tab_receipt", "tab_receipt"])
+        self.assertGreater(len(transitions[0]["observations"]), 2)
+
+    def test_unreceived_tab_times_out_without_another_key(self):
+        clock, presses, transitions, frame = Clock(), [], [], [1]
+
+        def snapshot():
+            frame[0] += 1
+            return state(frame[0], "chrome", epoch=0)
+
+        with self.assertRaises(TimeoutError):
+            focus_navigation_target(snapshot, lambda: presses.append(1), "tasks", transitions,
+                timeout_seconds=0.2, monotonic=clock.monotonic, sleep=clock.sleep)
+        self.assertEqual(presses, [1])
+        self.assertEqual(transitions[-1]["error"], "Tab was not received")
 
     def test_fixed_delay_discriminator_can_outpace_presentation(self):
         clock, presses = Clock(), []

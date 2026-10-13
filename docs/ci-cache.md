@@ -43,6 +43,10 @@ and a fresh focus observation, including the final permitted Tab. It retains
 `record-desk/native-focus.json` with target availability, input receipts, frames
 and focus transitions on success or failure; a newer frame alone does not
 acknowledge physical input.
+The Gallery's native navigation traversal likewise waits for receipt before
+each further Tab, through the Gallery chrome as well as the fixture. A frame from
+the previous key's release can present first, and two presses received in one
+input frame move egui focus only once.
 
 ## Rust dependencies
 
