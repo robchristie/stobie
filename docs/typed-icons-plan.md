@@ -1,11 +1,11 @@
 # Typed icons and shared action presentations
 
 Status: complete
-Delivery: [Polyorama PR #50](https://github.com/robchristie/polyorama/pull/50)
+Delivery: [Stobie PR #50](https://github.com/robchristie/stobie/pull/50)
 
 ## Outcome and boundaries
 
-`polyorama-ui-egui` owns a public typed icon vocabulary and reusable vector painter,
+`stobie-ui-egui` owns a public typed icon vocabulary and reusable vector painter,
 plus text-only, icon-only and leading icon+label presentations of its existing
 typed actions. Preserve `ActionButtonSpec` literals, logical instance identity,
 capability targets, availability, response handling and toggle semantics. Application
@@ -37,7 +37,7 @@ dependency updates, navigation-item recipes and application redesign are exclude
 ## UI acceptance and bounded calibration
 
 Task: compose an ordinary desktop toolbar with recognisable actions and a clear
-primary action. Reference: Polyorama's analytical token appearance and existing
+primary action. Reference: Stobie's analytical token appearance and existing
 text action recipes. The intended hierarchy uses quiet icon tools for frequent
 local actions, a leading icon+label for a named primary action, and restrained
 monochrome artwork. No decorative cards or competing accent colours.

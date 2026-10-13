@@ -1,0 +1,29 @@
+[package]
+name = "stobie-gallery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stobie-gallery"
+path = "src/main.rs"
+
+[dependencies]
+eframe.workspace = true
+egui.workspace = true
+stobie-core = { path = "../../crates/stobie-core" }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui" }
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.7"
+log.workspace = true
+serde-wasm-bindgen = "0.6.5"
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = ["HtmlCanvasElement"] }

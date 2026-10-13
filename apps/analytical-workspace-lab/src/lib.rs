@@ -60,7 +60,7 @@ impl WebHandle {
         let mut app = self
             .runner
             .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
         let snapshot = app
             .test_action(action)
             .map_err(|error| JsValue::from_str(&error))?;
@@ -71,14 +71,14 @@ impl WebHandle {
         let app = self
             .runner
             .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
         serde_wasm_bindgen::to_value(&app.test_snapshot()).map_err(Into::into)
     }
     pub fn enable_automation(&self, instance: &str) -> Result<(), JsValue> {
         let mut app = self
             .runner
             .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
         app.enable_inspection(instance)
             .map_err(|error| JsValue::from_str(&error))?;
         Ok(())
@@ -88,7 +88,7 @@ impl WebHandle {
         let mut app = self
             .runner
             .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Polyorama application is unavailable"))?;
+            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
         app.inspection_request(request)
             .map_err(|error| JsValue::from_str(&error))
     }
@@ -105,13 +105,13 @@ impl Default for WebHandle {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_name = __polyoramaStartupMark)]
+    #[wasm_bindgen(js_name = __stobieStartupMark)]
     pub(crate) fn startup_mark(name: &str);
-    #[wasm_bindgen(js_name = __polyoramaStartupFail)]
+    #[wasm_bindgen(js_name = __stobieStartupFail)]
     pub(crate) fn startup_fail(phase: &str, message: &str);
-    #[wasm_bindgen(js_name = __polyoramaWorkerUrl)]
+    #[wasm_bindgen(js_name = __stobieWorkerUrl)]
     pub(crate) fn startup_worker_url() -> String;
-    #[wasm_bindgen(js_name = __polyoramaStartupWorkerMessage)]
+    #[wasm_bindgen(js_name = __stobieStartupWorkerMessage)]
     pub(crate) fn startup_worker_message(value: &JsValue) -> bool;
 }
 

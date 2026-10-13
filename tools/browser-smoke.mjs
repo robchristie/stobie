@@ -11,7 +11,7 @@ import { assertFrozenResultTarget, firstResultRowTarget, resolveResultRowTarget,
   resultSelectionConfirmed, waitForStableResultTarget } from './lab-result-selection.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/analytical-workspace-lab/web'));
-const evidenceRoot = normalize(process.env.POLYORAMA_EVIDENCE_DIR
+const evidenceRoot = normalize(process.env.STOBIE_EVIDENCE_DIR
   ?? join(process.cwd(), 'docs/vertical-slice-evidence'));
 await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
@@ -33,7 +33,7 @@ const resultSelectionReceipts = [];
 const installedChromium = chromium.executablePath();
 const revisionDirectory = basename(dirname(dirname(installedChromium)));
 const revision = revisionDirectory.slice(revisionDirectory.lastIndexOf('-') + 1);
-const headlessShell = process.env.POLYORAMA_CHROMIUM ?? join(
+const headlessShell = process.env.STOBIE_CHROMIUM ?? join(
   dirname(dirname(dirname(installedChromium))),
   `chromium_headless_shell-${revision}`,
   'chrome-headless-shell-linux64',
@@ -50,10 +50,10 @@ const browserFlags = [
 let browser;
 let browserProcess;
 let browserProfile;
-if (process.env.POLYORAMA_USE_SYSTEM_UI_LIBS === '1') {
+if (process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1') {
   browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
 } else {
-  browserProfile = await mkdtemp(join(tmpdir(), 'polyorama-browser-'));
+  browserProfile = await mkdtemp(join(tmpdir(), 'stobie-browser-'));
   browserProcess = spawn(headlessShell, [
     ...browserFlags,
     '--remote-debugging-port=0',
@@ -116,7 +116,7 @@ const assertRenderedScreenshot = async (screenshot, label) => {
 };
 
 const captureX11Root = async (path) => {
-  if (process.platform !== 'linux' || process.env.POLYORAMA_BROWSER_HEADFUL !== '1') return null;
+  if (process.platform !== 'linux' || process.env.STOBIE_BROWSER_HEADFUL !== '1') return null;
   const capture = spawn('import', ['-silent', '-window', 'root', path], {
     env: process.env,
     stdio: ['ignore', 'ignore', 'pipe'],
@@ -135,19 +135,19 @@ const captureX11Root = async (path) => {
 
 try {
   await page.goto('http://127.0.0.1:4173', { waitUntil: 'domcontentloaded' });
-  await page.locator('#polyorama-canvas[data-polyorama-ready="true"]').waitFor({ timeout: 30_000 });
+  await page.locator('#stobie-canvas[data-stobie-ready="true"]').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => {
-    const diagnostics = window.__POLYORAMA_DIAGNOSTICS;
-    return Number(document.querySelector('#polyorama-canvas')?.dataset.workerCompletions ?? 0) > 0 && diagnostics?.runtime?.in_flight === 0 && diagnostics?.render?.draw_calls > 0;
+    const diagnostics = window.__STOBIE_DIAGNOSTICS;
+    return Number(document.querySelector('#stobie-canvas')?.dataset.workerCompletions ?? 0) > 0 && diagnostics?.runtime?.in_flight === 0 && diagnostics?.render?.draw_calls > 0;
   }, null, { timeout: 30_000 });
   const evidence = await page.evaluate(() => {
-    const canvas = document.getElementById('polyorama-canvas');
+    const canvas = document.getElementById('stobie-canvas');
     return {
       canvas: { width: canvas.width, height: canvas.height },
       panes: Number(canvas.dataset.paneCount),
       renderer: canvas.dataset.renderer,
       workerCompletions: Number(canvas.dataset.workerCompletions),
-      diagnostics: window.__POLYORAMA_DIAGNOSTICS,
+      diagnostics: window.__STOBIE_DIAGNOSTICS,
     };
   });
   if (evidence.canvas.width <= 0 || evidence.canvas.height <= 0) throw new Error('canvas has zero dimensions');
@@ -160,7 +160,7 @@ try {
   }, null, 2)}\n`);
   await assertRenderedScreenshot(defaultScreenshot, 'default application screenshot');
 
-  const semanticSnapshot = () => page.evaluate(() => window.__POLYORAMA_HANDLE.test_snapshot());
+  const semanticSnapshot = () => page.evaluate(() => window.__STOBIE_HANDLE.test_snapshot());
   const targetPoint = async (target, fractionX = 0.5, fractionY = 0.5, deltaX = 0, deltaY = 0) => {
     const snapshot = await semanticSnapshot();
     const geometry = snapshot.ui_geometry;
@@ -193,7 +193,7 @@ try {
     if (!values.every(Number.isFinite) || rect.max_x <= rect.min_x || rect.max_y <= rect.min_y) {
       throw new Error(`invalid Rust UI geometry for ${JSON.stringify(target)}: ${JSON.stringify(rect)}`);
     }
-    const canvas = await page.locator('#polyorama-canvas').boundingBox();
+    const canvas = await page.locator('#stobie-canvas').boundingBox();
     if (!canvas || root.max_x <= root.min_x || root.max_y <= root.min_y) throw new Error('canvas/root geometry is unavailable');
     const logicalX = rect.min_x + (rect.max_x - rect.min_x) * fractionX + deltaX;
     const logicalY = rect.min_y + (rect.max_y - rect.min_y) * fractionY + deltaY;
@@ -210,7 +210,7 @@ try {
   const clickTarget = async (target, options = {}) => {
     if (target.kind === 'action') {
       await page.waitForFunction(
-        ({ action, pane }) => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+        ({ action, pane }) => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
           .some((node) => node.enabled && node.actions.includes(action)
             && (pane == null || node.pane === pane)),
         target,
@@ -227,7 +227,7 @@ try {
     const beforeHover = await semanticSnapshot();
     await page.mouse.move(point.x, point.y);
     await page.waitForFunction(
-      (frame) => window.__POLYORAMA_HANDLE.test_snapshot().frame_number > frame,
+      (frame) => window.__STOBIE_HANDLE.test_snapshot().frame_number > frame,
       beforeHover.frame_number,
       { timeout: 10_000 },
     );
@@ -240,22 +240,22 @@ try {
     await page.mouse.up();
   };
   const openFreshAppearance = async () => {
-    const open = await page.evaluate(() => window.__POLYORAMA_HANDLE.test_snapshot()
+    const open = await page.evaluate(() => window.__STOBIE_HANDLE.test_snapshot()
       .ui_snapshot.nodes.some((node) => node.id === 'application.bar.preferences.appearance.light'));
     if (open) {
       await page.keyboard.press('Escape');
-      await page.waitForFunction(() => !window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+      await page.waitForFunction(() => !window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
         .some((node) => node.id === 'application.bar.preferences.appearance.light'), null, { timeout: 10_000 });
     }
     await clickTarget({ kind: 'action', action: 'appearance_settings' });
-    await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+    await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
       .some((node) => node.id === 'application.bar.preferences.appearance.light'), null, { timeout: 10_000 });
   };
   const choosePreference = async (field, value) => {
     await openFreshAppearance();
     await physicallyClickSemanticControl(preferenceNodeId(field, value));
     await page.waitForFunction(
-      ({ field, value }) => window.__POLYORAMA_HANDLE.test_snapshot().preferences[field] === value,
+      ({ field, value }) => window.__STOBIE_HANDLE.test_snapshot().preferences[field] === value,
       { field, value },
       { timeout: 10_000 },
     );
@@ -271,7 +271,7 @@ try {
     await page.mouse.move(end.x, end.y, { steps: 8 });
     await page.mouse.up();
     await page.waitForFunction(
-      (expected) => window.__POLYORAMA_HANDLE.test_snapshot().preferences.font_scale === expected,
+      (expected) => window.__STOBIE_HANDLE.test_snapshot().preferences.font_scale === expected,
       value,
       { timeout: 10_000 },
     );
@@ -279,11 +279,11 @@ try {
   };
   const semanticAction = async (action) => {
     const applied = await page.evaluate(
-      (value) => window.__POLYORAMA_HANDLE.test_action(value),
+      (value) => window.__STOBIE_HANDLE.test_action(value),
       action,
     );
     await page.waitForFunction(
-      (frame) => window.__POLYORAMA_HANDLE.test_snapshot().frame_number > frame,
+      (frame) => window.__STOBIE_HANDLE.test_snapshot().frame_number > frame,
       applied.frame_number,
       { timeout: 10_000 },
     );
@@ -331,12 +331,12 @@ try {
   }
   if (!initialSemantic.visible_tile_keys.length) throw new Error('Rust semantic snapshot has no visible tile demand');
   await page.keyboard.press('2');
-  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+  await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot()
     .ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
       && node.description?.includes('active tool: Polygon')));
   const keyboardToolSemantic = await semanticSnapshot();
   await page.keyboard.press('1');
-  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+  await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot()
     .ui_snapshot.nodes.some((node) => node.id === 'pane.1.viewport'
       && node.description?.includes('active tool: Navigate')));
   if (initialSemantic.runtime.worker_queue_depth > initialSemantic.runtime.external_queue_capacity
@@ -347,7 +347,7 @@ try {
   }
   await clickTarget({ kind: 'action', action: 'display_settings', pane: 1 });
   await page.waitForFunction(() => {
-    const nodes = window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes;
+    const nodes = window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes;
     return nodes.some((node) => node.id === 'pane.1.display_map' && node.role === 'combo_box')
       && nodes.some((node) => node.id === 'pane.1.display_low' && node.role === 'slider')
       && nodes.some((node) => node.id === 'pane.1.display_high' && node.role === 'slider');
@@ -370,7 +370,7 @@ try {
   await page.keyboard.press('Escape');
   await clickTarget({ kind: 'action', action: 'appearance_settings' });
   await page.waitForFunction(() => {
-    const nodes = window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes;
+    const nodes = window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes;
     return nodes.some((node) => node.id === 'application.bar.preferences.appearance.light')
       && nodes.some((node) => node.id === 'application.bar.preferences.font_scale.value')
       && nodes.some((node) => node.id === 'application.bar.preferences.motion.reduced');
@@ -402,7 +402,7 @@ try {
     kind: 'set_camera', pane: 1, centre_x: 32768, centre_y: 24576, pixels_per_screen_point: 8,
   });
   await page.waitForFunction(() => {
-    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    const snapshot = window.__STOBIE_HANDLE.test_snapshot();
     const primary = snapshot.cameras.find((item) => item.pane === 1)?.camera;
     const linked = snapshot.cameras.find((item) => item.pane === 2)?.camera;
     const primaryRender = snapshot.render_cameras.find((item) => item.pane === 1)?.camera;
@@ -528,7 +528,7 @@ try {
 
   await semanticAction({ kind: 'queue_zero_viewport_upload' });
   await page.waitForFunction(() => {
-    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    const snapshot = window.__STOBIE_HANDLE.test_snapshot();
     return JSON.stringify(snapshot.visible_panes) === JSON.stringify([5])
       && snapshot.render.pending_upload_bytes === 0
       && snapshot.render.gpu_viewports === 0
@@ -563,23 +563,23 @@ try {
   };
   await semanticAction({ kind: 'restore_default_workspace' });
   await page.waitForFunction(() => {
-    const snapshot = window.__POLYORAMA_HANDLE.test_snapshot();
+    const snapshot = window.__STOBIE_HANDLE.test_snapshot();
     return snapshot.render.render_jobs > 0 && snapshot.visible_tile_keys.length > 0;
   }, null, { timeout: 10_000 });
 
   const percentile = (values, p) => values.length ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * p))] : null;
   const observations = {};
   async function observe(name, action) {
-    const beforeFrame = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number);
+    const beforeFrame = await page.evaluate(() => window.__STOBIE_DIAGNOSTICS.frame.frame_number);
     await action();
-    await page.waitForFunction((frame) => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number > frame, beforeFrame, { timeout: 10_000 });
+    await page.waitForFunction((frame) => window.__STOBIE_DIAGNOSTICS.frame.frame_number > frame, beforeFrame, { timeout: 10_000 });
     await page.waitForTimeout(250);
     const semantic = await semanticSnapshot();
     if (semantic.ui_snapshot.semantic_audit.length !== 0) {
       throw new Error(`${name} produced semantic snapshot findings: ${JSON.stringify(semantic.ui_snapshot.semantic_audit)}`);
     }
     const samples = await page.evaluate((startFrame) => {
-      const frame = window.__POLYORAMA_DIAGNOSTICS.frame;
+      const frame = window.__STOBIE_DIAGNOSTICS.frame;
       const count = Math.min(frame.cpu_frame_history_ms.length, frame.frame_number - startFrame);
       return frame.cpu_frame_history_ms.slice(-count);
     }, beforeFrame);
@@ -665,7 +665,7 @@ try {
     await page.mouse.move(point.x, point.y); for (let index = 0; index < 6; index += 1) await page.mouse.wheel(0, -120);
   });
   await page.waitForFunction(
-    (depth) => window.__POLYORAMA_HANDLE.test_snapshot().undo_depth === depth + 1,
+    (depth) => window.__STOBIE_HANDLE.test_snapshot().undo_depth === depth + 1,
     zoomHistoryBefore.undo_depth,
     { timeout: 2_000 },
   );
@@ -674,19 +674,19 @@ try {
     throw new Error(`wheel zoom burst did not coalesce into one history record (${zoomHistoryBefore.undo_depth} -> ${zoomHistoryAfter.undo_depth})`);
   }
   await clickTarget({ kind: 'action', pane: 1, action: 'link_views' });
-  await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === null);
+  await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === null);
   await clickTarget({ kind: 'action', pane: 1, action: 'link_views' });
-  await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === 1);
+  await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS.cameras.find((item) => item.pane === 1)?.link === 1);
   await clickTarget({ kind: 'action', pane: 1, action: 'fit_view' });
   await page.waitForFunction(() => {
-    const cameras = window.__POLYORAMA_DIAGNOSTICS.cameras;
+    const cameras = window.__STOBIE_DIAGNOSTICS.cameras;
     const primary = cameras.find((item) => item.pane === 1)?.camera;
     const linked = cameras.find((item) => item.pane === 2)?.camera;
     return primary?.pixels_per_screen_point < 512 && JSON.stringify(primary) === JSON.stringify(linked);
   });
   const beforeResultScrollSnapshot = await semanticSnapshot();
   const beforeResultScroll = firstResultRowTarget(beforeResultScrollSnapshot,
-    await page.locator('#polyorama-canvas').boundingBox());
+    await page.locator('#stobie-canvas').boundingBox());
   if (!beforeResultScroll) throw new Error('Results has no initial first-row target');
   await observe('million_row_scroll', async () => {
     const point = await targetPoint({ kind: 'results_scroll' });
@@ -696,7 +696,7 @@ try {
   resultSelectionReceipts.push(resultReceipt);
   try {
     resultReceipt.settled = await waitForStableResultTarget(async () => firstResultRowTarget(
-      await semanticSnapshot(), await page.locator('#polyorama-canvas').boundingBox()),
+      await semanticSnapshot(), await page.locator('#stobie-canvas').boundingBox()),
     ms => page.waitForTimeout(ms), beforeResultScroll, undefined,
     target => page.mouse.move(target.x, target.y));
   } catch (error) {
@@ -706,7 +706,7 @@ try {
   const frozenResult = resultReceipt.settled.target;
   const resultDispatchSnapshot = await semanticSnapshot();
   const clickedResult = resolveResultRowTarget(resultDispatchSnapshot,
-    await page.locator('#polyorama-canvas').boundingBox(), frozenResult.result);
+    await page.locator('#stobie-canvas').boundingBox(), frozenResult.result);
   resultReceipt.stage = 'resolved';
   resultReceipt.picked = frozenResult;
   resultReceipt.dispatch = clickedResult;
@@ -739,7 +739,7 @@ try {
   };
   await clickTarget({ kind: 'tabs', pane: 6 });
   await page.waitForFunction(() => {
-    const virtualisation = window.__POLYORAMA_DIAGNOSTICS.virtualisation;
+    const virtualisation = window.__STOBIE_DIAGNOSTICS.virtualisation;
     return virtualisation.thumbnail_content_height > virtualisation.thumbnail_viewport_height
       && virtualisation.visible_thumbnails[1] > virtualisation.visible_thumbnails[0];
   }, null, { timeout: 10_000 });
@@ -752,7 +752,7 @@ try {
     }
   });
   await page.waitForFunction((initialStart) => {
-    const range = window.__POLYORAMA_DIAGNOSTICS.virtualisation.visible_thumbnails;
+    const range = window.__STOBIE_DIAGNOSTICS.virtualisation.visible_thumbnails;
     return range[0] > initialStart;
   }, thumbnailBeforeScroll.virtualisation.visible_thumbnails[0], { timeout: 10_000 });
   const thumbnailAfterScroll = await semanticSnapshot();
@@ -766,7 +766,7 @@ try {
       || !laterDemand) {
     throw new Error(`physical thumbnail wheel did not advance scroll state and demand: ${JSON.stringify(thumbnailAfterScroll.virtualisation)}`);
   }
-  await page.waitForFunction((minimumKey) => window.__POLYORAMA_HANDLE.test_snapshot()
+  await page.waitForFunction((minimumKey) => window.__STOBIE_HANDLE.test_snapshot()
     .thumbnail_resident_keys.some((key) => key.source === 2 && key.x >= minimumKey), laterVisibleStart, { timeout: 10_000 });
   await page.screenshot({ path: join(evidenceRoot, 'browser-thumbnails.png') });
   const thumbnailSemantic = await semanticSnapshot();
@@ -887,12 +887,12 @@ try {
   }
   await clickTarget({ kind: 'action', action: 'undo' });
   await page.waitForFunction(
-    (before) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === before,
+    (before) => window.__STOBIE_HANDLE.test_snapshot().workspace_hash === before,
     splitterBefore.workspace_hash,
   );
   await clickTarget({ kind: 'action', action: 'redo' });
   await page.waitForFunction(
-    (after) => window.__POLYORAMA_HANDLE.test_snapshot().workspace_hash === after,
+    (after) => window.__STOBIE_HANDLE.test_snapshot().workspace_hash === after,
     splitterAfter.workspace_hash,
   );
   const splitterNoOpBefore = await semanticSnapshot();
@@ -963,7 +963,7 @@ try {
   };
   const beforeDiagnosticsClose = await semanticSnapshot();
   await clickTarget({ kind: 'action', action: 'view_panels' });
-  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+  await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
     .some((node) => node.actions.includes('toggle_diagnostics')));
   const panelsOpen = await semanticSnapshot();
   const diagnosticsToggle = panelsOpen.ui_snapshot.nodes
@@ -974,11 +974,11 @@ try {
     throw new Error(`Diagnostics panel action lacks usable semantics: ${JSON.stringify(diagnosticsToggle)}`);
   }
   await clickTarget({ kind: 'action', action: 'toggle_diagnostics' });
-  await page.waitForFunction(() => !window.__POLYORAMA_HANDLE.test_snapshot()
+  await page.waitForFunction(() => !window.__STOBIE_HANDLE.test_snapshot()
     .ui_geometry.tabs.some((tab) => tab.pane === 8));
   const diagnosticsClosed = await semanticSnapshot();
   if (diagnosticsClosed.ui_geometry.tabs.length !== 7
-      || diagnosticsClosed.ui_snapshot.nodes.some((node) => node.id === 'polyorama.dock.tab.8')
+      || diagnosticsClosed.ui_snapshot.nodes.some((node) => node.id === 'stobie.dock.tab.8')
       || diagnosticsClosed.workspace_hash === beforeDiagnosticsClose.workspace_hash
       || JSON.stringify(diagnosticsClosed.annotations) !== JSON.stringify(beforeDiagnosticsClose.annotations)
       || diagnosticsClosed.selected_annotation !== beforeDiagnosticsClose.selected_annotation
@@ -993,14 +993,14 @@ try {
   if (persistedKeys.length === 0) throw new Error('Save layout did not create browser persistence');
 
   observations.warmed_idle = await observeWarmedIdle(
-    () => page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS.frame.frame_number),
+    () => page.evaluate(() => window.__STOBIE_DIAGNOSTICS.frame.frame_number),
     (ms) => page.waitForTimeout(ms),
   );
   semanticEvidence.warmed_idle = observations.warmed_idle;
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.locator('#polyorama-canvas[data-polyorama-ready="true"]').waitFor({ timeout: 30_000 });
-  await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS?.render?.draw_calls > 0, null, { timeout: 30_000 });
+  await page.locator('#stobie-canvas[data-stobie-ready="true"]').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS?.render?.draw_calls > 0, null, { timeout: 30_000 });
   await page.screenshot({ path: join(evidenceRoot, 'browser-reloaded.png') });
   const restoredSemantic = await semanticSnapshot();
   if (JSON.stringify(restoredSemantic.preferences) !== JSON.stringify(changedPreferences.preferences)) {
@@ -1014,10 +1014,10 @@ try {
     throw new Error('Saved closed Diagnostics layout or analytical state did not restore');
   }
   await clickTarget({ kind: 'action', action: 'view_panels' });
-  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+  await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
     .some((node) => node.actions.includes('toggle_diagnostics') && node.checked === false));
   await clickTarget({ kind: 'action', action: 'toggle_diagnostics' });
-  await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot()
+  await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot()
     .ui_geometry.tabs.some((tab) => tab.pane === 8));
   const diagnosticsReopened = await semanticSnapshot();
   if (diagnosticsReopened.ui_geometry.tabs.filter((tab) => tab.pane === 8).length !== 1
@@ -1034,7 +1034,7 @@ try {
   };
   await clickTarget({ kind: 'action', action: 'save_layout' });
   semanticEvidence.preferences.restored = restoredSemantic.preferences;
-  const restored = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS);
+  const restored = await page.evaluate(() => window.__STOBIE_DIAGNOSTICS);
   observations.saved_workspace_restore = {
     samples: restored.frame.cpu_frame_history_ms,
     median_ms: percentile(restored.frame.cpu_frame_history_ms, 0.5),
@@ -1049,24 +1049,24 @@ try {
   ]) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.locator('#polyorama-canvas[data-polyorama-ready="true"]').waitFor({ timeout: 30_000 });
-    await page.waitForFunction(() => window.__POLYORAMA_DIAGNOSTICS?.render?.draw_calls > 0, null, { timeout: 30_000 });
+    await page.locator('#stobie-canvas[data-stobie-ready="true"]').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS?.render?.draw_calls > 0, null, { timeout: 30_000 });
     const canvas = await page.evaluate(() => {
-      const element = document.getElementById('polyorama-canvas');
+      const element = document.getElementById('stobie-canvas');
       return { width: element.width, height: element.height };
     });
     if (canvas.width <= 0 || canvas.height <= 0) throw new Error(`${viewport.label} canvas has zero dimensions`);
     if (viewport.label === 'narrow') {
       await clickTarget({ kind: 'action', action: 'view_panels' });
-      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+      await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
         .some((node) => node.actions.includes('toggle_diagnostics')));
       await physicallyClickSemanticControl('action.toggle_diagnostics');
-      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_geometry.tabs.length === 7);
+      await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_geometry.tabs.length === 7);
       await clickTarget({ kind: 'action', action: 'view_panels' });
-      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_snapshot.nodes
+      await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_snapshot.nodes
         .some((node) => node.actions.includes('toggle_diagnostics') && node.checked === false));
       await physicallyClickSemanticControl('action.toggle_diagnostics');
-      await page.waitForFunction(() => window.__POLYORAMA_HANDLE.test_snapshot().ui_geometry.tabs.length === 8);
+      await page.waitForFunction(() => window.__STOBIE_HANDLE.test_snapshot().ui_geometry.tabs.length === 8);
     }
     responsiveEvidence.push({ viewport: `${viewport.width}x${viewport.height}`, canvas });
     await page.screenshot({ path: join(evidenceRoot, `browser-${viewport.label}.png`) });
@@ -1115,11 +1115,11 @@ try {
   console.log(JSON.stringify({ status: 'passed', ...evidence }, null, 2));
 } catch (error) {
   if (resultSelectionReceipts.length) {
-    resultSelectionReceipts.at(-1).failure_snapshot = await page.evaluate(() => window.__POLYORAMA_HANDLE?.test_snapshot()).catch(() => null);
+    resultSelectionReceipts.at(-1).failure_snapshot = await page.evaluate(() => window.__STOBIE_HANDLE?.test_snapshot()).catch(() => null);
     await writeFile(join(evidenceRoot, 'browser-result-selection-receipts.json'), `${JSON.stringify(resultSelectionReceipts, null, 2)}\n`);
   }
   await page.screenshot({ path: join(evidenceRoot, 'browser-failure.png') });
-  const diagnostics = await page.evaluate(() => window.__POLYORAMA_DIAGNOSTICS ?? null)
+  const diagnostics = await page.evaluate(() => window.__STOBIE_DIAGNOSTICS ?? null)
     .catch(() => null);
   await writeFile(join(evidenceRoot, 'browser-failure-diagnostics.json'), JSON.stringify(diagnostics, null, 2));
   const loading = await page.locator('#loading').textContent().catch(() => '<missing>');

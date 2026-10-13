@@ -6,7 +6,7 @@ supplies the label, description, optional compact label, shortcut and scope;
 the key supplies the stable external ID. Controls, shortcut routing, semantic
 metadata, tests and physical targeting must share that typed identity; do not
 create a parallel string action name or add application capabilities to
-`polyorama-ui-egui`.
+`stobie-ui-egui`.
 
 Bind a control to an `ActionTarget<A>`: application actions have no pane
 target, while pane and active-pane actions have a stable `PaneId`. Shared UI

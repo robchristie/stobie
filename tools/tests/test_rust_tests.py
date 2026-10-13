@@ -66,8 +66,8 @@ sys.exit(int(os.environ.get('DOC_EXIT', '0')))
             ["nextest", "run", "--profile", "workspace", "--workspace"],
             ["test", "--doc", "--workspace"],
             ["nextest", "show-config", "version"],
-            ["nextest", "run", "--profile", "ui-no-default", "-p", "polyorama-ui-egui", "--no-default-features"],
-            ["test", "--doc", "-p", "polyorama-ui-egui", "--no-default-features"],
+            ["nextest", "run", "--profile", "ui-no-default", "-p", "stobie-ui-egui", "--no-default-features"],
+            ["test", "--doc", "-p", "stobie-ui-egui", "--no-default-features"],
         ])
 
     def test_prepare_removes_only_the_three_owned_reports(self):

@@ -99,7 +99,7 @@ The local environment reused the primary checkout's `target`, `.tools/sysroot`
 and `.tools/packages` caches through symlinks. It used the default private
 sysroot/bwrap UI mode, with `TMPDIR` set to the worktree's
 `.tools/runtime/verification-friction` for canonical verification. Standalone
-smokes set `POLYORAMA_EVIDENCE_DIR` to that directory's `native` or `gallery`
+smokes set `STOBIE_EVIDENCE_DIR` to that directory's `native` or `gallery`
 subdirectory. Shared cache contents were not deleted. The supervisor is Linux
 specific, matching the native smoke entry points. Scoped verification proves
 prose scope and local lifecycle consistency; it cannot replace outstanding

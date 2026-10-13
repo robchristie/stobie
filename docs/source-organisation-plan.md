@@ -3,7 +3,7 @@
 Status: complete
 Landed commit: `ea2340b5562e028a30b53efefe2bd6ade8a28317`
 
-Delivery: [PR #26](https://github.com/robchristie/polyorama/pull/26) landed.
+Delivery: [PR #26](https://github.com/robchristie/stobie/pull/26) landed.
 
 Baseline revision: `4ee27756698cbce19926ad2f02709107dda1036a`
 
@@ -22,7 +22,7 @@ evidence.
 
 - This is source organisation only: do not add components, traits, registries,
   abstractions, visual changes or interaction changes.
-- Keep `polyorama_ui_egui` component exports at their existing crate-root paths.
+- Keep `stobie_ui_egui` component exports at their existing crate-root paths.
 - Keep shared component data and measured-text glue private to the component
   parent; do not create a public helper layer.
 - Leave dock/splitter and application-bar recipes in the component parent. They

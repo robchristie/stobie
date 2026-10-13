@@ -4,14 +4,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 bash tools/bootstrap-linux-ui.sh
-EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/.tools/runtime/navigation-evidence}/navigation-native"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/navigation-evidence}/navigation-native"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 EVIDENCE_DIR="$(cd "$EVIDENCE_DIR" && pwd)"
 SYSROOT="$ROOT/.tools/sysroot"
 SMOKE_TMP="$(mktemp -d "$ROOT/.tools/runtime/navigation-native-x11-XXXXXX")"
 mkdir -p "$SMOKE_TMP/.X11-unix"
 chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
   XVFB="$(command -v Xvfb)"
   XDO="$(command -v xdotool)"
 else
@@ -22,15 +22,15 @@ fi
 IMPORT="$(command -v import)"
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
-export DISPLAY="${POLYORAMA_NAVIGATION_DISPLAY:-:92}" WGPU_BACKEND=gl
-STORY="${POLYORAMA_GALLERY_STORY:-navigation/states}"
+export DISPLAY="${STOBIE_NAVIGATION_DISPLAY:-:92}" WGPU_BACKEND=gl
+STORY="${STOBIE_GALLERY_STORY:-navigation/states}"
 SNAPSHOT="$ROOT/.tools/runtime/navigation-native-snapshot.json"
 rm -f "$SNAPSHOT"
 owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/native-xvfb.log" 2>&1
 sleep 1
-POLYORAMA_GALLERY_STORY="$STORY" POLYORAMA_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
-  POLYORAMA_GALLERY_SNAPSHOT_CONTINUOUS=1 \
-  owned_start APP_PID target/release/polyorama-gallery >"$EVIDENCE_DIR/native-runtime.log" 2>&1
+STOBIE_GALLERY_STORY="$STORY" STOBIE_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
+  STOBIE_GALLERY_SNAPSHOT_CONTINUOUS=1 \
+  owned_start APP_PID target/release/stobie-gallery >"$EVIDENCE_DIR/native-runtime.log" 2>&1
 ui_sandbox "$(command -v python3)" - "$SNAPSHOT" "$XDO" "$IMPORT" "$EVIDENCE_DIR" <<'PY'
 import hashlib
 import json
@@ -68,7 +68,7 @@ state = wait(lambda s: s["frame"] > 0 and s["navigation_fixture"]["targets"], "f
 deadline = time.monotonic() + 10
 while time.monotonic() < deadline:
     try:
-        window = xdo("search", "--onlyvisible", "--name", "Polyorama Component Gallery").splitlines()[0]
+        window = xdo("search", "--onlyvisible", "--name", "Stobie Component Gallery").splitlines()[0]
         break
     except (subprocess.CalledProcessError, IndexError):
         time.sleep(0.05)
@@ -166,7 +166,7 @@ try:
     image = capture.read_bytes()
     width, height = struct.unpack(">II", image[16:24])
     report = {"source_revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "binary_sha256": hashlib.sha256(Path("target/release/polyorama-gallery").read_bytes()).hexdigest(),
+              "binary_sha256": hashlib.sha256(Path("target/release/stobie-gallery").read_bytes()).hexdigest(),
               "story": state["story"], "configuration": state["configuration"], "display": os.environ["DISPLAY"],
               "backend": "GL/llvmpipe on Xvfb", "steps": steps, "targets": targets, "focus_transitions": focus_transitions, "idle": idle,
               "image": {"path": capture.name, "width": width, "height": height, "sha256": hashlib.sha256(image).hexdigest()},

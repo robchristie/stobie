@@ -3,19 +3,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use eframe::egui;
-use polyorama_core::*;
-use polyorama_render_wgpu::{
+use serde::{Deserialize, Serialize};
+use stobie_core::*;
+use stobie_render_wgpu::{
     DisplayMap, DisplaySettings, RenderBridge, ScalarRenderer, UploadAdmission,
 };
-use polyorama_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
-use polyorama_ui_egui::{
+use stobie_runtime::{DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, Runtime};
+use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionTarget, DockBehaviour,
     DockTextContext, SemanticUiId, UiNode, UiPreferences, UiRole, UiSnapshot, action_button,
     application_bar_frame, application_bar_height, apply_design_system, audit_text_layouts,
     consume_action_shortcut, dock_workspace, measured_inline_label, preferences_control,
     stage_renderer_maintenance, submit_render_plan,
 };
-use serde::{Deserialize, Serialize};
 use tracing::info_span;
 use web_time::Instant;
 
@@ -33,7 +33,9 @@ use crate::{
     ui_geometry::UiGeometry,
 };
 
-const STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
+const STORAGE_KEY: &str = "stobie.vertical-slice.v2";
+// Read the former key on the same origin/container; all writes use STORAGE_KEY.
+const LEGACY_STORAGE_KEY: &str = "polyorama.vertical-slice.v2";
 const DIAGNOSTICS_PANE: PaneId = PaneId(8);
 const DIAGNOSTICS_ANCHOR: PaneId = PaneId(7);
 
@@ -54,6 +56,16 @@ struct PersistedState {
     document: Document,
     session: Session,
     display: BTreeMap<PaneId, DisplaySettingsDto>,
+}
+
+fn load_persisted(storage: &dyn eframe::Storage) -> Option<PersistedState> {
+    // An invalid current value must not resurrect an older saved workspace.
+    let key = if storage.get_string(STORAGE_KEY).is_some() {
+        STORAGE_KEY
+    } else {
+        LEGACY_STORAGE_KEY
+    };
+    eframe::get_value::<PersistedState>(storage, key).filter(persisted_state_is_valid)
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -85,11 +97,11 @@ pub(crate) enum TestAction {
     RestoreDefaultWorkspace,
     MakeWorkerUnavailable,
     SetUiPreferences {
-        appearance: polyorama_ui_egui::AppearancePreference,
-        contrast: polyorama_ui_egui::ContrastPreference,
-        density: polyorama_ui_egui::DensityPreference,
+        appearance: stobie_ui_egui::AppearancePreference,
+        contrast: stobie_ui_egui::ContrastPreference,
+        density: stobie_ui_egui::DensityPreference,
         font_scale: f32,
-        motion: polyorama_ui_egui::MotionPreference,
+        motion: stobie_ui_egui::MotionPreference,
     },
 }
 
@@ -228,17 +240,14 @@ pub struct AnalyticalWorkspaceApp {
     last_ui_snapshot: UiSnapshot,
     #[cfg(target_arch = "wasm32")]
     browser_worker: Option<crate::web_worker::BrowserWorker>,
-    inspection: Option<polyorama_ui_egui::Inspection>,
+    inspection: Option<stobie_ui_egui::Inspection>,
     #[cfg(not(target_arch = "wasm32"))]
-    _inspection_host: Option<polyorama_ui_egui::NativeInspectionHost>,
+    _inspection_host: Option<stobie_ui_egui::NativeInspectionHost>,
 }
 
 impl AnalyticalWorkspaceApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let persisted = cc
-            .storage
-            .and_then(|storage| eframe::get_value::<PersistedState>(storage, STORAGE_KEY))
-            .filter(persisted_state_is_valid);
+        let persisted = cc.storage.and_then(load_persisted);
         let preferences = persisted
             .as_ref()
             .map_or_else(UiPreferences::default, |saved| {
@@ -550,8 +559,8 @@ impl AnalyticalWorkspaceApp {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn write_native_test_snapshot(&self) -> Result<(), String> {
-        let path = std::env::var("POLYORAMA_TEST_SNAPSHOT_PATH")
-            .map_err(|_| "POLYORAMA_TEST_SNAPSHOT_PATH is not configured".to_owned())?;
+        let path = std::env::var("STOBIE_TEST_SNAPSHOT_PATH")
+            .map_err(|_| "STOBIE_TEST_SNAPSHOT_PATH is not configured".to_owned())?;
         let json = serde_json::to_string_pretty(&self.test_snapshot())
             .map_err(|error| format!("native test snapshot could not be serialised: {error}"))?;
         std::fs::write(&path, json).map_err(|error| {
@@ -762,12 +771,12 @@ impl AnalyticalWorkspaceApp {
             .unwrap_or(JsValue::NULL);
         let _ = js_sys::Reflect::set(
             &window,
-            &JsValue::from_str("__POLYORAMA_DIAGNOSTICS"),
+            &JsValue::from_str("__STOBIE_DIAGNOSTICS"),
             &snapshot,
         );
         if let Some(document) = window.document() {
-            if let Some(canvas) = document.get_element_by_id("polyorama-canvas") {
-                let _ = canvas.set_attribute("data-polyorama-ready", "true");
+            if let Some(canvas) = document.get_element_by_id("stobie-canvas") {
+                let _ = canvas.set_attribute("data-stobie-ready", "true");
                 let _ = canvas.set_attribute(
                     "data-worker-completions",
                     &self.runtime.metrics.completed.to_string(),
@@ -831,9 +840,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                         ui,
                         1,
                         APPLICATION_NAME,
-                        polyorama_ui_egui::TextRole::ApplicationTitle,
+                        stobie_ui_egui::TextRole::ApplicationTitle,
                         tokens.geometry.minimum_hit_size.0 * if compact_bar { 4.0 } else { 6.0 },
-                        polyorama_ui_egui::TextInteraction::Inert,
+                        stobie_ui_egui::TextInteraction::Inert,
                         &tokens,
                         self.preferences.font_scale,
                         &mut ui_geometry.text_layouts,
@@ -1072,9 +1081,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             ui,
                             2,
                             &self.status,
-                            polyorama_ui_egui::TextRole::Status,
+                            stobie_ui_egui::TextRole::Status,
                             status_width,
-                            polyorama_ui_egui::TextInteraction::Selectable,
+                            stobie_ui_egui::TextInteraction::Selectable,
                             &tokens,
                             self.preferences.font_scale,
                             &mut ui_geometry.text_layouts,
@@ -1100,9 +1109,9 @@ impl eframe::App for AnalyticalWorkspaceApp {
                             ui,
                             3,
                             &worker_status,
-                            polyorama_ui_egui::TextRole::Secondary,
+                            stobie_ui_egui::TextRole::Secondary,
                             worker_width,
-                            polyorama_ui_egui::TextInteraction::Selectable,
+                            stobie_ui_egui::TextInteraction::Selectable,
                             &tokens,
                             self.preferences.font_scale,
                             &mut ui_geometry.text_layouts,
@@ -1237,7 +1246,7 @@ impl eframe::App for AnalyticalWorkspaceApp {
         self.last_visible_tile_keys.dedup();
         self.diagnostics.frame.ui_ms = ui_started.elapsed().as_secs_f64() * 1000.0;
         outputs.ui_geometry.text_audit = audit_text_layouts(&outputs.ui_geometry.text_layouts);
-        outputs.ui_geometry.text_audit_coverage = Some(polyorama_ui_egui::text_audit_coverage(
+        outputs.ui_geometry.text_audit_coverage = Some(stobie_ui_egui::text_audit_coverage(
             &ctx,
             &outputs.ui_geometry.text_layouts,
         ));
@@ -1352,6 +1361,56 @@ fn apply_pane_intent(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default)]
+    struct MemoryStorage(BTreeMap<String, String>);
+
+    impl eframe::Storage for MemoryStorage {
+        fn get_string(&self, key: &str) -> Option<String> {
+            self.0.get(key).cloned()
+        }
+        fn set_string(&mut self, key: &str, value: String) {
+            self.0.insert(key.into(), value);
+        }
+        fn remove_string(&mut self, key: &str) {
+            self.0.remove(key);
+        }
+        fn flush(&mut self) {}
+    }
+
+    #[test]
+    fn former_saved_workspace_survives_load_save_and_restart() {
+        let mut storage = MemoryStorage::default();
+        let mut state = persisted(Workspace::analytical_default());
+        state.preferences.font_scale = 1.25;
+        eframe::set_value(&mut storage, LEGACY_STORAGE_KEY, &state);
+        let legacy = storage.0[LEGACY_STORAGE_KEY].clone();
+        let restored = load_persisted(&storage).unwrap();
+        assert_eq!(restored.preferences.font_scale, 1.25);
+        eframe::set_value(&mut storage, STORAGE_KEY, &restored);
+        assert_eq!(
+            load_persisted(&storage).unwrap().preferences.font_scale,
+            1.25
+        );
+        assert_eq!(storage.0[LEGACY_STORAGE_KEY], legacy);
+
+        state.preferences.font_scale = 1.5;
+        eframe::set_value(&mut storage, STORAGE_KEY, &state);
+        assert_eq!(
+            load_persisted(&storage).unwrap().preferences.font_scale,
+            1.5
+        );
+        storage.0.insert(STORAGE_KEY.into(), "malformed".into());
+        assert!(load_persisted(&storage).is_none());
+        state.schema_version += 1;
+        eframe::set_value(&mut storage, STORAGE_KEY, &state);
+        assert!(load_persisted(&storage).is_none());
+        storage.0.remove(STORAGE_KEY);
+        storage
+            .0
+            .insert(LEGACY_STORAGE_KEY.into(), "malformed".into());
+        assert!(load_persisted(&storage).is_none());
+    }
 
     fn persisted(workspace: Workspace) -> PersistedState {
         PersistedState {

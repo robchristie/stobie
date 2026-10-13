@@ -35,26 +35,7 @@
       "actions": []
     },
     {
-      "id": "presentation.9f9c4867650796ab",
-      "parent": "gallery.story",
-      "role": "button",
-      "name": "Export the selected annotations and their complete supporting evidence",
-      "description": "Export the selected annotations and their supporting evidence to a local file",
-      "rect": {
-        "min_x": 690,
-        "min_y": 230,
-        "max_x": 798,
-        "max_y": 266
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [
-        "export_selection"
-      ]
-    },
-    {
-      "id": "presentation.c32075d371f42fac",
+      "id": "presentation.364f325bdb198db0",
       "parent": "gallery.story",
       "role": "button",
       "name": "Export the selected annotations and their complete supporting evidence",
@@ -64,6 +45,25 @@
         "min_y": 191,
         "max_x": 994,
         "max_y": 227
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "export_selection"
+      ]
+    },
+    {
+      "id": "presentation.d209e5e055b942a4",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Export the selected annotations and their complete supporting evidence",
+      "description": "Export the selected annotations and their supporting evidence to a local file",
+      "rect": {
+        "min_x": 690,
+        "min_y": 230,
+        "max_x": 798,
+        "max_y": 266
       },
       "enabled": true,
       "focused": false,

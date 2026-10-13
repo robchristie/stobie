@@ -1,4 +1,4 @@
-# Polyorama UI guides
+# Stobie UI guides
 
 These guides are the implementation and review entry points for the UI layer.
 They apply the normative [design language](../design-language.md) and preserve

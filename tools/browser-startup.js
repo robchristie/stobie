@@ -23,7 +23,7 @@ function observeStreaming(scope) {
 
 export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs = 60000, onFailure = () => {} }) {
   const streaming = observeStreaming(scope);
-  const report = scope.__POLYORAMA_STARTUP = {
+  const report = scope.__STOBIE_STARTUP = {
     instantiateStreaming: streaming.report,
     schema: 1, app, timeOrigin: scope.performance.timeOrigin, phase: 'bootstrap', status: 'starting',
     milestones: {}, failure: null, submissionObservation: 'unavailable',
@@ -68,7 +68,7 @@ export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs =
     // layout may never draw any. First content remains an optional, one-shot observation.
     if (report.status === 'failed' || report.milestones[name] || (report.status === 'ready' && name !== 'first_useful_content')) return false;
     report.milestones[name] = stamp(scope);
-    scope.performance.mark?.(`polyorama:${name}`);
+    scope.performance.mark?.(`stobie:${name}`);
     if (name === 'application_construct_begin') { report.phase = 'application_construct'; shell('Constructing workspace…'); }
     if (name === 'application_construct_end') report.phase = 'framework_start';
     if (name === 'workspace_ui_complete') {
@@ -101,13 +101,13 @@ export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs =
       }
     } catch { /* Explicit unavailable fallback; never mislabel CPU work as submission. */ }
   }
-  scope.__polyoramaStartupMark = mark;
-  scope.__polyoramaStartupFail = fail;
-  scope.__polyoramaWorkerUrl = () => workerUrl;
-  scope.__polyoramaStartupWorkerMessage = data => {
-    if (!data?.__polyoramaStartup) return false;
+  scope.__stobieStartupMark = mark;
+  scope.__stobieStartupFail = fail;
+  scope.__stobieWorkerUrl = () => workerUrl;
+  scope.__stobieStartupWorkerMessage = data => {
+    if (!data?.__stobieStartup) return false;
     if (report.status === 'failed') return true;
-    const incoming = data.__polyoramaStartup;
+    const incoming = data.__stobieStartup;
     // Keep the finite first-decode sample even when it follows usable readiness.
     // Subsequent failures belong to the existing worker/runtime error path.
     if (report.status === 'ready' && (incoming.failure || report.worker?.milestones?.first_decode_complete)) return true;
@@ -183,11 +183,11 @@ export function installWorkerStartup({ scope = globalThis } = {}) {
   const streaming = observeStreaming(scope);
   const report = { instantiateStreaming: streaming.report, timeOrigin: scope.performance.timeOrigin, milestones: {}, memory: {}, resources: [], failure: null };
   let memory;
-  const publish = () => scope.postMessage({ __polyoramaStartup: structuredClone(report) });
+  const publish = () => scope.postMessage({ __stobieStartup: structuredClone(report) });
   const mark = name => {
     if (report.failure || report.milestones[name]) return;
     report.milestones[name] = stamp(scope);
-    scope.performance.mark?.(`polyorama:${name}`);
+    scope.performance.mark?.(`stobie:${name}`);
     if (memory) report.memory[name] = { ...stamp(scope), wasmLinearBytes: memory.buffer.byteLength };
     if (name === 'worker_ready' || name === 'first_decode_complete') {
       report.resources = scope.performance.getEntriesByType('resource').map(entry => ({

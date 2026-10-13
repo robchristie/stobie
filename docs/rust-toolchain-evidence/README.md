@@ -1,7 +1,7 @@
 # Rust 1.98.1 qualification observations
 
 These retained observations own programme `rust-1.98.1` / P1 acceptance for
-Polyorama. The source candidate is `50a14dc5650b15cea569da8caa7e92947e5314ee`,
+Stobie. The source candidate is `50a14dc5650b15cea569da8caa7e92947e5314ee`,
 tree `9f56909a825554a28e3dc3b6669627956e918240`, based on
 `e1f31e11bc3210e763cea1b1cbd5f23c02356db4`. Later plan/evidence-only commits
 preserve the executable inputs. Production manifests retain the actual build

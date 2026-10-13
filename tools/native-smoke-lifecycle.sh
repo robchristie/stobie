@@ -1,7 +1,7 @@
 # Shared owned background-process lifecycle for the native smoke scripts.
 # Source after ROOT, SYSROOT, SMOKE_TMP and EVIDENCE_DIR have been set.
 UI_COMMAND=()
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" != "1" ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" != "1" ]]; then
   UI_COMMAND=(bwrap --die-with-parent --ro-bind / / --bind "$SMOKE_TMP" /tmp
     --ro-bind /usr/bin /opt --ro-bind "$SYSROOT/usr/bin" /usr/bin
     --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime"

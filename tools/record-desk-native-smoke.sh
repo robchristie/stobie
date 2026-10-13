@@ -3,13 +3,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 bash tools/bootstrap-linux-ui.sh
-EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/.tools/runtime/record-desk-evidence}/record-desk"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/record-desk-evidence}/record-desk"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 SYSROOT="$ROOT/.tools/sysroot"
 SMOKE_TMP="$(mktemp -d "$ROOT/.tools/runtime/record-desk-native-x11-XXXXXX")"
 mkdir -p "$SMOKE_TMP/.X11-unix"
 chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
   XVFB="$(command -v Xvfb)"
   XDO="$(command -v xdotool)"
 else

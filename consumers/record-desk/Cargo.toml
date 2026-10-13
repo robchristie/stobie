@@ -13,8 +13,8 @@ resolver = "3"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-polyorama-core = { path = "../../crates/polyorama-core" }
-polyorama-ui-egui = { path = "../../crates/polyorama-ui-egui", default-features = false }
+stobie-core = { path = "../../crates/stobie-core" }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui", default-features = false }
 eframe = { version = "=0.36.1", default-features = false, features = ["accesskit", "default_fonts", "wgpu", "x11", "wayland"] }
 egui = { version = "=0.36.1", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }

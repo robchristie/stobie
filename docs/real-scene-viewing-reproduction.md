@@ -32,7 +32,7 @@ directory in an isolated checkout. Do not replace an existing build tree.
 
 ```sh
 export CARGO_TARGET_DIR="$VIEWER_BUILD/cargo"
-export POLYORAMA_VIEWER_WEB_DIR="$VIEWER_BUILD/web"
+export STOBIE_VIEWER_WEB_DIR="$VIEWER_BUILD/web"
 cargo build --locked --release -p emuella-viewer -p emuella-viewer-tools
 cargo xtask build-viewer-web
 mkdir "$VIEWER_BUILD/measured-bin"

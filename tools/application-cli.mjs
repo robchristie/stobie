@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { ApplicationClient, SocketTransport, BrowserTransport, BrowserPhysicalAdapter, NativePhysicalAdapter, describeApplicationError } from './application-client.mjs';
 
 const help = `Usage: node tools/application-cli.mjs [connection options] COMMAND [JSON or value]
-Connection: --socket PATH (or POLYORAMA_AUTOMATION_SOCKET), or --cdp URL [--url PAGE_URL]
+Connection: --socket PATH (or STOBIE_AUTOMATION_SOCKET), or --cdp URL [--url PAGE_URL]
 Physical: --window X11_ID for native; --canvas SELECTOR for browser (default canvas)
 Options: --timeout MS (default 15000), --output FILE, --capture PNG
 Commands: hello, observe, query SELECTOR, discover SELECTOR, invoke SELECTOR,

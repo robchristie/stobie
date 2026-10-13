@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
 
-PROJECT = "polyorama-lab"
+PROJECT = "stobie-lab"
 WEB_PARTS = ("apps", "analytical-workspace-lab", "web")
 RECORD_DESK_ASSETS = {
     "index.html": "text/html; charset=utf-8",
@@ -26,8 +26,8 @@ GALLERY_ASSETS = {
     "styles.css": "text/css; charset=utf-8",
     "bootstrap.js": "text/javascript; charset=utf-8",
     "browser-startup.js": "text/javascript; charset=utf-8",
-    "pkg/polyorama_gallery.js": "text/javascript; charset=utf-8",
-    "pkg/polyorama_gallery_bg.wasm": "application/wasm",
+    "pkg/stobie_gallery.js": "text/javascript; charset=utf-8",
+    "pkg/stobie_gallery_bg.wasm": "application/wasm",
 }
 READINESS_PATH = "/_dev_preview/ready"
 ASSETS = {
@@ -38,8 +38,8 @@ ASSETS = {
     "worker.js": "text/javascript; charset=utf-8",
     "pkg/analytical_workspace_lab.js": "text/javascript; charset=utf-8",
     "pkg/analytical_workspace_lab_bg.wasm": "application/wasm",
-    "worker-pkg/polyorama_tile_worker.js": "text/javascript; charset=utf-8",
-    "worker-pkg/polyorama_tile_worker_bg.wasm": "application/wasm",
+    "worker-pkg/stobie_tile_worker.js": "text/javascript; charset=utf-8",
+    "worker-pkg/stobie_tile_worker_bg.wasm": "application/wasm",
 }
 DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 
@@ -92,7 +92,7 @@ def check_assets(root):
 
 
 class PreviewHandler(BaseHTTPRequestHandler):
-    server_version = "PolyoramaPreview"
+    server_version = "StobiePreview"
     sys_version = ""
 
     def end_headers(self):
@@ -151,7 +151,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
         if path.startswith("/gallery/"):
             name = path.removeprefix("/gallery/") or "index.html"
             try:
-                root = open_web_root(self.server.identity["worktree"], ("apps", "polyorama-gallery", "web"))
+                root = open_web_root(self.server.identity["worktree"], ("apps", "stobie-gallery", "web"))
                 try:
                     body = open_asset(root, name, assets=GALLERY_ASSETS)
                 finally:

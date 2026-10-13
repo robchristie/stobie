@@ -1,6 +1,6 @@
 # Production browser builds and startup measurement
 
-Polyorama's browser packaging is a small post-`wasm-bindgen` step, usable without
+Stobie's browser packaging is a small post-`wasm-bindgen` step, usable without
 a frontend bundler. The Lab, Gallery and viewer use the same host startup helper.
 The production default retains unprocessed bindgen WASM and adds compressed,
 versioned delivery. Pinned `wasm-opt` variants remain explicit measurement options;
@@ -91,8 +91,8 @@ new package. With the example server, use distinct directories and switch the
 server atomically through your existing deployment supervisor:
 
 ```sh
-node tools/browser-serve.mjs --directory /srv/polyorama/new \
-  --retain-directory /srv/polyorama/previous --base-path /preview/
+node tools/browser-serve.mjs --directory /srv/stobie/new \
+  --retain-directory /srv/stobie/previous --base-path /preview/
 ```
 
 Retention is explicit: only previous manifests' immutable assets are served;
@@ -103,7 +103,7 @@ This work does not deploy or publish a site.
 
 ## Finite milestones
 
-`window.__POLYORAMA_STARTUP` records navigation-relative milliseconds and epoch
+`window.__STOBIE_STARTUP` records navigation-relative milliseconds and epoch
 milliseconds. Workers supply their own `timeOrigin`, durations and epoch stamps;
 never compare unnormalised page and worker `performance.now()` values.
 
@@ -146,7 +146,7 @@ cargo xtask verify
 ```
 
 On Linux the existing launch helper uses SwiftShader WebGPU. Set
-`POLYORAMA_BROWSER_HEADFUL=1 DISPLAY=:<your-X-display>` where needed for meaningful
+`STOBIE_BROWSER_HEADFUL=1 DISPLAY=:<your-X-display>` where needed for meaningful
 readback, and supply the normal library environment on hosts using the bundled
 UI sysroot. Evidence records browser version/flags, actual adapter/backend,
 hardware, viewport, artifact identity, resources, headers, streaming calls and
@@ -183,4 +183,4 @@ choosing optimisation flags. Do not apply blanket size tuning to compute code.
 state. Copy or adapt these host/build tools and their tests into the consuming
 application, record its own tool/configuration identity, and add constructor,
 first-workspace and meaningful-content hooks at its application boundary. Keep
-workers, data/transport policy and framework dependencies outside Polyorama core.
+workers, data/transport policy and framework dependencies outside Stobie core.

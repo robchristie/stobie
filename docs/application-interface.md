@@ -1,11 +1,11 @@
-# Inspect and exercise a Polyorama application
+# Inspect and exercise a Stobie application
 
 The shared application interface lets a client read current semantics and text,
 discover typed capabilities, dispatch a validated action, wait for an observed
 result and exercise the same host through physical input. Record Desk and
 Analytical Workspace Lab expose the same version 1 JSON contract on an explicitly
 enabled local Unix socket or browser page. Rust types in
-[`inspection.rs`](../crates/polyorama-ui-egui/src/inspection.rs) are authoritative;
+[`inspection.rs`](../crates/stobie-ui-egui/src/inspection.rs) are authoritative;
 the JavaScript client does not maintain a separate action registry or schema.
 
 The [execution plan](application-interface-plan.md) and
@@ -22,13 +22,13 @@ uses Node's standard library. Native physical input and capture additionally
 require X11, `xdotool` and ImageMagick's `import`; they target an explicit host
 window, without shell evaluation. Unix socket observation does not require X11.
 
-Native applications enable automation only when `POLYORAMA_AUTOMATION_SOCKET`
+Native applications enable automation only when `STOBIE_AUTOMATION_SOCKET`
 supplies an absolute path. Use a fresh private directory and launch the host with
 that environment:
 
 ```sh
 AUTOMATION_DIR=$(mktemp -d)
-export POLYORAMA_AUTOMATION_SOCKET="$AUTOMATION_DIR/record-desk.sock"
+export STOBIE_AUTOMATION_SOCKET="$AUTOMATION_DIR/record-desk.sock"
 cargo run --release --manifest-path consumers/record-desk/Cargo.toml
 ```
 
@@ -49,7 +49,7 @@ Browser applications enable the fixed dispatcher only when their startup URL
 contains `?automation=1`. Open the built app with that query string, then attach
 Playwright to its Chromium CDP endpoint. Removing the parameter and reloading
 starts a host without the dispatcher. The public `BrowserTransport` encapsulates
-`window.__POLYORAMA_AUTOMATION.request`; callers do not evaluate application
+`window.__STOBIE_AUTOMATION.request`; callers do not evaluate application
 globals or parse application-specific test snapshots.
 The maintained bootstraps pass `crypto.randomUUID()` to
 `handle.enable_automation(instance)` so each browser startup has a distinct host
@@ -201,8 +201,8 @@ import {
   ApplicationClient, SocketTransport, NativePhysicalAdapter,
 } from './tools/application-client.mjs';
 
-const client = new ApplicationClient(new SocketTransport(process.env.POLYORAMA_AUTOMATION_SOCKET));
-const input = new NativePhysicalAdapter(process.env.POLYORAMA_WINDOW_ID);
+const client = new ApplicationClient(new SocketTransport(process.env.STOBIE_AUTOMATION_SOCKET));
+const input = new NativePhysicalAdapter(process.env.STOBIE_WINDOW_ID);
 await client.hello();
 const field = { id: 'record-desk.title.1001' }; // Resolve the selected record's actual ID first.
 await client.click(field, input);
@@ -244,7 +244,7 @@ returns status 2 for partial evidence. Host
 capture cannot identify the exact GPU/OS frame for a completed UI submission;
 the report states that limit and never claims an atomic screenshot/snapshot.
 `BuildIdentity.source_revision` is optional: build with
-`POLYORAMA_BUILD_REVISION` to supply it, and retain binary/WASM hashes with the
+`STOBIE_BUILD_REVISION` to supply it, and retain binary/WASM hashes with the
 qualification evidence when exact artefact attribution is required.
 
 ## Adopt the interface in another application

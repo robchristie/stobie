@@ -35,7 +35,70 @@
       "actions": []
     },
     {
-      "id": "presentation.4745864528c19005",
+      "id": "presentation.0bd64a73f3d62a31",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Fit view",
+      "description": "Fit the complete image into the active viewport",
+      "rect": {
+        "min_x": 534,
+        "min_y": 158,
+        "max_x": 566,
+        "max_y": 190
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "pane": 1,
+      "domain_reference": {
+        "kind": "pane",
+        "value": 1
+      },
+      "actions": [
+        "fit_view"
+      ]
+    },
+    {
+      "id": "presentation.1d394fe0a9c0cb8d",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Save layout",
+      "description": "Persist the current workspace layout",
+      "rect": {
+        "min_x": 534,
+        "min_y": 195,
+        "max_x": 637.5,
+        "max_y": 227
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "save_layout"
+      ]
+    },
+    {
+      "id": "presentation.61f8ca351c02c13e",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Undo",
+      "description": "Undo the most recent change",
+      "rect": {
+        "min_x": 534,
+        "min_y": 269,
+        "max_x": 566,
+        "max_y": 301
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "undo"
+      ],
+      "disabled_reason": "History is empty"
+    },
+    {
+      "id": "presentation.91330ef15990c1c2",
       "parent": "gallery.story",
       "role": "button",
       "name": "Link views",
@@ -60,50 +123,7 @@
       ]
     },
     {
-      "id": "presentation.9a4cfb53ae5a1e36",
-      "parent": "gallery.story",
-      "role": "button",
-      "name": "Fit view",
-      "description": "Fit the complete image into the active viewport",
-      "rect": {
-        "min_x": 534,
-        "min_y": 158,
-        "max_x": 566,
-        "max_y": 190
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "pane": 1,
-      "domain_reference": {
-        "kind": "pane",
-        "value": 1
-      },
-      "actions": [
-        "fit_view"
-      ]
-    },
-    {
-      "id": "presentation.c31515aae44b17a0",
-      "parent": "gallery.story",
-      "role": "button",
-      "name": "Save layout",
-      "description": "Persist the current workspace layout",
-      "rect": {
-        "min_x": 534,
-        "min_y": 195,
-        "max_x": 637.5,
-        "max_y": 227
-      },
-      "enabled": true,
-      "focused": false,
-      "selected": false,
-      "actions": [
-        "save_layout"
-      ]
-    },
-    {
-      "id": "presentation.feb6c0d2958a23c2",
+      "id": "presentation.da2fda2fca7ab6cf",
       "parent": "gallery.story",
       "role": "button",
       "name": "Save layout",
@@ -120,26 +140,6 @@
       "actions": [
         "save_layout"
       ]
-    },
-    {
-      "id": "presentation.ff93ef13b1b3b560",
-      "parent": "gallery.story",
-      "role": "button",
-      "name": "Undo",
-      "description": "Undo the most recent change",
-      "rect": {
-        "min_x": 534,
-        "min_y": 269,
-        "max_x": 566,
-        "max_y": 301
-      },
-      "enabled": false,
-      "focused": false,
-      "selected": false,
-      "actions": [
-        "undo"
-      ],
-      "disabled_reason": "History is empty"
     }
   ],
   "semantic_audit": []

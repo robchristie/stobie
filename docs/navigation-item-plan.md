@@ -1,11 +1,11 @@
 # Navigation-item recipe
 
 Status: complete
-Delivery: [Polyorama PR #52](https://github.com/robchristie/polyorama/pull/52)
+Delivery: [Stobie PR #52](https://github.com/robchristie/stobie/pull/52)
 
 ## Outcome and ownership
 
-Polyorama owns one reusable navigation row, scoped observations and deterministic
+Stobie owns one reusable navigation row, scoped observations and deterministic
 Gallery stories. Applications own destinations, counts, selected state, intents
 and persistence. Bokkie integration and a broader chip/status system are excluded.
 

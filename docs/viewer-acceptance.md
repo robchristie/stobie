@@ -42,7 +42,7 @@ detail failures are unresolved by another product's successful observation.
 
 Representation sidecars carry validity; this does not invent JPEG 2000 or JPIP
 syntax or general alpha support. Framework pixel/upload APIs retain compatibility
-through additive frame types. Polyorama's generic framework remains codec-neutral.
+through additive frame types. Stobie's generic framework remains codec-neutral.
 The runtime reserves bounded active compressed working sets, rejects stale scopes
 and releases reservations on terminal paths. UI-owned publication/upload,
 priorities, cancellation, stale-generation rejection and three-frame settlement

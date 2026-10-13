@@ -11,7 +11,7 @@ import { STORE, ASSETS, DISPOSITION, LIMITS, beneath, parseArgs, sha256, bounded
   failureProof, pressureProof, validateGrant, validateTemporaryAlias, checkTemporaryAliasMapping,
   inspectTemporaryAlias, temporaryDirectory } from '../viewer-acceptance-browser-masks.mjs';
 
-const AUTHORED = resolve(process.env.POLYORAMA_AUTHORED_DIR ?? process.env.POLYORAMA_EVIDENCE_DIR
+const AUTHORED = resolve(process.env.STOBIE_AUTHORED_DIR ?? process.env.STOBIE_EVIDENCE_DIR
   ?? join(import.meta.dirname, '../../.tools/runtime/authored-browser-tests'));
 await mkdir(AUTHORED, { recursive: true });
 const fixtureRoot = await mkdtemp(join(AUTHORED, 'authored-tests-'));
@@ -61,7 +61,7 @@ test('temporary alias rejects an ordinary host /tmp using actual filesystem iden
     parent_mount_namespace: 'mnt:[0]' }), /mismatch/);
 });
 test('temporary alias private bind preflight retains authored files and leaves host /tmp unchanged',
-  { skip: process.platform !== 'linux' || process.env.POLYORAMA_TEST_PRIVATE_MOUNT !== '1' }, async () => {
+  { skip: process.platform !== 'linux' || process.env.STOBIE_TEST_PRIVATE_MOUNT !== '1' }, async () => {
   const backing = await mkdtemp(join(fixtureRoot, 'mount-')), s = await stat(backing, { bigint: true });
   const hostTmp = await stat('/tmp', { bigint: true }), parent = await readlink('/proc/self/ns/mnt');
   const spec = { ...alias, backing, dev: String(s.dev), ino: String(s.ino), parent_mount_namespace: parent };

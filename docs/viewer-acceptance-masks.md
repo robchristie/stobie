@@ -93,6 +93,6 @@ node tools/viewer-mask-agreement.mjs "$VIEWER_URL" \
 The browser harness requires the ordinary pinned Playwright dependencies and
 writes bounded aggregate evidence, without screenshots or source pixels.
 Run native GPU proof explicitly with
-`cargo test -p polyorama-render-wgpu --lib regional_gpu_readback -- --ignored --nocapture`.
+`cargo test -p stobie-render-wgpu --lib regional_gpu_readback -- --ignored --nocapture`.
 Run original GDAL proof explicitly with
 `cargo test -p emuella-viewer-tools --test masks original_gdal -- --ignored --nocapture`.

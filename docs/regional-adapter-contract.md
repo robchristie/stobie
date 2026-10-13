@@ -90,10 +90,10 @@ draw bindings cannot keep evicted textures outside ownership accounting.
 ## Focused verification
 
 ```sh
-cargo test -p polyorama-core -p polyorama-runtime -p polyorama-render-wgpu
-cargo clippy -p polyorama-core -p polyorama-runtime -p polyorama-render-wgpu --all-targets -- -D warnings
-cargo check -p polyorama-core -p polyorama-runtime -p polyorama-render-wgpu --target wasm32-unknown-unknown
-cargo test -p polyorama-render-wgpu regional_gpu_readback -- --ignored --nocapture
+cargo test -p stobie-core -p stobie-runtime -p stobie-render-wgpu
+cargo clippy -p stobie-core -p stobie-runtime -p stobie-render-wgpu --all-targets -- -D warnings
+cargo check -p stobie-core -p stobie-runtime -p stobie-render-wgpu --target wasm32-unknown-unknown
+cargo test -p stobie-render-wgpu regional_gpu_readback -- --ignored --nocapture
 ```
 
 The final command requires a native GPU adapter and is explicitly opt-in. It

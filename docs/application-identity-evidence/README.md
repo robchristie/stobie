@@ -112,5 +112,5 @@ its historical border values. Bokkie owns the corresponding graphite checks.
 
 The retained logs and summary describe the pre-approval checkpoint. Final
 canonical verification, exact-revision review and landing evidence are recorded
-in [Polyorama #33](https://github.com/robchristie/polyorama/pull/33). Bokkie owns
+in [Stobie #33](https://github.com/robchristie/stobie/pull/33). Bokkie owns
 final consumer integration and the complete objective’s closeout.

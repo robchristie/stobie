@@ -1,12 +1,12 @@
-use polyorama_core::{AnnotationId, PaneId, ResultId};
-use polyorama_ui_egui::{
+use serde::{Deserialize, Serialize};
+use stobie_core::{AnnotationId, PaneId, ResultId};
+use stobie_ui_egui::{
     ActionKey, ActionScope, ActionShortcut, ActionSpec, Availability, ShortcutKey,
 };
-use serde::{Deserialize, Serialize};
 
-pub(crate) fn polygon_vertex_count(gesture: Option<&polyorama_core::GesturePreview>) -> usize {
+pub(crate) fn polygon_vertex_count(gesture: Option<&stobie_core::GesturePreview>) -> usize {
     match gesture {
-        Some(polyorama_core::GesturePreview::Polygon { vertices, .. }) => vertices.len(),
+        Some(stobie_core::GesturePreview::Polygon { vertices, .. }) => vertices.len(),
         _ => 0,
     }
 }
@@ -14,11 +14,11 @@ pub(crate) fn polygon_vertex_count(gesture: Option<&polyorama_core::GesturePrevi
 /// The same fit intent is used by physical controls and semantic invocation.
 pub(crate) fn fit_view_intent(
     pane: PaneId,
-    rect: polyorama_ui_egui::UiRect,
-) -> polyorama_core::ImageIntent {
-    polyorama_core::ImageIntent::SetCamera {
+    rect: stobie_ui_egui::UiRect,
+) -> stobie_core::ImageIntent {
+    stobie_core::ImageIntent::SetCamera {
         pane,
-        camera: polyorama_core::Camera::fit(
+        camera: stobie_core::Camera::fit(
             f64::from(rect.max_x - rect.min_x),
             f64::from(rect.max_y - rect.min_y),
         ),

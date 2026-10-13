@@ -22,10 +22,10 @@ serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 web-time.workspace = true
-polyorama-core = { path = "../../crates/polyorama-core" }
-polyorama-render-wgpu = { path = "../../crates/polyorama-render-wgpu" }
-polyorama-runtime = { path = "../../crates/polyorama-runtime" }
-polyorama-ui-egui = { path = "../../crates/polyorama-ui-egui" }
+stobie-core = { path = "../../crates/stobie-core" }
+stobie-render-wgpu = { path = "../../crates/stobie-render-wgpu" }
+stobie-runtime = { path = "../../crates/stobie-runtime" }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui" }
 
 [dev-dependencies]
 egui_kittest.workspace = true

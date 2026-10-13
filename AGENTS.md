@@ -1,18 +1,18 @@
-# Polyorama working rules
+# Stobie working rules
 
 ## Boundaries
 
-- `polyorama-core` owns document, session, canonical dock-tree, commands and
+- `stobie-core` owns document, session, canonical dock-tree, commands and
   renderer-independent demand types. It must not depend on egui, eframe, wgpu or
   browser crates.
-- `polyorama-runtime` owns demand reconciliation, workers and completion state;
+- `stobie-runtime` owns demand reconciliation, workers and completion state;
   it must not depend on egui or wgpu.
-- `polyorama-render-wgpu` owns all persistent GPU resources and typed render
+- `stobie-render-wgpu` owns all persistent GPU resources and typed render
   requests. No pane or viewport may create a device or queue.
-- `polyorama-ui-egui` is the sole framework crate that understands egui. Pane
+- `stobie-ui-egui` is the sole framework crate that understands egui. Pane
   functions receive narrow views and feature intent/demand/render sinks, never
   mutable access to the complete application model or runtime.
-- The serialisable `polyorama_core::Workspace` is the only authoritative dock
+- The serialisable `stobie_core::Workspace` is the only authoritative dock
   tree. Do not introduce a second stateful docking tree.
 
 ## State and interaction

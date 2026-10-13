@@ -49,9 +49,9 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             "-p",
             "analytical-workspace-lab",
             "-p",
-            "polyorama-gallery",
+            "stobie-gallery",
             "-p",
-            "polyorama-tile-worker",
+            "stobie-tile-worker",
             "-p",
             "emuella-viewer",
         ],
@@ -62,7 +62,7 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             "analytical-workspace-lab",
             "analytical_workspace_lab",
         ),
-        ("gallery", "polyorama-gallery", "polyorama_gallery"),
+        ("gallery", "stobie-gallery", "stobie_gallery"),
         ("viewer", "emuella-viewer", "emuella_viewer"),
     ] {
         let destination = staging.join(name);
@@ -84,7 +84,7 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
         )?;
         bindgen(binary, &destination.join("pkg"))?;
         if name == "lab" {
-            bindgen("polyorama_tile_worker", &destination.join("worker-pkg"))?;
+            bindgen("stobie_tile_worker", &destination.join("worker-pkg"))?;
         }
     }
     let revision = Command::new("git").args(["rev-parse", "HEAD"]).output()?;

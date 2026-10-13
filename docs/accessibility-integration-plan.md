@@ -3,7 +3,7 @@
 Status: complete
 Landed commit: `7f3deea71080f83a5b3532d05d3c3debea357be5`
 
-Delivery: [PR #28](https://github.com/robchristie/polyorama/pull/28) landed.
+Delivery: [PR #28](https://github.com/robchristie/stobie/pull/28) landed.
 
 Baseline revision: `0e725f5a97a6d99a6bc4c961dfc05b4e9252ba1d`
 
@@ -18,7 +18,7 @@ make a representative analytical workflow understandable and operable by
 keyboard and assistive technology, enrich bounded GPU-viewport semantics, and
 report only the environments exercised with actual assistive technology.
 
-The increment may change application presentation, `polyorama-ui-egui`, test
+The increment may change application presentation, `stobie-ui-egui`, test
 and qualification tooling, and accessibility documentation. It does not replace
 egui, wgpu or AccessKit; create a DOM or retained widget tree; move UI concerns
 into core/runtime; materialise complete collections; redesign unrelated UI; or
@@ -37,7 +37,7 @@ boundaries.
 
 ## Exploration and calibration gate
 
-Question: can egui/eframe 0.36.1 expose Polyorama's existing AccessKit tree to
+Question: can egui/eframe 0.36.1 expose Stobie's existing AccessKit tree to
 native and browser assistive technologies without a second authoritative UI or
 application-state model?
 
@@ -67,7 +67,7 @@ the integration. Do not broaden into custom DOM or accessibility frameworks.
 | 2 | Bounded analytical viewport context and non-pointer workflow actions | 1 | Complete | Semantic parity, dynamic-state and custom-action tests |
 | 3 | Focus, dynamic state, virtualisation, dock restoration and physical checks | 1–2 | Complete | Kittest, native/browser harness and deterministic UI evidence |
 | 4 | Actual assistive-technology qualification and exact platform matrix | 1–3 | Complete for one exact native environment | The repeatable Debian 13 VM workflow passed and a human operator confirmed audible Orca 48.1 output in GNOME 48 over RDP; Arch/Xvfb remains partial and the browser adapter is unavailable in stock eframe 0.36.1 |
-| 5 | Canonical verification, report reconciliation, exact-head review and landing | 0–4 | Complete | PR [#28](https://github.com/robchristie/polyorama/pull/28) landed at `7f3deea71080f83a5b3532d05d3c3debea357be5`; the former Debian/GNOME/RDP/Orca hold was closed with the retained human speech confirmation |
+| 5 | Canonical verification, report reconciliation, exact-head review and landing | 0–4 | Complete | PR [#28](https://github.com/robchristie/stobie/pull/28) landed at `7f3deea71080f83a5b3532d05d3c3debea357be5`; the former Debian/GNOME/RDP/Orca hold was closed with the retained human speech confirmation |
 
 ## Acceptance proof
 
@@ -97,7 +97,7 @@ the stock WebRunner's discarded AccessKit update as the minimal browser
 blocker. Independent exact-head review found that momentary controls, Canvas
 and selection-only controls inherited an incorrect toggle state, and confirmed
 that the pinned Linux AT-SPI adapter does not carry Canvas custom actions. The
-landed PR [#28](https://github.com/robchristie/polyorama/pull/28)
+landed PR [#28](https://github.com/robchristie/stobie/pull/28)
 distinguishes deliberate pressed modes from momentary and selected controls;
 the repeated actual Orca workflow, refreshed evidence, canonical verification
 and repair review passed to the former human boundary. A persistent Debian 13

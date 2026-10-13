@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
-EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/docs/design-agent-loop-evidence}"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/docs/design-agent-loop-evidence}"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 
 command -v import >/dev/null
 IMPORT="$(command -v import)"
 SYSROOT="$ROOT/.tools/sysroot"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
   command -v Xvfb >/dev/null
   command -v xdotool >/dev/null
   XDO="$(command -v xdotool)"
@@ -25,7 +25,7 @@ DISPLAY_NUMBER=:96
 XVFB_LOG="$EVIDENCE_DIR/gallery-native-xvfb.log"
 APP_LOG="$EVIDENCE_DIR/gallery-native-runtime.log"
 SNAPSHOT="$ROOT/.tools/runtime/gallery-native-snapshot.json"
-STORY_COUNT="$(sed -n 's/.*pub const ALL: \[Self; \([0-9]*\)\].*/\1/p' apps/polyorama-gallery/src/catalogue.rs)"
+STORY_COUNT="$(sed -n 's/.*pub const ALL: \[Self; \([0-9]*\)\].*/\1/p' apps/stobie-gallery/src/catalogue.rs)"
 [[ "$STORY_COUNT" =~ ^[0-9]+$ ]]
 SMOKE_TMP="$ROOT/.tools/runtime/gallery-native-x11-tmp"
 
@@ -46,10 +46,10 @@ sleep 1
 : >"$APP_LOG"
 rm -f "$SNAPSHOT"
 DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl \
-  POLYORAMA_GALLERY_STORY=reference/application-shell \
-  POLYORAMA_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
-  owned_start APP_PID target/release/polyorama-gallery >>"$APP_LOG" 2>&1
-WINDOW_ID="$(owned_wait_window 'Polyorama Component Gallery' "$APP_PID")"
+  STOBIE_GALLERY_STORY=reference/application-shell \
+  STOBIE_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
+  owned_start APP_PID target/release/stobie-gallery >>"$APP_LOG" 2>&1
+WINDOW_ID="$(owned_wait_window 'Stobie Component Gallery' "$APP_PID")"
 xdo windowfocus --sync "$WINDOW_ID"
 DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$IMPORT" -window root "$EVIDENCE_DIR/gallery-native-overview.png"
 xdo key --window "$WINDOW_ID" F12

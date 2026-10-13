@@ -355,7 +355,7 @@ test('bounds and invalid/null selector values fail before any transport dispatch
 });
 
 test('capture preserves bracketed semantic/text observations and honest failure diagnostics', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'polyorama-evidence-'));
+  const directory = await mkdtemp(join(tmpdir(), 'stobie-evidence-'));
   try {
     const { client } = await bound();
     const physical = adapter();
@@ -376,7 +376,7 @@ test('capture keeps a successful screenshot when a bracketing observation fails'
   let reads = 0;
   const { client } = await bound(() => ++reads === 1 ? { error: { code: 'missing_observation', message: 'Not ready' } }
     : { kind: 'observe', observation: observation() });
-  const directory = await mkdtemp(join(tmpdir(), 'polyorama-evidence-'));
+  const directory = await mkdtemp(join(tmpdir(), 'stobie-evidence-'));
   try {
     const evidence = await client.capture(adapter(), { path: join(directory, 'partial.png') });
     assert.equal(evidence.status, 'partial'); assert.equal(evidence.capture.status, 'captured');
@@ -440,7 +440,7 @@ test('native pointer placement supports an unchanged position and dispatches one
 });
 
 test('socket transport handles fragmented replies and connection loss with no retry', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'polyorama-socket-'));
+  const directory = await mkdtemp(join(tmpdir(), 'stobie-socket-'));
   const path = join(directory, 'application.sock');
   let connections = 0;
   const server = createServer(stream => {

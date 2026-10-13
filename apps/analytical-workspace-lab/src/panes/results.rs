@@ -1,8 +1,8 @@
 use eframe::egui;
-use polyorama_core::{
+use stobie_core::{
     ImageIntent, PaneId, RESULT_COUNT, ResultId, VirtualisationMetrics, result_at, virtual_rows,
 };
-use polyorama_ui_egui::{
+use stobie_ui_egui::{
     DomainReference, ResultRowSpec, SemanticUiId, TextOverflow, TextRole, UiNode, UiRole,
     measured_content_label, result_row, result_row_height,
 };
@@ -29,7 +29,7 @@ pub fn show(
             TextRole::Secondary,
             TextOverflow::Ellipsis,
             1,
-            polyorama_ui_egui::TextInteraction::Selectable,
+            stobie_ui_egui::TextInteraction::Selectable,
             tokens,
             font_scale,
             &mut outputs.ui_geometry.text_layouts,
@@ -138,7 +138,7 @@ pub fn show(
                                 rect: selection.interact_rect.into(),
                             });
                         outputs.ui_geometry.record_node(UiNode {
-                            id: SemanticUiId::new(format!("polyorama.result-row.{}", result.id.0)),
+                            id: SemanticUiId::new(format!("stobie.result-row.{}", result.id.0)),
                             parent: Some(SemanticUiId::pane(PaneId(5))),
                             role: UiRole::ResultRow,
                             name: semantic_name,
@@ -182,7 +182,7 @@ pub fn show(
 mod tests {
     use super::*;
     use crate::ui_geometry::UiGeometry;
-    use polyorama_ui_egui::{DensityVariant, ThemeVariant, audit_text_layouts};
+    use stobie_ui_egui::{DensityVariant, ThemeVariant, audit_text_layouts};
 
     #[test]
     fn virtual_result_pitch_tracks_density_and_bounded_font_scale() {
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn visible_virtual_result_rows_have_a_clean_measured_text_audit() {
         let context = egui::Context::default();
-        polyorama_ui_egui::apply_design_system(&context, Default::default());
+        stobie_ui_egui::apply_design_system(&context, Default::default());
         let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 360.0));
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
         let mut outputs = FrameOutput {
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn physical_row_geometry_uses_the_visible_scroll_clip() {
         let context = egui::Context::default();
-        polyorama_ui_egui::apply_design_system(&context, Default::default());
+        stobie_ui_egui::apply_design_system(&context, Default::default());
         let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 720.0));
         let pane = egui::Rect::from_min_size(root.min, egui::vec2(720.0, 355.0));
         let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);

@@ -14,7 +14,7 @@ subsequent dispatch explains the observed waiting with decode removed, and
 which retained lifetimes explain current RSS across repeated releases. The
 smallest probe is the authored immediate-result workload through the actual
 one-worker executor and upload route, followed only in an allocated window by
-an identified full-scene memory cohort. Polyorama owns detailed evidence in the
+an identified full-scene memory cohort. Stobie owns detailed evidence in the
 approved store; the workspace acceptance plan owns selection. Exit this
 implementation phase when the bounded mechanisms, authored tests and protocol
 are ready. Cause attribution and any repair require the later measured evidence.

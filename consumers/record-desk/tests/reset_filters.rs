@@ -2,7 +2,6 @@
 
 use egui::{Key, Modifiers, Vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use polyorama_ui_egui::{ActionKey, SemanticActionId, UiNode};
 use record_desk::{
     actions::Action,
     app::{RecordDeskApp, Snapshot},
@@ -11,6 +10,7 @@ use record_desk::{
     },
     store::Store,
 };
+use stobie_ui_egui::{ActionKey, SemanticActionId, UiNode};
 
 #[derive(Default)]
 struct TestState {

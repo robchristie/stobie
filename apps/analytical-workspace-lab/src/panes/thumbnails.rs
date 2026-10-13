@@ -1,9 +1,9 @@
 use eframe::egui;
-use polyorama_core::{
+use stobie_core::{
     DemandPriority, ImageIntent, PaneId, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
     VirtualisationMetrics,
 };
-use polyorama_ui_egui::{
+use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, TextOverflow, TextRole, ThumbnailCellSpec,
     ThumbnailState, UiNode, UiRole, VirtualGridPresenter, measured_content_label, thumbnail_cell,
     thumbnail_cell_side,
@@ -44,7 +44,7 @@ pub fn show(
         TextRole::Secondary,
         TextOverflow::Ellipsis,
         1,
-        polyorama_ui_egui::TextInteraction::Selectable,
+        stobie_ui_egui::TextInteraction::Selectable,
         tokens,
         font_scale,
         &mut outputs.ui_geometry.text_layouts,
@@ -116,7 +116,7 @@ pub fn show(
                     .is_some_and(|root| root.contains(response.rect.into(), 1.0));
                 if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
                     outputs.ui_geometry.record_node(UiNode {
-                        id: SemanticUiId::new(format!("polyorama.thumbnail-cell.{index}")),
+                        id: SemanticUiId::new(format!("stobie.thumbnail-cell.{index}")),
                         parent: Some(SemanticUiId::pane(PaneId(6))),
                         role: UiRole::ThumbnailCell,
                         name: format!("{label}; {state:?}"),

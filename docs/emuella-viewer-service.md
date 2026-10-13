@@ -2,7 +2,7 @@
 
 `emuella-viewer-source` is the application adapter between the codec, the
 selected stateless JPP profile and a transport-owned worker. It builds for native
-Rust and `wasm32-unknown-unknown`; generic Polyorama crates do not depend on it.
+Rust and `wasm32-unknown-unknown`; generic Stobie crates do not depend on it.
 `emuella-viewer-tools` supplies synchronous GDAL preparation, deterministic
 public fixtures, a localhost HTTP service and an actual TCP measurement client.
 The viewer application owns transport, cancellation and request generations.

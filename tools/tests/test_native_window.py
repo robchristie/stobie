@@ -11,7 +11,7 @@ class WindowReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             return subprocess.run(["bash", "-c", '''
 set -euo pipefail
-POLYORAMA_USE_SYSTEM_UI_LIBS=1
+STOBIE_USE_SYSTEM_UI_LIBS=1
 source "$1"
 ''' + body, "fixture", str(LIFECYCLE)], cwd=temporary, text=True,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=4)

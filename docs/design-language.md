@@ -1,8 +1,8 @@
-# Polyorama design language
+# Stobie design language
 
 ## Universal design contract
 
-Polyorama supplies measured typography, coherent spacing, explicit overflow,
+Stobie supplies measured typography, coherent spacing, explicit overflow,
 readable states, minimum hit targets, stable semantics and predictable keyboard
 interaction. Application identity is independent of these interaction rules.
 Colours and chrome geometry may differ across applications while the same
@@ -13,7 +13,7 @@ production components retain the same behavioural contracts.
 `ApplicationTheme::analytical()` retains the existing analytical instrument
 appearance: matte planar chrome, a cool cyan-teal accent and compact geometry.
 This is the Lab's reference personality and the compatible default, rather than
-a requirement for every Polyorama application. Its operator goal is to inspect
+a requirement for every Stobie application. Its operator goal is to inspect
 linked scientific views, results and annotations without losing provenance.
 The application bar owns global lifecycle actions and status; the dock owns
 layout and each pane owns its content and scrolling.
@@ -83,7 +83,7 @@ height. Its `max_lines` is an overflow limit. `measured_fixed_slot_label`
 explicitly reserves that many role line heights for fixed table or virtualised
 row recipes. Both align text at the top; deliberate grouping spacing belongs to
 the parent recipe. Font identities and licence authority are retained in the
-[bundled-font record](../crates/polyorama-ui-egui/assets/fonts/README.md).
+[bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md).
 
 Default alignment and overflow are semantic:
 
@@ -124,7 +124,7 @@ permit content bounds outside the local allocation because the owning clip or
 scroll surface constrains visible paint. Expand requires the useful allocation
 to contain the measured text. All policies retain full semantic text.
 
-Polyorama-owned text components may emit a bounded `TextLayoutObservation`
+Stobie-owned text components may emit a bounded `TextLayoutObservation`
 with a typed stable component and parent ID, role, alignment, allocation,
 layout paint bounds, clip, declared overflow and line limit, actual line count
 and truncation state. Egui 0.36 has no reliable public baseline metric, so the
@@ -132,7 +132,7 @@ baseline is reported as unavailable rather than inferred. The deterministic
 audit uses a one-point tolerance for raster/layout rounding and rejects invalid
 useful geometry, undeclared out-of-bounds text, unexpected lines, undeclared
 truncation, alignment deviation and overlapping sibling text. Observations are
-concentrated on Polyorama components; they are not a second UI tree and do not
+concentrated on Stobie components; they are not a second UI tree and do not
 enumerate ordinary egui labels or virtualised collections.
 
 A component request that fails validation paints an explicit diagnostic fallback
@@ -142,7 +142,7 @@ filters the observation out of its visible subset. Low-level `measure_text`
 continues returning a typed error; production components use
 `measure_component_text` so errors cannot silently become empty rectangles.
 
-An empty text audit means **every observed Polyorama text component passed**,
+An empty text audit means **every observed Stobie text component passed**,
 not that every visible string in the frame was structurally audited.
 `TextAuditCoverage` records distinct `attempted_components`,
 `successful_components` and `failed_components` independently in the current
@@ -228,7 +228,7 @@ artwork plus inline-token spacing before one start-aligned measured label.
 Minimum useful labelled width includes measured ellipsis; callers must wrap,
 provide that width or explicitly choose icon-only/overflow. Icons never silently
 replace a label. See [component contracts](ui-guides/components.md#typed-icons-and-action-presentations)
-and the [artwork/licence record](../crates/polyorama-ui-egui/assets/icons/README.md).
+and the [artwork/licence record](../crates/stobie-ui-egui/assets/icons/README.md).
 
 ## Destination navigation
 
@@ -271,7 +271,7 @@ complete application migration remains later work.
 
 ## Token source and supported subset
 
-[`../design/tokens/polyorama.tokens.json`](../design/tokens/polyorama.tokens.json)
+[`../design/tokens/stobie.tokens.json`](../design/tokens/stobie.tokens.json)
 is the analytical reference token source. It uses a deliberately bounded,
 DTCG-style JSON subset:
 
@@ -375,7 +375,7 @@ generated from its checked-in source.
 
 ## Gallery and reference recipes
 
-`polyorama-gallery` is a native and browser application, not a second widget
+`stobie-gallery` is a native and browser application, not a second widget
 implementation. Its typed Rust catalogue has 27 stable story IDs and fixed
 metadata for description, component group, recommended viewport, applicable
 appearance/density variants and interaction scenarios. It supports the four
@@ -409,6 +409,6 @@ unknown current values fall back independently, obsolete schema versions reset
 predictably, and font scale is clamped to 100–150%. System appearance resolves
 against egui's current system theme.
 
-The token source, generator, generated Rust and component recipe are Polyorama
+The token source, generator, generated Rust and component recipe are Stobie
 project code under the repository's Apache-2.0 licence. Bundled Source Sans 3 fonts are separately licensed under SIL OFL 1.1; see the
-[bundled-font record](../crates/polyorama-ui-egui/assets/fonts/README.md).
+[bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md).

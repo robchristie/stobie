@@ -1,6 +1,6 @@
 # Accessibility and semantics
 
-Egui/AccessKit provides the framework semantics where available. Polyorama
+Egui/AccessKit provides the framework semantics where available. Stobie
 augments it with `UiSnapshot`: stable IDs, current bounded geometry, complete
 names and descriptions, role, enabled/focused/selected state, actions,
 disabled reason, pane/domain reference, text selectability and measured-text
@@ -53,7 +53,7 @@ binary, OS/desktop/session, graphics backend, AT and adapter versions; the
 representative [workflow](../accessibility-integration-report.md#qualification-workflow);
 and the expected names, focus, state, actions and dynamic announcements. Retain
 step-linked observations, failures and artefact identities. Actual Orca must
-consume platform accessibility events while the workflow operates Polyorama;
+consume platform accessibility events while the workflow operates Stobie;
 retain its speech output/transcript or a recording (or the equivalent braille
 output). A tree walk, adapter compilation or application-generated speech alone
 does not establish that path. A speech-generation log alone also does not prove

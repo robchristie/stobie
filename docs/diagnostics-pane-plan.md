@@ -2,10 +2,10 @@
 
 Status: complete
 
-Delivery: [Polyorama PR #41](https://github.com/robchristie/polyorama/pull/41).
+Delivery: [Stobie PR #41](https://github.com/robchristie/stobie/pull/41).
 
 Starting revision: `83ae311b1fe14df04f57b3738defcddb5dca417f`.
-Owner: Polyorama product repository.
+Owner: Stobie product repository.
 Scope: the Lab's Diagnostics pane, generic canonical dock transitions, product
 documentation and focused native/browser regressions.
 

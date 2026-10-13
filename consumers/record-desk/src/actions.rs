@@ -1,5 +1,5 @@
-use polyorama_ui_egui::{ActionKey, ActionScope, ActionShortcut, ActionSpec, ShortcutKey};
 use serde::Serialize;
+use stobie_ui_egui::{ActionKey, ActionScope, ActionShortcut, ActionSpec, ShortcutKey};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
 pub enum Action {

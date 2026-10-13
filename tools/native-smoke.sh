@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 "$ROOT/tools/bootstrap-linux-ui.sh"
-EVIDENCE_DIR="${POLYORAMA_EVIDENCE_DIR:-$ROOT/docs/vertical-slice-evidence}"
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/docs/vertical-slice-evidence}"
 
 command -v import >/dev/null
 IMPORT="$(command -v import)"
@@ -12,7 +12,7 @@ mkdir -p "$EVIDENCE_DIR" .tools/runtime
 rm -f .tools/runtime/native-storage.ron
 
 SYSROOT="$ROOT/.tools/sysroot"
-if [[ "${POLYORAMA_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == "1" ]]; then
   command -v Xvfb >/dev/null
   command -v xdotool >/dev/null
   XDO="$(command -v xdotool)"
@@ -42,8 +42,8 @@ sleep 1
 
 launch_app() {
   DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl RUST_LOG=info \
-    POLYORAMA_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
-    POLYORAMA_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
+    STOBIE_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
+    STOBIE_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
     owned_start APP_PID target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1
   WINDOW_ID="$(owned_wait_window 'Analytical Workspace Lab' "$APP_PID")"
   xdo windowfocus --sync "$WINDOW_ID"

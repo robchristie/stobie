@@ -1,12 +1,12 @@
 # Rust 1.99.0 maintenance
 
 Status: complete
-Delivery: [Polyorama PR #54](https://github.com/robchristie/polyorama/pull/54)
+Delivery: [Stobie PR #54](https://github.com/robchristie/stobie/pull/54)
 
 ## Outcome and scope
 
 Portfolio package `rust-1.99.0` / P1 selects exact Rust 1.99.0 for active
-Polyorama development, builds and normal CI. The root toolchain, production
+Stobie development, builds and normal CI. The root toolchain, production
 browser guard and maintained application/consumer setup guidance move together.
 The Rust 1.97.1 workspace and independent Record Desk minimums, both Cargo
 lockfiles, editions, resolver, warning policy, architecture and admission/resource
@@ -63,7 +63,7 @@ this package makes only the bounded public functional claim.
 
 ## Verification repair trajectory
 
-[CI 37734771653](https://github.com/robchristie/polyorama/actions/runs/37734771653)
+[CI 37734771653](https://github.com/robchristie/stobie/actions/runs/37734771653)
 failed on reviewed `24ba90da0dab7e22140dcea736bd496044cabb96` after native
 navigation exhausted forty Tabs; after-Tab state was missing. The preceding icon
 guard observed absent `rg`. Bounded advice selected explicit prerequisites,
@@ -72,7 +72,7 @@ presentation barrier with transition/failure retention. Fourteen controlled case
 focused navigation/icon workflows and committed
 `ae1a5344e5249160d42575b922e939d3b389b7d3` full canonical verification passed.
 
-[CI 37741675597](https://github.com/robchristie/polyorama/actions/runs/37741675597)
+[CI 37741675597](https://github.com/robchristie/stobie/actions/runs/37741675597)
 then failed on reviewed `db135e3ce50541df44e8e8560a0c90dd2c78a8c6` after forty
 actions. New observations show Home at action 37/frame 52, Home again at action
 38/frame 53, then Needs attention at action 39/frame 55 and Activity at action

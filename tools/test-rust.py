@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REPORTS = Path(".tools/runtime/verification-evidence/nextest")
 SELECTIONS = {
     "workspace": ["--workspace"],
-    "ui-no-default": ["-p", "polyorama-ui-egui", "--no-default-features"],
+    "ui-no-default": ["-p", "stobie-ui-egui", "--no-default-features"],
     "record-desk": ["--locked"],
 }
 WORKSPACES = {"record-desk": Path("consumers/record-desk")}

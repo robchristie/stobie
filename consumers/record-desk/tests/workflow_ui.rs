@@ -2,8 +2,8 @@
 
 use egui::{Key, Modifiers, Vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use polyorama_ui_egui::audit_accesskit;
 use record_desk::{app::RecordDeskApp, model::*, store::Store};
+use stobie_ui_egui::audit_accesskit;
 
 fn app_harness(
     width: f32,
@@ -177,7 +177,7 @@ fn open_filter_options_match_accesskit_and_disappear_when_closed() {
                 .ui
                 .nodes
                 .iter()
-                .filter(|node| node.role == polyorama_ui_egui::UiRole::RadioButton)
+                .filter(|node| node.role == stobie_ui_egui::UiRole::RadioButton)
                 .count(),
             4
         );
@@ -191,7 +191,7 @@ fn open_filter_options_match_accesskit_and_disappear_when_closed() {
                 .ui
                 .nodes
                 .iter()
-                .all(|node| node.role != polyorama_ui_egui::UiRole::RadioButton)
+                .all(|node| node.role != stobie_ui_egui::UiRole::RadioButton)
         );
     }
 }
@@ -233,7 +233,7 @@ fn ordinary_narrow_and_empty_observations_have_stable_identity_and_honest_text_c
         identities.push(row.id.clone());
         assert!(matches!(
             row.domain_reference,
-            Some(polyorama_ui_egui::DomainReference::External { .. })
+            Some(stobie_ui_egui::DomainReference::External { .. })
         ));
     }
     assert_eq!(identities[0], identities[1]);

@@ -1,10 +1,10 @@
 # Record Desk
 
-A maintained independent Polyorama consumer for finding, reviewing and editing
-12 deterministic synthetic records. It uses only public `polyorama-core` and
-`polyorama-ui-egui` APIs. Its own Cargo workspace, dependency declarations,
+A maintained independent Stobie consumer for finding, reviewing and editing
+12 deterministic synthetic records. It uses only public `stobie-core` and
+`stobie-ui-egui` APIs. Its own Cargo workspace, dependency declarations,
 profiles and lockfile do not inherit the product workspace. UI's image-rendering
-feature is disabled: neither Polyorama's image renderer nor its worker runtime
+feature is disabled: neither Stobie's image renderer nor its worker runtime
 is needed. Eframe still owns the host's GPU rendering of egui.
 
 ## Build and run
@@ -167,12 +167,16 @@ The UTF-8 JSON envelope is version 1:
 validates record identities/fields/count, layout structure and the exact two
 consumer panes; input is limited to 1 MiB and 1000 records.
 
-Native uses `$XDG_STATE_HOME/polyorama-record-desk/state.json`, falling back to
-`$HOME/.local/state/polyorama-record-desk/state.json`. Set
+Native uses `$XDG_STATE_HOME/stobie-record-desk/state.json`, falling back to
+`$HOME/.local/state/stobie-record-desk/state.json`. Set
 `RECORD_DESK_STATE_PATH=/absolute/path/state.json` for an isolated desk. Writes
 sync a temporary file in the same directory then atomically replace the state.
 Browser uses the current origin's `localStorage` key
-`polyorama.record-desk.v1`. Keeping the same origin/port preserves local state.
+`stobie.record-desk.v1`. Keeping the same origin/port preserves local state.
+When the new location is absent, existing state from the former project name
+remains readable; Save uses the new location and retains the former copy.
+An explicit state path disables this fallback. See the
+[project rename guide](../../docs/project-rename.md) for migration details.
 
 Missing saved data starts the synthetic collection. Malformed, unsupported,
 unreadable or oversized state reports an error and blocks Save. Existing state

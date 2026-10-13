@@ -48,8 +48,8 @@ jobs:
       matrix: ${{ fromJSON(needs.scope.outputs.matrix) }}
     runs-on: ubuntu-24.04
     env:
-      POLYORAMA_USE_SYSTEM_UI_LIBS: '1'
-      POLYORAMA_BROWSER_HEADFUL: '1'
+      STOBIE_USE_SYSTEM_UI_LIBS: '1'
+      STOBIE_BROWSER_HEADFUL: '1'
       DISPLAY: ':95'
     steps:
       - uses: actions/checkout@v4

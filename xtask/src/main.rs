@@ -52,7 +52,7 @@ fn main() -> Result<()> {
 }
 
 fn build_web() -> Result<()> {
-    for app in ["analytical-workspace-lab", "polyorama-gallery"] {
+    for app in ["analytical-workspace-lab", "stobie-gallery"] {
         fs::copy(
             "tools/browser-startup.js",
             format!("apps/{app}/web/browser-startup.js"),
@@ -69,9 +69,9 @@ fn build_web() -> Result<()> {
             "-p",
             "analytical-workspace-lab",
             "-p",
-            "polyorama-gallery",
+            "stobie-gallery",
             "-p",
-            "polyorama-tile-worker",
+            "stobie-tile-worker",
         ],
     )?;
     run(
@@ -90,8 +90,8 @@ fn build_web() -> Result<()> {
             "--target",
             "web",
             "--out-dir",
-            "apps/polyorama-gallery/web/pkg",
-            "target/wasm32-unknown-unknown/release/polyorama_gallery.wasm",
+            "apps/stobie-gallery/web/pkg",
+            "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
         ],
     )?;
     run(
@@ -101,7 +101,7 @@ fn build_web() -> Result<()> {
             "web",
             "--out-dir",
             "apps/analytical-workspace-lab/web/worker-pkg",
-            "target/wasm32-unknown-unknown/release/polyorama_tile_worker.wasm",
+            "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
         ],
     )?;
     build_viewer_web()?;
@@ -118,10 +118,10 @@ fn architecture() -> Result<()> {
         bail!("workspace eframe dependency must enable the native AccessKit adapter");
     }
     assert_tree_excludes(
-        "polyorama-core",
+        "stobie-core",
         &["egui", "eframe", "wgpu", "web-sys", "winit"],
     )?;
-    assert_tree_excludes("polyorama-runtime", &["egui", "eframe", "wgpu"])?;
+    assert_tree_excludes("stobie-runtime", &["egui", "eframe", "wgpu"])?;
     let mut pane_sources = Vec::new();
     collect_rust_sources(
         Path::new("apps/analytical-workspace-lab/src/panes"),
@@ -153,7 +153,7 @@ fn architecture() -> Result<()> {
     }
     let mut production_ui_sources = pane_sources.clone();
     collect_rust_sources(
-        Path::new("crates/polyorama-ui-egui/src"),
+        Path::new("crates/stobie-ui-egui/src"),
         &mut production_ui_sources,
     )?;
     production_ui_sources.push(Path::new("apps/analytical-workspace-lab/src/app.rs").into());
@@ -193,7 +193,7 @@ fn architecture() -> Result<()> {
         ] {
             if source.contains(forbidden) {
                 bail!(
-                    "production UI source {} contains unmanaged style or control primitive {forbidden:?}; use typed tokens and a polyorama-ui-egui recipe",
+                    "production UI source {} contains unmanaged style or control primitive {forbidden:?}; use typed tokens and a stobie-ui-egui recipe",
                     path.display()
                 );
             }
@@ -244,7 +244,7 @@ fn architecture() -> Result<()> {
     if !app_source.contains("if let Err(error) = submit_render_plan(&outputs.render_plan") {
         bail!("application shell must submit the complete typed frame render plan");
     }
-    let egui_integration = fs::read_to_string("crates/polyorama-ui-egui/src/lib.rs")?;
+    let egui_integration = fs::read_to_string("crates/stobie-ui-egui/src/lib.rs")?;
     if egui_integration.contains("request_repaint") {
         bail!("egui integration must report interaction activity through FrameOutput");
     }
@@ -257,13 +257,13 @@ fn architecture() -> Result<()> {
             bail!("egui integration is missing lifecycle enforcement: {required}");
         }
     }
-    let renderer_source = fs::read_to_string("crates/polyorama-render-wgpu/src/lib.rs")?;
+    let renderer_source = fs::read_to_string("crates/stobie-render-wgpu/src/lib.rs")?;
     if renderer_source.contains("create_device") {
         bail!("renderer or viewport creates an additional wgpu device");
     }
     let canonical_definitions = [
-        "crates/polyorama-core/src/dock.rs",
-        "crates/polyorama-ui-egui/src/lib.rs",
+        "crates/stobie-core/src/dock.rs",
+        "crates/stobie-ui-egui/src/lib.rs",
     ]
     .iter()
     .map(fs::read_to_string)
@@ -274,7 +274,7 @@ fn architecture() -> Result<()> {
     if canonical_definitions != 1 {
         bail!("expected exactly one canonical Workspace definition, found {canonical_definitions}");
     }
-    let action_source = fs::read_to_string("crates/polyorama-ui-egui/src/actions.rs")?;
+    let action_source = fs::read_to_string("crates/stobie-ui-egui/src/actions.rs")?;
     let framework_actions = action_source
         .split_once("#[cfg(test)]")
         .map_or(action_source.as_str(), |(production, _)| production);
@@ -288,7 +288,7 @@ fn architecture() -> Result<()> {
         }
     }
     let mut egui_sources = Vec::new();
-    collect_rust_sources(Path::new("crates/polyorama-ui-egui/src"), &mut egui_sources)?;
+    collect_rust_sources(Path::new("crates/stobie-ui-egui/src"), &mut egui_sources)?;
     for path in egui_sources {
         let source = fs::read_to_string(&path)?;
         if source.starts_with("#![cfg(test)]") {
@@ -310,7 +310,7 @@ fn architecture() -> Result<()> {
             "impl ActionKey for LabAction",
         ),
         (
-            "apps/polyorama-gallery/src/app.rs",
+            "apps/stobie-gallery/src/app.rs",
             "impl ActionKey for GalleryAction",
         ),
     ] {
@@ -445,7 +445,7 @@ fn build_viewer_web() -> Result<()> {
         ],
     )?;
     let output =
-        env::var("POLYORAMA_VIEWER_WEB_DIR").unwrap_or_else(|_| ".tools/runtime/viewer-web".into());
+        env::var("STOBIE_VIEWER_WEB_DIR").unwrap_or_else(|_| ".tools/runtime/viewer-web".into());
     fs::create_dir_all(&output)?;
     for asset in ["index.html", "bootstrap.js", "worker.js", "response.js"] {
         fs::copy(

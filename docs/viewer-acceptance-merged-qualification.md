@@ -14,7 +14,7 @@ Resolve owners from the live
 `/nvme/development/emuella/emuella-workspace/workspace.local.toml`; the acceptance
 workspace's local configuration currently agrees. Configured roots are
 `/nvme/development/emuella/{emuella-j2k,emuella-benchmark,emuella-testdata}`;
-Polyorama's configured owner is `/nvme/development/polyorama`, distinct from this
+At qualification time, the product checkout was `/nvme/development/polyorama`, distinct from this
 task checkout. Main selects its merged checkout explicitly. Keep these revisions:
 
 | Owner | Full revision |
@@ -198,7 +198,7 @@ PR comment, without a recursive owner closeout PR.
 
 ## Canonical temporary retention
 
-`POLYORAMA_RETAIN_UI_TEMP=1` leaves the UI capture's owned temporary directory
+`STOBIE_RETAIN_UI_TEMP=1` leaves the UI capture's owned temporary directory
 for caller-managed retention and records `logs/temporary-lifecycle.json`. The
 default cleanup behaviour is unchanged. For this campaign, bind fresh approved
 backing to the ignored `.tools/runtime` and `.tools/tmp` paths within a private

@@ -33,7 +33,7 @@ and
 
 Question:
 
-> Can egui/eframe 0.36.1 expose Polyorama's existing AccessKit tree to native
+> Can egui/eframe 0.36.1 expose Stobie's existing AccessKit tree to native
 > and browser assistive technologies without a second authoritative UI or
 > application-state model?
 
@@ -48,7 +48,7 @@ snapshot remains neither a retained widget tree nor an action/state authority.
 
 | Route | Exact configuration or observation | Result | Decision |
 | --- | --- | --- | --- |
-| Native eframe/winit AccessKit | Workspace eframe 0.36.1 with feature `accesskit`, which enables `egui-winit/accesskit` and `accesskit_winit 0.32.x` | Eframe initialises the platform adapter, enables egui tree generation on `InitialTreeRequested`, forwards AT actions as egui input, repaints for activation/action only, and submits each generated tree update through `update_if_active` | Retain and implement; it consumes the existing immediate-mode frame semantics without another Polyorama model |
+| Native eframe/winit AccessKit | Workspace eframe 0.36.1 with feature `accesskit`, which enables `egui-winit/accesskit` and `accesskit_winit 0.32.x` | Eframe initialises the platform adapter, enables egui tree generation on `InitialTreeRequested`, forwards AT actions as egui input, repaints for activation/action only, and submits each generated tree update through `update_if_active` | Retain and implement; it consumes the existing immediate-mode frame semantics without another Stobie model |
 | Browser AccessKit through stock `WebRunner` | Eframe 0.36.1 `web/app_runner.rs:394` destructures `accesskit_update: _` with `not currently implemented`; no web AccessKit adapter is present in the locked graph | The application cannot configure, intercept or forward the generated update through this private runner path | Reject for this stack; retained upstream blocker |
 | Eframe `web_screen_reader` | Optional Web Speech synthesis speaks `PlatformOutput::events_description()` only when egui's `screen_reader` option is true | No browsable roles/tree, virtual cursor, platform-AT focus, or AT-originated action route; it is not an AccessKit adapter | Reject as proof of browser accessibility; do not mislabel synthesised event speech as browser AT integration |
 | Custom DOM/ARIA mirror | Would require application-owned DOM projection and browser event plumbing outside stock eframe | Could create duplicate semantic ownership and exceeds the bounded upstream probe | Out of scope: the objective explicitly forbids expanding into a custom DOM or accessibility framework merely to avoid recording this limitation |
@@ -150,7 +150,7 @@ exists.
 The candidate enables eframe's native `accesskit` feature and locks
 `accesskit_winit 0.32.2`. The architecture gate now fails if that feature is
 removed. Eframe therefore owns native platform-adapter activation and update
-submission; Polyorama continues to emit its existing immediate-mode AccessKit
+submission; Stobie continues to emit its existing immediate-mode AccessKit
 tree and does not add another state or widget model.
 
 The shared action component distinguishes momentary controls from pressed

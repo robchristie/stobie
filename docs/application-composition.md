@@ -1,6 +1,6 @@
-# Compose a small Polyorama application
+# Compose a small Stobie application
 
-Polyorama is experimental: its public APIs are concrete and shaped by maintained
+Stobie is experimental: its public APIs are concrete and shaped by maintained
 applications. Start with [Record Desk](../consumers/record-desk/README.md), a useful
 independent Cargo workspace with native and browser entry points, local record
 editing/history and versioned persistence. It declares its own dependencies,
@@ -10,8 +10,8 @@ demonstration within the Lab package.
 
 ## Compose a non-image domain
 
-Record Desk needs only `polyorama-core` and `polyorama-ui-egui`. It disables UI's
-default-enabled `image-rendering` feature, removing Polyorama's scalar renderer
+Record Desk needs only `stobie-core` and `stobie-ui-egui`. It disables UI's
+default-enabled `image-rendering` feature, removing Stobie's scalar renderer
 and worker runtime from the resolved graph. Eframe's host GPU backend remains
 an ordinary consumer dependency. Existing image applications retain the feature
 and its public APIs by default.
@@ -54,10 +54,10 @@ adapter or application command injection.
 
 | Owner | Application-facing entry points | Responsibility |
 |---|---|---|
-| `polyorama-core` | `Document`, `Session`, `Workspace`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, one canonical dock tree, validated transitions and renderer-independent desired work |
-| `polyorama-runtime` | `Runtime`, `RuntimeConfig`, `DecodeRequest`, `DecodeEvent`, `RequestToken` | Reconcile complete desired sets, bound CPU work and validate completion identity; independent of egui/wgpu |
-| `polyorama-render-wgpu` | `RenderBridge`, `ScalarRenderer`, `ImageRenderRequest`, `RenderPlan` | Persistent GPU resources, bounded uploads, residency and typed image presentation |
-| `polyorama-ui-egui` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey` | egui layout/interaction, narrow pane views and output sinks, typed capabilities and current-pass observations |
+| `stobie-core` | `Document`, `Session`, `Workspace`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, one canonical dock tree, validated transitions and renderer-independent desired work |
+| `stobie-runtime` | `Runtime`, `RuntimeConfig`, `DecodeRequest`, `DecodeEvent`, `RequestToken` | Reconcile complete desired sets, bound CPU work and validate completion identity; independent of egui/wgpu |
+| `stobie-render-wgpu` | `RenderBridge`, `ScalarRenderer`, `ImageRenderRequest`, `RenderPlan` | Persistent GPU resources, bounded uploads, residency and typed image presentation |
+| `stobie-ui-egui` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey` | egui layout/interaction, narrow pane views and output sinks, typed capabilities and current-pass observations |
 
 Keep focus and hover in UI state. Durable annotations belong in `Document`;
 selection, cameras, tools and gesture preview belong in `Session`. Although
@@ -132,7 +132,7 @@ browser applications and their runtime requirements, use the
 
 Inside `TrianglePane::pane_ui`, replace the comment
 `// Public variation point: add a measured status badge here.` with the call
-`presentation.badge(ui, "state", "Document annotation", polyorama_ui_egui::StatusTone::Success);`.
+`presentation.badge(ui, "state", "Document annotation", stobie_ui_egui::StatusTone::Success);`.
 Run the same native command. The pane now shows the **Document annotation**
 badge beneath the committed count; both Add actions still change the count and
 canvas. This uses an existing public presentation method, without modifying
@@ -158,7 +158,7 @@ rustdoc retain these local ownership and pass-lifetime contracts.
 
 ## Compose icon actions
 
-Import `IconId` from `polyorama_ui_egui`. `PresentationContext::icon_action` and
+Import `IconId` from `stobie_ui_egui`. `PresentationContext::icon_action` and
 `action_with_icon` use your existing `ActionButtonSpec` and `ActionKey`; the icon
 selects artwork without changing capability routing or the full accessible name.
 Use stable logical keys for each instance and finish the context in this pass.
@@ -178,7 +178,7 @@ in your application. Pass that enum as the logical key and `ActionTarget`, choos
 an `IconId`, supply full label/description, caller selection and availability,
 and optionally `NavigationBadge::Count { value, meaning }` or `Label`.
 
-The [compiled navigation consumer example](https://github.com/robchristie/polyorama/blob/main/crates/polyorama-ui-egui/src/presentation.rs)
+The [compiled navigation consumer example](https://github.com/robchristie/stobie/blob/main/crates/stobie-ui-egui/src/presentation.rs)
 shows the complete enum and `sidebar` function. Its core call is:
 
 ```text
@@ -286,7 +286,7 @@ cargo xtask docs
 This generates the four framework crate entries and key item pages in
 `target/doc/`, executes their selected rustdoc examples, checks the maintained
 consumer natively and for WASM, and checks the selected guide/README links.
-Open `target/doc/polyorama_core/index.html`, then the runtime, render-wgpu and
+Open `target/doc/stobie_core/index.html`, then the runtime, render-wgpu and
 ui-egui entries from rustdoc's crate navigation. Important local contracts are
 on `validate_intent`, `Runtime::reconcile`, `ImageRenderRequest`,
 `PanePresenter` and `PresentationContext`.
@@ -294,8 +294,8 @@ on `validate_intent`, `Runtime::reconcile`, `ImageRenderRequest`,
 For separate generation or execution during editing:
 
 ```sh
-cargo doc --no-deps -p polyorama-core -p polyorama-runtime -p polyorama-render-wgpu -p polyorama-ui-egui
-cargo test --doc -p polyorama-core -p polyorama-runtime -p polyorama-render-wgpu -p polyorama-ui-egui
+cargo doc --no-deps -p stobie-core -p stobie-runtime -p stobie-render-wgpu -p stobie-ui-egui
+cargo test --doc -p stobie-core -p stobie-runtime -p stobie-render-wgpu -p stobie-ui-egui
 ```
 
 The full `cargo xtask verify` includes this documentation route and, on Linux,

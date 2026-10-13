@@ -1,6 +1,6 @@
 # Components
 
-Use the production recipes in `polyorama-ui-egui`; the gallery must call those
+Use the production recipes in `stobie-ui-egui`; the gallery must call those
 same recipes rather than recreate their appearance. A component is responsible
 for its allocation, painted bounds, hit bounds, stable semantic identity and
 declared text contract. It is not responsible for document mutation or owning
@@ -49,7 +49,7 @@ interaction conflicts with selection. Inspector values, diagnostic values,
 status and error messages, and longer pane-local information use
 `TextInteraction::Selectable`; buttons, tabs, toolbars, splitters, result rows
 and thumbnail labels remain `Inert`. Selectable measured text must use
-`present_measured_text`, which preserves Polyorama allocation and clipping
+`present_measured_text`, which preserves Stobie allocation and clipping
 while delegating selection and copy behaviour to egui. Do not reproduce
 cursor hit testing or clipboard handling in a component.
 
@@ -126,7 +126,7 @@ The application-owned state mapping is an executable rustdoc example on
 `PresentationContext::status_chip`; this short consumer helper uses the same API:
 
 ```rust
-use polyorama_ui_egui::{DesignTokens, IconId, PresentationContext,
+use stobie_ui_egui::{DesignTokens, IconId, PresentationContext,
     PresentationObservations, PresentationScope, SemanticUiId,
     StatusChipSpec, StatusTone};
 
@@ -279,7 +279,7 @@ returned click through your application's intent/command route and publish the
 returned observations for this pass:
 
 ```rust
-use polyorama_ui_egui::{
+use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionTarget,
     Availability, DesignTokens, IconId, PresentationContext, PresentationObservations,
     PresentationScope, SemanticUiId,
@@ -322,7 +322,7 @@ vector paint only; obtain component dimensions from `icon_size(tokens, font_scal
 and choose a foreground from the owning resolved theme. Application compositions
 still own allocation, hit geometry and complete semantics.
 
-The [artwork record](../../crates/polyorama-ui-egui/assets/icons/README.md) owns the
+The [artwork record](../../crates/stobie-ui-egui/assets/icons/README.md) owns the
 SVG source/compiler and licence. Gallery `icons/vocabulary`,
 `icons/action-presentations`, `icons/toolbar` and `icons/long-narrow` demonstrate
 production compositions and adversarial cases. New platform accessibility claims
@@ -377,7 +377,7 @@ action, distinct from dock tabs and independent toggles. Native AccessKit
 semantics and keyboard testing add no new screen-reader qualification; eframe’s
 browser accessibility adapter limitation remains unchanged.
 
-The [compilable consumer example on `navigation_item`](https://github.com/robchristie/polyorama/blob/main/crates/polyorama-ui-egui/src/presentation.rs)
+The [compilable consumer example on `navigation_item`](https://github.com/robchristie/stobie/blob/main/crates/stobie-ui-egui/src/presentation.rs)
 defines its own destination enum, selection and counts. Gallery
 `navigation/sidebar`, `navigation/states` and `navigation/long-narrow` use this
 production API, including scrolling and long-label/badge adversaries.

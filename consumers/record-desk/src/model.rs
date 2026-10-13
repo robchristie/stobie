@@ -2,8 +2,8 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use polyorama_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, SplitAxis, Workspace};
 use serde::{Deserialize, Serialize};
+use stobie_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, SplitAxis, Workspace};
 
 pub const LIST_PANE: PaneId = PaneId(101);
 pub const DETAIL_PANE: PaneId = PaneId(102);
