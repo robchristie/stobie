@@ -1,281 +1,201 @@
-# Compose a small Stobie application
+# Compose a Stobie application
 
-Stobie is experimental: its public APIs are concrete and shaped by maintained
-applications. Start with [Record Desk](../consumers/record-desk/README.md), a useful
-independent Cargo workspace with native and browser entry points, local record
-editing/history and versioned persistence. It declares its own dependencies,
-profiles and lockfile and imports no existing application package or private API.
-The smaller triangle example below remains a focused image-command/presenter
-demonstration within the Lab package.
+A Stobie application declares its state, its actions, its UI and how it
+applies changes. The framework host owns everything else in each UI pass:
+semantic observation and audits, shortcuts, availability checks, agent
+inspection and invocation, and repaint decisions. The same code runs natively
+and in the browser.
 
-## Compose a non-image domain
-
-Record Desk needs only `stobie-core` and `stobie-ui-egui`. It disables UI's
-default-enabled `image-rendering` feature, removing Stobie's scalar renderer
-and worker runtime from the resolved graph. Eframe's host GPU backend remains
-an ordinary consumer dependency. Existing image applications retain the feature
-and its public APIs by default.
-
-The consumer owns its `Record`, stable IDs, validation, selected identity,
-transient editing draft and transaction history. These are its own domain
-document/session equivalents. Framework `Document`, `Session`, `ImageIntent`
-and `CommandHistory` describe the analytical image domain and are not mandatory
-containers for unrelated records. Do not encode records as annotations.
-
-`dock_workspace_layout` presents the single core `Workspace` and emits a
-`WorkspaceResize` for a completed resize. Apply it after presentation; its public
-`apply` rejects stale/missing splits and invalid fractions without mutation.
-Record history remains application-owned. The existing `dock_workspace` wrapper
-returns its compatible `Command::ResizeSplit` for image-history consumers. Tab
-activation and movement mutate the canonical workspace directly in both routes;
-dirty tracking/persistence must observe the complete tree. `Workspace::validate`
-checks structural tab/split invariants as well as stable identities and schema;
-applications also validate their allowed pane set when restoring layouts.
-
-Read Record Desk's `model.rs`, `panes.rs`, `app.rs`, then `store.rs`: pane views
-emit intents; the application handles current-pass draft/filter outputs before
-actions; Apply validates one record transaction; Save persists only committed
-records and layout. Its README gives exact standalone commands, keyboard routes,
-field/action extension steps and protected malformed-state recovery. Its
-[qualification evidence](record-desk-evidence.md) distinguishes direct tests,
-physical native/browser input and a bounded fresh-context authoring probe.
-
-`choice_control_with_options` adds current popup option observations to the
-compatible `choice_control` recipe. Merge its option nodes into the viewport
-snapshot; their floating layer can extend beyond the pane. Option IDs derive
-from a stable value representation rather than labels or positions, so physical
-inspection can find the currently offered choice without guessing coordinates.
-Native text editors use the public `TextInput`/`MultilineTextInput` semantic roles
-and `NativeTextControlKind::TextEdit`; coverage explicitly excludes egui's internal
-editable text layout. These observations do not supply a browser accessibility
-adapter or application command injection.
-
-## Choose the owners
-
-| Owner | Application-facing entry points | Responsibility |
-|---|---|---|
-| `stobie-core` | `Document`, `Session`, `Workspace`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, one canonical dock tree, validated transitions and renderer-independent desired work |
-| `stobie-runtime` | `Runtime`, `RuntimeConfig`, `DecodeRequest`, `DecodeEvent`, `RequestToken` | Reconcile complete desired sets, bound CPU work and validate completion identity; independent of egui/wgpu |
-| `stobie-render-wgpu` | `RenderBridge`, `ScalarRenderer`, `ImageRenderRequest`, `RenderPlan` | Persistent GPU resources, bounded uploads, residency and typed image presentation |
-| `stobie-ui-egui` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey` | egui layout/interaction, narrow pane views and output sinks, typed capabilities and current-pass observations |
-
-Keep focus and hover in UI state. Durable annotations belong in `Document`;
-selection, cameras, tools and gesture preview belong in `Session`. Although
-session/workspace serialisation is supported, those owners remain distinct.
-The defaults are the analytical demo's starting state. A vector-only pane can
-use an empty camera/tool mapping; `Session::validate_image_cameras` specifically
-checks the Lab's image panes 1–4 and is not a generic pane-registry validator.
-Record Desk avoids these image-specific types entirely; compatibility defaults
-and the image camera contract remain unchanged.
-
-Use the core `Workspace` as the sole dock tree. `DockBehaviour` retains only
-drag/split previews, not a second layout. The host owns its GPU device/queue;
-`ScalarRenderer` owns persistent image GPU resources across panes. A pane may
-emit demands or render requests but must not allocate its own device/queue.
-The minimal vector example below uses egui's painter and therefore needs no
-asynchronous tile runtime or scalar renderer instance.
-
-## Build, run and observe a complete action
-
-Run from the repository root with the native prerequisites in the
-[README](../README.md#prerequisites): a graphical session and a working wgpu
-backend. The maintained source is
-[`minimal-workspace.rs`](../apps/analytical-workspace-lab/examples/minimal-workspace.rs).
+The complete example is [`notes.rs`](../crates/stobie-ui-egui/examples/notes.rs),
+about 200 lines with no inspection code. Run it from the repository root with
+the native [prerequisites](../README.md#prerequisites):
 
 ```sh
-cargo run --release -p analytical-workspace-lab --example minimal-workspace
+cargo run -p stobie-ui-egui --example notes
 ```
 
-The window contains one **Triangles** tab, **Add triangle**, a committed count
-and an initially empty canvas. Click **Add triangle** once: the count becomes
-1 and a blue triangle appears. Click again: the count becomes 2 and a second,
-offset triangle appears. Each click creates exactly one command/history entry.
-Closing the window ends the app. This small example does not save its document.
+## Write the four parts
 
-Read the source in this order:
-
-1. `MinimalApp::new` constructs `Document`, a camera-free `Session`,
-   `CommandHistory` and a validated single-tab `Workspace`.
-2. `Action` implements `ActionKey`; its stable ID and `ActionSpec` describe one
-   pane-scoped capability. `ActionTarget::pane` binds that capability to the
-   stable `PaneId`. The button emits `ImageIntent::CommitPolygon` into a sink.
-3. `TrianglePane` implements `PanePresenter` and borrows only the document,
-   intent sink, presentation output and resolved appearance. It paints committed
-   geometry and never receives the whole mutable model/runtime.
-4. `MinimalApp::ui` calls `dock_workspace`, resolves intents against current
-   state with `validate_intent`, executes resulting commands through history,
-   then requests repaint because a command changed state after presentation.
-   The next frame displays the committed polygon. The example has no unfinished
-   gesture; applications with gestures also display session previews that frame.
-
-`validate_intent` is variant-specific validation. Polygon validation requires
-at least three vertices and reserves an annotation ID before execution; it is
-not a general geometry/layer validator. `CommandHistory::execute` applies a
-trusted command without revalidation, so deliver it before unrelated mutations
-can invalidate its snapshots. In a larger app, show validation failures as
-observable status instead of relying on the example's fixed-input `expect`.
-Tab activation/movement update the canonical workspace inside `dock_workspace`;
-a completed split resize returns a command for the caller to execute.
-
-The portable example source also has an explicit compile check:
-
-```sh
-cargo check --target wasm32-unknown-unknown -p analytical-workspace-lab --example minimal-workspace
-```
-
-Its WASM `main` supplies no browser bootstrap, canvas, worker transport or web
-package. This check establishes source compatibility only. For the existing
-browser applications and their runtime requirements, use the
-[browser build/startup guide](browser-startup.md), not this example as a browser app.
-
-## Make a small presenter variation
-
-Inside `TrianglePane::pane_ui`, replace the comment
-`// Public variation point: add a measured status badge here.` with the call
-`presentation.badge(ui, "state", "Document annotation", stobie_ui_egui::StatusTone::Success);`.
-Run the same native command. The pane now shows the **Document annotation**
-badge beneath the committed count; both Add actions still change the count and
-canvas. This uses an existing public presentation method, without modifying
-the dock or application mutation route.
-
-The `"state"` key describes a stable logical control; do not derive it from
-the count or visible text. `PresentationScope` combines that key with stable
-pane/domain identity. The context owns only resolved appearance and observations;
-the caller still owns layout, state, intents and repaint scheduling. Construct
-it in each UI pass and call `finish(ui)` before leaving that pass. Using it in
-another context, viewport or pass panics. On repeated layout passes, replace the
-latest per-viewport publication rather than appending stale observations. When
-combining contexts, recompute text coverage over merged layouts instead of
-summing shared viewport-pass inventory counts.
-
-This badge variation reads no new state and needs no invalidation or timed
-repaint. A variation that changes model data must emit an intent, validate/apply
-it at the application boundary and request repaint for that change. Use
-[pane guidance](ui-guides/panes.md) for responsive/local-scroll responsibilities
-and [interaction guidance](ui-guides/interactions.md) for action availability,
-shortcuts and completed gestures. `PanePresenter` and `PresentationContext`
-rustdoc retain these local ownership and pass-lifetime contracts.
-
-## Compose icon actions
-
-Import `IconId` from `stobie_ui_egui`. `PresentationContext::icon_action` and
-`action_with_icon` use your existing `ActionButtonSpec` and `ActionKey`; the icon
-selects artwork without changing capability routing or the full accessible name.
-Use stable logical keys for each instance and finish the context in this pass.
-The [component guide's compilable toolbar example](ui-guides/components.md#typed-icons-and-action-presentations)
-shows an unavailable icon-only Undo and a primary Save with a leading icon.
-
-The application continues to arrange layout and apply validated intents. Choose
-icon-only deliberately; labelled actions reserve measured ellipsis space and
-never collapse implicitly. `paint_icon` exposes the same decorative artwork for
-application-owned compositions without introducing another interaction model.
-
-## Compose application navigation
-
-Use `PresentationContext::navigation_item` for sidebar destinations. Define your
-own destination enum implementing `ActionKey`; keep current selection and counts
-in your application. Pass that enum as the logical key and `ActionTarget`, choose
-an `IconId`, supply full label/description, caller selection and availability,
-and optionally `NavigationBadge::Count { value, meaning }` or `Label`.
-
-The [compiled navigation consumer example](https://github.com/robchristie/stobie/blob/main/crates/stobie-ui-egui/src/presentation.rs)
-shows the complete enum and `sidebar` function. Its core call is:
+**Actions.** Declare every user action once. The derive checks labels,
+shortcuts and stable IDs at compile time; IDs default to
+`<prefix>.<kebab-case variant>`.
 
 ```text
-let response = p.navigation_item(ui, destination, NavigationItemSpec {
-    target: ActionTarget::application(destination),
-    icon: IconId::Tasks,
-    label: "Tasks", description: "Open outstanding tasks",
-    selected: current == destination, availability: Availability::Enabled,
-    badge: Some(NavigationBadge::Count { value: tasks, meaning: "outstanding tasks" }),
-});
-if response.clicked() { intents.push(Navigate(destination)); }
+#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[action(prefix = "notes")]
+enum NoteAction {
+    #[action(label = "Add note", description = "Add the draft as a note", shortcut = "Cmd+Enter")]
+    Add,
+    #[action(label = "Clear", description = "Remove every note", shortcut = "Cmd+Shift+K")]
+    Clear,
+}
 ```
 
-Finish the context in the same pass and publish its returned observations.
-After applying navigation intents, request repaint for the changed state.
-Keyboard focus is UI state and leaves selection unchanged; Enter/Space activate
-through the same response. The row owns no router or destination registry.
-Counts above 99 paint as `99+` with exact accessible meaning; omission/zero are
-explicit caller choices. Provide the measured minimum sidebar width or an
-explicit parent scroll/relocation policy. See the
-[navigation component contract](ui-guides/components.md#navigation-items) for
-clipping, measurements, state treatment and platform limits.
+**State and availability.** Implement `Application` for your state. One
+`availability` rule serves buttons, shortcuts, discovery and agents.
 
-## Present application-owned workflow status
+```text
+impl Application for Notes {
+    type Action = NoteAction;
+    type Intent = NoteIntent;   // data changes, such as an edited draft
+    type UiState = ();          // UI-only state, such as a pending focus request
 
-Keep workflow enums and transitions in your application. Map a state to borrowed
-visible text and explicit `StatusTone`, then call
-`presentation.status_chip(ui, "status", StatusChipSpec::new(label, tone))`.
-An active or scheduled task need not mean success or warning. The executable
-example on `PresentationContext::status_chip` maps its own Active/Scheduled/
-NeedsReview states and adds typed artwork. Dynamic/localised labels work identically.
+    fn identity(&self) -> ApplicationIdentity { application_identity!("Notes") }
 
-Set `interaction: TextInteraction::Inert` inside a pointer-owned task row;
-standalone status is selectable by default. Scope to the stable task ID and use
-`"status"` as the local key to preserve identity across label/tone updates.
-Construct/finish in the current pass and publish observations. Applications still
-own row/detail layout, validated intents and repaint after state changes.
+    fn availability(&self, target: ActionTarget<NoteAction>) -> Availability {
+        match target.action {
+            NoteAction::Add if self.draft.trim().is_empty() =>
+                Availability::Disabled { reason: "Type a note first".into() },
+            _ => Availability::Enabled,
+        }
+    }
+```
 
-Use compact chips for concise inline information, wrapping badges for longer
-status/error explanations, and `NavigationBadge` for navigation-row counts/context.
-The [chip contract and consumer helper](ui-guides/components.md#compact-status-chips)
-explain measured limits, ellipsis/tooltips, semantic ownership and theme behaviour.
+**UI.** `ui` borrows the application immutably. It hands panes a narrow read
+view, and the host's dock presents them inside a panel:
 
-## Add asynchronous scalar images when needed
+```text
+    fn ui(&self, ui: &mut egui::Ui, _: &mut (), frame: &mut Frame<'_, NoteAction, NoteIntent>) {
+        let mut panes = NotePanes { notes: &self.notes, draft: &self.draft, status: &self.status };
+        egui::CentralPanel::default().show(ui, |ui| frame.dock(ui, &self.workspace, &mut panes));
+    }
+```
 
-The minimal consumer deliberately uses no tile pipeline. For a scalar-image
-application, compose the existing public lifecycle below. The
-[regional adapter contract](regional-adapter-contract.md) remains authoritative
-for external regional sources; the built-in `Runtime` worker prepares synthetic
-tiles and is not an arbitrary image decoder.
+A pane reads its view, emits data intents and presents actions. `Frame::action`
+resolves availability and triggers the action when clicked; `status` publishes
+a status line that agents can wait for.
 
-1. Construct `Runtime::try_new(RuntimeConfig::default())` and `RenderBridge` at
-   the application boundary. On native, install a `Send + Sync` repaint waker:
-   it runs on the worker thread and must wake the UI rather than mutate model
-   state. WASM construction creates no worker; transport requests from
-   `take_external_request` to your worker and return exact key/token events to
-   `accept_event` on the application thread. Taking a browser request consumes
-   a credit; its completion/failure returns it. Report worker-start/transport
-   failure using the public runtime methods rather than leaving work waiting.
-2. Derive the **complete** current `TileDemand` set from visible panes. Supply
-   `runtime.generation()` and typed coordinates; reconcile once after collecting
-   all pane outputs. Overlapping/repeated demands deduplicate. Submit `[]` when
-   nothing is desired. Demand withdrawal/epoch changes can make completions
-   obsolete; retained keys can keep their original tokens across epochs.
-3. At the start of an application update, `poll` native completions (WASM `poll`
-   returns zero) or accept external events. The runtime validates full key/token,
-   desired state and completion state before decoded hand-off. Move events from
-   `take_decoded_for_renderer` into `bridge.push`. On `UploadAdmission::Rejected`,
-   keep the returned event for retry; for terminal upload failure call
-   `mark_handoff_failed`. Dropping a handed-off event loses the completion path.
-4. Drain `bridge.take_evicted()` and `take_resident()` once, forwarding original
-   tokens to runtime `mark_evicted`/`mark_resident`. Decoding and bridge admission
-   do not establish residency. `runtime.invalidate()` advances source generation
-   and clears tracked work; old in-flight events can still arrive and are rejected.
-   Supply the new generation to the renderer to clear its stale resources too.
-5. Install `ScalarRenderer::new` once in the host's egui-wgpu callback resources,
-   using the host device/target format and matching bridge. Stage
-   `stage_renderer_maintenance` before pane presentation, even with no image
-   pane visible, using one application frame number/current source generation.
-6. Use `allocate_viewport` to obtain logical/physical geometry and local pointer
-   coordinates. Build `ImageRenderRequest` with stable pane/source IDs, current
-   generation, camera, display settings and desired tile keys. Display changes
-   do not change decoded identity. Stage each `stage_render_callback`, collect
-   its `ImagePlanTarget` and build a complete `RenderPlan` in the same order.
-   Publish with `submit_render_plan` before GPU callback preparation begins.
-   Counts and pane identities must match and panes must be unique; failed
-   publication disables staged callbacks instead of painting mismatched data.
-7. Apply validated outputs and record repaint reasons: command/state change,
-   active interaction/preview, worker completion, pending upload or scheduled
-   work. Retry backpressure while work is pending. Stop repainting when idle;
-   never add an unconditional repaint loop.
+```text
+impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
+    fn title(&self, _pane: PaneId) -> &'static str { "Notes" }
+    fn pane_ui(&mut self, ui: &mut egui::Ui, pane: PaneId, frame: &mut Frame<'_, NoteAction, NoteIntent>) {
+        let mut p = frame.pane_presentation(ui, PresentationScope::new("notes"), pane);
+        p.heading(ui, "title", "Notes");
+        let mut draft = self.draft.to_owned();
+        // ... a TextEdit for `draft`, observed as a text input (see the example)
+        if draft != self.draft { frame.emit(NoteIntent::EditDraft(draft)); }
+        frame.action(ui, &mut p, NoteAction::Add, ActionEmphasis::Primary);
+        p.status(ui, "status", self.status, false);
+    }
+}
+```
 
-The application update owns mutable model/runtime state; workers exchange
-owned messages and renderer callbacks own GPU mutation. `RenderBridge` clones
-share synchronised hand-off/acknowledgement queues. These are public composition
-obligations; the Lab's private pane orchestration is an example of them, not an
-additional API contract.
+The application owns the dock layout. `Workspace::with_tabs(&[NOTES_PANE])`
+builds a single-pane layout. The dock emits tab, move and resize changes as
+your intent through `From<WorkspaceChange>`.
+
+**Changes.** `apply` handles data intents. `perform` handles actions from
+clicks, shortcuts and agents alike, after the host rechecks availability. Both
+report whether state changed or return an error, which `report_error` shows.
+
+```text
+    fn apply(&mut self, intent: NoteIntent, _: &mut ()) -> Result<bool, String> { ... }
+    fn perform(&mut self, target: ActionTarget<NoteAction>, _: &mut ()) -> Result<bool, String> { ... }
+    fn report_error(&mut self, message: String) { self.status = message; }
+}
+```
+
+Start it with `stobie_ui_egui::run_native("Notes", options, |_| Notes::new())`.
+
+## Inspect and invoke it
+
+Enable automation with a private socket, then discover and invoke actions with
+the shared [application interface](application-interface.md) client:
+
+```sh
+AUTOMATION_DIR=$(mktemp -d)
+STOBIE_AUTOMATION_SOCKET="$AUTOMATION_DIR/notes.sock" cargo run -p stobie-ui-egui --example notes
+node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" discover '{}'
+node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" invoke '{"capability":"notes.clear"}'
+```
+
+Every action is invocable unless it declares `physical_only = "reason"`. Use
+that for actions that choose a value: actions with arguments are not supported
+yet, so text such as a draft can only be typed physically. Without the
+environment variable, no automation starts. Use a short, fresh directory for
+the socket: Unix socket paths are limited to about 100 bytes, and a socket left
+by a killed process blocks the next start until it is removed. Startup failures
+are printed to stderr and shown through `report_error`.
+
+## Know what the host does
+
+Each pass, the host runs `prepare`, then queued agent invocations, then
+shortcuts, then your `ui`. Shortcuts need exact modifiers and an available
+action. A shortcut without `Cmd` does not fire while a text field has focus, so
+give text-adjacent actions a `Cmd` chord. It
+publishes the completed observation and calls `completed`. Then it applies
+this pass's data intents in emission order (`order_intents` can rearrange
+them), followed by its actions, rechecking each action's availability first. It repaints only when state changed, an error was
+shown, a dock drag is active or you call `Frame::request_repaint(reason)`. The
+`AppHost` rustdoc gives the exact contract.
+
+Presentation contexts, choice and range recipes, and the dock register their
+semantic nodes and measured text automatically. Each is clipped to the region
+it was drawn in, and a discarded layout pass is replaced rather than merged.
+For a custom widget, call `PresentationContext::observe_node` and
+`observe_text`, or the free `observe_node`, with the pane's semantic node as
+parent. Record native egui text fields with
+`PresentationContext::native(NativeTextControlKind::TextEdit, ...)` and observe
+them as `UiRole::TextInput`. Observe a selectable list row as
+`UiRole::ResultRow` with `selected` and, for a done or checked state,
+`checked`. Do not observe a recipe's own nodes again.
+
+## Keep these rules
+
+- Change state only in `apply`, `perform` and `prepare`. Keep focus requests
+  and other UI-only state in `UiState`.
+- Derive presentation scopes and keys from stable domain IDs, never from labels,
+  positions or counters.
+- Give a pane-scoped action (`scope = "pane"`) its pane by presenting it inside
+  `Frame::pane_presentation`, or pass `ActionTarget::pane(action, pane)`;
+  shortcuts reach it through `Application::active_pane`.
+- Override `meaning` when an action's effect depends on state an agent could
+  have observed, such as a selection, a draft or history depth. A target
+  discovered before that state changed is then rejected as stale. Leave focus,
+  layout and counters out of it.
+- Publish bounded facts with `observe`: `fact(key, value)` for booleans,
+  integers and text, and `counted_collection` for lists. Facts have no null;
+  use an empty string for "none". Never publish whole collections.
+- Never request an unconditional repaint.
+
+## Grow to several panes
+
+`Frame::dock` presents the single core `Workspace` read-only, so the tree is
+yours to build: `Workspace::with_tabs` for tab groups, or a `DockNode::Split` of
+tab groups for side-by-side panes, then check it with `Workspace::validate`.
+Apply a dock change with `change.apply(&mut self.workspace)` in `apply`, and
+adapt the tree to the viewport in `prepare`. Tab titles are static; show
+changing counts in pane content.
+[Record Desk](../consumers/record-desk/README.md) is a two-pane reference:
+`app.rs` holds state, rules and handlers, `panes.rs` the pane UI, and
+`model.rs` and `store.rs` the domain and persistence.
+
+## Run in the browser
+
+Put the application in `lib.rs`, with a thin `main.rs` that starts it with
+`run_native`. Build the library as `crate-type = ["cdylib", "rlib"]` with a direct
+`wasm-bindgen` dependency pinned to your bindgen CLI's version, then export a
+handle:
+
+```text
+#[cfg(target_arch = "wasm32")]
+stobie_ui_egui::web_handle!(Notes, |_| Notes::new());
+```
+
+The page creates `new WebHandle()` and awaits `start(canvas)`. With
+`?automation=1` in its URL, it calls `enable_automation(crypto.randomUUID())`
+and exposes `automation_request` as `window.__STOBIE_AUTOMATION.request`.
+Record Desk's [`web/bootstrap.js`](../consumers/record-desk/web/bootstrap.js)
+and `build-web.sh` are a working template. The
+[browser startup guide](browser-startup.md) covers packaging.
+
+## Choose dependencies
+
+Copy Record Desk's [`Cargo.toml`](../consumers/record-desk/Cargo.toml): it
+depends on `stobie-core` and on `stobie-ui-egui` with
+`default-features = false, features = ["eframe"]`. Enable the default
+`image-rendering` feature only for the GPU image path described in
+[Compose an image application](image-application-composition.md).
 
 ## Generate and check the API documentation
 
@@ -283,23 +203,8 @@ additional API contract.
 cargo xtask docs
 ```
 
-This generates the four framework crate entries and key item pages in
-`target/doc/`, executes their selected rustdoc examples, checks the maintained
-consumer natively and for WASM, and checks the selected guide/README links.
-Open `target/doc/stobie_core/index.html`, then the runtime, render-wgpu and
-ui-egui entries from rustdoc's crate navigation. Important local contracts are
-on `validate_intent`, `Runtime::reconcile`, `ImageRenderRequest`,
-`PanePresenter` and `PresentationContext`.
-
-For separate generation or execution during editing:
-
-```sh
-cargo doc --no-deps -p stobie-core -p stobie-runtime -p stobie-render-wgpu -p stobie-ui-egui
-cargo test --doc -p stobie-core -p stobie-runtime -p stobie-render-wgpu -p stobie-ui-egui
-```
-
-The full `cargo xtask verify` includes this documentation route and, on Linux,
-the actual example's physical native smoke. Exact exercised environments,
-rendered-page inspection and consumer qualification are recorded in the
-[documentation evidence](api-documentation-evidence.md). Generated HTML stays
-in ignored output; the repository makes no hosted rustdoc availability claim.
+This generates the framework crates' rustdoc in `target/doc/`, runs the
+selected examples, checks the `notes` example and the image guide's
+`minimal-workspace` example natively and for WASM, and checks guide links. `cargo xtask verify` includes it. The
+[documentation evidence](api-documentation-evidence.md) records exercised
+environments.

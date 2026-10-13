@@ -3,6 +3,7 @@ use crate::{ActionKey, DesignTokens, SemanticActionId, SemanticUiId, UiNode, UiR
 
 /// Present a bounded labelled choice using egui's native combo-box behaviour
 /// while fixing stable Stobie and AccessKit identity at the recipe boundary.
+/// A hosted application observes the returned node automatically.
 #[allow(clippy::too_many_arguments)]
 pub fn choice_control<T: Copy + Eq, A: ActionKey>(
     ui: &mut egui::Ui,
@@ -39,7 +40,9 @@ pub struct ChoiceControlOutput {
 /// control. `T` must have a stable Debug representation (typically an application
 /// enum); identities derive from the choice value, never its position or label.
 /// Merge `options` into the same viewport snapshot as `control.node`. Popup
-/// geometry belongs to its floating layer, not the enclosing pane's clip.
+/// geometry belongs to its floating layer, not the enclosing pane's clip. A
+/// hosted application observes the control and its options automatically,
+/// each clipped to its own layer.
 #[allow(clippy::too_many_arguments)]
 pub fn choice_control_with_options<T: Copy + Eq + std::fmt::Debug, A: ActionKey>(
     ui: &mut egui::Ui,
@@ -122,6 +125,7 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
                     node.checked = Some(checked);
                     node.focused = option.has_focus();
                     node.actions.push(SemanticActionId::from_action(action));
+                    crate::observation::observe_recipe_node(ui, &node);
                     option_nodes.push(node);
                 }
             }
@@ -141,7 +145,7 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
         node.set_author_id(semantic_id.0.clone());
         node.add_action(Action::Click);
     });
-    ChoiceControlOutput {
+    let output = ChoiceControlOutput {
         options: option_nodes,
         control: SemanticControlOutput {
             node: UiNode {
@@ -164,7 +168,9 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
             },
             response,
         },
-    }
+    };
+    crate::observation::observe_recipe_node(ui, &output.control.node);
+    output
 }
 
 #[cfg(test)]

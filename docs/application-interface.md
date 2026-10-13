@@ -34,7 +34,10 @@ cargo run --release --manifest-path consumers/record-desk/Cargo.toml
 
 From another terminal, pass that same socket path to the CLI. The host refuses
 to replace an existing path, retains a private socket and removes its own socket
-on ordinary shutdown. Restart creates a new instance identity. Non-Unix native
+on ordinary shutdown. A process killed by a signal leaves its socket behind, and
+the next start then reports `Automation could not start` on stderr; remove the
+stale path or use a fresh directory. Keep the path short: Unix socket paths are
+limited to about 100 bytes. Restart creates a new instance identity. Non-Unix native
 hosting is unavailable. Starting without the variable disables automation;
 closing the enabled host ends that instance.
 
@@ -148,7 +151,8 @@ up in the new instance.
 ## Wait for outcomes and use physical input
 
 `ApplicationClient.wait` polls completed observations with a monotonic deadline
-and optional `AbortSignal`. Conditions include `present`, `absent`, `enabled`,
+and optional `AbortSignal`. The CLI's deadline is `--timeout MS` (default
+15000), given before the command; condition objects take no timeout field. Conditions include `present`, `absent`, `enabled`,
 `capability_enabled`, `focused`, `selected`, `checked`, `name`, `status`, `selection_changed`, `fact`
 and `audits_clear`. Checked compares a boolean `value`; audits-clear waits for
 empty semantic/text findings with retained coverage. Name and
@@ -249,32 +253,32 @@ qualification evidence when exact artefact attribution is required.
 
 ## Adopt the interface in another application
 
-Keep the existing application-owned `ActionKey` enum, typed targets,
-availability and validation route. Create an `Inspection` with application/build
-identity and install its completion hook once before the first app update,
-after other UI plugins. Stage each pass's owned snapshot, current
-`InspectionBinding<A>` values, bounded `CollectionMetadata` and primitive
-`ObservationValue` facts using `stage_completed`; discarded UI passes are not
-published. The completed snapshot is an observation, not a second state owner.
+Host the application with `AppHost` (see the
+[composition guide](application-composition.md)). The host creates the
+`Inspection`, installs its completion hook, and starts the native socket when
+`STOBIE_AUTOMATION_SOCKET` is set. In the browser, `web_handle!` exposes
+`enable_automation` and `automation_request`. Each completed, non-discarded pass
+is published with one binding per rendered control for each action. An
+application-scoped action with no rendered control keeps its default identity.
+A pane-scoped action is discoverable where its control is rendered with a pane,
+and in the panes `Application::action_panes` lists. Facts come from
+`Application::observe`. Queued invocations drain on the application thread
+before the UI runs. Bindings are recalculated before each one, and availability
+is rechecked immediately before `perform`. Reads never request a repaint.
 
-A binding marks whether its typed action is semantically invocable and supplies
-an application-owned `meaning` guard. Include assumptions whose change makes a
-previously resolved target stale, such as selected domain identity or editing
-revision; do not use unrelated repaint/focus counters as meaning. Bind exact
-semantic IDs and domain references to the same controls used for physical input.
-Discoverable physical controls can set `semantic_invocable` to false.
+Applications decide two things. `meaning` names the assumptions whose change
+makes a previously resolved target stale, such as selected domain identity or
+editing revision. Leave unrelated repaint and focus counters out of it. An
+action declared `physical_only` stays discoverable with `semantic_invocable`
+false.
 
-Native hosts call `start_native` with the UI waker, then drain queued actions on
-the app thread through the existing validated route. Recalculate current
-bindings before every `drain`, including between queued actions. Browser hosts
-opt in before exposing the fixed `request(JSON-string)` hook and use the same
-typed request/reply envelope. `dispatch` provides app-thread dispatch. Ordinary
-reads must retain the completed observation and must not request repaint.
-Browser integrations construct `Inspection::with_instance(application, build,
-nonce)?` with an opaque host nonce that changes on each startup; the maintained
-bootstraps generate it using `crypto.randomUUID()`. Do not derive it from a WASM
+The Lab still wires `Inspection` directly in its `inspection.rs`, a temporary
+path until it moves to the host. That path uses the same public API. Stage each
+pass with `stage_completed`, drain with current bindings through the validated
+route, and construct browser services with `Inspection::with_instance(application,
+build, nonce)?`. The nonce must be an opaque value that changes on each startup:
+the maintained bootstraps use `crypto.randomUUID()`. Never derive it from a WASM
 process ID, wall clock or resettable counter, which can repeat after reload.
-See both maintained applications' `inspection.rs` modules for integration.
 
 The bounds are 4,096 retained nodes, 512 measured text observations, 2 MiB
 publication JSON, a 256 KiB request, 256 entries per query/discovery, 16 queued

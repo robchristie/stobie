@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 stobie-core = { path = "../../crates/stobie-core" }
-stobie-ui-egui = { path = "../../crates/stobie-ui-egui", default-features = false }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui", default-features = false, features = ["eframe"] }
 eframe = { version = "=0.36.1", default-features = false, features = ["accesskit", "default_fonts", "wgpu", "x11", "wayland"] }
 egui = { version = "=0.36.1", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
@@ -25,9 +25,7 @@ tempfile = "3.23.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "=0.2.127"
-wasm-bindgen-futures = "0.4.57"
-web-sys = { version = "0.3.82", features = ["Window", "Storage", "HtmlCanvasElement"] }
-console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3.82", features = ["Window", "Storage"] }
 
 [dev-dependencies]
 egui_kittest = "=0.36.1"

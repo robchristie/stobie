@@ -3,8 +3,8 @@
 //! Keep durable annotations in [`Document`], transient selection, cameras, tools
 //! and gesture previews in [`Session`], and the sole serialisable dock tree in
 //! [`Workspace`]. Focus and hover belong to the UI integration. The defaults are
-//! the analytical demo's starting state; applications can construct smaller
-//! states explicitly. Coordinate newtypes preserve domain distinctions at each
+//! the analytical demo's starting state; [`Workspace::with_tabs`] builds a small
+//! layout for other applications. Coordinate newtypes preserve domain distinctions at each
 //! boundary; do not substitute untyped screen points for [`WorldPoint`].
 //!
 //! Collect feature [`ImageIntent`]s from a narrow pane view, call
@@ -35,8 +35,10 @@
 //! [`TileDemand`] describes renderer-independent desired work, not a work queue.
 //! Use `stobie-runtime` to reconcile complete desired sets and reject stale
 //! completions. See the
-//! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
-//! for the four-crate lifecycle and a small native consumer.
+//! [image application guide](https://github.com/robchristie/stobie/blob/main/docs/image-application-composition.md)
+//! for the four-crate image lifecycle and a small native consumer. Other
+//! applications start from the
+//! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md).
 
 pub mod camera;
 pub mod commands;

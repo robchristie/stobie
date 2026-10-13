@@ -19,6 +19,7 @@ CRATES = (
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
 EXPECTED_EXAMPLES["stobie-ui-egui"] = 5  # Composition, derived actions, icon toolbar, navigation and status-chip consumers.
+EXPECTED_EXAMPLES["stobie-core"] = 2  # Command history and a small workspace layout.
 SOURCE_CONSUMERS = (
     "crates/stobie-core/src/lib.rs",
     "crates/stobie-core/src/data.rs",
@@ -34,8 +35,15 @@ SOURCE_CONSUMERS = (
 MARKDOWN_CONSUMERS = (
     "README.md",
     "docs/application-composition.md",
+    "docs/image-application-composition.md",
 )
 EXAMPLE = "apps/analytical-workspace-lab/examples/minimal-workspace.rs"
+VARIATION_GUIDE = "docs/image-application-composition.md"
+# Compiled consumers named by the guides: (package, example).
+CONSUMERS = (
+    ("analytical-workspace-lab", "minimal-workspace"),
+    ("stobie-ui-egui", "notes"),
+)
 VARIATION = ('presentation.badge(ui, "state", "Document annotation", '
              'stobie_ui_egui::StatusTone::Success);')
 
@@ -86,7 +94,7 @@ def coverage(root: Path) -> dict[str, int]:
     example = (root / EXAMPLE).read_text()
     if "// Public variation point: add a measured status badge here." not in example:
         raise ValueError("maintained consumer variation point is absent")
-    if VARIATION not in (root / "docs/application-composition.md").read_text():
+    if VARIATION not in (root / VARIATION_GUIDE).read_text():
         raise ValueError("documented presenter variation differs from selected recipe")
     return expected
 
@@ -130,7 +138,8 @@ def main() -> None:
         output = run(["cargo", "test", "--doc", "-p", crate], capture=True, environment=environment)
         check_doctest_result(output, expected[crate])
     for target in ([], ["--target", "wasm32-unknown-unknown"]):
-        run(["cargo", "check", *target, "-p", "analytical-workspace-lab", "--example", "minimal-workspace"])
+        for package, example in CONSUMERS:
+            run(["cargo", "check", *target, "-p", package, "--example", example])
     print(f"API documentation checks passed: rendered generation, {sum(expected.values())} executed examples, native/WASM consumer compilation and selected local links")
 
 

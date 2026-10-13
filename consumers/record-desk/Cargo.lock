@@ -2422,7 +2422,6 @@ dependencies = [
 name = "record-desk"
 version = "0.1.0"
 dependencies = [
- "console_error_panic_hook",
  "eframe",
  "egui",
  "egui_kittest",
@@ -2432,7 +2431,6 @@ dependencies = [
  "stobie-ui-egui",
  "tempfile",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -2796,11 +2794,17 @@ dependencies = [
 name = "stobie-ui-egui"
 version = "0.1.6"
 dependencies = [
+ "console_error_panic_hook",
+ "eframe",
  "egui",
+ "js-sys",
  "serde",
  "serde_json",
  "stobie-core",
  "stobie-ui-egui-derive",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
