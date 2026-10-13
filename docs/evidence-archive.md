@@ -147,8 +147,11 @@ tools that look up frozen commit IDs, fetch the bundle under a separate
 namespace instead:
 
 ```sh
-git fetch stobie-original-history-2026-10-13.bundle 'refs/*:refs/original/*'
+git fetch stobie-original-history-2026-10-13.bundle 'refs/*:refs/stobie-original/*'
 ```
+
+Never push those refs: they bring every archived blob back. In particular,
+do not run `git push --mirror` from a clone that has them.
 
 Pull-request pages on GitHub still show their original commits. Clones made
 before the rewrite must be re-cloned, or their branches reset to the rewritten
