@@ -3,7 +3,8 @@
 Raw evidence such as screenshots, logs, runtime snapshots and JSON
 observations does not belong in tracked source. Git keeps every binary revision
 in full, and repeated captures had grown the repository history to about
-95 MB, almost all of it evidence. Reports keep the conclusions; the raw
+95 MB, almost all of it evidence, until the rewrite described under
+[History](#history). Reports keep the conclusions; the raw
 captures live in the append-only
 [stobie-evidence](https://github.com/robchristie/stobie-evidence) repository.
 
@@ -39,13 +40,16 @@ When a report needs durable raw evidence:
 3. Link to them from the report with permalinks to that commit.
 
 Never rewrite stobie-evidence history, because those permalinks depend on it.
+Its rulesets block force-pushing or deleting `main` and moving or deleting
+`archive-*` tags.
 
 ## Archived evidence
 
 On 2026-10-13, 652 raw files were removed from this tree: every non-Markdown
 file under `docs/*-evidence/` and three `docs/real-scene-viewing-*evidence.json`
 captures. Each was copied byte for byte from source commit
-`03ad5c5c3a125e453ec96554a078dda9d6ad4f64` to stobie-evidence commit
+`03ad5c5c3a125e453ec96554a078dda9d6ad4f64` (an original-history ID; see
+[History](#history)) to stobie-evidence commit
 [`0d0d782`](https://github.com/robchristie/stobie-evidence/tree/0d0d782fee9970d6740bc409fa3a350cf2fe9e00).
 [`evidence-archive.sha256`](evidence-archive.sha256) lists each file's
 SHA-256 and is byte-identical to the archive's manifest. Report links point to
@@ -92,8 +96,39 @@ sha256sum --check --quiet evidence-archive.sha256
 
 ## History
 
-Removing files from the tree stops further growth, but it doesn't shrink clones:
-the archived blobs remain in this repository's history. Any history rewrite is a
-separate, explicitly authorised change. Before it runs, store a complete Git
-bundle of the original history alongside the archive. The permalinks here
-already point at stobie-evidence, so a rewrite does not break them.
+On 2026-10-13, after the archive was copied, this repository's history was
+rewritten to remove the same raw captures from every commit: every
+non-Markdown file under `docs/*-evidence/` and every `docs/*-evidence.json`.
+The synthetic viewer input catalogue was kept at its old path. Nothing else
+changed on the rewritten branches: authors, dates, messages, parent structure
+and all other files are as before. Commits left empty were kept, so every
+merged pull request still has its commit. The tree of `main` is unchanged, and
+fresh clones fell from about 98 MB to about 7 MB.
+
+Every commit ID changed. IDs cited before the rewrite, in reports, plans,
+receipts and pull requests, refer to the original history. The
+[`archive-2026-10-13` release](https://github.com/robchristie/stobie-evidence/releases/tag/archive-2026-10-13)
+of stobie-evidence preserves that history:
+
+- `stobie-original-history-2026-10-13.bundle` (SHA-256
+  `2b98530ad0a5e5b625c12032374da64ff9dba49131c00dc0bb3e817225b119f7`) is a
+  complete bundle of every branch and pull-request ref as it stood on GitHub,
+  with `main` at `7dae8fcdf92e8ded2234514d7c714295cb73a263`.
+- `stobie-commit-map-2026-10-13.txt` (SHA-256
+  `606fdd682709dc75baf12892a638f9959436fb6121cdd0ff437f40a9c7f52e0a`) maps
+  the original ID of each of the 63 commits on `main` and
+  `codex/generic-application-actions` to its rewritten ID. For example,
+  `03ad5c5` became `14139f7` and `7dae8fc` became `adbb281`. Commits that
+  exist only on pull-request refs were not rewritten on GitHub and keep
+  their original IDs there.
+
+Restore the original history for inspection with:
+
+```sh
+sha256sum --check stobie-original-history-2026-10-13.bundle.sha256
+git clone --bare stobie-original-history-2026-10-13.bundle stobie-original.git
+```
+
+Pull-request pages on GitHub still show their original commits. Existing clones
+made before the rewrite must be re-cloned or reset to the new `origin/main`;
+their working trees do not change.
