@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    use stobie_gallery::{APPLICATION_NAME, GalleryApp};
-    eframe::run_native(
+    use stobie_gallery::{APPLICATION_NAME, Gallery};
+    stobie_ui_egui::run_native(
         APPLICATION_NAME,
         eframe::NativeOptions {
             renderer: eframe::Renderer::Wgpu,
@@ -10,7 +10,7 @@ fn main() -> eframe::Result {
                 .with_min_inner_size([960.0, 640.0]),
             ..Default::default()
         },
-        Box::new(|creation| Ok(Box::new(GalleryApp::new(creation)))),
+        Gallery::new,
     )
 }
 

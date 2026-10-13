@@ -3,7 +3,10 @@ mod appearance;
 mod catalogue;
 mod stories;
 
-pub use app::{GalleryApp, GalleryConfiguration, GallerySnapshot, GalleryWidth};
+pub use app::{
+    Gallery, GalleryApp, GalleryCommand, GalleryConfiguration, GalleryIntent, GallerySnapshot,
+    GalleryWidth,
+};
 pub use catalogue::{STORIES, StoryDefinition, StoryId};
 pub use stories::{Destination, IconControl, IconFixtureState, NavigationFixtureState};
 
@@ -12,11 +15,12 @@ pub const APPLICATION_NAME: &str = "Stobie Component Gallery";
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// The browser handle: the framework host plus the Gallery's read-only and
+/// test hooks. Automation is enabled explicitly by the page.
 #[cfg(target_arch = "wasm32")]
-#[derive(Clone)]
 #[wasm_bindgen]
 pub struct WebHandle {
-    runner: eframe::WebRunner,
+    host: stobie_ui_egui::WebHost<Gallery>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -24,69 +28,57 @@ pub struct WebHandle {
 impl WebHandle {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        console_error_panic_hook::set_once();
         let _ = eframe::WebLogger::init(log::LevelFilter::Info);
         Self {
-            runner: eframe::WebRunner::new(),
+            host: Default::default(),
         }
     }
 
-    pub async fn start(&self, canvas: web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
-        self.runner
-            .start(
-                canvas,
-                eframe::WebOptions::default(),
-                Box::new(|creation| {
-                    startup_mark("application_construct_begin");
-                    let app = GalleryApp::new(creation);
-                    startup_mark("application_construct_end");
-                    Ok(Box::new(app))
-                }),
-            )
-            .await
+    pub fn start(&self, canvas: web_sys::HtmlCanvasElement) -> js_sys::Promise {
+        self.host.start(canvas, |creation| {
+            startup_mark("application_construct_begin");
+            let app = Gallery::new(creation);
+            startup_mark("application_construct_end");
+            app
+        })
     }
 
     pub fn destroy(&self) {
-        self.runner.destroy();
+        self.host.destroy();
+    }
+
+    pub fn enable_automation(&self, instance: &str) -> Result<(), JsValue> {
+        self.host.enable_automation(instance)
+    }
+
+    pub fn automation_request(&self, request: &str) -> Result<String, JsValue> {
+        self.host.automation_request(request)
     }
 
     pub fn select_story(&self, story: &str) -> Result<(), JsValue> {
         let story = story
             .parse::<StoryId>()
             .map_err(|error| JsValue::from_str(&error))?;
-        let mut app = self
-            .runner
-            .app_mut::<GalleryApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie gallery is unavailable"))?;
-        app.select_story(story);
+        self.host
+            .with_host_mut(|host| host.submit(GalleryIntent::Select(story)))?;
         Ok(())
     }
 
     pub fn set_configuration(&self, value: JsValue) -> Result<(), JsValue> {
         let configuration: GalleryConfiguration = serde_wasm_bindgen::from_value(value)?;
-        let mut app = self
-            .runner
-            .app_mut::<GalleryApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie gallery is unavailable"))?;
-        app.set_configuration(configuration);
+        self.host
+            .with_host_mut(|host| host.submit(GalleryIntent::Configure(configuration)))?;
         Ok(())
     }
 
     pub fn request_test_repaint(&self) -> Result<(), JsValue> {
-        let app = self
-            .runner
-            .app_mut::<GalleryApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie gallery is unavailable"))?;
-        app.request_test_repaint();
-        Ok(())
+        self.host
+            .with_host_mut(|host| host.request_repaint("test request"))
     }
 
     pub fn snapshot(&self) -> Result<JsValue, JsValue> {
-        let app = self
-            .runner
-            .app_mut::<GalleryApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie gallery is unavailable"))?;
-        serde_wasm_bindgen::to_value(&app.snapshot()).map_err(Into::into)
+        let snapshot = self.host.with_host(|host| host.app().snapshot())?;
+        serde_wasm_bindgen::to_value(&snapshot).map_err(Into::into)
     }
 
     pub fn manifest(&self) -> Result<JsValue, JsValue> {

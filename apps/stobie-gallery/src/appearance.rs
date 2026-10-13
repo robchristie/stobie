@@ -290,37 +290,23 @@ mod tests {
                     preset: index,
                     ..Default::default()
                 };
-                let mut dock =
-                    crate::stories::DockSceneState::new(crate::StoryId::ReferenceApplicationShell);
-                let mut observations = Vec::new();
-                let mut output = context.run_ui(
-                    egui::RawInput {
-                        screen_rect: Some(egui::Rect::from_min_size(
-                            egui::Pos2::ZERO,
-                            egui::vec2(1100.0, 800.0),
-                        )),
-                        ..Default::default()
-                    },
-                    |ui| {
-                        crate::stories::render_story(
-                            ui,
-                            crate::StoryId::ReferenceApplicationShell,
-                            &mut dock,
-                            &tokens,
-                            1.0,
-                            &mut observations,
-                            &mut Vec::new(),
-                            &mut None,
-                            &mut crate::stories::IconFixtureState::default(),
-                            &mut crate::stories::NavigationFixtureState::default(),
-                            &mut crate::stories::StatusChipFixtureState::default(),
-                        );
-                        assert!(!workbench.show(&context, variant));
-                    },
-                );
+                let probe = crate::stories::probe::StoryProbe {
+                    story: crate::StoryId::ReferenceApplicationShell,
+                    tokens,
+                    scale: 1.0,
+                    clip: None,
+                    theme: theme.clone(),
+                    preferences: Default::default(),
+                    heading: false,
+                };
+                let (snapshot, _) =
+                    crate::stories::probe::render(&context, probe, egui::vec2(1100.0, 800.0));
+                assert!(!snapshot.text.is_empty());
+                assert!(stobie_ui_egui::audit_text_layouts(&snapshot.text).is_empty());
+                let mut output = context.run_ui(Default::default(), |_| {
+                    assert!(!workbench.show(&context, variant));
+                });
                 output.textures_delta.clear();
-                assert!(!observations.is_empty());
-                assert!(stobie_ui_egui::audit_text_layouts(&observations).is_empty());
                 assert_eq!(workbench.effective_theme(), theme);
             }
         }

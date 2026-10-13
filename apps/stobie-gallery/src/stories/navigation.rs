@@ -4,9 +4,10 @@ use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
     ActionTarget, Availability, ContentTextSpec, DesignTokens, IconId, NavigationBadge,
     NavigationItemSpec, PresentationContext, PresentationScope, SemanticUiId, TextInteraction,
-    TextLayoutObservation, TextOverflow, TextRole, UiNode,
+    TextOverflow, TextRole,
 };
 
+use super::StoryReport;
 use crate::catalogue::StoryId;
 
 /// The Gallery consumer's destinations; the component has no destination registry.
@@ -128,9 +129,8 @@ pub(super) fn story(
     story: StoryId,
     tokens: &DesignTokens,
     scale: f32,
-    observations: &mut Vec<TextLayoutObservation>,
-    nodes: &mut Vec<UiNode>,
     state: &mut NavigationFixtureState,
+    report: &mut StoryReport,
 ) {
     state.hovered = None;
     state.pointer_down = None;
@@ -288,17 +288,15 @@ pub(super) fn story(
             && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
             && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0
     });
-    let publication = presentation.finish(ui);
-    observations.extend(publication.text_layouts);
-    nodes.extend(publication.semantic_nodes);
+    report.presented(&presentation.finish(ui));
     if let Some(destination) = navigation_intent {
         // Application intent handling after coherent presentation of this pass.
         state.selected = destination;
         state.activations += 1;
-        ui.ctx().request_repaint();
+        report.repaint = Some("navigation fixture changed");
     }
     if complete_task {
         state.task_count = state.task_count.saturating_sub(1);
-        ui.ctx().request_repaint();
+        report.repaint = Some("navigation fixture changed");
     }
 }
