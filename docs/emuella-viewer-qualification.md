@@ -12,8 +12,8 @@ Follow the [independent NITF commands](emuella-viewer-independent-nitf.md),
 [preparation measurements](emuella-viewer-nitf-preparation.md),
 [service contract](emuella-viewer-service.md) and
 [composed workload commands](emuella-viewer-calibration.md).
-The [qualification report](emuella-viewer-evidence/nitf-qualified/qualification.json)
-and [file manifest](emuella-viewer-evidence/nitf-qualified/manifest.json) retain
+The [qualification report](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/nitf-qualified/qualification.json)
+and [file manifest](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/nitf-qualified/manifest.json) retain
 exact source, binary, preparation, request, resource and reference evidence.
 No external image pixels are included.
 
@@ -80,7 +80,7 @@ frozen admission using the NITF-derived parent plus eight previously prepared
 U11/U16 greyscale and RGB8/RGB16 parents. All representation files remain
 hash-identical before and after viewing; auxiliary preparation is not repeated.
 The first attempted group failed before rendering because its X display was no
-longer live. The [failed admissions and logs](emuella-viewer-evidence/nitf-qualified/failed-display/assessment.json)
+longer live. The [failed admissions and logs](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/nitf-qualified/failed-display/assessment.json)
 remain retained. A fresh display restored hardware execution with unchanged
 binaries, representations and limits; no cause for the earlier display exit is inferred.
 
@@ -119,7 +119,7 @@ sampling limitations. Physical GPU allocation overhead and GPU timing are unavai
 
 ## Correctness and visual assessment
 
-The [complete-reference comparisons](emuella-viewer-evidence/nitf-qualified/reference/comparisons.json)
+The [complete-reference comparisons](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/nitf-qualified/reference/comparisons.json)
 pass all 18 groups: 807 application records and 12,109,360 pixels, with zero
 checksum, dimension or precision mismatches. They read complete selected tiles
 from immutable files and crop, bypassing JPP and compressed-cache assembly.
@@ -130,7 +130,7 @@ provide independent source-encoder evidence and full-tile reconstruction checks.
 The reference command's 224 actual-array cases cover four formats, odd edges,
 tile crossings and every D6 discard level.
 
-[Opened captures and assessment](emuella-viewer-evidence/nitf-qualified/visuals/assessment.json)
+[Opened captures and assessment](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/nitf-qualified/visuals/assessment.json)
 show coarse fallback during a held detail response, small authored circles and
 rectangles, modular-ramp and vertical source edges, and aggressive stretch.
 Stretch changes no compressed request or decode count. No blank regional strip
@@ -165,9 +165,9 @@ Eventual Geometis integration should consume these independent regional-demand,
 immutable-representation and JPIP contracts after representative vendor qualification.
 No Geometis implementation was inspected for this proof.
 
-Earlier [five-native/five-browser qualification](emuella-viewer-evidence/qualified-public/qualification.json),
-[complete reference](emuella-viewer-evidence/complete-reference/comparisons.json) and
-[response-admission repair](emuella-viewer-evidence/response-repair/qualification.json)
+Earlier [five-native/five-browser qualification](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/qualified-public/qualification.json),
+[complete reference](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/complete-reference/comparisons.json) and
+[response-admission repair](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/emuella-viewer-evidence/response-repair/qualification.json)
 remain historical evidence with their own exact revisions. The earlier 1 MiB
 probe's failed extra assertion about unused representation registrations is retained;
 it is not replaced by a passing claim. Current qualification above adds actual

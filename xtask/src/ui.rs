@@ -11,8 +11,8 @@ use serde_json::{Value, json};
 use stobie_gallery::{GalleryConfiguration, StoryId};
 use stobie_ui_egui::TextAuditCoverage;
 
-const FIXTURE_MANIFEST: &str = "docs/ui-snapshots/fixtures.json";
-const EXPECTED_ROOT: &str = "docs/ui-snapshots/expected";
+const FIXTURE_MANIFEST: &str = "tests/ui-snapshots/fixtures.json";
+const EXPECTED_ROOT: &str = "tests/ui-snapshots/expected";
 const SCHEMA_VERSION: u32 = 1;
 const OUTPUT_MARKER: &str = ".stobie-ui-output-v1";
 
@@ -907,7 +907,7 @@ mod tests {
     #[test]
     fn checked_in_fixture_manifest_is_typed_and_valid() {
         let manifest: FixtureManifest =
-            serde_json::from_str(include_str!("../../docs/ui-snapshots/fixtures.json")).unwrap();
+            serde_json::from_str(include_str!("../../tests/ui-snapshots/fixtures.json")).unwrap();
         validate_manifest(&manifest).unwrap();
         assert_eq!(manifest.fixtures.len(), 14);
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
@@ -1046,7 +1046,7 @@ mod tests {
             repository_root.clone(),
             repository_root.join("docs"),
             repository_root.join(EXPECTED_ROOT),
-            repository_root.join(".tools/../docs/ui-snapshots/expected"),
+            repository_root.join(".tools/../tests/ui-snapshots/expected"),
         ] {
             let error = recreate_owned_directory(&repository_root, &unsafe_path).unwrap_err();
             assert!(error.to_string().contains("beneath"));

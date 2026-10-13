@@ -8,7 +8,7 @@ write output to an explicit disposable directory and never update a baseline
 as part of review.
 
 The exact command forms and baseline policy are documented in the
-[deterministic snapshot guide](../ui-snapshots/README.md). The canonical
+[deterministic snapshot guide](../../tests/ui-snapshots/README.md). The canonical
 verification command is `cargo xtask ui verify --output-dir <path>`; it has no
 baseline-update option and emits a complete failure bundle on drift.
 

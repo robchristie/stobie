@@ -26,7 +26,7 @@ def main():
     limits_path = root / 'apps/emuella-viewer/qualification/preparation-thresholds.json'
     limits = json.loads(limits_path.read_text())
     pin = tomllib.loads((root / 'crates/emuella-viewer-source/Cargo.toml').read_text())['dependencies']['emuella-j2k-codestream']['rev']
-    catalogue = json.loads((root / 'docs/emuella-viewer-evidence/synthetic-input-catalogue.json').read_text())
+    catalogue = json.loads((root / 'apps/emuella-viewer/qualification/synthetic-input-catalogue.json').read_text())
     args.output.mkdir(parents=True, exist_ok=False)
     report = dict(schema='viewer-preparation-result/1', started_unix_ms=int(time.time()*1000),
                   thresholds_sha256=digest(limits_path), codec_revision=pin,
