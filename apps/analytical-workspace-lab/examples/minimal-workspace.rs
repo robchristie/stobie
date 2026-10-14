@@ -4,8 +4,8 @@
 use egui::{Color32, Pos2, Rect, Stroke, Ui};
 use serde::Serialize;
 use stobie_core::{
-    CommandHistory, DockNode, DockNodeId, Document, ImageIntent, LAYOUT_SCHEMA_VERSION, LayerId,
-    PaneId, Session, Workspace, WorldPoint, validate_intent,
+    CommandHistory, DockNode, DockNodeId, Document, ImageCommand, ImageIntent,
+    LAYOUT_SCHEMA_VERSION, LayerId, PaneId, Session, Workspace, WorldPoint, validate_intent,
 };
 use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
@@ -189,7 +189,14 @@ impl eframe::App for MinimalApp {
                 )
             })
             .inner;
-        let mut commands: Vec<_> = dock_command.into_iter().collect();
+        let mut commands: Vec<_> = dock_command
+            .map(|resize| ImageCommand::ResizeSplit {
+                node: resize.node,
+                before: resize.before,
+                after: resize.after,
+            })
+            .into_iter()
+            .collect();
         for intent in intents {
             commands.push(
                 validate_intent(intent, &mut self.document, &self.session)

@@ -155,8 +155,8 @@ use egui::{Pos2, Rect, Ui};
 #[cfg(feature = "image-rendering")]
 use std::sync::{Arc, RwLock};
 use stobie_core::{
-    Command, DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis,
-    ViewportPoint, Workspace, WorkspaceChange, WorkspaceResize,
+    DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis, ViewportPoint,
+    Workspace, WorkspaceChange, WorkspaceResize,
 };
 #[cfg(feature = "image-rendering")]
 use stobie_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
@@ -251,33 +251,15 @@ pub trait PanePresenter {
 }
 
 /// Present and update the canonical workspace using an application presenter.
-/// Tab activation and pane movement update the supplied workspace directly;
-/// a completed split resize returns one [`Command::ResizeSplit`] for the caller
-/// to execute through history. Keep [`DockBehaviour`] between frames for UI-only
-/// drag previews. Pane callbacks run before this function returns; deliver their
-/// emitted intents afterwards and repaint for applied changes/active interaction.
+/// Tab activation and pane movement update the supplied workspace directly; a
+/// completed split resize is returned for the caller to apply, either with
+/// [`WorkspaceResize::apply`] or as an undoable
+/// [`WorkspaceCommand`](stobie_core::WorkspaceCommand) in a
+/// [`History`](stobie_core::History). Keep [`DockBehaviour`] between frames
+/// for UI-only drag previews. Pane callbacks run before this function returns;
+/// deliver their emitted intents afterwards and repaint for applied
+/// changes/active interaction.
 pub fn dock_workspace(
-    ui: &mut Ui,
-    workspace: &mut Workspace,
-    behaviour: &mut DockBehaviour,
-    presenter: &mut impl PanePresenter,
-    text_context: DockTextContext,
-) -> Option<Command> {
-    dock_workspace_layout(ui, workspace, behaviour, presenter, text_context).map(|resize| {
-        Command::ResizeSplit {
-            node: resize.node,
-            before: resize.before,
-            after: resize.after,
-        }
-    })
-}
-
-/// Present the canonical layout without requiring an image document or session.
-/// Tab activation and moves update `workspace`; a completed resize is an output
-/// to validate/apply with [`WorkspaceResize::apply`] after presentation. Application
-/// domain commands and history remain with the consumer. The legacy
-/// [`dock_workspace`] maps this output to its compatible image-command variant.
-pub fn dock_workspace_layout(
     ui: &mut Ui,
     workspace: &mut Workspace,
     behaviour: &mut DockBehaviour,
@@ -1130,7 +1112,7 @@ pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source
 
 #[cfg(test)]
 mod tests {
-    use stobie_core::{CommandHistory, Document, Session};
+    use stobie_core::{History, WorkspaceChange, WorkspaceCommand};
 
     use super::*;
 
@@ -1218,7 +1200,7 @@ mod tests {
         workspace: &mut Workspace,
         behaviour: &mut DockBehaviour,
         events: Vec<egui::Event>,
-    ) -> (Option<Command>, GeometryPresenter) {
+    ) -> (Option<WorkspaceResize>, GeometryPresenter) {
         dock_frame_with_presenter(
             context,
             workspace,
@@ -1234,7 +1216,7 @@ mod tests {
         behaviour: &mut DockBehaviour,
         events: Vec<egui::Event>,
         mut presenter: GeometryPresenter,
-    ) -> (Option<Command>, GeometryPresenter) {
+    ) -> (Option<WorkspaceResize>, GeometryPresenter) {
         let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
         let input = egui::RawInput {
             screen_rect: Some(root),
@@ -1266,7 +1248,7 @@ mod tests {
         behaviour: &mut DockBehaviour,
         events: Vec<egui::Event>,
         parent_id: &'static str,
-    ) -> (Option<Command>, GeometryPresenter) {
+    ) -> (Option<WorkspaceResize>, GeometryPresenter) {
         let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
         let input = egui::RawInput {
             screen_rect: Some(root),
@@ -1303,7 +1285,7 @@ mod tests {
         workspace: &mut Workspace,
         behaviour: &mut DockBehaviour,
         events: Vec<egui::Event>,
-    ) -> (Option<Command>, GeometryPresenter, egui::FullOutput) {
+    ) -> (Option<WorkspaceResize>, GeometryPresenter, egui::FullOutput) {
         let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
         let input = egui::RawInput {
             screen_rect: Some(root),
@@ -1732,14 +1714,11 @@ mod tests {
             let (command, _, mut output) =
                 dock_accesskit_frame(&context, &mut workspace, &mut behaviour, vec![request]);
             output.textures_delta.clear();
-            let Command::ResizeSplit {
+            let WorkspaceResize {
                 node,
                 before,
                 after,
-            } = command.expect("one splitter command")
-            else {
-                panic!("unexpected command");
-            };
+            } = command.expect("one splitter command");
             assert_eq!(node, DockNodeId(1));
             assert_eq!(before, 0.72);
             assert!((after - expected_after).abs() < 1.0e-6, "action={action:?}");
@@ -1787,24 +1766,17 @@ mod tests {
             vec![key(egui::Key::ArrowRight)],
         );
         output.textures_delta.clear();
-        let command = command.expect("focused arrow adjustment");
-        let Command::ResizeSplit {
-            node,
-            before,
-            after,
-        } = &command
-        else {
-            panic!("unexpected command");
-        };
-        assert_eq!(*node, DockNodeId(1));
-        assert_eq!(*before, 0.72);
-        assert!((*after - 0.77).abs() < 1.0e-6);
+        let resize = command.expect("focused arrow adjustment");
+        assert_eq!(resize.node, DockNodeId(1));
+        assert_eq!(resize.before, 0.72);
+        assert!((resize.after - 0.77).abs() < 1.0e-6);
         assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
 
-        let mut history = CommandHistory::default();
-        let mut document = Document::default();
-        let mut session = Session::default();
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        let mut history = History::default();
+        let command = WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &workspace);
+        history
+            .execute_merging(command.unwrap().unwrap(), &mut workspace)
+            .unwrap();
         let (second, _, mut output) = dock_accesskit_frame(
             &context,
             &mut workspace,
@@ -1812,13 +1784,18 @@ mod tests {
             vec![key(egui::Key::ArrowRight)],
         );
         output.textures_delta.clear();
-        let Command::ResizeSplit { before, after, .. } = second.expect("second arrow adjustment")
-        else {
-            panic!("unexpected command");
-        };
-        assert!((before - 0.77).abs() < 1.0e-6);
-        assert!((after - 0.82).abs() < 1.0e-6);
+        let second = second.expect("second arrow adjustment");
+        assert!((second.before - 0.77).abs() < 1.0e-6);
+        assert!((second.after - 0.82).abs() < 1.0e-6);
         assert_eq!(context.memory(|memory| memory.focused()), Some(splitter_id));
+        // Keyboard nudges of one splitter can undo as one step.
+        let command = WorkspaceCommand::from_change(WorkspaceChange::Resize(second), &workspace);
+        history
+            .execute_merging(command.unwrap().unwrap(), &mut workspace)
+            .unwrap();
+        assert_eq!(history.undo_len(), 1);
+        assert!(history.undo(&mut workspace).unwrap());
+        assert_eq!(workspace.root.split_fraction(DockNodeId(1)), Some(0.72));
     }
 
     #[test]
@@ -1856,7 +1833,7 @@ mod tests {
             vec![key(egui::Key::ArrowRight)],
         );
         assert!(
-            matches!(adjusted, Some(Command::ResizeSplit { node: DockNodeId(1), before: 0.72, after }) if (after - 0.77).abs() < 1e-6)
+            matches!(adjusted, Some(WorkspaceResize { node: DockNodeId(1), before: 0.72, after }) if (after - 0.77).abs() < 1e-6)
         );
     }
 
@@ -2163,26 +2140,20 @@ mod tests {
             ],
         );
         assert!((released.splitter(node).center().x - (origin.x - 100.0)).abs() < 0.001);
-        let command = command.expect("split resize is committed on release");
-        let Command::ResizeSplit {
-            node: changed_node,
-            before,
-            after,
-        } = command.clone()
-        else {
-            panic!("unexpected splitter command");
-        };
-        assert_eq!(changed_node, node);
-        assert_eq!(before, before_fraction);
+        let resize = command.expect("split resize is committed on release");
+        assert_eq!(resize.node, node);
+        assert_eq!(resize.before, before_fraction);
+        let after = resize.after;
         assert!((after - (before_fraction - 100.0 / 800.0)).abs() < f32::EPSILON);
 
-        let mut history = CommandHistory::default();
-        let mut document = Document::default();
-        let mut session = Session::default();
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        let mut history = History::default();
+        let command = WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &workspace);
+        history
+            .execute(command.unwrap().unwrap(), &mut workspace)
+            .unwrap();
         assert_eq!(workspace.root.split_fraction(node), Some(after));
         assert_eq!(history.undo_len(), 1);
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert!(history.undo(&mut workspace).unwrap());
         assert_eq!(workspace.root.split_fraction(node), Some(before_fraction));
     }
 
@@ -2230,7 +2201,7 @@ mod tests {
         );
         assert!(matches!(
             command,
-            Some(Command::ResizeSplit {
+            Some(WorkspaceResize {
                 node: DockNodeId(1),
                 ..
             })

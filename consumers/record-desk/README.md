@@ -72,7 +72,8 @@ records or history. A successful changed Apply creates one transaction regardles
 of the number of edited fields; unchanged normalised drafts create none. Undo
 and redo reverse/reapply committed record changes and refresh the selected
 draft. They require Apply or Cancel first if a draft is dirty. A new Apply clears
-redo. History retains at most 100 transactions and does not survive restart.
+redo. Each transaction is one entry in core's generic `History`, which retains
+at most 100 and does not survive restart.
 
 The host presents views, applies this pass's draft, filter and selection
 intents, then runs its actions against current state. This order makes a
@@ -161,7 +162,10 @@ preservation of a hidden selection with an editing draft through public UI input
 Save explicitly writes **committed records and the canonical layout**, excluding
 drafts, filters, selection, focus and history. Saving while editing says that the
 draft was excluded. Restarts/reloads restore saved state and start fresh history;
-there is no automatic exit save.
+there is no automatic exit save. The state line shows unsaved changes when
+history has left its save point or the layout differs from the saved layout, so
+undoing back to a save shows it as saved, while recommitting earlier values is a
+new change.
 
 The UTF-8 JSON envelope is version 1:
 `{ "schema_version": 1, "records": [...], "workspace": {...} }`. Records have

@@ -10,7 +10,8 @@ pub struct RecordDesk {
     pub(crate) desk: Desk,
     pub(crate) workspace: Workspace,
     store: Store,
-    persisted: Option<SavedState>,
+    /// The layout of the last save or restore; `None` before the first save.
+    saved_layout: Option<Workspace>,
     load_error: bool,
     message: String,
     error: bool,
@@ -62,7 +63,7 @@ impl RecordDesk {
             desk: Desk::default(),
             workspace: default_workspace(),
             store,
-            persisted: None,
+            saved_layout: None,
             load_error: false,
             message:
                 "Synthetic records ready. Apply commits a draft; Save persists records and layout."
@@ -90,7 +91,7 @@ impl RecordDesk {
     }
 
     fn unsaved(&self) -> bool {
-        self.persisted.as_ref() != Some(&self.state())
+        !self.desk.is_saved() || self.saved_layout.as_ref() != Some(&self.workspace)
     }
 
     fn load(&mut self) {
@@ -100,7 +101,7 @@ impl RecordDesk {
                     self.desk = desk;
                     self.desk_epoch += 1;
                     self.workspace = saved.workspace.clone();
-                    self.persisted = Some(saved);
+                    self.saved_layout = Some(saved.workspace);
                     self.load_error = false;
                     self.message =
                         "Restored committed records and layout. Undo history starts empty.".into();
@@ -112,7 +113,7 @@ impl RecordDesk {
                 self.desk = Desk::default();
                 self.desk_epoch += 1;
                 self.workspace = default_workspace();
-                self.persisted = None;
+                self.saved_layout = None;
                 self.load_error = false;
                 self.message = "No saved state yet. Synthetic records are ready to review.".into();
                 self.error = false;
@@ -316,7 +317,8 @@ impl Application for RecordDesk {
             Action::Save => {
                 let saved = self.state();
                 self.store.save(&saved)?;
-                self.persisted = Some(saved);
+                self.desk.mark_saved();
+                self.saved_layout = Some(saved.workspace);
                 self.message = if self.desk.is_dirty() {
                     "Saved committed records and layout. The editing draft was excluded."
                 } else {

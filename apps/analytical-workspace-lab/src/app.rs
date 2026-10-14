@@ -265,7 +265,7 @@ pub enum Intent {
     /// already rendered it.
     Gesture(Option<GesturePreview>),
     Pane(PaneIntent),
-    Command(Command),
+    Command(ImageCommand),
     Image(ImageIntent),
     Layout(WorkspaceChange),
     /// This pass's desired tiles.
@@ -446,7 +446,7 @@ impl Lab {
                     .root
                     .split_fraction(node)
                     .ok_or("unknown split node")?;
-                Command::ResizeSplit {
+                ImageCommand::ResizeSplit {
                     node,
                     before,
                     after: fraction,
@@ -1212,7 +1212,7 @@ impl Application for Lab {
             }
             Intent::Layout(WorkspaceChange::Resize(resize)) => {
                 self.history.execute(
-                    Command::ResizeSplit {
+                    ImageCommand::ResizeSplit {
                         node: resize.node,
                         before: resize.before,
                         after: resize.after,

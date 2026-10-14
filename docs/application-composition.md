@@ -175,6 +175,74 @@ pane or domain; that observation replaces the recipe's.
 - Override `preferences` and `theme` to change appearance; the host reapplies
   the design system when they change and resolves `Frame::tokens` from them.
 
+## Add undo and redo
+
+Core's `History<C>` records completed changes as reversible commands.
+Implement `Command<T>` for a small command type, where `T` is what it changes:
+your model, or a struct of mutable borrows when one change spans several
+owners. A command carries the values it needs in both directions, so validate
+the intent first and build the command from current state.
+
+```text
+enum NoteEdit {
+    Add(String),
+    Remove { index: usize, text: String },
+}
+
+impl Command<Vec<String>> for NoteEdit {
+    fn apply(&self, notes: &mut Vec<String>) -> Result<bool, String> {
+        match self {
+            NoteEdit::Add(text) => notes.push(text.clone()),
+            NoteEdit::Remove { index, .. } => { notes.remove(*index); }
+        }
+        Ok(true) // Ok(false) means "changed nothing": no entry is recorded
+    }
+    fn revert(&self, notes: &mut Vec<String>) -> Result<(), String> {
+        match self {
+            NoteEdit::Add(_) => { notes.pop(); }
+            NoteEdit::Remove { index, text } => notes.insert(*index, text.clone()),
+        }
+        Ok(())
+    }
+}
+```
+
+Keep a `History<NoteEdit>` beside the state it changes and call it from
+`perform` or `apply`; `History::default()` keeps 100 entries and
+`History::new(capacity)` sets another bound.
+
+- `execute(command, &mut self.notes)` applies one command as one entry and
+  clears redo.
+- `execute_group(commands, &mut self.notes)` applies several commands as one
+  entry, such as removing every note for Clear. If one fails, the others are
+  reverted and nothing is recorded.
+- `execute_merging(command, ...)` folds the command into the newest entry when
+  your `Command::merge` accepts it, so a run of small steps undoes at once.
+  `seal` ends the run; undo, redo and `mark_saved` also end it. Implement
+  `Command::is_noop` so a run that returns to its start leaves no entry.
+- `undo` and `redo` return `Ok(false)` when there is nothing to do. A command
+  that returns an error must leave its target unchanged; the entry then stays.
+- `mark_saved` records a save point and `is_saved` reports whether undo and
+  redo have returned to it, for an "unsaved changes" indicator.
+
+Make Undo and Redo unavailable when `can_undo` or `can_redo` is false, and
+include `revision()` in their `meaning` so an agent's stale target is rejected.
+Keep drafts and other in-progress edits out of history: one completed edit is
+one entry. When a command spans several owners, borrow them for the call:
+
+```text
+struct Model<'a> { notes: &'a mut Vec<String>, workspace: &'a mut Workspace }
+// impl Command<Model<'_>> for Edit { ... }
+self.history.undo(&mut Model { notes: &mut self.notes, workspace: &mut self.workspace })?;
+```
+
+To make layout undoable, resolve each dock change with
+`WorkspaceCommand::from_change(change, &self.workspace)` and execute the
+command in a `History<WorkspaceCommand>`, or wrap it in your own command type.
+Execute each resize separately: a pointer drag is one completed resize, and so
+is each keyboard nudge. Record Desk's `model.rs` applies each validated draft as one `Edit`
+command and keeps layout changes out of history.
+
 ## Grow to several panes
 
 `Frame::dock` presents the single core `Workspace` read-only, so the tree is

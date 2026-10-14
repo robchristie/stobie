@@ -40,7 +40,7 @@ pub enum ImageIntent {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum Command {
+pub enum ImageCommand {
     SetCameras {
         changes: Vec<CameraChange>,
     },
@@ -83,7 +83,7 @@ pub enum UndoScope {
     Workspace,
 }
 
-impl Command {
+impl ImageCommand {
     pub fn undo_scope(&self) -> UndoScope {
         match self {
             Self::AddPolygon { .. } | Self::MoveVertex { .. } | Self::DeletePolygon { .. } => {
@@ -101,8 +101,8 @@ impl Command {
 /// History applies snapshots without revalidating them; do not execute fabricated
 /// or stale commands that violate current annotation, camera or dock mappings.
 pub struct CommandHistory {
-    undo: Vec<Command>,
-    redo: Vec<Command>,
+    undo: Vec<ImageCommand>,
+    redo: Vec<ImageCommand>,
 }
 
 impl CommandHistory {
@@ -110,18 +110,18 @@ impl CommandHistory {
     /// Empty/unchanged camera commands and unchanged split resizes are skipped.
     pub fn execute(
         &mut self,
-        command: Command,
+        command: ImageCommand,
         document: &mut Document,
         session: &mut Session,
         workspace: &mut Workspace,
     ) {
         if matches!(
             &command,
-            Command::SetCameras { changes }
+            ImageCommand::SetCameras { changes }
                 if changes.is_empty() || changes.iter().all(|change| change.before == change.after)
         ) || matches!(
             &command,
-            Command::ResizeSplit { before, after, .. } if before == after
+            ImageCommand::ResizeSplit { before, after, .. } if before == after
         ) {
             return;
         }
@@ -180,13 +180,13 @@ pub fn validate_intent(
     intent: ImageIntent,
     document: &mut Document,
     session: &Session,
-) -> Result<Command, String> {
+) -> Result<ImageCommand, String> {
     match intent {
         ImageIntent::SetCamera { pane, camera } => {
             if !session.cameras.iter().any(|state| state.pane == pane) {
                 return Err("unknown camera pane".into());
             }
-            Ok(Command::SetCameras {
+            Ok(ImageCommand::SetCameras {
                 changes: linked_camera_changes(&session.cameras, pane, camera),
             })
         }
@@ -204,7 +204,7 @@ pub fn validate_intent(
                         .find(|candidate| candidate.pane != pane && candidate.link == Some(group))
                 })
                 .map_or(state.camera, |candidate| candidate.camera);
-            Ok(Command::SetCameraLink {
+            Ok(ImageCommand::SetCameraLink {
                 pane,
                 before: state.link,
                 after: link,
@@ -218,7 +218,7 @@ pub fn validate_intent(
             }
             let id = AnnotationId(document.next_annotation_id);
             document.next_annotation_id += 1;
-            Ok(Command::AddPolygon {
+            Ok(ImageCommand::AddPolygon {
                 polygon: Polygon {
                     id,
                     layer,
@@ -237,7 +237,7 @@ pub fn validate_intent(
                 .find(|polygon| polygon.id == annotation)
                 .ok_or("unknown annotation")?;
             let before = *polygon.vertices.get(vertex).ok_or("unknown vertex")?;
-            Ok(Command::MoveVertex {
+            Ok(ImageCommand::MoveVertex {
                 annotation,
                 vertex,
                 before,
@@ -250,12 +250,12 @@ pub fn validate_intent(
                 .iter()
                 .position(|polygon| polygon.id == annotation)
                 .ok_or("unknown annotation")?;
-            Ok(Command::DeletePolygon {
+            Ok(ImageCommand::DeletePolygon {
                 polygon: document.annotations[index].clone(),
                 index,
             })
         }
-        ImageIntent::SelectResult { result } => Ok(Command::SelectResult {
+        ImageIntent::SelectResult { result } => Ok(ImageCommand::SelectResult {
             before: session.selected_result,
             after: Some(result),
         }),
@@ -267,14 +267,17 @@ pub fn validate_intent(
                 .ok_or("unknown camera pane")?
                 .camera;
             after.centre = result_at(result.0).position;
-            Ok(Command::SetCameras {
+            Ok(ImageCommand::SetCameras {
                 changes: linked_camera_changes(&session.cameras, pane, after),
             })
         }
     }
 }
 
-pub fn commit_gesture(document: &mut Document, session: &mut Session) -> Result<Command, String> {
+pub fn commit_gesture(
+    document: &mut Document,
+    session: &mut Session,
+) -> Result<ImageCommand, String> {
     match session.gesture.take().ok_or("no active gesture")? {
         GesturePreview::Polygon { layer, vertices } => validate_intent(
             ImageIntent::CommitPolygon { layer, vertices },
@@ -286,7 +289,7 @@ pub fn commit_gesture(document: &mut Document, session: &mut Session) -> Result<
             vertex,
             original,
             preview,
-        } => Ok(Command::MoveVertex {
+        } => Ok(ImageCommand::MoveVertex {
             annotation,
             vertex,
             before: original,
@@ -296,16 +299,16 @@ pub fn commit_gesture(document: &mut Document, session: &mut Session) -> Result<
 }
 
 fn apply(
-    command: &Command,
+    command: &ImageCommand,
     document: &mut Document,
     session: &mut Session,
     workspace: &mut Workspace,
 ) {
     match command {
-        Command::SetCameras { changes } => {
+        ImageCommand::SetCameras { changes } => {
             apply_camera_changes(&mut session.cameras, changes, true)
         }
-        Command::SetCameraLink {
+        ImageCommand::SetCameraLink {
             pane,
             after,
             after_camera,
@@ -316,11 +319,11 @@ fn apply(
                 camera.camera = *after_camera;
             }
         }
-        Command::AddPolygon { polygon } => {
+        ImageCommand::AddPolygon { polygon } => {
             document.annotations.push(polygon.clone());
             session.selected_annotation = Some(polygon.id);
         }
-        Command::MoveVertex {
+        ImageCommand::MoveVertex {
             annotation,
             vertex,
             after,
@@ -334,30 +337,30 @@ fn apply(
                 polygon.vertices[*vertex] = *after;
             }
         }
-        Command::DeletePolygon { polygon, .. } => {
+        ImageCommand::DeletePolygon { polygon, .. } => {
             document.annotations.retain(|item| item.id != polygon.id);
             if session.selected_annotation == Some(polygon.id) {
                 session.selected_annotation = None;
             }
         }
-        Command::SelectResult { after, .. } => session.selected_result = *after,
-        Command::ResizeSplit { node, after, .. } => {
+        ImageCommand::SelectResult { after, .. } => session.selected_result = *after,
+        ImageCommand::ResizeSplit { node, after, .. } => {
             workspace.root.set_split_fraction(*node, *after);
         }
     }
 }
 
 fn revert(
-    command: &Command,
+    command: &ImageCommand,
     document: &mut Document,
     session: &mut Session,
     workspace: &mut Workspace,
 ) {
     match command {
-        Command::SetCameras { changes } => {
+        ImageCommand::SetCameras { changes } => {
             apply_camera_changes(&mut session.cameras, changes, false)
         }
-        Command::SetCameraLink {
+        ImageCommand::SetCameraLink {
             pane,
             before,
             before_camera,
@@ -368,11 +371,11 @@ fn revert(
                 camera.camera = *before_camera;
             }
         }
-        Command::AddPolygon { polygon } => {
+        ImageCommand::AddPolygon { polygon } => {
             document.annotations.retain(|item| item.id != polygon.id);
             session.selected_annotation = None;
         }
-        Command::MoveVertex {
+        ImageCommand::MoveVertex {
             annotation,
             vertex,
             before,
@@ -386,14 +389,14 @@ fn revert(
                 polygon.vertices[*vertex] = *before;
             }
         }
-        Command::DeletePolygon { polygon, index } => {
+        ImageCommand::DeletePolygon { polygon, index } => {
             document
                 .annotations
                 .insert((*index).min(document.annotations.len()), polygon.clone());
             session.selected_annotation = Some(polygon.id);
         }
-        Command::SelectResult { before, .. } => session.selected_result = *before,
-        Command::ResizeSplit { node, before, .. } => {
+        ImageCommand::SelectResult { before, .. } => session.selected_result = *before,
+        ImageCommand::ResizeSplit { node, before, .. } => {
             workspace.root.set_split_fraction(*node, *before);
         }
     }
@@ -508,7 +511,7 @@ mod tests {
         let mut history = CommandHistory::default();
 
         history.execute(
-            Command::ResizeSplit {
+            ImageCommand::ResizeSplit {
                 node,
                 before,
                 after: 0.61,
@@ -570,7 +573,7 @@ mod tests {
         let mut history = CommandHistory::default();
 
         history.execute(
-            Command::SetCameras {
+            ImageCommand::SetCameras {
                 changes: vec![CameraChange {
                     pane: PaneId(1),
                     before: original[0].camera,
@@ -596,7 +599,7 @@ mod tests {
         let mut history = CommandHistory::default();
 
         history.execute(
-            Command::ResizeSplit {
+            ImageCommand::ResizeSplit {
                 node: DockNodeId(1),
                 before: 0.72,
                 after: 0.72,
@@ -641,7 +644,7 @@ mod tests {
     #[test]
     fn command_undo_scope_is_explicit() {
         assert_eq!(
-            Command::SelectResult {
+            ImageCommand::SelectResult {
                 before: None,
                 after: Some(ResultId(1)),
             }
@@ -649,7 +652,7 @@ mod tests {
             UndoScope::Selection
         );
         assert_eq!(
-            Command::ResizeSplit {
+            ImageCommand::ResizeSplit {
                 node: DockNodeId(1),
                 before: 0.5,
                 after: 0.6,

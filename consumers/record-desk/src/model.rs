@@ -1,9 +1,11 @@
 //! Record Desk's domain state. Drafts and history stay outside saved state.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
-use stobie_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, SplitAxis, Workspace};
+use stobie_core::{
+    Command, DockNode, DockNodeId, History, LAYOUT_SCHEMA_VERSION, PaneId, SplitAxis, Workspace,
+};
 
 pub const LIST_PANE: PaneId = PaneId(101);
 pub const DETAIL_PANE: PaneId = PaneId(102);
@@ -72,10 +74,32 @@ pub struct Filters {
     pub review: ReviewFilter,
 }
 
+/// One committed record change.
 #[derive(Clone, Debug)]
 struct Edit {
     before: Record,
     after: Record,
+}
+
+impl Command<Vec<Record>> for Edit {
+    fn apply(&self, records: &mut Vec<Record>) -> Result<bool, String> {
+        let record = record_mut(records, self.after.id)?;
+        let changed = *record != self.after;
+        *record = self.after.clone();
+        Ok(changed)
+    }
+
+    fn revert(&self, records: &mut Vec<Record>) -> Result<(), String> {
+        *record_mut(records, self.before.id)? = self.before.clone();
+        Ok(())
+    }
+}
+
+fn record_mut(records: &mut [Record], id: RecordId) -> Result<&mut Record, String> {
+    records
+        .iter_mut()
+        .find(|record| record.id == id)
+        .ok_or_else(|| "The history record does not exist.".to_owned())
 }
 
 #[derive(Clone, Debug)]
@@ -84,10 +108,8 @@ pub struct Desk {
     selected: Option<RecordId>,
     draft: Option<Record>,
     filters: Filters,
-    undo: VecDeque<Edit>,
-    redo: Vec<Edit>,
+    history: History<Edit>,
     draft_revision: u64,
-    history_revision: u64,
     filter_revision: u64,
 }
 
@@ -100,10 +122,8 @@ impl Desk {
             draft,
             records,
             filters: Filters::default(),
-            undo: VecDeque::new(),
-            redo: Vec::new(),
+            history: History::new(MAX_HISTORY),
             draft_revision: 0,
-            history_revision: 0,
             filter_revision: 0,
         })
     }
@@ -128,7 +148,7 @@ impl Desk {
         self.draft_revision
     }
     pub fn history_revision(&self) -> u64 {
-        self.history_revision
+        self.history.revision()
     }
     pub fn filter_revision(&self) -> u64 {
         self.filter_revision
@@ -159,11 +179,20 @@ impl Desk {
     }
 
     pub fn undo_len(&self) -> usize {
-        self.undo.len()
+        self.history.undo_len()
     }
 
     pub fn redo_len(&self) -> usize {
-        self.redo.len()
+        self.history.redo_len()
+    }
+
+    /// Whether committed records match the last save point.
+    pub fn is_saved(&self) -> bool {
+        self.history.is_saved()
+    }
+
+    pub fn mark_saved(&mut self) {
+        self.history.mark_saved();
     }
 
     pub fn set_filters(&mut self, filters: Filters) {
@@ -224,18 +253,13 @@ impl Desk {
             self.draft = Some(after);
             return Ok(false);
         }
-        let before = std::mem::replace(&mut self.records[index], after.clone());
-        self.undo.push_back(Edit {
-            before,
+        let edit = Edit {
+            before: self.records[index].clone(),
             after: after.clone(),
-        });
-        if self.undo.len() > MAX_HISTORY {
-            self.undo.pop_front();
-        }
-        self.redo.clear();
+        };
+        let changed = self.history.execute(edit, &mut self.records)?;
         self.draft = Some(after);
-        self.history_revision += 1;
-        Ok(true)
+        Ok(changed)
     }
 
     pub fn cancel(&mut self) {
@@ -248,43 +272,22 @@ impl Desk {
 
     pub fn undo(&mut self) -> Result<bool, String> {
         self.require_clean_draft()?;
-        let Some(edit) = self.undo.back() else {
-            return Ok(false);
-        };
-        let index = self.record_index(edit.before.id)?;
-        let edit = self.undo.pop_back().expect("the undo entry was inspected");
-        self.records[index] = edit.before.clone();
-        self.redo.push(edit);
-        self.history_revision += 1;
+        let undone = self.history.undo(&mut self.records)?;
         self.cancel();
-        Ok(true)
+        Ok(undone)
     }
 
     pub fn redo(&mut self) -> Result<bool, String> {
         self.require_clean_draft()?;
-        let Some(edit) = self.redo.last() else {
-            return Ok(false);
-        };
-        let index = self.record_index(edit.after.id)?;
-        let edit = self.redo.pop().expect("the redo entry was inspected");
-        self.records[index] = edit.after.clone();
-        self.undo.push_back(edit);
-        self.history_revision += 1;
+        let redone = self.history.redo(&mut self.records)?;
         self.cancel();
-        Ok(true)
+        Ok(redone)
     }
 
     fn selected_record(&self) -> Option<&Record> {
         self.records
             .iter()
             .find(|record| Some(record.id) == self.selected)
-    }
-
-    fn record_index(&self, id: RecordId) -> Result<usize, String> {
-        self.records
-            .iter()
-            .position(|record| record.id == id)
-            .ok_or_else(|| "The history record does not exist.".to_owned())
     }
 
     fn require_clean_draft(&self) -> Result<(), String> {
@@ -730,6 +733,38 @@ mod tests {
         desk.apply().unwrap();
         assert_eq!(desk.redo_len(), 0);
         assert!(!desk.redo().unwrap());
+    }
+
+    #[test]
+    fn save_point_follows_undo_and_redo_but_not_drafts() {
+        let mut desk = Desk::default();
+        assert!(desk.is_saved());
+        edit_title(&mut desk, "Saved revision");
+        assert!(desk.is_saved(), "a draft is not committed state");
+        desk.apply().unwrap();
+        assert!(!desk.is_saved());
+        let revision = desk.history_revision();
+        desk.mark_saved();
+        assert_eq!(
+            desk.history_revision(),
+            revision,
+            "saving keeps undo targets current"
+        );
+        edit_title(&mut desk, "Unsaved revision");
+        desk.apply().unwrap();
+        assert!(!desk.is_saved());
+        desk.undo().unwrap();
+        assert!(desk.is_saved());
+        desk.undo().unwrap();
+        assert!(!desk.is_saved());
+        desk.redo().unwrap();
+        assert!(desk.is_saved());
+        // Recommitting the saved values is a new change, not a return to the save point.
+        edit_title(&mut desk, "Unsaved revision");
+        desk.apply().unwrap();
+        edit_title(&mut desk, "Saved revision");
+        desk.apply().unwrap();
+        assert!(!desk.is_saved());
     }
 
     #[test]

@@ -73,7 +73,8 @@ trusted command without revalidation, so deliver it before unrelated mutations
 can invalidate its snapshots. In a larger app, show validation failures as
 observable status instead of relying on the example's fixed-input `expect`.
 Tab activation/movement update the canonical workspace inside `dock_workspace`;
-a completed split resize returns a command for the caller to execute.
+a completed split resize returns a `WorkspaceResize`, which the example records
+as an image `ResizeSplit` command.
 
 The portable example source also has an explicit compile check:
 
