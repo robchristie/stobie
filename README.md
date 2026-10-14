@@ -276,10 +276,11 @@ for the exact Debian 13/GNOME 48/RDP/Orca 48.1 environment on
 5 September 2026
 ([qualification matrix row](docs/accessibility-integration-report.md#platform-qualification-matrix)).
 That qualification predates the ARIA-layer work (PRs #74 to #76), which also
-changed the native AccessKit tree: status lines became live regions, panes
-became named regions, section headings became headings, records became
-list-box options and combo boxes gained their values. The current native tree
-has not been requalified with Orca. The one versioned result is also not
+changed the shared native AccessKit tree: it gained status roles with live
+settings, named pane regions, headings, list boxes with position and set size,
+keyboard shortcuts and percentage splitter values
+([changes](docs/accessibility-integration-report.md#browser-aria-layer-with-orca)).
+The current native tree has not been requalified with Orca. The one versioned result is also not
 evidence of screen-reader support on Windows, macOS, other Linux
 configurations or browsers.
 In the browser, hosted applications mirror the same AccessKit tree into a
