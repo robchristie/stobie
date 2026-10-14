@@ -472,6 +472,7 @@ impl PaneSurface<'_> {
             }
         });
         self.outputs.ui_geometry.record_node(UiNode {
+            value: None,
             id: viewport_id,
             parent: Some(SemanticUiId::pane(pane)),
             role: UiRole::Viewport,

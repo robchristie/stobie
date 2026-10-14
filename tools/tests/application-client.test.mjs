@@ -167,15 +167,17 @@ test('metadata write failure preserves observations and a captured image report'
   } finally { await rm(directory, { recursive: true }); }
 });
 
-test('name/status and changed selection waits need no application parser', async () => {
+test('name/status/value and changed selection waits need no application parser', async () => {
   let selected = 'one';
   const scheduler = fakeClock();
   scheduler.sleep = async function(ms) { this.elapsed += ms; selected = 'two'; };
   const { client } = await bound(() => ({ kind: 'observe', observation: observation([
     node({ id: 'one', selected: selected === 'one' }), node({ id: 'two', selected: selected === 'two' }),
     node({ id: 'status', role: 'status', name: 'Saved' }),
+    node({ id: 'notes', role: 'multiline_text_input', value: 'Checked' }),
   ]) }), scheduler);
   await client.wait({ condition: 'status', selector: { id: 'status' }, value: 'Saved' });
+  await client.wait({ condition: 'value', selector: { id: 'notes' }, value: 'Checked' });
   await client.wait({ condition: 'name', selector: { id: 'one' }, value: 'Apply' });
   const result = await client.wait({ condition: 'selection_changed', selector: { role: 'button' } });
   assert.equal(result.observation.snapshot.nodes.find(candidate => candidate.id === 'two').selected, true);

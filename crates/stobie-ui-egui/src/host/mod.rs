@@ -23,7 +23,7 @@
 //!    change requests one, so the next pass presents and observes it. A
 //!    scheduled reason requests a pass after its delay instead.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::hash::Hash;
 
 use egui::{Rect, Response, Ui};
@@ -31,14 +31,15 @@ use stobie_core::{PaneId, Workspace, WorkspaceChange};
 
 use crate::observation::{Origin, Visibility};
 use crate::{
-    ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey,
-    ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme, Availability,
-    CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour, DockTextContext,
-    DomainReference, IconId, Inspection, InspectionBinding, InspectionError, InspectionReply,
-    InspectionRequest, IntoActionTarget, ObservationValue, PanePresenter, PresentationContext,
-    PresentationScope, SemanticAuditFinding, SemanticUiId, ShortcutKey, TextLayoutObservation,
-    TypographyProfile, UiNode, UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme,
-    audit_text_layouts, text_audit_coverage,
+    ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
+    ActionKey, ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme,
+    Availability, CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour,
+    DockTextContext, DomainReference, Execution, IconId, Inspection, InspectionBinding,
+    InspectionError, InspectionReply, InspectionRequest, IntoActionTarget, Invocation,
+    ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
+    SemanticUiId, ShortcutKey, TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode,
+    UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
+    text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -88,6 +89,26 @@ pub trait Application: 'static {
         target: ActionTarget<Self::Action>,
         state: &mut Self::UiState,
     ) -> Result<bool, String>;
+
+    /// Perform an action with its argument, already validated against the
+    /// action's declared contract. The default runs [`Self::perform`] for an
+    /// action without an argument; an application whose actions declare
+    /// arguments implements this and applies the same intent its control
+    /// would emit.
+    fn perform_with(
+        &mut self,
+        target: ActionTarget<Self::Action>,
+        argument: ActionArgument,
+        state: &mut Self::UiState,
+    ) -> Result<bool, String> {
+        match argument {
+            ActionArgument::None => self.perform(target, state),
+            _ => Err(format!(
+                "{} does not handle its argument",
+                target.action.specification().label
+            )),
+        }
+    }
 
     /// Show an error from an intent, a clicked or shortcut action, or host
     /// startup. A rejected semantic invocation is reported in its receipt instead,
@@ -237,7 +258,7 @@ fn request_passes(context: &egui::Context, reasons: &[HostRepaint]) {
 /// Panes receive it instead of mutable access to the application.
 pub struct Frame<'a, A: ActionSet, I> {
     intents: &'a mut Vec<I>,
-    triggers: &'a mut Vec<ActionTarget<A>>,
+    triggers: &'a mut Vec<(ActionTarget<A>, ActionArgument)>,
     availability: &'a dyn Fn(ActionTarget<A>) -> Availability,
     repaint: &'a mut Vec<HostRepaint>,
     tokens: DesignTokens,
@@ -290,7 +311,15 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// pass's intents if it is still available. Pass an [`ActionTarget`] for a
     /// pane-scoped action.
     pub fn trigger(&mut self, target: impl IntoActionTarget<A>) {
-        self.triggers.push(target.into_target(None));
+        self.triggers
+            .push((target.into_target(None), ActionArgument::None));
+    }
+
+    /// Queue an action with its argument, as a control that chooses a value
+    /// would. The argument is validated against the action's contract before
+    /// [`Application::perform_with`] receives it.
+    pub fn trigger_with(&mut self, target: impl IntoActionTarget<A>, argument: ActionArgument) {
+        self.triggers.push((target.into_target(None), argument));
     }
 
     /// The application's current availability for a target.
@@ -393,7 +422,7 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         };
         let response = presentation.action_with_content(ui, key, spec, content);
         if response.clicked() {
-            self.triggers.push(target);
+            self.triggers.push((target, ActionArgument::None));
         }
         response
     }
@@ -633,6 +662,30 @@ pub struct AppHost<A: Application> {
     repaint: Vec<HostRepaint>,
     preferences: UiPreferences,
     theme: ApplicationTheme,
+    /// The latest pass's framework text fields and their text.
+    text_fields: Vec<(TextFieldBinding, String)>,
+    /// Text to set, applied one field per pass.
+    text_edits: VecDeque<TextEdit>,
+    /// The field this pass's edit focused and the focus to return to after it.
+    edit_focus: Option<(egui::Id, Option<egui::Id>)>,
+    /// The set-text invocation this pass applied, completed once its intents
+    /// have settled.
+    completing: Option<String>,
+    /// Whether state changed since the latest pass paired text fields, so a
+    /// widget may now present something other than its paired field.
+    fields_stale: bool,
+}
+
+/// One queued set-text edit.
+struct TextEdit {
+    widget: egui::Id,
+    /// The field's semantic ID when queued; the edit applies only while the
+    /// widget still presents it.
+    field: SemanticUiId,
+    text: String,
+    /// The invocation for a semantic edit, which returns focus afterwards;
+    /// `None` for assistive technology editing in place.
+    request: Option<String>,
 }
 
 fn apply_appearance(context: &egui::Context, preferences: UiPreferences, theme: &ApplicationTheme) {
@@ -665,6 +718,11 @@ impl<A: Application> AppHost<A> {
             repaint: Vec::new(),
             preferences,
             theme,
+            text_fields: Vec::new(),
+            text_edits: VecDeque::new(),
+            edit_focus: None,
+            completing: None,
+            fields_stale: false,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();
@@ -680,6 +738,8 @@ impl<A: Application> AppHost<A> {
         let wake = self.context.clone();
         match inspection.start_native(move || wake.request_repaint()) {
             Ok(Some(host)) => {
+                // Text field values and set text read the AccessKit tree.
+                self.context.enable_accesskit();
                 inspection.install_completion_hook(&self.context);
                 self.inspection = Some(inspection);
                 self._native_host = Some(host);
@@ -697,6 +757,7 @@ impl<A: Application> AppHost<A> {
     /// Enable inspection with an explicitly constructed service, for example a
     /// browser instance or a test. The host publishes from the next pass.
     pub fn enable_inspection(&mut self, inspection: Inspection) {
+        self.context.enable_accesskit();
         inspection.install_completion_hook(&self.context);
         self.inspection = Some(inspection);
         self.repaint.push(HostRepaint::AutomationEnabled);
@@ -780,7 +841,12 @@ impl<A: Application> AppHost<A> {
         };
         self.app.prepare(&mut prepare, &mut self.ui_state);
         self.drain_invocations();
-        let mut triggers = self.consume_shortcuts(root);
+        let mut triggers: Vec<_> = self
+            .consume_shortcuts(root)
+            .into_iter()
+            .map(|target| (target, ActionArgument::None))
+            .collect();
+        self.apply_text_edit(root);
         let mut intents = Vec::new();
         {
             let app = &self.app;
@@ -800,8 +866,17 @@ impl<A: Application> AppHost<A> {
             };
             app.ui(root, &mut self.ui_state, &mut frame);
         }
+        // Set text is a semantic edit: once the field has taken it, focus
+        // returns to where it was, so no caret is left blinking.
+        if let Some((widget, previous)) = self.edit_focus.take() {
+            context.memory_mut(|memory| match previous {
+                Some(previous) => memory.request_focus(previous),
+                None => memory.surrender_focus(widget),
+            });
+        }
         self.passes += 1;
-        self.snapshot = self.collect(root.ctx(), root_rect);
+        (self.snapshot, self.text_fields) = self.collect(root.ctx(), root_rect);
+        self.fields_stale = false;
         self.publish(&context);
         self.app.completed(
             &CompletedPass {
@@ -817,9 +892,14 @@ impl<A: Application> AppHost<A> {
             let outcome = self.app.apply(intent, &mut self.ui_state);
             self.settle(outcome);
         }
-        for target in triggers {
-            let outcome = self.run_action(target);
+        for (target, argument) in triggers {
+            let outcome = self.run_action(target, argument);
             self.settle(outcome);
+        }
+        // The edit's intents have now applied, so the next published pass
+        // presents the application's own effect.
+        if let (Some(request), Some(inspection)) = (self.completing.take(), &self.inspection) {
+            inspection.complete(&request, Ok(()));
         }
         request_passes(&context, &self.repaint);
     }
@@ -830,7 +910,10 @@ impl<A: Application> AppHost<A> {
         let inspection = self.inspection.clone()?;
         let bindings = self.bindings();
         let reasons = self.repaint.len();
-        let reply = inspection.dispatch(request, &bindings, |target| self.run_semantic(target));
+        let fields = self.text_field_bindings();
+        let reply = inspection.dispatch_invocation(request, &bindings, &fields, |invocation| {
+            self.run_invocation(invocation)
+        });
         // Only a state change repaints; reads never do.
         if self.repaint.len() > reasons {
             self.context.request_repaint();
@@ -967,9 +1050,20 @@ impl<A: Application> AppHost<A> {
         triggered
     }
 
-    fn run_action(&mut self, target: ActionTarget<A::Action>) -> Result<bool, String> {
+    fn run_action(
+        &mut self,
+        target: ActionTarget<A::Action>,
+        argument: ActionArgument,
+    ) -> Result<bool, String> {
         match self.app.availability(target) {
-            Availability::Enabled => self.app.perform(target, &mut self.ui_state),
+            Availability::Enabled => {
+                target
+                    .action
+                    .argument()
+                    .validate(&argument)
+                    .map_err(|error| error.message)?;
+                self.app.perform_with(target, argument, &mut self.ui_state)
+            }
             Availability::Disabled { reason } => Err(reason.into_owned()),
             Availability::Hidden => Err(format!(
                 "{} is unavailable",
@@ -978,19 +1072,182 @@ impl<A: Application> AppHost<A> {
         }
     }
 
-    fn run_semantic(&mut self, target: ActionTarget<A::Action>) -> Result<(), InspectionError> {
-        let changed = self
-            .run_action(target)
-            .map_err(InspectionError::validation)?;
-        if changed {
-            self.repaint.push(HostRepaint::StateChanged);
+    fn run_invocation(
+        &mut self,
+        invocation: Invocation<A::Action>,
+    ) -> Result<Execution, InspectionError> {
+        match invocation {
+            Invocation::Action { target, argument } => {
+                let changed = self
+                    .run_action(target, argument)
+                    .map_err(InspectionError::validation)?;
+                if changed {
+                    self.repaint.push(HostRepaint::StateChanged);
+                    self.fields_stale = true;
+                }
+                Ok(Execution::Completed)
+            }
+            // The edit applies through egui's own text editing on a pass, and
+            // completes once that pass's intents have applied.
+            Invocation::SetText {
+                request_id,
+                field,
+                text,
+            } => {
+                self.text_edits.push_back(TextEdit {
+                    widget: field.widget,
+                    field: field.id,
+                    text,
+                    request: Some(request_id),
+                });
+                self.repaint.push(HostRepaint::Application("set text"));
+                Ok(Execution::Deferred)
+            }
         }
-        Ok(())
+    }
+
+    /// Finish a semantic edit that cannot apply.
+    fn reject_edit(&self, edit: &TextEdit, message: String) {
+        if let (Some(request), Some(inspection)) = (&edit.request, &self.inspection) {
+            inspection.complete(request, Err(InspectionError::validation(message)));
+        }
+    }
+
+    fn text_field_bindings(&self) -> Vec<TextFieldBinding> {
+        self.text_fields
+            .iter()
+            .map(|(binding, _)| binding.clone())
+            .collect()
+    }
+
+    /// Apply one queued set-text edit, from an invocation or an AccessKit
+    /// `SetValue` request, as typed input: focus the field, select its text
+    /// and paste the new text over it (or delete the selection for empty
+    /// text). The field's `TextEdit` handles it as any edit, so the
+    /// application sees its ordinary change. After a semantic edit, focus
+    /// returns to where it was; assistive technology editing in place keeps
+    /// it and goes first, so the field being typed in never waits. Further
+    /// edits wait for later passes, because egui edits only the focused
+    /// field.
+    fn apply_text_edit(&mut self, root: &mut Ui) {
+        use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
+        let fields = &self.text_fields;
+        let requests: Vec<TextEdit> = root.input_mut(|input| {
+            let mut requests = Vec::new();
+            input.events.retain(|event| {
+                if let egui::Event::AccessKitActionRequest(ActionRequest {
+                    action: Action::SetValue,
+                    target_node,
+                    target_tree,
+                    data: Some(ActionData::Value(value)),
+                }) = event
+                    && *target_tree == TreeId::ROOT
+                    && let Some((field, _)) = fields
+                        .iter()
+                        .find(|(field, _)| field.widget.accesskit_id() == *target_node)
+                {
+                    // Assistive technology edits in place; focus stays.
+                    requests.push(TextEdit {
+                        widget: field.widget,
+                        field: field.id.clone(),
+                        text: value.to_string(),
+                        request: None,
+                    });
+                    false
+                } else {
+                    true
+                }
+            });
+            requests
+        });
+        // Each in-place edit carries the field's whole text, so consecutive
+        // edits of one field, such as fast typing in a layer field, apply as
+        // the latest.
+        for edit in requests {
+            match self.text_edits.front_mut() {
+                Some(first) if first.request.is_none() && first.widget == edit.widget => {
+                    first.text = edit.text;
+                }
+                _ => self.text_edits.push_front(edit),
+            }
+        }
+        // A queued semantic edit names its field as last presented. If state
+        // changed since then, in this pass or between passes, the widget may
+        // now present something else, so the edit waits for a pass that pairs
+        // fields afresh.
+        if self
+            .text_edits
+            .front()
+            .is_some_and(|edit| edit.request.is_some())
+            && self.fields_stale
+        {
+            self.repaint.push(HostRepaint::Application("set text"));
+            return;
+        }
+        let Some(edit) = self.text_edits.pop_front() else {
+            return;
+        };
+        if !self.text_edits.is_empty() {
+            self.repaint.push(HostRepaint::Application("set text"));
+        }
+        let widget = edit.widget;
+        let Some((field, current)) = self
+            .text_fields
+            .iter()
+            .find(|(field, _)| field.widget == widget && field.id == edit.field)
+        else {
+            self.reject_edit(&edit, format!("{} is no longer presented", edit.field.0));
+            return;
+        };
+        // A disabled or read-only field takes no typed input either.
+        if let Some(reason) = field.availability.disabled_reason() {
+            let reason = reason.to_owned();
+            self.reject_edit(&edit, reason);
+            return;
+        }
+        if *current == edit.text {
+            if let (Some(request), Some(inspection)) = (&edit.request, &self.inspection) {
+                inspection.complete(request, Ok(()));
+            }
+            return;
+        }
+        let context = root.ctx().clone();
+        let previous = context.memory(|memory| memory.focused());
+        if edit.request.is_some() && previous != Some(widget) {
+            self.edit_focus = Some((widget, previous));
+        }
+        self.completing = edit.request;
+        let text = edit.text;
+        context.memory_mut(|memory| memory.request_focus(widget));
+        let mut state = egui::text_edit::TextEditState::load(&context, widget).unwrap_or_default();
+        // egui clamps the end to the text's length.
+        state
+            .cursor
+            .set_char_range(Some(egui::text::CCursorRange::two(
+                egui::text::CCursor::new(0),
+                egui::text::CCursor::new(usize::MAX),
+            )));
+        state.store(&context, widget);
+        let event = if text.is_empty() {
+            egui::Event::Key {
+                key: egui::Key::Delete,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            }
+        } else {
+            egui::Event::Paste(text)
+        };
+        root.input_mut(|input| input.events.push(event));
     }
 
     fn settle(&mut self, outcome: Result<bool, String>) {
         match outcome {
-            Ok(true) => self.repaint.push(HostRepaint::StateChanged),
+            Ok(true) => {
+                self.repaint.push(HostRepaint::StateChanged);
+                self.fields_stale = true;
+            }
             Ok(false) => {}
             Err(message) => {
                 self.app.report_error(message);
@@ -1006,7 +1263,10 @@ impl<A: Application> AppHost<A> {
         // Recalculate bindings from current state before every queued action.
         loop {
             let bindings = self.bindings();
-            if !inspection.drain(&bindings, |target| self.run_semantic(target)) {
+            let fields = self.text_field_bindings();
+            if !inspection.drain_invocation(&bindings, &fields, |invocation| {
+                self.run_invocation(invocation)
+            }) {
                 break;
             }
         }
@@ -1080,7 +1340,11 @@ impl<A: Application> AppHost<A> {
         bindings
     }
 
-    fn collect(&self, context: &egui::Context, root_rect: Rect) -> UiSnapshot {
+    fn collect(
+        &self,
+        context: &egui::Context,
+        root_rect: Rect,
+    ) -> (UiSnapshot, Vec<(TextFieldBinding, String)>) {
         let observed = crate::observation::take(context);
         let mut root_node = UiNode::container(
             SemanticUiId::root(),
@@ -1130,6 +1394,7 @@ impl<A: Application> AppHost<A> {
                 Some(_) => duplicates.push(node.id),
             }
         }
+        let text_fields = pair_text_fields(context, &mut nodes);
         // Visible-only surfaces scroll, so they submit partially visible text.
         // Audit their measured successes only when complete; keep every failed
         // attempt and all other text as presented.
@@ -1167,7 +1432,7 @@ impl<A: Application> AppHost<A> {
                         .map(|id| SemanticAuditFinding::InvalidRect { id }),
                 ),
         );
-        snapshot
+        (snapshot, text_fields)
     }
 
     fn publish(&self, context: &egui::Context) {
@@ -1187,10 +1452,11 @@ impl<A: Application> AppHost<A> {
             collections: observation.collections,
             ..Default::default()
         };
-        if let Err(error) = inspection.stage_completed(
+        if let Err(error) = inspection.stage_completed_with_fields(
             context,
             self.snapshot.clone(),
             &self.bindings(),
+            &self.text_field_bindings(),
             metadata,
             observation.facts,
         ) {
@@ -1199,5 +1465,102 @@ impl<A: Application> AppHost<A> {
     }
 }
 
+/// Pair this pass's recorded egui text edits with the observed text input
+/// nodes that present them, publish each paired field's text as its node's
+/// value and offer AccessKit `SetValue` on it. A field pairs by its AccessKit
+/// `author_id`, which Stobie recipes set to the semantic ID, or else by
+/// presenting exactly one text input node's rectangle; the host then sets the
+/// `author_id`. Without AccessKit, no field pairs.
+fn pair_text_fields(
+    context: &egui::Context,
+    nodes: &mut [UiNode],
+) -> Vec<(TextFieldBinding, String)> {
+    use egui::accesskit::Action;
+    let is_text =
+        |node: &UiNode| matches!(node.role, UiRole::TextInput | UiRole::MultilineTextInput);
+    let mut fields = Vec::new();
+    for (widget, rect) in crate::text_coverage::recorded_text_edits(context) {
+        let Some((author, value, disabled, read_only, password)) =
+            context.accesskit_node_builder(widget, |node| {
+                (
+                    node.author_id().map(ToOwned::to_owned),
+                    node.value().unwrap_or_default().to_owned(),
+                    node.is_disabled(),
+                    node.is_read_only(),
+                    node.role() == egui::accesskit::Role::PasswordInput,
+                )
+            })
+        else {
+            continue;
+        };
+        // AccessKit carries a password field's masked text, which an edit
+        // would write back; set text never touches one.
+        if password {
+            continue;
+        }
+        let index = match &author {
+            Some(author) => nodes
+                .iter()
+                .position(|node| is_text(node) && node.id.0 == *author),
+            None => {
+                let mut matching = nodes.iter().enumerate().filter(|(_, node)| {
+                    let presented = Rect::from(node.rect);
+                    is_text(node)
+                        && (presented.min - rect.min).length() < 0.5
+                        && (presented.max - rect.max).length() < 0.5
+                });
+                match (matching.next(), matching.next()) {
+                    (Some((index, _)), None) => Some(index),
+                    _ => None,
+                }
+            }
+        };
+        let Some(index) = index else {
+            continue;
+        };
+        let node = &mut nodes[index];
+        if fields
+            .iter()
+            .any(|(field, _): &(TextFieldBinding, String)| field.id == node.id)
+        {
+            continue;
+        }
+        node.value = Some(value.clone());
+        let editable = node.enabled && !disabled && !read_only;
+        context.accesskit_node_builder(widget, |builder| {
+            if author.is_none() {
+                builder.set_author_id(node.id.0.clone());
+            }
+            if editable {
+                builder.add_action(Action::SetValue);
+            }
+        });
+        let availability = if editable {
+            Availability::Enabled
+        } else {
+            Availability::Disabled {
+                reason: node
+                    .disabled_reason
+                    .clone()
+                    .unwrap_or_else(|| "The text field is read-only".into())
+                    .into(),
+            }
+        };
+        fields.push((
+            TextFieldBinding {
+                id: node.id.clone(),
+                widget,
+                pane: node.pane,
+                domain: node.domain_reference.clone(),
+                availability,
+            },
+            value,
+        ));
+    }
+    fields
+}
+
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod text_tests;

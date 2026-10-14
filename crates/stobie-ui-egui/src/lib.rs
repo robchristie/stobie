@@ -122,11 +122,30 @@ pub use semantics::*;
 ///
 /// Every action is semantically invocable by default. Declare `physical_only`
 /// with a reason when physical input is required, for example because the
-/// action chooses a value (actions with arguments are not supported yet).
+/// action opens a menu.
+///
+/// An action that chooses a value declares one `argument`: `"text"` (with an
+/// optional `max_length`), `"boolean"`, `"number"` (with `minimum`, `maximum`
+/// and an optional `integer = true`) or `"choice"` (with `choices = Type`,
+/// where the type implements [`ChoiceArgument`]). Discovery publishes the
+/// contract, the host rejects invalid values, and
+/// [`Application::perform_with`] receives the validated [`ActionArgument`]. An
+/// action with an argument cannot have a shortcut.
 ///
 /// ```
 /// use serde::Serialize;
-/// use stobie_ui_egui::{Action, ActionInvocation, ActionKey, ActionScope, ActionSet, ShortcutKey};
+/// use stobie_ui_egui::{
+///     Action, ActionInvocation, ActionKey, ActionScope, ActionSet, ArgumentContract,
+///     ChoiceArgument, ShortcutKey,
+/// };
+///
+/// #[derive(Clone, Copy, Debug, PartialEq)]
+/// enum Colour { Yellow, Blue }
+///
+/// impl ChoiceArgument for Colour {
+///     const CHOICES: &'static [(Self, &'static str, &'static str)] =
+///         &[(Self::Yellow, "yellow", "Yellow"), (Self::Blue, "blue", "Blue")];
+/// }
 ///
 /// #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 /// #[action(prefix = "notes")]
@@ -139,18 +158,23 @@ pub use semantics::*;
 ///              scope = "pane", shortcut = "F", id = "notes.fit")]
 ///     FitView,
 ///     #[action(label = "Colour", description = "Choose the note colour",
-///              physical_only = "Chooses a value; actions with arguments are not supported yet")]
+///              argument = "choice", choices = Colour)]
 ///     ChooseColour,
+///     #[action(label = "Palette", description = "Open the colour palette",
+///              physical_only = "Opens a menu")]
+///     Palette,
 /// }
 ///
-/// assert_eq!(NoteAction::ALL.len(), 4);
+/// assert_eq!(NoteAction::ALL.len(), 5);
 /// assert_eq!(NoteAction::Redo.stable_id(), "notes.redo");
 /// assert_eq!(NoteAction::FitView.stable_id(), "notes.fit");
 /// let redo = NoteAction::Redo.specification().shortcut.unwrap();
 /// assert!(redo.command && redo.shift && redo.key == ShortcutKey::Z);
 /// assert_eq!(NoteAction::FitView.specification().scope, ActionScope::Pane);
 /// assert!(NoteAction::Save.invocation().semantic());
-/// assert!(matches!(NoteAction::ChooseColour.invocation(), ActionInvocation::PhysicalOnly { .. }));
+/// assert!(NoteAction::ChooseColour.invocation().semantic());
+/// assert!(matches!(NoteAction::ChooseColour.argument(), ArgumentContract::Choice { .. }));
+/// assert!(matches!(NoteAction::Palette.invocation(), ActionInvocation::PhysicalOnly { .. }));
 /// ```
 pub use stobie_ui_egui_derive::Action;
 pub use style::*;
@@ -1296,6 +1320,7 @@ mod tests {
                 .tab_states
                 .iter()
                 .map(|(pane, rect, selected, focused)| UiNode {
+                    value: None,
                     id: SemanticUiId::tab(*pane),
                     parent: Some(SemanticUiId::root()),
                     role: UiRole::Tab,
@@ -1319,6 +1344,7 @@ mod tests {
                 .splitter_states
                 .iter()
                 .map(|(node, rect, horizontal, focused)| UiNode {
+                    value: None,
                     id: SemanticUiId::splitter(*node),
                     parent: Some(SemanticUiId::root()),
                     role: UiRole::Splitter,

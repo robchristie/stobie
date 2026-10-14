@@ -23,6 +23,11 @@ pub trait ActionKey: Copy + Eq + Hash + Ord + Serialize {
     fn invocation(self) -> ActionInvocation {
         ActionInvocation::Semantic
     }
+    /// The argument this capability takes, published by discovery and
+    /// validated before the application receives it. Most actions take none.
+    fn argument(self) -> crate::ArgumentContract {
+        crate::ArgumentContract::None
+    }
 }
 
 /// The complete, closed set of an application's actions, used to discover,

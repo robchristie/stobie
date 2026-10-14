@@ -84,6 +84,8 @@ struct NativeTextInventory {
     controls: HashSet<Id>,
     exclusions: BTreeSet<TextExclusion>,
     components: BTreeMap<TextComponentId, bool>,
+    /// Text edits in recording order, with their allocated rectangles.
+    text_edits: Vec<(Id, egui::Rect)>,
 }
 
 fn inventory_id(context: &Context) -> Id {
@@ -105,9 +107,25 @@ pub fn record_native_text_control(response: &Response, kind: NativeTextControlKi
                 ..Default::default()
             };
         }
-        inventory.controls.insert(response.id);
+        if inventory.controls.insert(response.id) && matches!(kind, NativeTextControlKind::TextEdit)
+        {
+            inventory.text_edits.push((response.id, response.rect));
+        }
         inventory.exclusions.insert(kind.exclusion());
     });
+}
+
+/// The egui text edits recorded in this pass, with their rectangles. Hosts
+/// pair them with observed text input nodes to offer framework set text.
+pub(crate) fn recorded_text_edits(context: &Context) -> Vec<(Id, egui::Rect)> {
+    let pass = context.cumulative_pass_nr();
+    let id = inventory_id(context);
+    context.data(|data| {
+        data.get_temp::<NativeTextInventory>(id)
+            .filter(|inventory| inventory.pass == pass)
+            .map(|inventory| inventory.text_edits)
+            .unwrap_or_default()
+    })
 }
 
 /// Retain outcomes independently of consumer observation filtering.

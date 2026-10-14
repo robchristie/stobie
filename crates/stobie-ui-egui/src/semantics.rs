@@ -193,6 +193,10 @@ pub struct UiNode {
     #[serde(default, skip_serializing_if = "is_false")]
     pub text_selectable: bool,
     pub disabled_reason: Option<String>,
+    /// A text field's current text, published by hosts for framework text
+    /// fields while AccessKit is enabled; omitted otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -223,6 +227,7 @@ impl UiNode {
             actions: Vec::new(),
             text_selectable: false,
             disabled_reason: None,
+            value: None,
         }
     }
 }
@@ -738,6 +743,7 @@ mod tests {
                     },
                 ),
                 UiNode {
+                    value: None,
                     id: SemanticUiId::new("action.undo"),
                     parent: Some(root),
                     role: UiRole::Button,

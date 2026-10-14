@@ -110,9 +110,13 @@ node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" discover '{
 node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" invoke '{"capability":"notes.clear"}'
 ```
 
-Every action is invocable unless it declares `physical_only = "reason"`. Use
-that for actions that choose a value: actions with arguments are not supported
-yet, so text such as a draft can only be typed physically. Without the
+Every action is invocable unless it declares `physical_only = "reason"`, for
+example because it opens a menu. An action that chooses a value declares an
+`argument` (text, boolean, bounded number or a `ChoiceArgument` choice) and
+implements `Application::perform_with`, which receives the validated value;
+apply the same intent its control emits. Every text field presented through
+`PresentationContext::native` and observed as a text input can be set through
+the framework's `stobie.set-text` capability without application code. Without the
 environment variable, no automation starts. Use a short, fresh directory for
 the socket: Unix socket paths are limited to about 100 bytes, and a socket left
 by a killed process blocks the next start until it is removed. Startup failures

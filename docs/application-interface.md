@@ -116,8 +116,39 @@ does not imply an empty domain collection.
 availability, argument contract, semantic-invocation support and a resolved
 target. Semantic invocation is available only where the application has opted
 in a typed action. Physical-only controls remain discoverable. Disabled and
-hidden availability remain distinct. The current integrations support
-no-argument actions; an unsupported argument object is rejected.
+hidden availability remain distinct.
+
+An action takes at most one argument. Its contract is `"none"` or an object
+tagged by `kind`:
+
+- `{"kind":"text","max_length":N|null}`: a string of at most `N` characters;
+- `{"kind":"boolean"}`;
+- `{"kind":"number","minimum":A,"maximum":B,"integer":bool}`;
+- `{"kind":"choice","options":[{"id":…,"label":…}]}`: one option ID.
+
+Send the value as `"arguments": {"value": …}`. A no-argument action accepts
+only a missing, `null` or empty `arguments`, as before. Invalid values are
+rejected with `invalid_arguments` and a message naming what is accepted,
+before the application sees them, and are checked again against the current
+contract when the action runs. Record Desk's category edit and its category
+and review filters are choice actions, for example
+`{"capability":"record-desk.edit-category"}` with `{"value":"ideas"}`.
+
+Every framework text field, an egui text edit presented through
+`PresentationContext::native` and observed as a `text_input` or
+`multiline_text_input`, is bound to the framework capability
+`stobie.set-text`. Its identity is the field's semantic ID and its contract
+is text. Invoking it replaces the field's text through the same edit route as
+typing: the host focuses the field, selects its text and pastes the new text
+over it (or deletes it), then returns focus to where it was. A single-line
+field therefore turns newlines into spaces, as a paste does, and a field's
+character limit applies. A field that held focus sees focus leave and return,
+as when a user clicks into another field and back. A disabled or password
+field is never set. Its receipt stays `queued`, and can no longer be
+cancelled, until the edit has applied and the intents it caused have settled;
+it then completes with the observation that presents them. If the field is no
+longer presented by then, the receipt is rejected. Hosts publish each text
+field's text as its node's optional `value`.
 
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
@@ -125,7 +156,10 @@ observation; an intervening publication can return `stale_cursor`. Start a new
 bounded query when that occurs.
 
 `invoke` discovers exactly one target, sends its current resolved identity and
-meaning once, then reads the correlated receipt while it is queued. An explicit
+meaning once, then reads the correlated receipt while it is queued. A
+completed receipt carries `after_observation`, the first observation that
+includes its effect. Wait for an observation at least that new before reading
+the outcome or discovering a target whose meaning the action changed. An explicit
 `expected` target may be supplied to exercise a previously discovered target.
 The application rechecks identity, meaning, current availability and arguments
 at its normal validated mutation route. A `completed` receipt establishes that
@@ -153,10 +187,11 @@ up in the new instance.
 `ApplicationClient.wait` polls completed observations with a monotonic deadline
 and optional `AbortSignal`. The CLI's deadline is `--timeout MS` (default
 15000), given before the command; condition objects take no timeout field. Conditions include `present`, `absent`, `enabled`,
-`capability_enabled`, `focused`, `selected`, `checked`, `name`, `status`, `selection_changed`, `fact`
+`capability_enabled`, `focused`, `selected`, `checked`, `name`, `value`, `status`, `selection_changed`, `fact`
 and `audits_clear`. Checked compares a boolean `value`; audits-clear waits for
-empty semantic/text findings with retained coverage. Name and
-status conditions compare exact text with `value`; status restricts the role to
+empty semantic/text findings with retained coverage. Name, value and
+status conditions compare exact text with `value`; value compares a text
+field's published text; status restricts the role to
 `status`. Selection change compares selected stable IDs, against `previous` or
 the first observation. Fact conditions compare a named application-published
 primitive value; the available names are visible in `observe`.
@@ -309,10 +344,10 @@ snapshot. It offers nothing that a pointer or keyboard user cannot do.
   canvas, so they are never hit targets.
 - Read a text field's value from the snapshot, for example
   `textbox "Record title": Survey notes`.
-- Edit text with `locator.focus()`, then `page.keyboard.type(text)`. Press
-  `Control+A` first to replace the text. `locator.fill()` does not edit:
-  focus returns to the application, egui owns the text, and a direct edit of a
-  layer field is reverted.
+- Edit text with `locator.fill(text)`, or `locator.focus()` and then
+  `page.keyboard.type(text)`. The layer field keeps focus, and each edit
+  reaches egui as typed input, so the application sees the same change as
+  typing. Escape or Tab returns focus to the application.
 - Action buttons list their shortcuts in `aria-keyshortcuts`, for example
   `Control+S Meta+S`.
 - Read results from the tree again after a pass. A disabled control's

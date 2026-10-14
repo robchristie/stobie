@@ -1,0 +1,41 @@
+error: argument must be "text", "boolean", "number" or "choice"
+ --> tests/derive-action/invalid_arguments.rs:7:67
+  |
+7 |     #[action(label = "Rename", description = "Rename", argument = "colour")]
+  |                                                                   ^^^^^^^^
+
+error: a number argument needs `minimum` and `maximum`
+  --> tests/derive-action/invalid_arguments.rs:10:5
+   |
+10 |     Zoom,
+   |     ^^^^
+
+error: `maximum` is less than `minimum`
+  --> tests/derive-action/invalid_arguments.rs:11:98
+   |
+11 |     #[action(label = "Scale", description = "Scale", argument = "number", minimum = 2, maximum = -1.5)]
+   |                                                                                                  ^
+
+error: a choice argument needs `choices = Type`
+  --> tests/derive-action/invalid_arguments.rs:14:5
+   |
+14 |     Pick,
+   |     ^^^^
+
+error: `max_length` does not apply to a boolean argument
+  --> tests/derive-action/invalid_arguments.rs:15:87
+   |
+15 |     #[action(label = "Note", description = "Note", argument = "boolean", max_length = 4)]
+   |                                                                                       ^
+
+error: `minimum` needs an `argument`
+  --> tests/derive-action/invalid_arguments.rs:17:64
+   |
+17 |     #[action(label = "Limit", description = "Limit", minimum = 1)]
+   |                                                                ^
+
+error: an action with an argument cannot have a shortcut: a key press supplies no value
+  --> tests/derive-action/invalid_arguments.rs:19:84
+   |
+19 |     #[action(label = "Title", description = "Title", argument = "text", shortcut = "Cmd+T")]
+   |                                                                                    ^^^^^^^
