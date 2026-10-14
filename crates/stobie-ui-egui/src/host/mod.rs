@@ -671,6 +671,9 @@ pub struct AppHost<A: Application> {
     /// The set-text invocation this pass applied, completed once its intents
     /// have settled.
     completing: Option<String>,
+    /// Whether state changed since the latest pass paired text fields, so a
+    /// widget may now present something other than its paired field.
+    fields_stale: bool,
 }
 
 /// One queued set-text edit.
@@ -719,6 +722,7 @@ impl<A: Application> AppHost<A> {
             text_edits: VecDeque::new(),
             edit_focus: None,
             completing: None,
+            fields_stale: false,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();
@@ -872,6 +876,7 @@ impl<A: Application> AppHost<A> {
         }
         self.passes += 1;
         (self.snapshot, self.text_fields) = self.collect(root.ctx(), root_rect);
+        self.fields_stale = false;
         self.publish(&context);
         self.app.completed(
             &CompletedPass {
@@ -1078,6 +1083,7 @@ impl<A: Application> AppHost<A> {
                     .map_err(InspectionError::validation)?;
                 if changed {
                     self.repaint.push(HostRepaint::StateChanged);
+                    self.fields_stale = true;
                 }
                 Ok(Execution::Completed)
             }
@@ -1165,15 +1171,15 @@ impl<A: Application> AppHost<A> {
                 _ => self.text_edits.push_front(edit),
             }
         }
-        // A queued semantic edit names its field as last presented. If an
-        // action changed state earlier in this pass, the widget may now
-        // present something else, so the edit waits for a pass that pairs
+        // A queued semantic edit names its field as last presented. If state
+        // changed since then, in this pass or between passes, the widget may
+        // now present something else, so the edit waits for a pass that pairs
         // fields afresh.
         if self
             .text_edits
             .front()
             .is_some_and(|edit| edit.request.is_some())
-            && self.repaint.contains(&HostRepaint::StateChanged)
+            && self.fields_stale
         {
             self.repaint.push(HostRepaint::Application("set text"));
             return;
@@ -1238,7 +1244,10 @@ impl<A: Application> AppHost<A> {
 
     fn settle(&mut self, outcome: Result<bool, String>) {
         match outcome {
-            Ok(true) => self.repaint.push(HostRepaint::StateChanged),
+            Ok(true) => {
+                self.repaint.push(HostRepaint::StateChanged);
+                self.fields_stale = true;
+            }
             Ok(false) => {}
             Err(message) => {
                 self.app.report_error(message);

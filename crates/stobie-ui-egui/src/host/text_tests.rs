@@ -745,3 +745,45 @@ fn password_fields_are_never_set_or_valued() {
     };
     assert_eq!(total, 0);
 }
+
+#[test]
+fn a_set_text_dispatched_between_passes_also_waits_out_a_state_change() {
+    // The browser route runs invocations between passes.
+    let mut harness = harness(desk());
+    for (id, selector, value) in [
+        (
+            "notes",
+            by_id("desk.notes"),
+            serde_json::json!("Wrong place"),
+        ),
+        (
+            "pin",
+            InspectionSelector {
+                capability: Some("desk.pin".into()),
+                ..Default::default()
+            },
+            serde_json::json!(true),
+        ),
+    ] {
+        let expected = discover(host(&harness), selector.clone()).target;
+        let operation = InspectionOperation::Invoke {
+            selector,
+            expected,
+            arguments: serde_json::json!({ "value": value }),
+        };
+        let request = request(host(&harness), id, operation);
+        host_mut(&mut harness).dispatch(request).unwrap();
+    }
+    harness.run();
+    let host = host(&harness);
+    assert_eq!(host.app().notes_id, Some("desk.notes.pinned"));
+    assert_eq!(host.app().notes, "");
+    let rejected = receipt(host.inspection().unwrap().handle(request(
+        host,
+        "notes-receipt",
+        InspectionOperation::Receipt {
+            request_id: "notes".into(),
+        },
+    )));
+    assert_eq!(rejected.state, ReceiptState::Rejected, "{rejected:?}");
+}
