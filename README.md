@@ -269,12 +269,20 @@ does not update them automatically.
 ## Current limits
 
 Stobie compiles eframe's native AccessKit adapter and is
-**AccessKit-semantic and keyboard-tested**. The representative workflow is
-directly qualified with human-confirmed audible Orca output for the exact
-Debian 13/GNOME 48/RDP/Orca 48.1 environment. Its tests cover roles, names,
-states, bounds, actions, semantic parity and keyboard operation, but that one
-versioned result is not evidence of screen-reader support on Windows, macOS,
-other Linux configurations or browsers.
+**AccessKit-semantic and keyboard-tested**. Its tests cover roles, names,
+states, bounds, actions, semantic parity and keyboard operation. The
+representative workflow was qualified with human-confirmed audible Orca output
+for the exact Debian 13/GNOME 48/RDP/Orca 48.1 environment on
+5 September 2026
+([qualification matrix row](docs/accessibility-integration-report.md#platform-qualification-matrix)).
+That qualification predates the ARIA-layer work (PRs #74 to #76), which also
+changed the shared native AccessKit tree: it gained status roles with live
+settings, named pane regions, headings, list boxes with position and set size,
+keyboard shortcuts and percentage splitter values
+([changes](docs/accessibility-integration-report.md#browser-aria-layer-with-orca)).
+The current native tree has not been requalified with Orca. The one versioned result is also not
+evidence of screen-reader support on Windows, macOS, other Linux
+configurations or browsers.
 In the browser, hosted applications mirror the same AccessKit tree into a
 hidden [ARIA layer](docs/ui-guides/accessibility.md#browser-aria-layer).
 Automated Chromium checks cover its tree, rule conformance, activation and
