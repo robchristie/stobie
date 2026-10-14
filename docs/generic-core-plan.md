@@ -134,7 +134,7 @@ returns `None` for a change that does nothing.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | 1. Generic history and workspace commands in core; Record Desk migration | In review ([PR #71](https://github.com/robchristie/stobie/pull/71)) | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
-| 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; Gallery and Record Desk trees exclude imaging, runtime and renderer |
+| 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
 | 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Planned | |
 
 ## Record Desk migration

@@ -4,7 +4,9 @@
 //! application declares state, actions, UI and intent handling, and the host
 //! owns observation, shortcuts, agent inspection and repaint. Present panes
 //! with [`Frame::dock`] and [`Panes`]; `run_native` and `web_handle!` are the
-//! entry points. The core `Workspace` remains the only dock tree. See the
+//! entry points. They leave GPU backends to the application, which depends on
+//! eframe with its `wgpu` feature. The core `Workspace` remains the only dock
+//! tree. See the
 //! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
 //! and its compiled `notes` example.
 //!
