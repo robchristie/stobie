@@ -10,8 +10,7 @@
 //!
 //! One pass runs in this order:
 //!
-//! 1. [`Application::prepare`] adapts state to the viewport (and, later, polls
-//!    workers).
+//! 1. [`Application::prepare`] adapts state to the viewport and polls workers.
 //! 2. Queued semantic invocations run, each rechecked against current state.
 //! 3. Available shortcuts are consumed with exact modifiers.
 //! 4. [`Application::ui`] presents state and emits intents and action triggers.
@@ -21,24 +20,25 @@
 //!    arranges them), then actions in trigger order, each action rechecking its
 //!    availability immediately before it runs.
 //! 7. A repaint is requested only for a recorded [`HostRepaint`]. Any state
-//!    change requests one, so the next pass presents and observes it.
+//!    change requests one, so the next pass presents and observes it. A
+//!    scheduled reason requests a pass after its delay instead.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::hash::Hash;
 
 use egui::{Rect, Response, Ui};
 use stobie_core::{PaneId, Workspace, WorkspaceChange};
 
-use crate::observation::Visibility;
+use crate::observation::{Origin, Visibility};
 use crate::{
     ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey,
     ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme, Availability,
     CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour, DockTextContext,
-    IconId, Inspection, InspectionBinding, InspectionError, InspectionReply, InspectionRequest,
-    IntoActionTarget, ObservationValue, PanePresenter, PresentationContext, PresentationScope,
-    SemanticAuditFinding, SemanticUiId, TextLayoutObservation, TypographyProfile, UiNode,
-    UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
-    text_audit_coverage,
+    DomainReference, IconId, Inspection, InspectionBinding, InspectionError, InspectionReply,
+    InspectionRequest, IntoActionTarget, ObservationValue, PanePresenter, PresentationContext,
+    PresentationScope, SemanticAuditFinding, SemanticUiId, TextLayoutObservation,
+    TypographyProfile, UiNode, UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme,
+    audit_text_layouts, text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -121,8 +121,10 @@ pub trait Application: 'static {
         ApplicationTheme::analytical()
     }
 
-    /// Adapt state before the UI runs, for example to the viewport size.
-    fn prepare(&mut self, _pass: &mut PassContext<'_>) {}
+    /// Adapt state before the UI runs, for example to the viewport size, and
+    /// poll workers. UI state is available for UI-owned resources such as
+    /// textures made from worker results.
+    fn prepare(&mut self, _pass: &mut PassContext<'_>, _state: &mut Self::UiState) {}
 
     /// Inspect the completed pass with the state it presented, including UI
     /// state, before this pass's intents and actions apply. Geometry and state
@@ -139,6 +141,19 @@ pub trait Application: 'static {
     /// control is not rendered. Rendered controls are always discoverable.
     fn action_panes(&self, _action: Self::Action) -> Vec<PaneId> {
         Vec::new()
+    }
+
+    /// Persist durable state to eframe storage. eframe calls this periodically
+    /// and on exit; the host also calls it, and flushes, after a pass in which
+    /// [`Self::take_save_request`] returns true.
+    #[cfg(feature = "eframe")]
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {}
+
+    /// Whether an action asked to save now, for example "Save layout". The host
+    /// asks once after each pass and clears nothing itself.
+    #[cfg(feature = "eframe")]
+    fn take_save_request(&mut self) -> bool {
+        false
     }
 }
 
@@ -181,6 +196,32 @@ pub enum HostRepaint {
     Appearance,
     /// The application asked for a repaint for this reason.
     Application(&'static str),
+    /// The application asked for a pass after a delay, for example to end an
+    /// idle gesture.
+    Scheduled {
+        reason: &'static str,
+        delay: std::time::Duration,
+    },
+}
+
+impl HostRepaint {
+    /// Whether this reason asks for a pass now rather than after a delay.
+    pub fn is_immediate(self) -> bool {
+        !matches!(self, Self::Scheduled { .. })
+    }
+}
+
+/// Ask egui for passes for the recorded reasons: one now if any reason is
+/// immediate, and one after each scheduled delay.
+fn request_passes(context: &egui::Context, reasons: &[HostRepaint]) {
+    if reasons.iter().any(|reason| reason.is_immediate()) {
+        context.request_repaint();
+    }
+    for reason in reasons {
+        if let HostRepaint::Scheduled { delay, .. } = reason {
+            context.request_repaint_after(*delay);
+        }
+    }
 }
 
 /// The UI's sink for one pass: intents, action triggers and repaint requests.
@@ -251,6 +292,11 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// Ask for another pass, for example while an animation runs.
     pub fn request_repaint(&mut self, reason: &'static str) {
         self.repaint.push(HostRepaint::Application(reason));
+    }
+
+    /// Ask for a pass after `delay`, for example to end an idle gesture.
+    pub fn request_repaint_after(&mut self, reason: &'static str, delay: std::time::Duration) {
+        self.repaint.push(HostRepaint::Scheduled { reason, delay });
     }
 
     /// Present an action button with its current availability, and trigger the
@@ -426,6 +472,7 @@ impl<A: ActionSet, I, P: Panes<A, I>> PanePresenter for HostedPanes<'_, '_, '_, 
         );
         node.name = self.panes.title(pane).into();
         node.pane = Some(pane);
+        node.domain_reference = Some(DomainReference::Pane(pane));
         // Pane bodies scroll: publish only what each pane shows.
         crate::observe_visible_only(ui, |ui| {
             crate::observe_node(ui, node);
@@ -442,6 +489,7 @@ impl<A: ActionSet, I, P: Panes<A, I>> PanePresenter for HostedPanes<'_, '_, '_, 
         );
         node.name = self.panes.title(pane).into();
         node.pane = Some(pane);
+        node.domain_reference = Some(DomainReference::Pane(pane));
         node.selected = selected;
         node.focused = focused;
         self.observe(node);
@@ -479,6 +527,7 @@ impl<A: ActionSet, I, P: Panes<A, I>> PanePresenter for HostedPanes<'_, '_, '_, 
         }
         .into();
         node.description = Some("Resize adjacent dock panes".into());
+        node.domain_reference = Some(DomainReference::DockNode(id));
         node.focused = focused;
         self.observe(node);
     }
@@ -553,6 +602,10 @@ pub struct CompletedPass<'a> {
     pub tab_presses: u64,
     /// The egui context, for example to read this pass's input.
     pub context: &'a egui::Context,
+    /// Repaints requested so far in this pass, for application diagnostics.
+    /// Intents and actions that change state add [`HostRepaint::StateChanged`]
+    /// after this hook.
+    pub repaint: &'a [HostRepaint],
 }
 
 /// Owns an [`Application`] and runs its per-pass lifecycle.
@@ -716,7 +769,7 @@ impl<A: Application> AppHost<A> {
             available_rect: root.available_rect_before_wrap(),
             repaint: &mut self.repaint,
         };
-        self.app.prepare(&mut prepare);
+        self.app.prepare(&mut prepare, &mut self.ui_state);
         self.drain_invocations();
         let mut triggers = self.consume_shortcuts(root);
         let mut intents = Vec::new();
@@ -746,6 +799,7 @@ impl<A: Application> AppHost<A> {
                 snapshot: &self.snapshot,
                 tab_presses: self.tab_presses,
                 context: &context,
+                repaint: &self.repaint,
             },
             &self.ui_state,
         );
@@ -758,9 +812,7 @@ impl<A: Application> AppHost<A> {
             let outcome = self.run_action(target);
             self.settle(outcome);
         }
-        if !self.repaint.is_empty() {
-            context.request_repaint();
-        }
+        request_passes(&context, &self.repaint);
     }
 
     /// Dispatch one inspection request on the application thread, running an
@@ -937,6 +989,7 @@ impl<A: Application> AppHost<A> {
     /// default identity when none is rendered, so discovery covers the whole set.
     fn bindings(&self) -> Vec<InspectionBinding<A::Action>> {
         let mut bindings = Vec::new();
+        let mut presented = Vec::new();
         for &action in A::Action::ALL {
             let nodes: Vec<&UiNode> = self.snapshot.by_action(action).collect();
             let mut targets: Vec<(ActionTarget<A::Action>, Option<&UiNode>)> =
@@ -975,11 +1028,24 @@ impl<A: Application> AppHost<A> {
                     semantic,
                     meaning,
                 );
+                // A pane target belongs to its pane unless its control names a
+                // more specific domain object.
+                let domain = node
+                    .and_then(|node| node.domain_reference.clone())
+                    .or_else(|| target.pane.map(DomainReference::Pane));
+                // Several controls can present one target, such as a toolbar
+                // button and a viewport's custom action; the first is the
+                // capability's instance.
+                let key = (target, domain.clone());
+                if presented.contains(&key) {
+                    continue;
+                }
+                presented.push(key);
                 if let Some(node) = node {
                     binding = binding.with_id(node.id.clone());
-                    if let Some(domain) = &node.domain_reference {
-                        binding = binding.with_domain(domain.clone());
-                    }
+                }
+                if let Some(domain) = domain {
+                    binding = binding.with_domain(domain);
                 }
                 bindings.push(binding);
             }
@@ -997,10 +1063,10 @@ impl<A: Application> AppHost<A> {
         );
         root_node.name = self.identity.name.clone();
         let mut nodes = vec![root_node];
-        let mut identities = BTreeSet::from([SemanticUiId::root()]);
+        let mut published = BTreeMap::from([(SemanticUiId::root(), (0, Origin::Application))]);
         let mut duplicates = Vec::new();
         let mut non_finite = Vec::new();
-        for (mut node, visibility) in observed.nodes {
+        for (mut node, visibility, origin) in observed.nodes {
             let rect = Rect::from(node.rect);
             // Non-finite geometry would make the whole publication invalid, so
             // report it as an audit finding instead of publishing the node.
@@ -1019,10 +1085,18 @@ impl<A: Application> AppHost<A> {
                 }
                 node.rect = visible.into();
             }
-            if identities.insert(node.id.clone()) {
-                nodes.push(node);
-            } else {
-                duplicates.push(node.id);
+            match published.get(&node.id).copied() {
+                None => {
+                    published.insert(node.id.clone(), (nodes.len(), origin));
+                    nodes.push(node);
+                }
+                // An application's observation refines the recipe's own node.
+                Some((index, Origin::Recipe)) if origin == Origin::Application => {
+                    published.insert(node.id.clone(), (index, origin));
+                    nodes[index] = node;
+                }
+                Some((_, Origin::Application)) if origin == Origin::Recipe => {}
+                Some(_) => duplicates.push(node.id),
             }
         }
         // Visible-only surfaces scroll, so they submit partially visible text.

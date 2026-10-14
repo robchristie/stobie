@@ -1,7 +1,7 @@
 # Framework-owned application host and derived actions
 
 Status: active
-Next action: Move the Lab's gesture previews out of Session, then migrate the Lab (increment 3b).
+Next action: Migrate the Lab to `AppHost` (increment 3b), following the Lab migration design below.
 
 ## Outcome and boundaries
 
@@ -83,7 +83,7 @@ Checked against Record Desk, the Lab and the Gallery before implementation.
 | 1. Derive macro and Record Desk actions | Landed | [PR #63](https://github.com/robchristie/stobie/pull/63): compile-fail and expansion tests; Record Desk tests and smokes unchanged |
 | 2. Host, collector, Record Desk migration, composition guide and authoring probe | Landed | [PR #64](https://github.com/robchristie/stobie/pull/64): host kittests; Record Desk tests and smokes; glue 962 to 526 lines, accepted by the user; probe below |
 | 3a. Gallery migration | Landed | [PR #65](https://github.com/robchristie/stobie/pull/65): Gallery tests, deterministic UI snapshots and Gallery-driven smokes; published snapshots equal base's in 540 renders apart from the root name |
-| 3b. Lab migration | Planned | Lab smokes and the application-interface smoke |
+| 3b. Lab migration | Active | Lab tests, native and browser smokes, and the application-interface smoke |
 
 ## Authoring probe
 
@@ -145,11 +145,40 @@ Recorded for later work:
   Gallery's own unit test renders each story alone at its configured width, as
   before.
 
-## Lab follow-up
+## Lab migration
 
-The Lab needs pane-scoped availability and meaning (already part of the target
-signature), `action_panes` for its eight panes, and a pre-pass hook with context
-access for worker polling and texture upload. It also needs gesture previews
-moved out of `Session` into UI state or intents before `ui` can borrow the
-application immutably. Its in-pass render-plan submission can run at the end of
-`ui` from UI-owned outputs.
+The Lab keeps its image model and runtime; only its frame lifecycle moves to the
+host. No host type names an image concept.
+
+- **Gesture previews stay in `Session`.** `AGENTS.md` places gesture previews in
+  the session and requires them to render in the frame that changes them. An
+  earlier note proposed moving them to UI state, which would break that rule.
+  Instead, `ui` edits a pass-local copy of `session.gesture`, renders the
+  overlay and render plan from that copy, and emits a `Gesture` intent first.
+  A completed gesture still emits one command and one undo record.
+- **One action path.** Toolbar clicks trigger actions, so clicks, shortcuts
+  and semantic invocations all reach `perform` and are rechecked for
+  availability. Availability and meaning use the context the Lab's inspection
+  bindings already build. `action_panes` keeps every pane-scoped action
+  discoverable for panes 1 to 8, as before.
+- **Invocable by default.** As decided above, every action becomes semantically
+  invocable except menu anchors, which open UI rather than change state
+  (`ViewPanels`, `AppearanceSettings`, `DisplaySettings`), and
+  `CopyDiagnostics`, which writes the system clipboard. Each declares its reason.
+- **Layout.** The host dock emits `WorkspaceChange`. A resize stays an undoable
+  `ResizeSplit` command; activation and moves apply directly, as before.
+- **UI state.** Camera gestures, the thumbnail cache (egui textures), virtualisation
+  metrics and the Lab's physical-test geometry are UI state. `UiGeometry` keeps
+  only physical-test geometry; semantic nodes and text go to the host collector.
+- **Host additions.**
+  - `prepare` receives UI state, so runtime polling can insert thumbnail
+    textures.
+  - Dock pane, tab and splitter nodes carry pane and dock-node domain
+    references, as the Lab's always did.
+  - Applications can persist to eframe storage and ask for an immediate save.
+  - `Frame::request_repaint_after` schedules a delayed repaint for a recorded
+    reason, for the Lab's wheel-gesture timeout.
+- **Equivalence.** Lab tests, native and browser smokes and the
+  application-interface smoke pass. Expected snapshot differences are the
+  root's name and publication order; any other difference is explained in the
+  pull request.

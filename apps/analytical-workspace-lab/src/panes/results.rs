@@ -34,7 +34,7 @@ pub fn show(
             font_scale,
             &mut outputs.ui_geometry.text_layouts,
         );
-        if let Some(selected) = selected_result {
+        if selected_result.is_some() {
             let context = ActionContext {
                 active_pane,
                 target_pane: Some(PaneId(5)),
@@ -54,10 +54,9 @@ pub fn show(
                 active_pane == PaneId(5),
                 "recenter_primary",
             ) {
-                outputs.intents.push(ImageIntent::RecenterOnResult {
-                    result: selected,
-                    pane: PaneId(1),
-                });
+                outputs
+                    .triggers
+                    .push(ActionTarget::pane(LabAction::RecenterPrimary, PaneId(5)));
             }
         }
     });

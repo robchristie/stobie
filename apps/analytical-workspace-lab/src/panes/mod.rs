@@ -9,16 +9,18 @@ use stobie_render_wgpu::{
 };
 use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionTarget,
-    Availability, DesignTokens, DomainReference, ImagePlanTarget, ImageStatusSpec, PanePresenter,
+    Availability, DesignTokens, DomainReference, Frame, ImagePlanTarget, ImageStatusSpec, Panes,
     SemanticUiId, TextLayoutObservation, UiNode, UiRole, action_button, allocate_viewport,
-    choice_control, consume_action_shortcut, diagnostic_row, image_status_height,
-    paint_image_status, range_control, section_heading, stage_render_callback,
+    choice_control, diagnostic_row, image_status_height, paint_image_status, range_control,
+    section_heading, stage_render_callback,
 };
 use web_time::Instant;
 
 use crate::actions::LabAction;
 use crate::thumbnail_cache::ThumbnailCache;
-use crate::ui_geometry::{PaneUiRect, SplitterUiRect, UiGeometry};
+#[cfg(test)]
+use crate::ui_geometry::SplitterUiRect;
+use crate::ui_geometry::{PaneUiRect, UiGeometry};
 
 mod annotations;
 mod camera_gestures;
@@ -45,6 +47,8 @@ pub struct FrameOutput {
     overlays: Vec<ImageOverlayRequest>,
     annotation_release_preview: Option<GesturePreview>,
     statuses: Vec<ImageStatusRequest>,
+    /// Actions clicked in this pass; they run through the host's action route.
+    pub triggers: Vec<ActionTarget<LabAction>>,
     pub interaction_active: bool,
     pub repaint_after: Option<Duration>,
     pub ui_geometry: UiGeometry,
@@ -105,8 +109,8 @@ fn present_action(
             .ui_geometry
             .action(parent.clone(), target, &availability, state, &response);
     }
-    availability.enabled()
-        && (response.clicked() || consume_action_shortcut(ui, target.action, active_pane))
+    // The host dispatches shortcuts; this reports a click on an available action.
+    availability.enabled() && response.clicked()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -372,46 +376,50 @@ impl<'a> PaneSurface<'a> {
             outputs: feature.outputs,
         }
     }
+}
 
-    pub fn push_shell_command(&mut self, command: Command) {
-        self.outputs.commands.push(command);
-    }
-
-    pub fn record_shell_interaction(&mut self, active: bool) {
-        self.outputs.interaction_active |= active;
+fn pane_title(pane: PaneId) -> &'static str {
+    match pane.0 {
+        1 => "Primary View",
+        2 => "Linked Detail",
+        3 => "Overview",
+        4 => "Derived View",
+        5 => "Results",
+        6 => "Thumbnails",
+        7 => "Inspector",
+        8 => "Diagnostics",
+        _ => "Unknown pane",
     }
 }
 
-impl PanePresenter for PaneSurface<'_> {
+/// The hosted dock publishes each pane's node, tab and splitters; the surface
+/// presents pane content.
+impl Panes<LabAction, crate::app::Intent> for PaneSurface<'_> {
     fn title(&self, pane: PaneId) -> &'static str {
-        match pane.0 {
-            1 => "Primary View",
-            2 => "Linked Detail",
-            3 => "Overview",
-            4 => "Derived View",
-            5 => "Results",
-            6 => "Thumbnails",
-            7 => "Inspector",
-            8 => "Diagnostics",
-            _ => "Unknown pane",
-        }
+        pane_title(pane)
     }
 
-    fn pane_ui(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
+    fn pane_ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        pane: PaneId,
+        _frame: &mut Frame<'_, LabAction, crate::app::Intent>,
+    ) {
+        let pane_rect = ui.max_rect();
+        self.present_pane(ui, pane, pane_rect);
+    }
+}
+
+impl PaneSurface<'_> {
+    fn title(&self, pane: PaneId) -> &'static str {
+        pane_title(pane)
+    }
+
+    fn present_pane(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
         self.outputs.ui_geometry.pane_bodies.push(PaneUiRect {
             pane,
             rect: pane_rect.into(),
         });
-        let mut pane_node = UiNode::container(
-            SemanticUiId::pane(pane),
-            Some(SemanticUiId::root()),
-            UiRole::Pane,
-            pane_rect.into(),
-        );
-        pane_node.name = self.title(pane).to_owned();
-        pane_node.pane = Some(pane);
-        pane_node.domain_reference = Some(DomainReference::Pane(pane));
-        self.outputs.ui_geometry.record_node(pane_node);
         ui.push_id(("window", 1_u32, "pane", pane.0), |ui| match pane.0 {
             1..=4 => self.image_pane(ui, pane, pane_rect),
             5 => self.results_pane(ui),
@@ -434,6 +442,29 @@ impl PanePresenter for PaneSurface<'_> {
             }
         });
     }
+}
+
+/// The low-level dock route, which publishes dock semantics as the host does.
+/// Pane tests use it to render the workspace without an application.
+#[cfg(test)]
+impl stobie_ui_egui::PanePresenter for PaneSurface<'_> {
+    fn title(&self, pane: PaneId) -> &'static str {
+        pane_title(pane)
+    }
+
+    fn pane_ui(&mut self, ui: &mut egui::Ui, pane: PaneId, pane_rect: egui::Rect) {
+        let mut pane_node = UiNode::container(
+            SemanticUiId::pane(pane),
+            Some(SemanticUiId::root()),
+            UiRole::Pane,
+            pane_rect.into(),
+        );
+        pane_node.name = pane_title(pane).to_owned();
+        pane_node.pane = Some(pane);
+        pane_node.domain_reference = Some(DomainReference::Pane(pane));
+        self.outputs.ui_geometry.record_node(pane_node);
+        self.present_pane(ui, pane, pane_rect);
+    }
 
     fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect, selected: bool, focused: bool) {
         self.outputs.ui_geometry.tabs.push(PaneUiRect {
@@ -444,7 +475,7 @@ impl PanePresenter for PaneSurface<'_> {
             id: SemanticUiId::tab(pane),
             parent: Some(SemanticUiId::root()),
             role: UiRole::Tab,
-            name: self.title(pane).to_owned(),
+            name: pane_title(pane).to_owned(),
             description: None,
             rect: rect.into(),
             enabled: true,

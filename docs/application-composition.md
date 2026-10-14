@@ -119,14 +119,19 @@ are printed to stderr and shown through `report_error`.
 
 ## Know what the host does
 
-Each pass, the host runs `prepare`, then queued agent invocations, then
+Each pass, the host runs `prepare` (which also receives UI state, for example
+to turn worker results into textures), then queued agent invocations, then
 shortcuts, then your `ui`. Shortcuts need exact modifiers and an available
-action. A shortcut without `Cmd` does not fire while a text field has focus, so
-give text-adjacent actions a `Cmd` chord. It
-publishes the completed observation and calls `completed`. Then it applies
-this pass's data intents in emission order (`order_intents` can rearrange
-them), followed by its actions, rechecking each action's availability first. It repaints only when state changed, an error was
-shown, a dock drag is active or you call `Frame::request_repaint(reason)`. The
+action. A shortcut without `Cmd` does not fire while any widget has keyboard
+focus, such as a text field or a clicked viewport, so give text-adjacent
+actions a `Cmd` chord. It publishes the completed observation and calls
+`completed`. Then it applies this pass's data intents in emission order
+(`order_intents` can rearrange them), followed by its actions, rechecking each
+action's availability first. It repaints only when state changed, an error was
+shown, a dock drag is active or you call `Frame::request_repaint(reason)`;
+`Frame::request_repaint_after(reason, delay)` schedules a later pass. To
+persist to eframe storage, implement `Application::save`; return true from
+`take_save_request` after an action such as "Save layout" to save at once. The
 `AppHost` rustdoc gives the exact contract.
 
 Presentation contexts, choice and range recipes, and the dock register their
@@ -142,7 +147,8 @@ parent. Record native egui text fields with
 `PresentationContext::native(NativeTextControlKind::TextEdit, ...)` and observe
 them as `UiRole::TextInput`. Observe a selectable list row as
 `UiRole::ResultRow` with `selected` and, for a done or checked state,
-`checked`. Do not observe a recipe's own nodes again.
+`checked`. Observe a recipe's own node again only to add context such as its
+pane or domain; that observation replaces the recipe's.
 
 ## Keep these rules
 
