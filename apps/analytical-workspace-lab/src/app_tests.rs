@@ -337,10 +337,7 @@ fn layout_resizes_are_undoable_and_activation_is_not() {
     );
     assert_eq!(app.workspace.active_pane, PaneId(5));
     assert_eq!(app.history.undo_len(), 1);
-    assert!(
-        app.history
-            .undo(&mut app.document, &mut app.session, &mut app.workspace)
-    );
+    assert_eq!(app.undo(), Ok(true));
     assert_eq!(app.workspace.root.split_fraction(node), Some(before));
 }
 

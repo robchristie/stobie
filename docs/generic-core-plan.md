@@ -135,7 +135,47 @@ returns `None` for a change that does nothing.
 | --- | --- | --- |
 | 1. Generic history and workspace commands in core; Record Desk migration | In review ([PR #71](https://github.com/robchristie/stobie/pull/71)) | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
 | 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
-| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Planned | |
+| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | In review | Workspace tests; architecture-rule regression tests and temporary-violation checks; probe below |
+
+## Lab on the generic history
+
+- `ImageCommand` implements `Command<ImageTarget<'_>>`, where `ImageTarget`
+  borrows the image document and session. Empty or unchanged camera commands
+  return `Ok(false)`, so they are not recorded, as before. Reverts stay
+  lenient. `ImageCommand::ResizeSplit`, `UndoScope` and `CommandHistory` are
+  removed.
+- The Lab's `LabCommand` wraps `ImageCommand` and core's `WorkspaceCommand`
+  over a `LabTarget` of mutable borrows of its document, session and
+  workspace. A resize resolves through `WorkspaceCommand::from_change` and
+  shares the image history; tab activation and moves still apply directly.
+  The browser fixture's `resize_split` action keeps its wire name.
+- The Lab's history keeps 1,000 entries. It was unbounded; camera moves are
+  undoable, so the bound is generous, and no test or smoke comes near it.
+- The minimal example records image commands in a `History<ImageCommand>` and
+  applies resizes directly, because it has no undo action.
+
+## Architecture rules
+
+`cargo xtask architecture` now also checks that:
+- `stobie-core`'s dependency tree has no `stobie-imaging`, runtime or
+  renderer, and its sources define none of the image or Lab-demo items (a
+  definition scan with its own regression test); core cannot re-export image
+  types it cannot reach;
+- the Gallery and Record Desk resolve no image-layer crate, and reach `wgpu`
+  only through eframe's `egui-wgpu` backend.
+
+Temporary violations (enabling `image-rendering` in the Gallery, defining a
+`Camera` in core) fail the check with a specific message.
+
+## Effects on later work
+
+- The ARIA mirror and the MCP server are unaffected: the semantic snapshot and
+  inspection protocol are unchanged. `History::revision` gives applications a
+  ready input for action meanings that agents rely on.
+- WebGL2 becomes easier to scope: applications without images no longer
+  resolve the image renderer, so a WebGL2 path needs only an eframe backend
+  change for them. The image renderer stays wgpu-only.
+- Action arguments and availability that reads UI state are unaffected.
 
 ## Record Desk migration
 

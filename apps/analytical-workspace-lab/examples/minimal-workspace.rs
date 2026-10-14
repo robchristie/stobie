@@ -3,10 +3,9 @@
 
 use egui::{Color32, Pos2, Rect, Stroke, Ui};
 use serde::Serialize;
-use stobie_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, Workspace};
+use stobie_core::{DockNode, DockNodeId, History, LAYOUT_SCHEMA_VERSION, PaneId, Workspace};
 use stobie_imaging::{
-    CommandHistory, Document, ImageCommand, ImageIntent, LayerId, Session, WorldPoint,
-    validate_intent,
+    Document, ImageCommand, ImageIntent, ImageTarget, LayerId, Session, WorldPoint, validate_intent,
 };
 use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
@@ -119,7 +118,7 @@ struct MinimalApp {
     document: Document,
     session: Session,
     workspace: Workspace,
-    history: CommandHistory,
+    history: History<ImageCommand>,
     dock: DockBehaviour,
     tokens: stobie_ui_egui::DesignTokens,
 }
@@ -154,7 +153,7 @@ impl MinimalApp {
             // This vector pane has no image camera or tool mapping.
             session: Session::default(),
             workspace,
-            history: CommandHistory::default(),
+            history: History::default(),
             dock: DockBehaviour::default(),
             tokens: preferences.tokens(true),
         }
@@ -172,7 +171,7 @@ impl eframe::App for MinimalApp {
             publication: &mut publication,
             tokens: self.tokens,
         };
-        let dock_command = egui::CentralPanel::default()
+        let resize = egui::CentralPanel::default()
             .show(root, |ui| {
                 dock_workspace(
                     ui,
@@ -186,29 +185,21 @@ impl eframe::App for MinimalApp {
                 )
             })
             .inner;
-        let mut commands: Vec<_> = dock_command
-            .map(|resize| ImageCommand::ResizeSplit {
-                node: resize.node,
-                before: resize.before,
-                after: resize.after,
-            })
-            .into_iter()
-            .collect();
-        for intent in intents {
-            commands.push(
-                validate_intent(intent, &mut self.document, &self.session)
-                    .expect("project-authored triangle is valid"),
-            );
-        }
-        for command in commands {
-            self.history.execute(
-                command,
-                &mut self.document,
-                &mut self.session,
-                &mut self.workspace,
-            );
-            // Recorded reason: a command changed the model after presentation.
+        // Layout is not undoable here; a completed resize applies directly.
+        if let Some(resize) = resize
+            && resize.apply(&mut self.workspace) == Ok(true)
+        {
+            // Recorded reason: the layout changed after presentation.
             root.ctx().request_repaint();
+        }
+        for intent in intents {
+            let command = validate_intent(intent, &mut self.document, &self.session)
+                .expect("project-authored triangle is valid");
+            let mut target = ImageTarget::new(&mut self.document, &mut self.session);
+            if self.history.execute(command, &mut target) == Ok(true) {
+                // Recorded reason: a command changed the model after presentation.
+                root.ctx().request_repaint();
+            }
         }
         if let Some(publication) = publication {
             write_smoke_observation(&self.document, &self.history, displayed_count, publication);
@@ -220,7 +211,7 @@ impl eframe::App for MinimalApp {
 // create no files; this does not trigger repaint or automate application actions.
 fn write_smoke_observation(
     document: &Document,
-    history: &CommandHistory,
+    history: &History<ImageCommand>,
     displayed_count: usize,
     publication: PresentationObservations,
 ) {

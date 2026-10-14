@@ -119,8 +119,39 @@ fn architecture() -> Result<()> {
     }
     assert_tree_excludes(
         "stobie-core",
-        &["egui", "eframe", "wgpu", "web-sys", "winit"],
+        &[
+            "egui",
+            "eframe",
+            "wgpu",
+            "web-sys",
+            "winit",
+            "stobie-imaging",
+            "stobie-runtime",
+            "stobie-render-wgpu",
+        ],
     )?;
+    let mut core_sources = Vec::new();
+    collect_rust_sources(Path::new("crates/stobie-core/src"), &mut core_sources)?;
+    for path in &core_sources {
+        if let Some(item) = image_definitions(&fs::read_to_string(path)?).first() {
+            bail!(
+                "stobie-core source {} defines image or Lab-demo item {item}; move it to stobie-imaging or the Lab",
+                path.display()
+            );
+        }
+    }
+    // Applications without images resolve neither the image layer nor wgpu
+    // beyond eframe's own GPU backend.
+    for (label, arguments) in [
+        ("stobie-gallery", &["-p", "stobie-gallery"][..]),
+        (
+            "record-desk",
+            &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],
+        ),
+    ] {
+        assert_tree_excludes_with(label, arguments, IMAGE_LAYER)?;
+        assert_gpu_only_through_eframe(label, arguments)?;
+    }
     assert_tree_excludes("stobie-runtime", &["egui", "eframe", "wgpu"])?;
     let mut pane_sources = Vec::new();
     collect_rust_sources(
@@ -320,7 +351,7 @@ fn architecture() -> Result<()> {
         }
     }
     println!(
-        "architecture boundaries passed: native AccessKit adapter, GPU-free core/reducers, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }
@@ -391,13 +422,89 @@ fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) 
     Ok(())
 }
 
+/// The image layer, which only image applications may resolve.
+const IMAGE_LAYER: &[&str] = &["stobie-imaging", "stobie-runtime", "stobie-render-wgpu"];
+
+/// Image and Lab-demo items that `stobie-core` must not define.
+const IMAGE_ITEMS: &[&str] = &[
+    "Camera",
+    "CameraState",
+    "CameraChange",
+    "CameraDragSession",
+    "Polygon",
+    "Document",
+    "Session",
+    "ActiveTool",
+    "GesturePreview",
+    "ImageIntent",
+    "ImageCommand",
+    "ImageTarget",
+    "CommandHistory",
+    "TileKey",
+    "TileDemand",
+    "DemandPriority",
+    "ResourceKey",
+    "ResourceState",
+    "RegionKey",
+    "RegionDemand",
+    "ImageRegion",
+    "RegionalPixels",
+    "RegionalFrame",
+    "RepresentationId",
+    "ImagePoint",
+    "WorldPoint",
+    "ImageToWorld",
+    "LayerId",
+    "AnnotationId",
+    "ResultId",
+    "SourceId",
+    "LinkGroupId",
+    "ResultRecord",
+    "RenderMetrics",
+    "RuntimeMetrics",
+    "VirtualisationMetrics",
+    "DiagnosticsSnapshot",
+    "analytical_default",
+    "result_at",
+    "validate_image_cameras",
+];
+
+/// Image items a source defines with `struct`, `enum`, `type`, `trait`, `fn`
+/// or a declarative macro such as `id_type!(LayerId, u32)`. Comments are ignored.
+fn image_definitions(source: &str) -> Vec<&'static str> {
+    let mut found = Vec::new();
+    for line in source.lines() {
+        let code = line.split("//").next().unwrap_or_default();
+        let tokens: Vec<_> = code
+            .split(|character: char| !(character.is_alphanumeric() || "_!".contains(character)))
+            .filter(|token| !token.is_empty())
+            .collect();
+        for pair in tokens.windows(2) {
+            let defines = matches!(pair[0], "struct" | "enum" | "type" | "trait" | "fn")
+                || pair[0].ends_with('!');
+            if let Some(item) = IMAGE_ITEMS.iter().find(|item| **item == pair[1])
+                && defines
+            {
+                found.push(*item);
+            }
+        }
+    }
+    found
+}
+
 fn assert_tree_excludes(package: &str, forbidden: &[&str]) -> Result<()> {
+    assert_tree_excludes_with(package, &["-p", package], forbidden)
+}
+
+fn assert_tree_excludes_with(label: &str, arguments: &[&str], forbidden: &[&str]) -> Result<()> {
     let output = Command::new("cargo")
-        .args(["tree", "-p", package, "--prefix", "none"])
+        .arg("tree")
+        .args(arguments)
+        .args(["--prefix", "none"])
         .output()
-        .with_context(|| format!("run cargo tree for {package}"))?;
+        .with_context(|| format!("run cargo tree for {label}"))?;
     if !output.status.success() {
-        bail!("cargo tree failed for {package}");
+        bail!("cargo tree failed for {label}");
     }
     let tree = String::from_utf8(output.stdout)?;
     for dependency in forbidden {
@@ -405,10 +512,46 @@ fn assert_tree_excludes(package: &str, forbidden: &[&str]) -> Result<()> {
             .lines()
             .any(|line| line.split_whitespace().next() == Some(dependency))
         {
-            bail!("{package} must not depend on {dependency}");
+            bail!("{label} must not depend on {dependency}");
         }
     }
     Ok(())
+}
+
+/// Reach wgpu only through eframe's egui-wgpu backend.
+fn assert_gpu_only_through_eframe(label: &str, arguments: &[&str]) -> Result<()> {
+    for (package, allowed) in [("wgpu", &["egui-wgpu"][..]), ("egui-wgpu", &["eframe"][..])] {
+        let output = Command::new("cargo")
+            .arg("tree")
+            .args(arguments)
+            .args([
+                "-e", "normal", "--prefix", "none", "--depth", "1", "-i", package,
+            ])
+            .output()
+            .with_context(|| format!("run cargo tree -i {package} for {label}"))?;
+        if !output.status.success() {
+            if String::from_utf8_lossy(&output.stderr).contains("did not match any packages") {
+                continue;
+            }
+            bail!("cargo tree -i {package} failed for {label}");
+        }
+        for dependent in direct_dependents(&String::from_utf8(output.stdout)?) {
+            if !allowed.contains(&dependent) {
+                bail!(
+                    "{label} reaches {package} through {dependent}; only eframe's GPU backend may use it"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Package names after the inverted root in `cargo tree -i --depth 1` output.
+fn direct_dependents(tree: &str) -> Vec<&str> {
+    tree.lines()
+        .skip(1)
+        .filter_map(|line| line.split_whitespace().next())
+        .collect()
 }
 
 fn ensure_wasm_bindgen_version(expected: &str) -> Result<()> {
@@ -507,7 +650,30 @@ fn build_viewer_web() -> Result<()> {
 
 #[cfg(test)]
 mod architecture_tests {
-    use super::{has_action_key_implementation, owns_action_registry, workspace_definition_count};
+    use super::{
+        direct_dependents, has_action_key_implementation, image_definitions, owns_action_registry,
+        workspace_definition_count,
+    };
+
+    #[test]
+    fn core_image_guard_finds_definitions_but_not_mentions() {
+        let source = "pub struct Workspace {}\nid_type!(PaneId, u32);\n// A Session belongs elsewhere.\nfn uses(session: &Session) {}";
+        assert!(image_definitions(source).is_empty());
+        assert_eq!(image_definitions("pub struct Camera {"), ["Camera"]);
+        assert_eq!(image_definitions("id_type!(LayerId, u32);"), ["LayerId"]);
+        assert_eq!(
+            image_definitions("    pub fn analytical_default() -> Self {"),
+            ["analytical_default"]
+        );
+        assert_eq!(image_definitions("pub type Document = ();"), ["Document"]);
+    }
+
+    #[test]
+    fn gpu_guard_reads_only_direct_dependents() {
+        let tree = "wgpu v30.0.1\negui-wgpu v0.36.1\nstobie-render-wgpu v0.1.6 (/repo)\n";
+        assert_eq!(direct_dependents(tree), ["egui-wgpu", "stobie-render-wgpu"]);
+        assert!(direct_dependents("wgpu v30.0.1\n").is_empty());
+    }
 
     #[test]
     fn applications_own_registries_by_hand_or_by_derive() {

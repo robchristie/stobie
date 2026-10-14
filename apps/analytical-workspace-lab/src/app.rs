@@ -216,13 +216,52 @@ fn persisted_state_is_valid(state: &PersistedState) -> bool {
     true
 }
 
+/// Undo entries kept. Camera moves are undoable, so the Lab keeps more than
+/// the default.
+const HISTORY_CAPACITY: usize = 1000;
+
+/// One undoable Lab change. Layout resizes share the image history; tab
+/// activation and moves apply directly.
+#[derive(Clone, Debug)]
+enum LabCommand {
+    Image(ImageCommand),
+    Layout(WorkspaceCommand),
+}
+
+/// The state Lab commands change, borrowed for one history operation.
+struct LabTarget<'a> {
+    document: &'a mut Document,
+    session: &'a mut Session,
+    workspace: &'a mut Workspace,
+}
+
+impl Command<LabTarget<'_>> for LabCommand {
+    fn apply(&self, target: &mut LabTarget<'_>) -> Result<bool, String> {
+        match self {
+            Self::Image(command) => {
+                command.apply(&mut ImageTarget::new(target.document, target.session))
+            }
+            Self::Layout(command) => command.apply(target.workspace),
+        }
+    }
+
+    fn revert(&self, target: &mut LabTarget<'_>) -> Result<(), String> {
+        match self {
+            Self::Image(command) => {
+                command.revert(&mut ImageTarget::new(target.document, target.session))
+            }
+            Self::Layout(command) => command.revert(target.workspace),
+        }
+    }
+}
+
 /// The Lab's application state. The UI reads it and emits [`Intent`]s; actions
 /// run in [`Application::perform`]. The host owns the frame lifecycle.
 pub struct Lab {
     workspace: Workspace,
     document: Document,
     session: Session,
-    history: CommandHistory,
+    history: History<LabCommand>,
     runtime: Runtime,
     render_bridge: RenderBridge,
     display: BTreeMap<PaneId, DisplaySettings>,
@@ -365,7 +404,7 @@ impl Lab {
             workspace,
             document,
             session,
-            history: CommandHistory::default(),
+            history: History::new(HISTORY_CAPACITY),
             runtime,
             render_bridge,
             display,
@@ -410,7 +449,7 @@ impl Lab {
                 centre_x,
                 centre_y,
                 pixels_per_screen_point,
-            } => validate_intent(
+            } => LabCommand::Image(validate_intent(
                 ImageIntent::SetCamera {
                     pane: PaneId(pane),
                     camera: Camera {
@@ -420,8 +459,8 @@ impl Lab {
                 },
                 &mut self.document,
                 &self.session,
-            )?,
-            TestAction::CommitPolygon { vertices } => validate_intent(
+            )?),
+            TestAction::CommitPolygon { vertices } => LabCommand::Image(validate_intent(
                 ImageIntent::CommitPolygon {
                     layer: LayerId(1),
                     vertices: vertices
@@ -431,12 +470,9 @@ impl Lab {
                 },
                 &mut self.document,
                 &self.session,
-            )?,
+            )?),
             TestAction::Undo => {
-                if !self
-                    .history
-                    .undo(&mut self.document, &mut self.session, &mut self.workspace)
-                {
+                if !self.undo()? {
                     return Err("nothing to undo".into());
                 }
                 self.record_repaint(RepaintReason::Command);
@@ -449,11 +485,11 @@ impl Lab {
                     .root
                     .split_fraction(node)
                     .ok_or("unknown split node")?;
-                ImageCommand::ResizeSplit {
+                LabCommand::Layout(WorkspaceCommand::Resize(WorkspaceResize {
                     node,
                     before,
                     after: fraction,
-                }
+                }))
             }
             TestAction::QueueZeroViewportUpload => {
                 self.runtime.invalidate();
@@ -539,12 +575,7 @@ impl Lab {
                 return Ok(());
             }
         };
-        self.history.execute(
-            command,
-            &mut self.document,
-            &mut self.session,
-            &mut self.workspace,
-        );
+        self.execute(command)?;
         self.record_repaint(RepaintReason::Command);
         Ok(())
     }
@@ -699,14 +730,36 @@ impl Lab {
         self.diagnostics.frame.runtime_poll_ms = started.elapsed().as_secs_f64() * 1000.0;
     }
 
+    fn execute(&mut self, command: LabCommand) -> Result<bool, String> {
+        let mut target = LabTarget {
+            document: &mut self.document,
+            session: &mut self.session,
+            workspace: &mut self.workspace,
+        };
+        self.history.execute(command, &mut target)
+    }
+
+    fn undo(&mut self) -> Result<bool, String> {
+        let mut target = LabTarget {
+            document: &mut self.document,
+            session: &mut self.session,
+            workspace: &mut self.workspace,
+        };
+        self.history.undo(&mut target)
+    }
+
+    fn redo(&mut self) -> Result<bool, String> {
+        let mut target = LabTarget {
+            document: &mut self.document,
+            session: &mut self.session,
+            workspace: &mut self.workspace,
+        };
+        self.history.redo(&mut target)
+    }
+
     fn execute_image_intent(&mut self, intent: ImageIntent) -> Result<(), String> {
         let command = validate_intent(intent, &mut self.document, &self.session)?;
-        self.history.execute(
-            command,
-            &mut self.document,
-            &mut self.session,
-            &mut self.workspace,
-        );
+        self.execute(LabCommand::Image(command))?;
         Ok(())
     }
 
@@ -1201,29 +1254,18 @@ impl Application for Lab {
                 RepaintReason::Interaction
             }
             Intent::Command(command) => {
-                self.history.execute(
-                    command,
-                    &mut self.document,
-                    &mut self.session,
-                    &mut self.workspace,
-                );
+                self.execute(LabCommand::Image(command))?;
                 RepaintReason::Command
             }
             Intent::Image(intent) => {
                 self.execute_image_intent(intent)?;
                 RepaintReason::Command
             }
-            Intent::Layout(WorkspaceChange::Resize(resize)) => {
-                self.history.execute(
-                    ImageCommand::ResizeSplit {
-                        node: resize.node,
-                        before: resize.before,
-                        after: resize.after,
-                    },
-                    &mut self.document,
-                    &mut self.session,
-                    &mut self.workspace,
-                );
+            Intent::Layout(change @ WorkspaceChange::Resize(_)) => {
+                // A completed resize is one undo entry beside image commands.
+                if let Some(command) = WorkspaceCommand::from_change(change, &self.workspace)? {
+                    self.execute(LabCommand::Layout(command))?;
+                }
                 RepaintReason::Command
             }
             Intent::Layout(change) => {
@@ -1266,14 +1308,8 @@ impl Application for Lab {
         let pane = target.pane;
         let image_pane = || pane.ok_or_else(|| "An image pane is required".to_owned());
         let changed = match target.action {
-            LabAction::Undo => {
-                self.history
-                    .undo(&mut self.document, &mut self.session, &mut self.workspace)
-            }
-            LabAction::Redo => {
-                self.history
-                    .redo(&mut self.document, &mut self.session, &mut self.workspace)
-            }
+            LabAction::Undo => self.undo()?,
+            LabAction::Redo => self.redo()?,
             LabAction::SaveLayout => {
                 self.save_requested = true;
                 self.status = "Workspace saved".into();
