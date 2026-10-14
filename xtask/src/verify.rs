@@ -112,6 +112,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "tools/tests/viewer-merged-qualification-preload.test.mjs",
                     "apps/emuella-viewer/web/tests/worker.test.mjs",
                     "tools/tests/browser-startup.test.mjs",
+                    "tools/tests/browser-launch.test.mjs",
                     "tools/tests/browser-idle.test.mjs",
                     "tools/tests/navigation-browser-focus.test.mjs",
                     "tools/tests/record-desk-target.test.mjs",
