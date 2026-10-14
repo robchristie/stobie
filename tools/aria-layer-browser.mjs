@@ -6,7 +6,8 @@
 //
 // It then activates controls through the layer (a click event, as a screen
 // reader's default action sends; `element.click()`; and Playwright's forced
-// coordinate click) and checks focus reporting. Where an application exposes
+// coordinate click), checks that a plain Playwright click hits an enabled
+// control's one-pixel target, and checks focus reporting. Where an application exposes
 // its handle, the outcome is read through the application interface, which
 // the check enables on the running page only after the structural, idle and
 // hover checks, so those see the default page.
@@ -181,16 +182,81 @@ try {
     assert.match(changed, new RegExp(then), 'the status reports the change');
     check('live status', { before: text, after: changed });
   }
+  // An ordinary pointer click needs a hit target at the element's centre:
+  // Playwright's actionability check and Lantern's strict targets both test
+  // `elementFromPoint` there. Every enabled clickable element has a
+  // one-pixel target, which forwards real input to the canvas.
+  const sweep = await page.evaluate(layer => {
+    const clickable = ['button', 'tab', 'option', 'radio', 'checkbox', 'switch', 'menuitem', 'combobox', 'link'];
+    const result = { targets: 0, outside: 0, occluded: [], unmarked: [] };
+    const container = document.querySelector(layer);
+    const visible = container.getBoundingClientRect();
+    for (const element of container.querySelectorAll('[role]')) {
+      const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
+      if (!element.hasAttribute('data-stobie-hit')) {
+        if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
+        continue;
+      }
+      const box = element.getBoundingClientRect();
+      // Lantern's point: the centre of the viewport-clipped border box.
+      const left = Math.max(box.left, 0), right = Math.min(box.right, innerWidth);
+      const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, innerHeight);
+      const [x, y] = [(left + right) / 2, (top + bottom) / 2];
+      // A control scrolled beyond the canvas is not shown, so no pointer can
+      // reach it there either.
+      if (right <= left || bottom <= top || x < visible.left || x > visible.right || y < visible.top || y > visible.bottom) {
+        result.outside += 1;
+        continue;
+      }
+      result.targets += 1;
+      if (!element.contains(document.elementFromPoint(x, y))) result.occluded.push(name);
+    }
+    return result;
+  }, LAYER);
+  assert(sweep.targets > 0, 'the layer offers hit targets');
+  assert.deepEqual(sweep.occluded, [], 'every hit target is the topmost element at its control\'s centre');
+  assert.deepEqual(sweep.unmarked, [], 'every enabled clickable control has a hit target');
+  check('hit targets', { targets: sweep.targets, outside: sweep.outside });
+
+  // Real input at a hit target reaches the canvas unchanged: the canvas
+  // receives the pointer's moves and never hears that the pointer left.
+  {
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      window.__canvasInput = { moves: [], leaves: 0 };
+      canvas.addEventListener('pointermove', event => window.__canvasInput.moves.push([event.clientX, event.clientY]));
+      canvas.addEventListener('mouseleave', () => { window.__canvasInput.leaves += 1; });
+    });
+    const centre = await page.evaluate(layer => {
+      const element = document.querySelector(`${layer} [data-stobie-hit]`);
+      const box = element.querySelector('[data-stobie-hit-target]').getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }, LAYER);
+    before = await probe();
+    await page.mouse.move(centre.x - 3, centre.y);
+    await page.mouse.move(centre.x, centre.y);
+    await page.mouse.move(centre.x + 3, centre.y);
+    after = await settle('pointer over a hit target');
+    const input = await page.evaluate(() => window.__canvasInput);
+    assert(input.moves.some(([x, y]) => Math.abs(x - centre.x) < 0.5 && Math.abs(y - centre.y) < 0.5), `the canvas received the move onto the hit target: ${JSON.stringify(input.moves)}`);
+    assert.equal(input.leaves, 0, 'the canvas never heard the pointer leave');
+    assert.equal(after.mutations, before.mutations, 'pointer movement wrote nothing');
+    check('pointer at a hit target', { moves: input.moves.length });
+  }
+
   // Activation through the layer takes the same route as a physical click: a
   // disabled control does nothing, and a hidden capability has no element.
-  // A plain Playwright click cannot target a layer element: the pointer passes
-  // through to the canvas, as the agent guide documents.
-  if (expectations.plainClick) {
-    const { role, name } = expectations.plainClick;
-    const failure = await page.getByRole(role, { name, exact: true }).click({ timeout: 2000 }).then(() => null, error => error.message);
-    assert.match(failure ?? 'clicked', /intercepts pointer events/, 'a plain click reports the canvas intercepting it');
-    await settle('plain click');
-    check('plain click', { target: { role, name } });
+  // A plain Playwright click hits the control's target and activates it as a
+  // physical click at its centre does.
+  for (const step of expectations.plainClick ?? []) {
+    const { role, name } = step.target;
+    await page.getByRole(role, { name, exact: true }).click({ timeout: 5000 });
+    await settle(`plain click ${name}`);
+    const changed = await accessibilityTree(page);
+    for (const expected of step.then ?? []) {
+      assert(changed.some(node => matches(node, expected)), `after a plain click on ${name}, expected ${JSON.stringify(expected)}`);
+    }
+    check('plain click', { target: step.target });
   }
   let client;
   if (expectations.handle) {

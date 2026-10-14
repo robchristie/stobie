@@ -16,6 +16,15 @@ use egui::accesskit::{self, AriaCurrent, Live, Node, NodeId, Orientation, Role, 
 /// Prefix of every element ID the layer creates, kept apart from page IDs.
 pub const ARIA_ID_PREFIX: &str = "stobie-a11y:";
 
+/// The attribute carrying a node's semantic ID, which agents share with the
+/// inspection interface.
+pub const SEMANTIC_ID_ATTRIBUTE: &str = "data-stobie-id";
+
+/// Marks an enabled element that an ordinary pointer click can target. The
+/// browser host gives it a one-pixel hit target at its centre that forwards
+/// pointer input to the canvas.
+pub const HIT_ATTRIBUTE: &str = "data-stobie-hit";
+
 /// One element of the projected layer.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AriaElement {
@@ -197,6 +206,18 @@ impl Projection<'_> {
             attributes.insert("tabindex", "-1".to_owned());
             attributes.insert("autocomplete", "off".to_owned());
             attributes.insert("spellcheck", "false".to_owned());
+        } else if attributes.contains_key("role")
+            && node.supports_action(accesskit::Action::Click)
+            && !node.is_disabled()
+            && width > 0.0
+            && height > 0.0
+        {
+            // A text field cannot hold the hit target's element; agents fill
+            // or focus it instead.
+            attributes.insert(HIT_ATTRIBUTE, "true".to_owned());
+        }
+        if let Some(author) = node.author_id() {
+            attributes.insert(SEMANTIC_ID_ATTRIBUTE, author.to_owned());
         }
         self.tree.elements.insert(
             element_id.clone(),

@@ -446,3 +446,71 @@ fn numbers_are_formatted_without_float_noise() {
     assert_eq!(number(-0.00001), "0");
     assert_eq!(number(12.5), "12.5");
 }
+
+#[test]
+fn enabled_clickable_elements_are_hit_targets_and_carry_semantic_ids() {
+    let tree = project(&sample("Apply", 1), 1.0);
+    let button = &tree.elements["stobie-a11y:record-desk.apply"];
+    assert_eq!(button.attributes[HIT_ATTRIBUTE], "true");
+    assert_eq!(
+        button.attributes[SEMANTIC_ID_ATTRIBUTE],
+        "record-desk.apply"
+    );
+    // A region without a click action, and text without an author, are not.
+    let pane = &tree.elements["stobie-a11y:pane.2"];
+    assert!(!pane.attributes.contains_key(HIT_ATTRIBUTE));
+    assert_eq!(pane.attributes[SEMANTIC_ID_ATTRIBUTE], "pane.2");
+    assert!(
+        tree.elements
+            .values()
+            .filter(|element| element.text.as_deref() == Some("Committed record"))
+            .all(|element| element.attributes.is_empty())
+    );
+
+    // A disabled control, a text field and an empty box take no pointer.
+    let mut disabled = node(Role::Button, &[]);
+    disabled.set_label("Undo");
+    disabled.add_action(Action::Click);
+    disabled.set_disabled();
+    bounds(&mut disabled, 0.0, 0.0, 40.0, 20.0);
+    let mut field = node(Role::TextInput, &[]);
+    field.set_label("Title");
+    field.add_action(Action::Click);
+    bounds(&mut field, 0.0, 30.0, 40.0, 50.0);
+    let mut empty = node(Role::Button, &[]);
+    empty.set_label("Hidden");
+    empty.add_action(Action::Click);
+    bounds(&mut empty, 0.0, 60.0, 0.0, 60.0);
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2, 3, 4])),
+                (2, disabled),
+                (3, field),
+                (4, empty),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    assert!(
+        tree.elements
+            .values()
+            .all(|element| !element.attributes.contains_key(HIT_ATTRIBUTE))
+    );
+
+    // Enabling the control writes only its hit marker.
+    let enabled = sample("Apply", 1);
+    let mut disabled = sample("Apply", 1);
+    for (_, node) in &mut disabled.nodes {
+        if node.role() == Role::Button {
+            node.set_disabled();
+        }
+    }
+    let operations = diff(&project(&disabled, 1.0), &project(&enabled, 1.0));
+    assert!(operations.contains(&DomOp::SetAttribute {
+        id: "stobie-a11y:record-desk.apply".into(),
+        name: HIT_ATTRIBUTE,
+        value: "true".into(),
+    }));
+}

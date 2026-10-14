@@ -1,7 +1,7 @@
 # Agent CLI, action arguments and browser-agent operability
 
 Status: active
-Next action: Increment 2, plain browser click and the semantic agreement check.
+Next action: Increment 3, the protocol crate extraction.
 
 ## Outcome and boundaries
 
@@ -130,6 +130,10 @@ through to the canvas, so they always fail that test.
 - A plain `click()` is therefore the same physical click at the control's
   centre as `click({force: true})`. `dispatchEvent('click')` and
   `element.click()` still use the AccessKit route.
+- eframe accepts a pointer move only where `elementFromPoint` finds the
+  canvas, so the layer turns hit targets off, through a stylesheet rule that
+  writes nothing to the DOM, while it dispatches each copy. Without that, the
+  icon-actions smoke showed hover lost at a control's exact centre.
 - The known difference for real input is the pointer's cursor shape over
   that single pixel, which shows the default cursor rather than egui's.
 - A disabled control has no hit pixel, so Playwright reports it disabled.
@@ -204,8 +208,8 @@ through to the canvas, so they always fail that test.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | 0. README native Orca claim | Landed | [PR #77](https://github.com/robchristie/stobie/pull/77) |
-| 1. Typed action arguments and set text, including `fill()` | Complete | This PR: protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
-| 2. Plain browser click and the semantic agreement check | Planned | |
+| 1. Typed action arguments and set text, including `fill()` | Landed | [PR #78](https://github.com/robchristie/stobie/pull/78): protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
+| 2. Plain browser click and the semantic agreement check | Complete | This PR: projection tests for hit markers and semantic IDs; agreement unit tests for each field; agreement over every Gallery story, four Record Desk states and three Lab states, with no disagreement found; the ARIA check sweeps every visible enabled control for a centre hit, moves a real pointer over a hit target and plain-clicks controls in all three applications; the Lab, Gallery, icon, navigation and status-chip pointer, drag, wheel and keyboard smokes pass unchanged. Real Lantern `--strict` role/name clicks are recorded below. |
 | 3. Protocol crate extraction | Planned | |
 | 4. Client library, `stobie` CLI, parity tests, documentation and probes | Planned | |
 
@@ -219,7 +223,32 @@ local pair from `cargo xtask verify`, so it shows only that the gates pass.
 | Increment | Lab WASM (Brotli) | Gallery WASM (Brotli) | Lab cold / repeat content | Gallery cold / repeat content |
 | --- | --- | --- | --- | --- |
 | Baseline `b3abff7` | 2,960,391 B | 2,834,735 B | 171.1 / 125.4 ms | 94.2 / 66.0 ms |
-| 1. Arguments and set text | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
+| 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
+| 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
+
+## Lantern strict targets
+
+`lantern click --role R --name N --strict` (Lantern `c160146`) against each
+application's ARIA layer in Chromium, with the outcome read from the
+accessibility tree:
+
+| Application | Targets | Outcome |
+| --- | --- | --- |
+| Record Desk | option "Prepare review agenda · Operations · Reviewed", button "Reviewed", "Apply", "Undo" | Row selected, Reviewed unpressed, Apply disabled after applying, Redo enabled after Undo |
+| Gallery | tab "Overview", button "button/default" | Tab selected, toggle pressed |
+| Lab | tabs "Thumbnails" and "Results", result row "#0000002…" | Tabs selected in turn, row selected |
+
+Every click was acknowledged. The Lab's "Polygon" is one button per image
+pane, so Lantern correctly refuses it as ambiguous.
+
+## Semantic agreement findings
+
+The comparison found no disagreement in the tested states. Every Gallery
+story, Record Desk (initial, focused search, filtered with a draft, narrow with
+another record) and the Lab (initial, Tab focus, a selected result without
+Diagnostics) agree on role, name, enabled, focused, selection, checked,
+expanded and text values. Roles the layer flattens or presents as text
+(application, toolbars, scroll areas, sections, status chips) are not compared.
 
 ## Acceptance
 

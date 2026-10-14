@@ -54,8 +54,11 @@ pub mod __private {
 }
 
 mod actions;
+mod agreement;
 mod application_theme;
-#[cfg(any(target_arch = "wasm32", test))]
+// The agreement check projects the layer natively too; only the browser host
+// applies its DOM operations.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 mod aria;
 mod virtual_grid;
 
@@ -80,6 +83,9 @@ mod text_coverage;
 mod typography;
 
 pub use actions::*;
+pub use agreement::{
+    AgreementField, AgreementNode, Disagreement, expected_aria_role, semantic_agreement,
+};
 pub use application_theme::*;
 pub use components::*;
 pub use generated_tokens::*;

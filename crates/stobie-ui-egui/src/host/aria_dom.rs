@@ -10,6 +10,18 @@
 //! availability. DOM focus returns to the canvas, which keeps keyboard and IME
 //! input working; the canvas's `aria-activedescendant` names egui's focus.
 //!
+//! An ordinary pointer click, such as Playwright's default `click()` or a
+//! strict Lantern target, hit-tests the centre of an element. Each enabled
+//! clickable element therefore holds a one-pixel hit target at its centre,
+//! the only part of the layer that takes pointer input. Every pointer, mouse,
+//! touch, wheel and context-menu event on it is dispatched again to the canvas
+//! at the same coordinates, and moving onto it does not tell the canvas the
+//! pointer left. egui sees the same input as without the layer, so a click
+//! there is a physical click, and hover, drags and wheel starting there behave
+//! as before. While the copy is dispatched, hit targets take no pointer input,
+//! so eframe's own check that the canvas is under the pointer passes. Only
+//! the cursor's shape over that pixel can differ.
+//!
 //! A layer text field keeps DOM focus instead, so assistive technology and
 //! browser agents (`locator.fill()`, typing) can edit it. Each `input` event
 //! becomes an AccessKit `SetValue` request with the field's whole text, which
@@ -36,8 +48,41 @@ use crate::aria::{self, AriaTree, DomOp};
 /// Keeps the layer invisible and out of hit testing without removing it from
 /// the accessibility tree: no `display: none`, `visibility: hidden` or
 /// `aria-hidden`.
-const CONTAINER_STYLE: &str = "position:fixed;margin:0;padding:0;border:0;overflow:hidden;opacity:0;pointer-events:none;contain:strict;";
+const CONTAINER_STYLE: &str = "position:fixed;margin:0;padding:0;border:0;overflow:hidden;opacity:0;pointer-events:none;contain:strict;user-select:none;";
 const ELEMENT_STYLE: &str = "position:absolute;margin:0;padding:0;";
+/// A hit target: one CSS pixel centred on its element. A stylesheet rule
+/// gives it pointer input (see [`HIT_RULE`]).
+const HIT_STYLE: &str = "position:absolute;left:calc(50% - 0.5px);top:calc(50% - 0.5px);width:1px;height:1px;margin:0;padding:0;touch-action:none;";
+/// The rule that lets hit targets take pointer input. The layer turns it off
+/// while it dispatches a forwarded event, so eframe's own hit test, which
+/// accepts a move only where the canvas is the topmost element, finds the
+/// canvas. Changing a rule writes nothing to the DOM.
+const HIT_RULE: &str = "[data-stobie-hit-target]{pointer-events:auto}";
+/// Marks a hit target element.
+const HIT_TARGET: &str = "data-stobie-hit-target";
+/// Input on a hit target that the canvas receives instead. Enter, leave, over
+/// and out stay with the hit target: the pointer has not left the canvas.
+const FORWARDED: [&str; 16] = [
+    "pointerdown",
+    "pointermove",
+    "pointerup",
+    "pointercancel",
+    "mousedown",
+    "mousemove",
+    "mouseup",
+    "click",
+    "auxclick",
+    "dblclick",
+    "contextmenu",
+    "wheel",
+    "touchstart",
+    "touchmove",
+    "touchend",
+    "touchcancel",
+];
+/// Canvas notifications that the pointer moved onto a hit target, which the
+/// canvas must not see as the pointer leaving it.
+const SUPPRESSED: [&str; 4] = ["pointerout", "pointerleave", "mouseout", "mouseleave"];
 
 /// A DOM event listener the layer owns.
 type Listener = Closure<dyn FnMut(Event)>;
@@ -155,6 +200,8 @@ struct Layer {
     checking: Vec<String>,
     /// The layer's event listeners, kept alive while it is installed.
     listeners: Vec<(&'static str, Listener)>,
+    /// Capture listeners on the document, which see the canvas's own events.
+    document_listeners: Vec<(&'static str, Listener)>,
 }
 
 impl Layer {
@@ -213,6 +260,41 @@ impl Layer {
         let listener = Listener::new(move |event: Event| hand_back(key, &event));
         container.add_event_listener_with_callback("keydown", listener.as_ref().unchecked_ref())?;
         listeners.push(("keydown", listener));
+        // Hit targets forward their input to the canvas, ahead of the
+        // layer's own listeners. Wheel and touch listeners are not passive,
+        // so the canvas's `preventDefault` reaches the original event.
+        let options = web_sys::AddEventListenerOptions::new();
+        options.set_capture(true);
+        options.set_passive(false);
+        let style = document.create_element("style")?;
+        style.set_text_content(Some(HIT_RULE));
+        container.append_child(&style)?;
+        let rule = js_sys::Reflect::get(&style, &"sheet".into())
+            .and_then(|sheet| js_sys::Reflect::get(&sheet, &"cssRules".into()))
+            .and_then(|rules| js_sys::Reflect::get(&rules, &0.into()))
+            .and_then(|rule| js_sys::Reflect::get(&rule, &"style".into()))?;
+        for event_name in FORWARDED {
+            let target = canvas.clone();
+            let rule = rule.clone();
+            let listener = Listener::new(move |event: Event| forward(&target, &rule, &event));
+            container.add_event_listener_with_callback_and_add_event_listener_options(
+                event_name,
+                listener.as_ref().unchecked_ref(),
+                &options,
+            )?;
+            listeners.push((event_name, listener));
+        }
+        let mut document_listeners = Vec::new();
+        for event_name in SUPPRESSED {
+            let target = canvas.clone();
+            let listener = Listener::new(move |event: Event| keep_pointer(&target, &event));
+            document.add_event_listener_with_callback_and_bool(
+                event_name,
+                listener.as_ref().unchecked_ref(),
+                true,
+            )?;
+            document_listeners.push((event_name, listener));
+        }
         let mut layer = Self {
             context: context.clone(),
             document,
@@ -231,6 +313,7 @@ impl Layer {
             edited: Vec::new(),
             checking: Vec::new(),
             listeners,
+            document_listeners,
         };
         layer.name_text_agent()?;
         Ok(layer)
@@ -241,6 +324,18 @@ impl Layer {
             let _ = self
                 .container
                 .remove_event_listener_with_callback(event, listener.as_ref().unchecked_ref());
+            let _ = self.container.remove_event_listener_with_callback_and_bool(
+                event,
+                listener.as_ref().unchecked_ref(),
+                true,
+            );
+        }
+        for (event, listener) in &self.document_listeners {
+            let _ = self.document.remove_event_listener_with_callback_and_bool(
+                event,
+                listener.as_ref().unchecked_ref(),
+                true,
+            );
         }
         self.container.remove();
         // Restore what the layer changed outside its container.
@@ -345,12 +440,30 @@ impl Layer {
                 self.elements.insert(id, element);
             }
             DomOp::SetAttribute { id, name, value } => {
-                self.element(&id)?.set_attribute(name, &value)?;
+                let element = self.element(&id)?;
+                element.set_attribute(name, &value)?;
+                if name == aria::HIT_ATTRIBUTE {
+                    self.place_hit_target(element)?;
+                }
             }
             DomOp::RemoveAttribute { id, name } => {
-                self.element(&id)?.remove_attribute(name)?;
+                let element = self.element(&id)?;
+                element.remove_attribute(name)?;
+                if name == aria::HIT_ATTRIBUTE
+                    && let Some(hit) =
+                        element.query_selector(&format!(":scope > [{HIT_TARGET}]"))?
+                {
+                    hit.remove();
+                }
             }
-            DomOp::SetText { id, text } => set_text(self.element(&id)?, text.as_deref())?,
+            DomOp::SetText { id, text } => {
+                let element = self.element(&id)?;
+                set_text(element, text.as_deref())?;
+                // Text content replaces children, including a hit target.
+                if element.has_attribute(aria::HIT_ATTRIBUTE) {
+                    self.place_hit_target(element)?;
+                }
+            }
             DomOp::SetStyle { id, style } => {
                 self.element(&id)?
                     .set_attribute("style", &format!("{ELEMENT_STYLE}{style}"))?;
@@ -428,6 +541,113 @@ fn set_text(element: &HtmlElement, text: Option<&str>) -> Result<(), JsValue> {
         element.set_text_content(text);
     }
     Ok(())
+}
+
+impl Layer {
+    /// Give `element` its hit target, unless it has one.
+    fn place_hit_target(&self, element: &HtmlElement) -> Result<(), JsValue> {
+        if element
+            .query_selector(&format!(":scope > [{HIT_TARGET}]"))?
+            .is_none()
+        {
+            let hit = self.document.create_element("span")?;
+            hit.set_attribute(HIT_TARGET, "")?;
+            hit.set_attribute("aria-hidden", "true")?;
+            hit.set_attribute("style", HIT_STYLE)?;
+            element.append_child(&hit)?;
+        }
+        Ok(())
+    }
+}
+
+fn is_hit_target(target: Option<web_sys::EventTarget>) -> bool {
+    target
+        .and_then(|target| target.dyn_into::<Element>().ok())
+        .is_some_and(|element| element.has_attribute(HIT_TARGET))
+}
+
+/// Dispatch input that landed on a hit target to the canvas instead, as an
+/// event of the same type with the same properties, and carry back its
+/// `preventDefault`. The original goes no further: the layer's click listener
+/// must not also send an AccessKit click.
+fn forward(canvas: &HtmlCanvasElement, rule: &JsValue, event: &Event) {
+    if !is_hit_target(event.target()) {
+        return;
+    }
+    event.stop_propagation();
+    // The canvas, not a layer element, takes focus from a press.
+    if event.type_() == "mousedown" {
+        event.prevent_default();
+    }
+    match copy(event) {
+        Ok(copy) => {
+            set_pointer_events(rule, "none");
+            let accepted = canvas.dispatch_event(&copy).unwrap_or(true);
+            set_pointer_events(rule, "auto");
+            if !accepted {
+                event.prevent_default();
+            }
+        }
+        Err(error) => log_error(&error),
+    }
+}
+
+/// Set the hit target rule's `pointer-events`.
+fn set_pointer_events(rule: &JsValue, value: &str) {
+    let result = js_sys::Reflect::get(rule, &"setProperty".into())
+        .and_then(|set| set.dyn_into::<js_sys::Function>())
+        .and_then(|set| set.call2(rule, &"pointer-events".into(), &value.into()));
+    if let Err(error) = result {
+        log_error(&error);
+    }
+}
+
+/// A new event of `event`'s type and class with its properties. Mouse,
+/// pointer and wheel events read their initialiser from the event itself; a
+/// touch event's touch lists become arrays.
+fn copy(event: &Event) -> Result<Event, JsValue> {
+    use js_sys::{Array, Object, Reflect};
+    let constructor: js_sys::Function = Reflect::get(event, &"constructor".into())?.dyn_into()?;
+    let initialiser: JsValue = if event.type_().starts_with("touch") {
+        let init = Object::new();
+        for name in [
+            "bubbles",
+            "cancelable",
+            "composed",
+            "view",
+            "detail",
+            "ctrlKey",
+            "shiftKey",
+            "altKey",
+            "metaKey",
+        ] {
+            Reflect::set(&init, &name.into(), &Reflect::get(event, &name.into())?)?;
+        }
+        for name in ["touches", "targetTouches", "changedTouches"] {
+            let list = Reflect::get(event, &name.into())?;
+            Reflect::set(&init, &name.into(), &Array::from(&list))?;
+        }
+        init.into()
+    } else {
+        event.clone().into()
+    };
+    let arguments = Array::of2(&event.type_().into(), &initialiser);
+    Reflect::construct(&constructor, &arguments)?.dyn_into()
+}
+
+/// The pointer moving from the canvas onto a hit target has not left the
+/// canvas's control, so the canvas does not hear that it left.
+fn keep_pointer(canvas: &HtmlCanvasElement, event: &Event) {
+    let onto_hit_target = js_sys::Reflect::get(event, &"relatedTarget".into())
+        .ok()
+        .and_then(|related| related.dyn_into::<Element>().ok())
+        .is_some_and(|element| element.has_attribute(HIT_TARGET));
+    let from_canvas = event
+        .target()
+        .is_some_and(|target| JsValue::from(target) == JsValue::from(canvas.clone()));
+    if from_canvas && onto_hit_target {
+        event.stop_propagation();
+    }
 }
 
 fn is_text_field(element: &HtmlElement) -> bool {

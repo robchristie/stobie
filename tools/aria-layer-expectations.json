@@ -335,10 +335,38 @@
         "fact": "draft_title"
       }
     },
-    "plainClick": {
-      "role": "button",
-      "name": "Save"
-    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "button",
+          "name": "Reviewed"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "false"
+            }
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "button",
+          "name": "Reviewed"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "true"
+            }
+          }
+        ]
+      }
+    ],
     "fill": [
       {
         "target": {
@@ -497,7 +525,24 @@
     ],
     "focus": {
       "tabs": 3
-    }
+    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "tab",
+          "name": "Primary image — Antarctic reconstruction sector 04"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Primary image — Antarctic reconstruction sector 04",
+            "properties": {
+              "selected": true
+            }
+          }
+        ]
+      }
+    ]
   },
   "lab": {
     "application": "Analytical Workspace Lab",
@@ -714,6 +759,45 @@
     ],
     "focus": {
       "tabs": 3
-    }
+    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "tab",
+          "name": "Thumbnails"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Thumbnails",
+            "properties": {
+              "selected": true
+            }
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "tab",
+          "name": "Results"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Results",
+            "properties": {
+              "selected": true
+            }
+          },
+          {
+            "role": "tab",
+            "name": "Thumbnails",
+            "properties": {
+              "selected": false
+            }
+          }
+        ]
+      }
+    ]
   }
 }
