@@ -383,6 +383,12 @@ fn presentation(
             attributes.insert("aria-keyshortcuts", shortcut.to_owned());
         }
     }
+    // Focusable controls can take DOM focus from assistive technology, which
+    // the browser host passes to egui; a focusable separator also exposes its
+    // value. `-1` keeps them out of the page's own Tab order.
+    if node.supports_action(accesskit::Action::Focus) && role.is_some() {
+        attributes.insert("tabindex", "-1".to_owned());
+    }
     if node.is_disabled() && role.is_some() {
         attributes.insert("aria-disabled", "true".to_owned());
     }

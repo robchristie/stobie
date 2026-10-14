@@ -94,6 +94,10 @@ mod web {
                         eframe::WebOptions::default(),
                         Box::new(move |creation| {
                             let app = create(creation);
+                            // A restarted host replaces its previous layer.
+                            if let Some(previous) = layer.take() {
+                                super::aria_dom::remove(previous);
+                            }
                             if app.web_accessibility_layer() {
                                 layer.set(super::aria_dom::install(
                                     &creation.egui_ctx,

@@ -192,6 +192,7 @@ pub(super) fn story(
                 let (_, rect) = ui.allocate_space(egui::vec2(ui.available_width(), height));
                 let identity = scope.child(id).instance("row");
                 let row = ui.interact(rect, identity.egui_id(), egui::Sense::click());
+                stobie_ui_egui::set_position_semantics(&row, id as usize, Some(TASKS.len()));
                 let selected = state.selected_task == id;
                 let fill = if selected {
                     tokens.colours.selection_background

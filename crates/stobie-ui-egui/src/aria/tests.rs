@@ -76,6 +76,10 @@ fn projection_flattens_layout_and_maps_roles_names_and_geometry() {
 
     let button = &tree.elements["stobie-a11y:record-desk.apply"];
     assert_eq!(button.parent.as_deref(), Some("stobie-a11y:pane.2"));
+    assert_eq!(
+        button.attributes["tabindex"], "-1",
+        "focusable controls take focus"
+    );
     assert_eq!(button.node, NodeId(4));
     assert_eq!(button.attributes["role"], "button");
     assert_eq!(button.attributes["aria-label"], "Apply");
@@ -88,6 +92,7 @@ fn projection_flattens_layout_and_maps_roles_names_and_geometry() {
 
     let label = &tree.elements["stobie-a11y:egui-5"];
     assert!(!label.attributes.contains_key("role"));
+    assert!(!label.attributes.contains_key("tabindex"));
     assert_eq!(label.text.as_deref(), Some("Committed record"));
 
     // A status is implicitly a polite live region.

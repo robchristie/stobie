@@ -44,6 +44,14 @@ pub fn range_control<A: ActionKey>(
         node.set_max_numeric_value(f64::from(maximum));
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
+        // egui bounds only the track; the control, as observed and targeted,
+        // includes its label.
+        node.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(response.rect.min.x),
+            y0: f64::from(response.rect.min.y),
+            x1: f64::from(response.rect.max.x),
+            y1: f64::from(response.rect.max.y),
+        });
     });
     let output = SemanticControlOutput {
         node: UiNode {

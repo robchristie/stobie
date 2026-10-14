@@ -1,7 +1,7 @@
 # Hidden ARIA layer for hosted web applications
 
 Status: active
-Next action: Land increment 1, the read-only mirror with role mapping, incremental updates and live status.
+Next action: Land increment 2, activation and focus synchronisation through AccessKit requests.
 
 ## Outcome and boundaries
 
@@ -85,12 +85,17 @@ The parity audit is extended where a UiRole gains an expected AccessKit form.
   `aria-activedescendant` names the focused node's element. eframe reads
   keyboard input only while the canvas itself (or its text agent) has DOM
   focus, and it refocuses the canvas after each pass. Moving DOM focus into the
-  layer would therefore break canvas keyboard and IME input. A focused text
-  edit moves DOM focus to eframe's text agent, as today.
+  layer would therefore break canvas keyboard and IME input. Focusable
+  elements carry `tabindex="-1"`. When assistive technology or Playwright moves
+  DOM focus onto one, the layer queues an AccessKit `Focus` request for its node
+  and returns DOM focus to the canvas. A focused text edit moves DOM focus to
+  eframe's text agent, as before, and the layer names the agent after the
+  field. The canvas keeps `role="application"`, so screen readers pass Tab,
+  arrows and shortcuts to egui. Browse mode can still read the layer.
 - **Activation.** A `click` on a layer element (from a screen reader's default
   action, `element.click()` or Playwright's `dispatchEvent('click')`) queues an
-  AccessKit `Click` request for that node. A plugin `input_hook` adds it to
-  egui's next input, with one recorded repaint request. egui marks a widget
+  AccessKit `Click` request for that node. The plugin's `input_hook` adds it to
+  egui's next input, and the layer asks egui for one pass. egui marks a widget
   clicked only when it is enabled and senses clicks. That click then follows
   the existing path: `Frame` triggers, and the host rechecks availability
   before `perform`. A disabled control does nothing and exposes
@@ -98,13 +103,13 @@ The parity audit is extended where a UiRole gains an expected AccessKit form.
   renders no widget, so it has no element.
 - **Playwright route.** The layer's elements cannot be hit targets without
   intercepting real pointer input. Playwright's default actionability check
-  therefore reports that the canvas intercepts pointer events. There are two
-  supported routes, documented in the agent guide:
-  - `locator.dispatchEvent('click')` is the semantic route;
+  therefore reports that the canvas intercepts pointer events. The agent guide
+  documents the supported routes:
+  - `locator.dispatchEvent('click')` or `element.click()` is the AccessKit
+    route;
   - `locator.click({ force: true })` is a physical click at the control's
-    centre.
-
-  Both are tested.
+    centre;
+  - `locator.focus()` and then typing edits a text field.
 
 ## Role mapping
 
@@ -135,8 +140,8 @@ AccessKit to ARIA. Summary:
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| 1. Read-only tree: role mapping, incremental updates, live status, opt-out | In progress | Projection and diff unit tests. The parity audit is extended to status, pane and list containers, with a hosted Lab audit. `tools/aria-layer-browser.mjs` passes for all three applications. |
-| 2. Activation and focus synchronisation | Planned | |
+| 1. Read-only tree: role mapping, incremental updates, live status, opt-out | Landed | [PR #74](https://github.com/robchristie/stobie/pull/74): projection and diff unit tests. The parity audit is extended to status, pane and list containers, with a hosted Lab audit. `tools/aria-layer-browser.mjs` passes for all three applications. Brotli WASM +0.57%; every startup regression gate passes. |
+| 2. Activation and focus synchronisation | In progress | A host test covers the AccessKit click and focus route. Negative tests cover the live and list-container audits. Every Gallery story passes a whole-tree parity audit. `tools/aria-layer-browser.mjs` covers three activation routes, disabled and hidden controls, Tab focus, the focus handoff with typing, and destroy, for all three applications. |
 | 3. Values, documentation and the general-agent probe | Planned | |
 
 Each increment lands through review in order, rebased on the previous merge.
@@ -181,13 +186,25 @@ Each increment lands through review in order, rebased on the previous merge.
   - the Gallery's appearance combo boxes are named.
 - The Lab's coordinate readouts and decoding count change with the pointer or
   worker progress. They declare live off, so they do not flood a screen reader.
-- CDP reports neither set position nor a non-focusable separator's value. The
-  check reads position from the DOM. Splitter values need focusable elements,
-  which arrive with focus handling in increment 2.
+- CDP does not report set position, so the check reads it from the DOM. A
+  non-focusable separator or text field exposes no value. Making focusable
+  controls `tabindex="-1"` in increment 2 exposed splitter and text-field
+  values.
+- egui refuses AccessKit focus for a disabled widget, as it refuses a click.
+- Chromium's hidden text agent fires no `input` events without a usable font.
+  Like the Record Desk smoke, the layer check's Linux wrapper supplies
+  Stobie's fonts through fontconfig.
+- The whole-Gallery parity audit found that a slider's AccessKit bounds
+  covered only egui's track, while its semantic node and physical targeting
+  cover the labelled control. The range recipe now sets the same bounds.
+- `Application::web_accessibility_layer` is a one-line guard in
+  `WebHost::start`. No hosted application opts out, so no browser test covers
+  the opt-out.
 - axe-core reports only moderate best-practice findings: no `main` landmark, no
   level-one heading, and content outside landmarks.
 
 ## Later work
 
-- Editing text through the layer (handing focus to egui's text agent) is the
-  next increment unless increment 3 shows that it fits cleanly.
+- Editing text through the layer works by handing focus to egui's text agent
+  and typing. Setting a value directly, as `locator.fill()` does, would need an
+  action argument and is not supported.
