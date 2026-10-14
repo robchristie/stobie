@@ -82,6 +82,8 @@ struct Counter {
     overflow: bool,
     /// Present a range recipe and observe its node again with a pane.
     refine_recipe: bool,
+    /// Observe a different control under the recipe node's ID.
+    clash_with_recipe: bool,
     animate: bool,
     /// Schedule a pass after an idle delay.
     idle_timeout: bool,
@@ -197,6 +199,9 @@ impl Application for Counter {
             )
             .node;
             node.pane = Some(PaneId(3));
+            if self.clash_with_recipe {
+                node.role = UiRole::Status;
+            }
             crate::observe_node(ui, node);
         }
         if self.overflow {
@@ -573,11 +578,11 @@ fn invalid_observations_are_audited_without_blocking_publication() {
 
 #[test]
 fn an_application_observation_refines_a_recipe_node() {
-    let harness = harness(Counter {
+    let refined = harness(Counter {
         refine_recipe: true,
         ..Default::default()
     });
-    let snapshot = host(&harness).ui_snapshot();
+    let snapshot = host(&refined).ui_snapshot();
     let levels: Vec<_> = snapshot
         .nodes
         .iter()
@@ -590,6 +595,18 @@ fn an_application_observation_refines_a_recipe_node() {
         "{:?}",
         snapshot.semantic_audit
     );
+
+    // A different control under the same ID is still a duplicate.
+    let clashing = harness(Counter {
+        refine_recipe: true,
+        clash_with_recipe: true,
+        ..Default::default()
+    });
+    assert!(host(&clashing).ui_snapshot().semantic_audit.contains(
+        &SemanticAuditFinding::DuplicateId {
+            id: SemanticUiId::new("level"),
+        }
+    ));
 }
 
 #[test]

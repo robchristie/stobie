@@ -300,3 +300,62 @@ fn layout_resizes_are_undoable_and_activation_is_not() {
     );
     assert_eq!(app.workspace.root.split_fraction(node), Some(before));
 }
+
+#[test]
+fn diagnostics_report_interaction_while_a_camera_drag_previews() {
+    let mut harness = harness();
+    lab(&mut harness).workspace.active_pane = PaneId(1);
+    harness.run_steps(2);
+    let centre = viewport(&harness, PaneId(1)).center();
+    harness.event(egui::Event::PointerMoved(centre));
+    harness.event(egui::Event::PointerButton {
+        pos: centre,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.step();
+    for step in 1..=6 {
+        harness.event(egui::Event::PointerMoved(
+            centre + egui::vec2(8.0 * step as f32, 0.0),
+        ));
+        harness.step();
+    }
+    assert!(host(&harness).app().diagnostics.frame.interaction_active);
+    harness.event(egui::Event::PointerButton {
+        pos: centre + egui::vec2(48.0, 0.0),
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.run_steps(4);
+    assert!(!host(&harness).app().diagnostics.frame.interaction_active);
+}
+
+#[test]
+fn a_preference_change_counts_one_repaint() {
+    let mut harness = harness();
+    let preferences = |harness: &Harness<'_, Probe>| {
+        host(harness)
+            .app()
+            .diagnostics
+            .frame
+            .recent_reasons
+            .iter()
+            .filter(|reason| **reason == RepaintReason::Preferences)
+            .count()
+    };
+    let before = preferences(&harness);
+    let mut changed = host(&harness).app().preferences;
+    changed.font_scale = 1.25;
+    harness
+        .state_mut()
+        .as_mut()
+        .unwrap()
+        .submit(Intent::Preferences(changed));
+    // The pass that reapplies appearance records it once; later passes do not.
+    harness.step();
+    assert_eq!(preferences(&harness), before + 1);
+    harness.step();
+    assert_eq!(preferences(&harness), before + 1);
+}

@@ -248,6 +248,8 @@ pub struct LabView {
     render_cameras: Vec<CameraState>,
     visible_tile_keys: Vec<TileKey>,
     ui_ms: f64,
+    /// Whether a gesture or preview was in progress in the latest pass.
+    interaction_active: bool,
     /// Return focus to View/Panels after Diagnostics is toggled.
     focus_panels: bool,
 }
@@ -520,7 +522,8 @@ impl Lab {
                 font_scale,
                 motion,
             } => {
-                // The host applies the design system from the next pass.
+                // The host applies the design system in the next pass and
+                // records that repaint as `Appearance`.
                 self.preferences = UiPreferences {
                     appearance,
                     contrast,
@@ -530,7 +533,6 @@ impl Lab {
                     ..self.preferences
                 }
                 .validated();
-                self.record_repaint(RepaintReason::Preferences);
                 return Ok(());
             }
         };
@@ -627,8 +629,8 @@ impl Lab {
         #[cfg(not(target_arch = "wasm32"))]
         let browser_completed = 0;
         if native_completed + browser_completed > 0 {
-            self.record_repaint(RepaintReason::WorkerCompletion);
-            pass.request_repaint("worker completion");
+            // `completed` records the pass's repaint reasons once.
+            pass.request_repaint(WORKER_COMPLETION);
         }
         let context = pass.context().clone();
         while let Some(event) = self
@@ -1167,6 +1169,7 @@ impl Application for Lab {
         for target in outputs.triggers.drain(..) {
             frame.trigger(target);
         }
+        view.interaction_active = outputs.interaction_active;
         if outputs.interaction_active {
             frame.request_repaint("interaction");
         }
@@ -1233,13 +1236,17 @@ impl Application for Lab {
                 return Ok(false);
             }
             Intent::Preferences(preferences) => {
-                // The host reapplies the design system from the next pass.
+                // The host reapplies the design system in the next pass and
+                // records that repaint as `Appearance`, counted then.
                 self.preferences = preferences.validated();
                 self.status = "Appearance preferences saved".into();
                 self.save_requested = true;
-                RepaintReason::Preferences
+                return Ok(true);
             }
             Intent::Status(status) => {
+                if status == self.status {
+                    return Ok(false);
+                }
                 self.status = status;
                 RepaintReason::Command
             }
@@ -1428,6 +1435,8 @@ impl Application for Lab {
         for reason in pass.repaint {
             self.record_repaint(repaint_reason(*reason));
         }
+        self.diagnostics.frame.interaction_active =
+            view.interaction_active || pass.repaint.contains(&HostRepaint::DockInteraction);
         self.last_ui_snapshot = pass.snapshot.clone();
         self.last_ui_geometry = view.geometry.with_observation(pass.snapshot);
         self.last_render_cameras = view.render_cameras.clone();

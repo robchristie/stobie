@@ -191,4 +191,3 @@ application keeps these image obligations:
   directly.
 - **Request delayed repaints for idle gestures** with
   `Frame::request_repaint_after`, and persist through `Application::save`.
-

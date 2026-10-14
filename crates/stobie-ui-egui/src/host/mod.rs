@@ -1090,12 +1090,16 @@ impl<A: Application> AppHost<A> {
                     published.insert(node.id.clone(), (nodes.len(), origin));
                     nodes.push(node);
                 }
-                // An application's observation refines the recipe's own node.
-                Some((index, Origin::Recipe)) if origin == Origin::Application => {
+                // An application's observation of the same control refines the
+                // recipe's own node; anything else sharing the ID is a duplicate.
+                Some((index, Origin::Recipe))
+                    if origin == Origin::Application && nodes[index].role == node.role =>
+                {
                     published.insert(node.id.clone(), (index, origin));
                     nodes[index] = node;
                 }
-                Some((_, Origin::Application)) if origin == Origin::Recipe => {}
+                Some((index, Origin::Application))
+                    if origin == Origin::Recipe && nodes[index].role == node.role => {}
                 Some(_) => duplicates.push(node.id),
             }
         }
