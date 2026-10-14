@@ -1,7 +1,7 @@
 # Framework-owned application host and derived actions
 
-Status: active
-Next action: Migrate the Lab to `AppHost` (increment 3b), following the Lab migration design below.
+Status: complete
+Delivery: [PR #67](https://github.com/robchristie/stobie/pull/67) completes the plan; earlier increments landed in PRs #63 to #65.
 
 ## Outcome and boundaries
 
@@ -83,7 +83,7 @@ Checked against Record Desk, the Lab and the Gallery before implementation.
 | 1. Derive macro and Record Desk actions | Landed | [PR #63](https://github.com/robchristie/stobie/pull/63): compile-fail and expansion tests; Record Desk tests and smokes unchanged |
 | 2. Host, collector, Record Desk migration, composition guide and authoring probe | Landed | [PR #64](https://github.com/robchristie/stobie/pull/64): host kittests; Record Desk tests and smokes; glue 962 to 526 lines, accepted by the user; probe below |
 | 3a. Gallery migration | Landed | [PR #65](https://github.com/robchristie/stobie/pull/65): Gallery tests, deterministic UI snapshots and Gallery-driven smokes; published snapshots equal base's in 540 renders apart from the root name |
-| 3b. Lab migration | Active | Lab tests, native and browser smokes, and the application-interface smoke |
+| 3b. Lab migration | Complete | [PR #67](https://github.com/robchristie/stobie/pull/67): hosted Lab tests; Lab native and browser smokes and the application-interface journeys unmodified; published snapshots equal base's in 18 scenarios apart from the root name |
 
 ## Authoring probe
 
@@ -119,7 +119,10 @@ Recorded for later work:
 - CLI diagnostics: the reported deadline, unknown condition fields, error
   output and a way to pass an expected target;
 - marking shortcuts that text focus blocks in discovery;
-- action arguments, without which agents cannot fill a draft.
+- action arguments, without which agents cannot fill a draft;
+- dock tab text that follows an application's visible-only region, and a
+  narrower visible-only region for Record Desk than its whole UI (both from
+  the review of PR #65).
 
 ## Gallery migration
 
