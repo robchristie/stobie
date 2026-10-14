@@ -84,7 +84,10 @@ snapshot, is the source.
   typed input: it focuses the egui field, selects its text and pastes the new
   text over it. The application therefore sees its ordinary change, and a
   value egui does not take is restored after the pass. Tab and Escape return
-  DOM focus to the canvas and reach egui as the same keys. Combo boxes
+  DOM focus to the canvas and reach egui as the same keys. Cmd or Ctrl chords,
+  other than the field's own selection, clipboard, undo and caret keys, reach
+  egui as application shortcuts while focus stays in the field. Password
+  fields are never edited this way. Combo boxes
   expose their current text. Sliders expose `aria-valuenow`, minimum and
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.

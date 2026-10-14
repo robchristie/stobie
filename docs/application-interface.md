@@ -141,9 +141,14 @@ Every framework text field, an egui text edit presented through
 is text. Invoking it replaces the field's text through the same edit route as
 typing: the host focuses the field, selects its text and pastes the new text
 over it (or deletes it), then returns focus to where it was. A single-line
-field therefore turns newlines into spaces, as a paste does. A disabled field
-rejects the invocation with its reason. Hosts publish each text field's text
-as its node's optional `value`.
+field therefore turns newlines into spaces, as a paste does, and a field's
+character limit applies. A field that held focus sees focus leave and return,
+as when a user clicks into another field and back. A disabled or password
+field is never set. Its receipt stays `queued`, and can no longer be
+cancelled, until the edit has applied and the intents it caused have settled;
+it then completes with the observation that presents them. If the field is no
+longer presented by then, the receipt is rejected. Hosts publish each text
+field's text as its node's optional `value`.
 
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same

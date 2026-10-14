@@ -57,6 +57,11 @@ struct Desk {
     pinned: Option<bool>,
     /// The title field is presented disabled.
     locked: bool,
+    /// The title is a password field.
+    secret: bool,
+    /// The notes widget presents this semantic ID; pinning changes it, as an
+    /// application that reuses one editor for each selection would.
+    notes_id: Option<&'static str>,
     errors: Vec<String>,
     /// A colour for the next pass to trigger as a control would.
     physical_colour: Option<ActionArgument>,
@@ -92,7 +97,9 @@ impl Application for Desk {
         let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
             let response = ui.add_enabled(
                 !locked,
-                egui::TextEdit::singleline(&mut title).id(egui::Id::new("desk.title")),
+                egui::TextEdit::singleline(&mut title)
+                    .password(self.secret)
+                    .id(egui::Id::new("desk.title")),
             );
             ui.ctx().accesskit_node_builder(response.id, |node| {
                 node.set_label("Title");
@@ -126,7 +133,7 @@ impl Application for Desk {
             (response, ())
         });
         let mut node = UiNode::container(
-            SemanticUiId::new("desk.notes"),
+            SemanticUiId::new(self.notes_id.unwrap_or("desk.notes")),
             Some(SemanticUiId::root()),
             UiRole::MultilineTextInput,
             response.rect.into(),
@@ -172,6 +179,7 @@ impl Application for Desk {
             }
             Act::Pin => {
                 self.pinned = argument.as_boolean();
+                self.notes_id = Some("desk.notes.pinned");
                 Ok(true)
             }
             Act::Apply => self.perform(target, state),
@@ -627,4 +635,113 @@ fn consecutive_set_values_of_one_field_apply_the_latest_text_in_one_pass() {
     assert_eq!(host(&harness).app().title, "Old");
     assert_eq!(host(&harness).app().edits, 1);
     assert!(host(&harness).text_edits.is_empty());
+}
+
+#[test]
+fn a_semantic_edit_waits_out_a_state_change_and_rejects_a_repurposed_field() {
+    let mut harness = harness(desk());
+    let notes = discover(host(&harness), by_id("desk.notes")).target;
+    let pin = InspectionSelector {
+        capability: Some("desk.pin".into()),
+        ..Default::default()
+    };
+    let pin_target = discover(host(&harness), pin.clone()).target;
+    let current = host(&harness);
+    for (id, selector, expected, value) in [
+        (
+            "notes",
+            by_id("desk.notes"),
+            notes,
+            serde_json::json!("Pinned notes"),
+        ),
+        ("pin", pin, pin_target, serde_json::json!(true)),
+    ] {
+        let admitted = receipt(current.inspection().unwrap().handle(request(
+            current,
+            id,
+            InspectionOperation::Invoke {
+                selector,
+                expected,
+                arguments: serde_json::json!({ "value": value }),
+            },
+        )));
+        assert_eq!(admitted.state, ReceiptState::Queued);
+    }
+    harness.run();
+    let host = host(&harness);
+    // Pinning repurposed the notes widget, so the edit queued for the old
+    // field is rejected rather than written into the new one.
+    assert_eq!(host.app().pinned, Some(true));
+    assert_eq!(host.app().notes, "");
+    let rejected = receipt(host.inspection().unwrap().handle(request(
+        host,
+        "notes-receipt",
+        InspectionOperation::Receipt {
+            request_id: "notes".into(),
+        },
+    )));
+    assert_eq!(rejected.state, ReceiptState::Rejected);
+    assert!(
+        rejected
+            .error
+            .as_ref()
+            .unwrap()
+            .message
+            .contains("no longer presented"),
+        "{rejected:?}"
+    );
+}
+
+#[test]
+fn in_place_edits_go_before_queued_semantic_edits() {
+    let mut harness = harness(desk());
+    let current = host(&harness);
+    let expected = discover(current, by_id("desk.notes")).target;
+    receipt(current.inspection().unwrap().handle(request(
+        current,
+        "notes",
+        InspectionOperation::Invoke {
+            selector: by_id("desk.notes"),
+            expected,
+            arguments: serde_json::json!({"value": "Queued"}),
+        },
+    )));
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::AccessKitActionRequest(
+            egui::accesskit::ActionRequest {
+                action: egui::accesskit::Action::SetValue,
+                target_node: egui::Id::new("desk.title").accesskit_id(),
+                target_tree: egui::accesskit::TreeId::ROOT,
+                data: Some(egui::accesskit::ActionData::Value("Typed".into())),
+            },
+        ));
+    harness.step();
+    assert_eq!(host(&harness).app().title, "Typed");
+    assert_eq!(host(&harness).app().notes, "");
+    harness.run();
+    assert_eq!(host(&harness).app().notes, "Queued");
+}
+
+#[test]
+fn password_fields_are_never_set_or_valued() {
+    let harness = harness(Desk {
+        secret: true,
+        ..desk()
+    });
+    assert_eq!(node(&harness, "desk.title").value, None);
+    let reply = host(&harness).inspection().unwrap().handle(request(
+        host(&harness),
+        "discover",
+        InspectionOperation::Discover {
+            selector: by_id("desk.title"),
+            limit: 8,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Discover { total, .. }) = reply.result else {
+        panic!("discovery");
+    };
+    assert_eq!(total, 0);
 }

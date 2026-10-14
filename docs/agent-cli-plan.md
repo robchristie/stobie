@@ -86,13 +86,26 @@ ARIA layer. The inspection snapshot and the ARIA layer are checked to agree.
   the first observation that includes the invocation's effect. A client
   waits for it before discovering a target whose meaning the action changed;
   without it, the interface smoke discovered Apply from the observation
-  before a category choice and was correctly rejected as stale.
+  before a category choice and was correctly rejected as stale. Set text
+  completes later: an executed invocation may return `Execution::Deferred`,
+  its receipt stays queued, and the host calls `Inspection::complete` after the
+  pass that applied the edit has applied its intents. That pass's staged
+  publication lacks them, so `after_observation` names the one after it.
+- **Queued edits.** In-place edits from the ARIA layer or assistive
+  technology go before queued semantic edits. A semantic edit applies only
+  while its widget still presents the semantic ID it was queued for, and
+  waits a pass when an action changed state earlier in the same pass, so a
+  widget an application reuses for another selection is never written by
+  mistake. Password fields are never paired.
 - **ARIA layer.** A layer text field that receives DOM focus keeps it, so
   `locator.fill()` and Lantern `type` can edit it. An `input` event on it
   becomes a `SetValue` request with the field's whole value. If egui does
   not take the value, the next pass restores the mirrored text. Tab and
   Escape in a layer field return DOM focus to the canvas and reach egui as
-  the same keys. Other layer elements still return focus to the canvas.
+  the same keys; Cmd or Ctrl chords other than editing keys reach egui as
+  application shortcuts. Other layer elements still return focus to the
+  canvas. A screen reader user's caret and IME composition stay in the
+  browser field; each composed change reaches egui as a whole-text edit.
 - **Native assistive technology.** Framework text fields advertise
   `SetValue`, and an AccessKit `SetValue` request from the platform adapter
   takes the same route, where the adapter delivers one.

@@ -401,13 +401,51 @@ fn set_text_edits_notes_as_typing_would() {
         serde_json::json!("Checked\nagainst the survey"),
         "notes",
     );
-    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
-    // The edit applies on the next pass, through egui's text editing.
+    // The edit applies on the next pass, through egui's text editing, and
+    // completes once the draft intent it causes has applied.
+    assert_eq!(receipt.state, ReceiptState::Queued, "{receipt:?}");
     present(&mut host, &context, 1080.0);
+    let reply = host.inspection().unwrap().handle(request(
+        &host,
+        "notes-receipt",
+        InspectionOperation::Receipt {
+            request_id: "notes".into(),
+        },
+    ));
+    let Some(InspectionResult::Receipt { receipt }) = reply.result else {
+        panic!("receipt");
+    };
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    let effect = receipt
+        .after_observation
+        .expect("a completed receipt names its effect");
+    // Every observation from `after_observation` presents the effect: the
+    // draft is dirty and Apply is available.
+    let observe = |host: &RecordDeskApp| {
+        let reply = host.inspection().unwrap().handle(request(
+            host,
+            "observe",
+            InspectionOperation::Observe,
+        ));
+        let Some(InspectionResult::Observe { observation }) = reply.result else {
+            panic!("observation");
+        };
+        observation
+    };
+    assert!(observe(&host).id < effect);
+    present(&mut host, &context, 1080.0);
+    let observation = observe(&host);
+    assert_eq!(observation.id, effect);
+    assert_eq!(
+        observation.facts["draft_dirty"],
+        stobie_ui_egui::ObservationValue::Boolean(true)
+    );
+    let expected = target(&host, Action::Apply);
+    let apply = invoke(&mut host, Action::Apply, expected, "apply-after-set-text");
+    assert_eq!(apply.state, ReceiptState::Completed, "{apply:?}");
     present(&mut host, &context, 1080.0);
     let draft = host.app().desk.draft().unwrap();
     assert_eq!(draft.notes, "Checked\nagainst the survey");
-    assert!(host.app().desk.is_dirty());
     assert_eq!(
         host.ui_snapshot()
             .node(&SemanticUiId::new(notes))
@@ -416,6 +454,5 @@ fn set_text_edits_notes_as_typing_would() {
             .as_deref(),
         Some("Checked\nagainst the survey")
     );
-    perform(&mut host, Action::Apply);
     assert_eq!(host.app().desk.undo_len(), 1);
 }

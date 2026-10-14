@@ -289,6 +289,15 @@ try {
     for (const [key, value] of Object.entries(step.facts ?? {})) {
       assert.deepEqual(observed[key], value, `after filling ${step.target.name}, fact ${key}`);
     }
+    // An application shortcut pressed in the field still reaches egui.
+    if (step.press) {
+      await page.keyboard.press(step.press.key);
+      await page.waitForTimeout(500);
+      const pressed = await facts();
+      for (const [key, value] of Object.entries(step.press.facts)) {
+        assert.deepEqual(pressed[key], value, `after ${step.press.key} in ${step.target.name}, fact ${key}`);
+      }
+    }
     await page.keyboard.press('Escape');
     assert(await page.evaluate(() => document.activeElement === document.querySelector('canvas')), 'Escape returns focus to the canvas');
     check('fill', { target: step.target, length: step.text.length, facts: step.facts });

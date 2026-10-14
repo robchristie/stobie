@@ -15,7 +15,9 @@
 //! becomes an AccessKit `SetValue` request with the field's whole text, which
 //! the host applies through egui's own text editing. A value egui does not take
 //! is restored from the mirror after the pass. Tab and Escape return DOM focus
-//! to the canvas and reach egui as the same keys.
+//! to the canvas and reach egui as the same keys; Cmd or Ctrl chords other
+//! than the browser's own editing keys reach egui too, so application
+//! shortcuts keep working while a field is edited in place.
 //!
 //! DOM objects are not `Send`, but egui plugins must be. The plugin therefore
 //! holds only a key into a thread-local registry; WASM runs the UI on one
@@ -474,19 +476,13 @@ fn edit(key: u32, event: &Event) {
 }
 
 /// Tab and Escape leave a layer text field: DOM focus returns to the canvas
-/// and egui receives the key, so focus moves or editing ends as in egui.
+/// and egui receives the key, so focus moves or editing ends as in egui. A
+/// Cmd or Ctrl chord, other than the field's own editing keys, reaches egui
+/// as an application shortcut, and focus stays.
 fn hand_back(key: u32, event: &Event) {
     let Some(keyboard) = event.dyn_ref::<KeyboardEvent>() else {
         return;
     };
-    let pressed = match keyboard.key().as_str() {
-        "Tab" => egui::Key::Tab,
-        "Escape" => egui::Key::Escape,
-        _ => return,
-    };
-    if keyboard.ctrl_key() || keyboard.alt_key() || keyboard.meta_key() {
-        return;
-    }
     let in_field = event
         .target()
         .and_then(|target| target.dyn_into::<HtmlElement>().ok())
@@ -494,6 +490,23 @@ fn hand_back(key: u32, event: &Event) {
     if !in_field {
         return;
     }
+    let name = keyboard.key();
+    let chord = keyboard.ctrl_key() || keyboard.meta_key();
+    let (pressed, leave) = match name.as_str() {
+        "Tab" | "Escape" if !chord && !keyboard.alt_key() => {
+            (egui::Key::from_name(&name).expect("named key"), true)
+        }
+        // Selection, clipboard, undo and caret movement edit the field.
+        "a" | "A" | "c" | "C" | "v" | "V" | "x" | "X" | "z" | "Z" | "y" | "Y" | "ArrowLeft"
+        | "ArrowRight" | "ArrowUp" | "ArrowDown" | "Home" | "End" | "Backspace" | "Delete" => {
+            return;
+        }
+        _ if chord => match egui::Key::from_name(&name) {
+            Some(key) => (key, false),
+            None => return,
+        },
+        _ => return,
+    };
     LAYERS.with(|layers| {
         let Ok(mut layers) = layers.try_borrow_mut() else {
             return;
@@ -503,8 +516,11 @@ fn hand_back(key: u32, event: &Event) {
         };
         event.prevent_default();
         let modifiers = egui::Modifiers {
+            alt: keyboard.alt_key(),
+            ctrl: keyboard.ctrl_key(),
             shift: keyboard.shift_key(),
-            ..egui::Modifiers::NONE
+            mac_cmd: keyboard.meta_key(),
+            command: chord,
         };
         for pressed_state in [true, false] {
             layer.keys.push(egui::Event::Key {
@@ -515,9 +531,11 @@ fn hand_back(key: u32, event: &Event) {
                 modifiers,
             });
         }
-        let options = web_sys::FocusOptions::new();
-        options.set_prevent_scroll(true);
-        let _ = layer.canvas.focus_with_options(&options);
+        if leave {
+            let options = web_sys::FocusOptions::new();
+            options.set_prevent_scroll(true);
+            let _ = layer.canvas.focus_with_options(&options);
+        }
         layer.context.request_repaint();
     });
 }

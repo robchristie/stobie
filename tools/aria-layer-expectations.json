@@ -349,6 +349,12 @@
         "facts": {
           "draft_title": "Filled title",
           "draft_dirty": true
+        },
+        "press": {
+          "key": "Control+Enter",
+          "facts": {
+            "draft_dirty": false
+          }
         }
       },
       {

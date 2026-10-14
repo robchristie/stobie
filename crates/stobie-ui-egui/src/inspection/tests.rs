@@ -1319,7 +1319,7 @@ fn discovery_publishes_contracts_and_drain_delivers_typed_values() {
             panic!("expected an action")
         };
         delivered.push((target.action, argument));
-        Ok(())
+        Ok(Execution::Completed)
     }) {}
     assert_eq!(
         delivered,
@@ -1381,20 +1381,41 @@ fn text_fields_are_bound_to_set_text_with_a_text_contract() {
     );
     let mut edits = Vec::new();
     inspection.drain_invocation(&bindings, &fields, |invocation| {
-        let Invocation::SetText { field, text } = invocation else {
+        let Invocation::SetText {
+            request_id,
+            field,
+            text,
+        } = invocation
+        else {
             panic!("expected set text")
         };
-        edits.push((field.id, field.widget, text));
-        Ok(())
+        edits.push((request_id, field.id, field.widget, text));
+        Ok(Execution::Deferred)
     });
     assert_eq!(
         edits,
         vec![(
+            "set".to_owned(),
             SemanticUiId::new("field"),
             egui::Id::new("field"),
             "New\ntext".to_owned()
         )]
     );
+    // The edit applies later: the receipt stays queued and can no longer be
+    // cancelled until the host completes it.
+    assert_eq!(lookup(&inspection, "set").state, ReceiptState::Queued);
+    let cancel = inspection.handle(request(
+        &inspection,
+        "cancel-set",
+        InspectionOperation::Cancel {
+            request_id: "set".into(),
+        },
+    ));
+    assert_eq!(cancel.error.unwrap().code, InspectionErrorCode::TooLate);
+    inspection.complete("set", Ok(()));
+    let completed = lookup(&inspection, "set");
+    assert_eq!(completed.state, ReceiptState::Completed);
+    assert_eq!(completed.after_observation, Some(2));
     // A disabled field rejects with its reason.
     let (disabled, ..) = typed_fixture(true);
     let receipt = invoke_with(&disabled, "locked", "field", json!({"value": "x"}));

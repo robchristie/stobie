@@ -34,11 +34,12 @@ use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme,
     Availability, CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour,
-    DockTextContext, DomainReference, IconId, Inspection, InspectionBinding, InspectionError,
-    InspectionReply, InspectionRequest, IntoActionTarget, Invocation, ObservationValue,
-    PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding, SemanticUiId,
-    ShortcutKey, TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode, UiPreferences,
-    UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts, text_audit_coverage,
+    DockTextContext, DomainReference, Execution, IconId, Inspection, InspectionBinding,
+    InspectionError, InspectionReply, InspectionRequest, IntoActionTarget, Invocation,
+    ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
+    SemanticUiId, ShortcutKey, TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode,
+    UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
+    text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -663,11 +664,25 @@ pub struct AppHost<A: Application> {
     theme: ApplicationTheme,
     /// The latest pass's framework text fields and their text.
     text_fields: Vec<(TextFieldBinding, String)>,
-    /// Text to set, by text edit widget, applied one per pass, and whether
-    /// focus returns afterwards (a semantic edit) or stays (editing in place).
-    text_edits: VecDeque<(egui::Id, String, bool)>,
+    /// Text to set, applied one field per pass.
+    text_edits: VecDeque<TextEdit>,
     /// The field this pass's edit focused and the focus to return to after it.
     edit_focus: Option<(egui::Id, Option<egui::Id>)>,
+    /// The set-text invocation this pass applied, completed once its intents
+    /// have settled.
+    completing: Option<String>,
+}
+
+/// One queued set-text edit.
+struct TextEdit {
+    widget: egui::Id,
+    /// The field's semantic ID when queued; the edit applies only while the
+    /// widget still presents it.
+    field: SemanticUiId,
+    text: String,
+    /// The invocation for a semantic edit, which returns focus afterwards;
+    /// `None` for assistive technology editing in place.
+    request: Option<String>,
 }
 
 fn apply_appearance(context: &egui::Context, preferences: UiPreferences, theme: &ApplicationTheme) {
@@ -703,6 +718,7 @@ impl<A: Application> AppHost<A> {
             text_fields: Vec::new(),
             text_edits: VecDeque::new(),
             edit_focus: None,
+            completing: None,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();
@@ -875,6 +891,11 @@ impl<A: Application> AppHost<A> {
             let outcome = self.run_action(target, argument);
             self.settle(outcome);
         }
+        // The edit's intents have now applied, so the next published pass
+        // presents the application's own effect.
+        if let (Some(request), Some(inspection)) = (self.completing.take(), &self.inspection) {
+            inspection.complete(&request, Ok(()));
+        }
         request_passes(&context, &self.repaint);
     }
 
@@ -1046,7 +1067,10 @@ impl<A: Application> AppHost<A> {
         }
     }
 
-    fn run_invocation(&mut self, invocation: Invocation<A::Action>) -> Result<(), InspectionError> {
+    fn run_invocation(
+        &mut self,
+        invocation: Invocation<A::Action>,
+    ) -> Result<Execution, InspectionError> {
         match invocation {
             Invocation::Action { target, argument } => {
                 let changed = self
@@ -1055,15 +1079,32 @@ impl<A: Application> AppHost<A> {
                 if changed {
                     self.repaint.push(HostRepaint::StateChanged);
                 }
+                Ok(Execution::Completed)
             }
-            // The edit applies at the start of the next UI pass, through egui's
-            // own text editing; the drain at a pass's start precedes it.
-            Invocation::SetText { field, text } => {
-                self.text_edits.push_back((field.widget, text, true));
+            // The edit applies through egui's own text editing on a pass, and
+            // completes once that pass's intents have applied.
+            Invocation::SetText {
+                request_id,
+                field,
+                text,
+            } => {
+                self.text_edits.push_back(TextEdit {
+                    widget: field.widget,
+                    field: field.id,
+                    text,
+                    request: Some(request_id),
+                });
                 self.repaint.push(HostRepaint::Application("set text"));
+                Ok(Execution::Deferred)
             }
         }
-        Ok(())
+    }
+
+    /// Finish a semantic edit that cannot apply.
+    fn reject_edit(&self, edit: &TextEdit, message: String) {
+        if let (Some(request), Some(inspection)) = (&edit.request, &self.inspection) {
+            inspection.complete(request, Err(InspectionError::validation(message)));
+        }
     }
 
     fn text_field_bindings(&self) -> Vec<TextFieldBinding> {
@@ -1079,12 +1120,13 @@ impl<A: Application> AppHost<A> {
     /// text). The field's `TextEdit` handles it as any edit, so the
     /// application sees its ordinary change. After a semantic edit, focus
     /// returns to where it was; assistive technology editing in place keeps
-    /// it. Further edits wait for later passes, because egui edits only the
-    /// focused field.
+    /// it and goes first, so the field being typed in never waits. Further
+    /// edits wait for later passes, because egui edits only the focused
+    /// field.
     fn apply_text_edit(&mut self, root: &mut Ui) {
         use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
         let fields = &self.text_fields;
-        let requests: Vec<(egui::Id, String, bool)> = root.input_mut(|input| {
+        let requests: Vec<TextEdit> = root.input_mut(|input| {
             let mut requests = Vec::new();
             input.events.retain(|event| {
                 if let egui::Event::AccessKitActionRequest(ActionRequest {
@@ -1099,7 +1141,12 @@ impl<A: Application> AppHost<A> {
                         .find(|(field, _)| field.widget.accesskit_id() == *target_node)
                 {
                     // Assistive technology edits in place; focus stays.
-                    requests.push((field.widget, value.to_string(), false));
+                    requests.push(TextEdit {
+                        widget: field.widget,
+                        field: field.id.clone(),
+                        text: value.to_string(),
+                        request: None,
+                    });
                     false
                 } else {
                     true
@@ -1107,39 +1154,64 @@ impl<A: Application> AppHost<A> {
             });
             requests
         });
-        // Each edit carries the field's whole text, so consecutive edits of
-        // one field, such as fast typing in a layer field, apply as the latest.
-        for (widget, text, restore_focus) in requests {
-            match self.text_edits.back_mut() {
-                Some(last) if last.0 == widget => {
-                    last.1 = text;
-                    last.2 &= restore_focus;
+        // Each in-place edit carries the field's whole text, so consecutive
+        // edits of one field, such as fast typing in a layer field, apply as
+        // the latest.
+        for edit in requests {
+            match self.text_edits.front_mut() {
+                Some(first) if first.request.is_none() && first.widget == edit.widget => {
+                    first.text = edit.text;
                 }
-                _ => self.text_edits.push_back((widget, text, restore_focus)),
+                _ => self.text_edits.push_front(edit),
             }
         }
-        let Some((widget, text, restore_focus)) = self.text_edits.pop_front() else {
+        // A queued semantic edit names its field as last presented. If an
+        // action changed state earlier in this pass, the widget may now
+        // present something else, so the edit waits for a pass that pairs
+        // fields afresh.
+        if self
+            .text_edits
+            .front()
+            .is_some_and(|edit| edit.request.is_some())
+            && self.repaint.contains(&HostRepaint::StateChanged)
+        {
+            self.repaint.push(HostRepaint::Application("set text"));
+            return;
+        }
+        let Some(edit) = self.text_edits.pop_front() else {
             return;
         };
         if !self.text_edits.is_empty() {
             self.repaint.push(HostRepaint::Application("set text"));
         }
+        let widget = edit.widget;
         let Some((field, current)) = self
             .text_fields
             .iter()
-            .find(|(field, _)| field.widget == widget)
+            .find(|(field, _)| field.widget == widget && field.id == edit.field)
         else {
+            self.reject_edit(&edit, format!("{} is no longer presented", edit.field.0));
             return;
         };
         // A disabled or read-only field takes no typed input either.
-        if !field.availability.enabled() || *current == text {
+        if let Some(reason) = field.availability.disabled_reason() {
+            let reason = reason.to_owned();
+            self.reject_edit(&edit, reason);
+            return;
+        }
+        if *current == edit.text {
+            if let (Some(request), Some(inspection)) = (&edit.request, &self.inspection) {
+                inspection.complete(request, Ok(()));
+            }
             return;
         }
         let context = root.ctx().clone();
         let previous = context.memory(|memory| memory.focused());
-        if restore_focus && previous != Some(widget) {
+        if edit.request.is_some() && previous != Some(widget) {
             self.edit_focus = Some((widget, previous));
         }
+        self.completing = edit.request;
+        let text = edit.text;
         context.memory_mut(|memory| memory.request_focus(widget));
         let mut state = egui::text_edit::TextEditState::load(&context, widget).unwrap_or_default();
         // egui clamps the end to the text's length.
@@ -1399,18 +1471,24 @@ fn pair_text_fields(
         |node: &UiNode| matches!(node.role, UiRole::TextInput | UiRole::MultilineTextInput);
     let mut fields = Vec::new();
     for (widget, rect) in crate::text_coverage::recorded_text_edits(context) {
-        let Some((author, value, disabled, read_only)) =
+        let Some((author, value, disabled, read_only, password)) =
             context.accesskit_node_builder(widget, |node| {
                 (
                     node.author_id().map(ToOwned::to_owned),
                     node.value().unwrap_or_default().to_owned(),
                     node.is_disabled(),
                     node.is_read_only(),
+                    node.role() == egui::accesskit::Role::PasswordInput,
                 )
             })
         else {
             continue;
         };
+        // AccessKit carries a password field's masked text, which an edit
+        // would write back; set text never touches one.
+        if password {
+            continue;
+        }
         let index = match &author {
             Some(author) => nodes
                 .iter()

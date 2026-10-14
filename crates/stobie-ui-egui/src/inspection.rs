@@ -295,11 +295,24 @@ pub enum Invocation<A: ActionKey> {
         target: ActionTarget<A>,
         argument: ActionArgument,
     },
-    /// Replace a framework text field's text.
+    /// Replace a framework text field's text. The edit applies on a later UI
+    /// pass, so the host defers its completion with
+    /// [`Execution::Deferred`] and reports it with [`Inspection::complete`].
     SetText {
+        request_id: String,
         field: TextFieldBinding,
         text: String,
     },
+}
+
+/// How far an executed invocation got.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Execution {
+    /// The effect is in place; the receipt completes now.
+    Completed,
+    /// The effect applies later. The receipt stays queued, and cannot be
+    /// cancelled, until the host calls [`Inspection::complete`].
+    Deferred,
 }
 
 /// The value a capability takes, published by discovery. An action takes at
@@ -490,8 +503,17 @@ pub trait ChoiceArgument: Copy + PartialEq + 'static {
             .map(|(value, ..)| *value)
     }
 
-    /// The published options.
+    /// The published options. Option IDs must be distinct.
     fn options() -> Vec<ArgumentOption> {
+        debug_assert!(
+            Self::CHOICES
+                .iter()
+                .enumerate()
+                .all(|(index, (_, id, _))| Self::CHOICES[..index]
+                    .iter()
+                    .all(|(_, other, _)| other != id)),
+            "choice option IDs must be distinct"
+        );
         Self::CHOICES
             .iter()
             .map(|(_, id, label)| ArgumentOption {
@@ -1225,7 +1247,7 @@ impl Inspection {
             Invocation::Action {
                 target,
                 argument: ActionArgument::None,
-            } => execute(target),
+            } => execute(target).map(|()| Execution::Completed),
             _ => Err(InspectionError::validation(
                 "this host executes only no-argument actions",
             )),
@@ -1239,7 +1261,7 @@ impl Inspection {
         &self,
         current: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
-        mut execute: impl FnMut(Invocation<A>) -> Result<(), InspectionError>,
+        mut execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> bool {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
         let Some(request_id) = state.pending.pop_front() else {
@@ -1259,8 +1281,14 @@ impl Inspection {
         else {
             unreachable!("only invocation is queued")
         };
-        let validation =
-            state.resolve_current(current, text_fields, &selector, &expected, &arguments);
+        let validation = state.resolve_current(
+            current,
+            text_fields,
+            &request_id,
+            &selector,
+            &expected,
+            &arguments,
+        );
         state
             .ledger
             .get_mut(&request_id)
@@ -1268,25 +1296,35 @@ impl Inspection {
             .executing = true;
         drop(state);
         let outcome = validation.and_then(&mut execute);
+        if outcome != Ok(Execution::Deferred) {
+            self.complete(&request_id, outcome.map(drop));
+        }
+        true
+    }
+
+    /// Finish an invocation whose execution was [`Execution::Deferred`] (or
+    /// any executing invocation): record its outcome and, on success, the
+    /// first observation that will present its effect. Call it once the
+    /// effect is in the application's state; an observation staged before
+    /// then does not present it.
+    pub fn complete(&self, request_id: &str, outcome: Result<(), InspectionError>) {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
-        let observation = state.observation;
-        let entry = state
-            .ledger
-            .get_mut(&request_id)
-            .expect("ledger entries are never evicted");
+        // A staged pass commits before any later one, without the effect.
+        let next = state.observation + 1 + u64::from(state.staged.is_some());
+        let Some(entry) = state.ledger.get_mut(request_id) else {
+            return;
+        };
+        if !entry.executing {
+            return;
+        }
         entry.executing = false;
         entry.receipt.state = if outcome.is_ok() {
             ReceiptState::Completed
         } else {
             ReceiptState::Rejected
         };
+        entry.receipt.after_observation = outcome.is_ok().then_some(next);
         entry.receipt.error = outcome.err();
-        // Execution precedes the next publication, which therefore presents
-        // the effect; a discarded pass publishes nothing.
-        if entry.receipt.state == ReceiptState::Completed {
-            entry.receipt.after_observation = Some(observation + 1);
-        }
-        true
     }
 
     /// Convenience for a browser host already running on the app thread. This
@@ -1302,7 +1340,7 @@ impl Inspection {
             Invocation::Action {
                 target,
                 argument: ActionArgument::None,
-            } => execute(target),
+            } => execute(target).map(|()| Execution::Completed),
             _ => Err(InspectionError::validation(
                 "this host executes only no-argument actions",
             )),
@@ -1315,7 +1353,7 @@ impl Inspection {
         request: InspectionRequest,
         current: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
-        execute: impl FnMut(Invocation<A>) -> Result<(), InspectionError>,
+        execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> InspectionReply {
         let invocation = matches!(request.operation, InspectionOperation::Invoke { .. });
         let request_id = request.request_id.clone();
@@ -1685,6 +1723,7 @@ impl InspectionState {
         &self,
         bindings: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
+        request_id: &str,
         selector: &InspectionSelector,
         expected: &ResolvedTarget,
         arguments: &serde_json::Value,
@@ -1730,6 +1769,7 @@ impl InspectionState {
                 argument,
             }),
             (None, Some(field)) => Ok(Invocation::SetText {
+                request_id: request_id.to_owned(),
                 field: (*field).clone(),
                 text: match argument {
                     ActionArgument::Text(text) => text,
