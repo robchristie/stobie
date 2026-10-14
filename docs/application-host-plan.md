@@ -123,6 +123,12 @@ Recorded for later work:
 - dock tab text that follows an application's visible-only region, and a
   narrower visible-only region for Record Desk than its whole UI (both from
   the review of PR #65).
+- availability that can read UI state. `Application::availability` sees only
+  the model, so discovery can offer an action that does nothing, such as the
+  Gallery's Appearance workbench action while the workbench is open. Adding a
+  `&UiState` parameter breaks every implementation, and `Frame::availability`
+  runs inside `ui`, which already holds the state mutably, so this needs an
+  API decision (found while fixing the shortcut text-focus gate).
 
 ## Gallery migration
 

@@ -130,8 +130,7 @@ fn polygon_clicks_edit_the_session_preview_and_one_commit_records_one_command() 
     assert_eq!(app.history.undo_len(), undo_before);
     assert_eq!(app.document.annotations.len(), 0);
 
-    // The focused viewport blocks unmodified shortcuts, as before hosting;
-    // the toolbar's Commit takes the click route: one command, one undo
+    // The toolbar's Commit takes the click route: one command, one undo
     // record, and no remaining preview.
     let commit: egui::Rect = host(&harness)
         .ui_snapshot()
@@ -193,6 +192,32 @@ fn pane_shortcuts_reach_only_panes_that_offer_the_action() {
     harness.run_steps(2);
     assert_ne!(camera(&harness), before);
     assert_eq!(host(&harness).app().history.undo_len(), 1);
+}
+
+#[test]
+fn plain_key_shortcuts_reach_a_clicked_viewport() {
+    let mut harness = harness();
+    let rect = viewport(&harness, PaneId(1));
+    click(&mut harness, rect.center());
+    assert!(harness.ctx.egui_wants_keyboard_input());
+    assert_eq!(host(&harness).app().workspace.active_pane, PaneId(1));
+    let tool = |harness: &Harness<'_, Probe>| {
+        host(harness)
+            .app()
+            .session
+            .active_tools
+            .get(&PaneId(1))
+            .copied()
+    };
+    // Keyboard focus on the image is not text entry, so its pane's
+    // unmodified shortcuts still run.
+    harness.key_press(egui::Key::Num2);
+    harness.run_steps(2);
+    assert_eq!(tool(&harness), Some(ActiveTool::Polygon));
+    harness.key_press(egui::Key::Num1);
+    harness.run_steps(2);
+    assert_eq!(tool(&harness), Some(ActiveTool::Navigate));
+    assert!(harness.ctx.egui_wants_keyboard_input());
 }
 
 #[test]
