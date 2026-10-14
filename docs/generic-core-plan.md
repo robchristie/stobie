@@ -38,7 +38,8 @@ Checked against Record Desk, the Lab and the dock before implementation.
 - `History<C>` keeps at most `capacity` entries (100 by default) and forgets
   the oldest. `execute_group` applies several commands as one entry and rolls
   back on failure. `execute_merging` folds a command into the newest entry
-  when `merge` accepts, until an undo, redo, save point or `seal`.
+  when `merge` accepts, until an undo, redo, save point or `seal`, and drops a
+  merged command that `is_noop` reports.
 - `mark_saved` and `is_saved` give a save point. Each entry has a unique state
   ID, so undoing back to a save is saved, while recommitting earlier values is
   a new change. Record Desk's "unsaved" now combines the save point with its
@@ -56,10 +57,15 @@ returns `None` for a change that does nothing.
 
 - `Resize` applies and reverts leniently: it sets the fraction while the split
   exists and otherwise does nothing, as the Lab's `ResizeSplit` did, so an undo
-  after a direct layout change never sticks. Consecutive resizes of one split
-  merge, so keyboard nudges can undo as one step.
+  after a direct layout change never sticks. Fractions outside 0.1–0.9 are
+  errors. Consecutive resizes of one split can merge, and a merged run that
+  returns to its start leaves no entry (`Command::is_noop`). Applications
+  execute each resize separately by default, because each drag or nudge is a
+  completed gesture.
 - `Activate` records the pane, the tab its group showed and the previously
-  active pane, and reverts by activating them again; absent panes are skipped.
+  active pane. Reverting shows that tab again and restores the active pane
+  without changing what its group shows, since the active pane need not be a
+  displayed tab; absent panes are skipped.
 - `Rearrange` (pane moves) stores the layouts before and after and fails when
   the workspace no longer matches, because a structural change has no lenient
   inverse. An application that makes moves undoable routes every layout

@@ -33,6 +33,13 @@ pub trait Command<T: ?Sized> {
         let _ = next;
         false
     }
+
+    /// Whether a merged command now changes nothing, such as a run of nudges
+    /// that returned to where it started. [`History::execute_merging`] then
+    /// drops it rather than keep an undo step that does nothing.
+    fn is_noop(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Clone)]
@@ -180,7 +187,9 @@ impl<C> History<C> {
 
     /// Apply `command` and, when [`Command::merge`] accepts it, fold it into
     /// the newest entry instead of adding one, so a run of steps such as
-    /// repeated nudges undoes at once. Merging continues until an undo, redo,
+    /// repeated nudges undoes at once. A merged command that
+    /// [`Command::is_noop`] reports is dropped, with its entry if nothing else
+    /// remains. Merging continues until an undo, redo,
     /// [`mark_saved`](Self::mark_saved) or [`seal`](Self::seal); a plain
     /// [`execute`](Self::execute) can also be extended this way.
     pub fn execute_merging<T: ?Sized>(&mut self, command: C, target: &mut T) -> Result<bool, String>
@@ -195,8 +204,17 @@ impl<C> History<C> {
             && let Some(last) = entry.commands.last_mut()
             && last.merge(&command)
         {
-            entry.state = self.next_state;
-            self.next_state += 1;
+            if last.is_noop() {
+                entry.commands.pop();
+            }
+            if entry.commands.is_empty() {
+                // The target is back in the previous entry's state.
+                self.undo.pop_back();
+                self.open = false;
+            } else {
+                entry.state = self.next_state;
+                self.next_state += 1;
+            }
             self.redo.clear();
             self.revision += 1;
             return Ok(true);
@@ -372,6 +390,10 @@ mod tests {
             self.after = next.after;
             true
         }
+
+        fn is_noop(&self) -> bool {
+            self.before == self.after
+        }
     }
 
     fn set(slot: usize, before: i32, after: i32) -> Set {
@@ -476,6 +498,39 @@ mod tests {
         history.undo(&mut values).unwrap();
         history.undo(&mut values).unwrap();
         assert_eq!(values, [0, 0]);
+    }
+
+    #[test]
+    fn a_merged_run_that_returns_to_its_start_leaves_no_entry() {
+        let mut values = vec![0];
+        let mut history = History::default();
+        history.execute(set(0, 0, 5), &mut values).unwrap();
+        history.mark_saved();
+        history.execute_merging(set(0, 5, 6), &mut values).unwrap();
+        assert!(!history.is_saved());
+        history.execute_merging(set(0, 6, 5), &mut values).unwrap();
+        assert_eq!((values.clone(), history.undo_len()), (vec![5], 1));
+        assert!(history.is_saved(), "back in the saved state");
+        // The remaining entry was sealed before the run and stays separate.
+        history.execute_merging(set(0, 5, 7), &mut values).unwrap();
+        assert_eq!(history.undo_len(), 2);
+    }
+
+    #[test]
+    fn merging_stops_at_a_save_point_and_failures_leave_the_entry() {
+        let mut values = vec![0];
+        let mut history = History::default();
+        history.execute_merging(set(0, 0, 1), &mut values).unwrap();
+        history.mark_saved();
+        history.execute_merging(set(0, 1, 2), &mut values).unwrap();
+        assert_eq!(history.undo_len(), 2);
+        assert!(history.execute_merging(set(4, 0, 1), &mut values).is_err());
+        assert_eq!(history.last_undo(), Some(&[set(0, 1, 2)][..]));
+        history.undo(&mut values).unwrap();
+        assert!(history.is_saved());
+        let revision = history.revision();
+        history.clear();
+        assert!(history.revision() > revision);
     }
 
     #[test]

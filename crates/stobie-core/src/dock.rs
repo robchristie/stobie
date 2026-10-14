@@ -29,11 +29,7 @@ impl WorkspaceResize {
 
     /// Whether this resize is valid for `workspace` and changes it.
     fn check(self, workspace: &Workspace) -> Result<bool, String> {
-        if !self.before.is_finite()
-            || !self.after.is_finite()
-            || !(0.1..=0.9).contains(&self.before)
-            || !(0.1..=0.9).contains(&self.after)
-        {
+        if !valid_fraction(self.before) || !valid_fraction(self.after) {
             return Err("invalid split resize fraction".into());
         }
         if workspace.root.split_fraction(self.node) != Some(self.before) {
@@ -99,12 +95,15 @@ impl WorkspaceChange {
 #[derive(Clone, Debug, PartialEq)]
 pub enum WorkspaceCommand {
     /// One split fraction. Applying and reverting set the fraction while the
-    /// split exists and otherwise do nothing. Consecutive resizes of one split
-    /// merge under [`History::execute_merging`](crate::History::execute_merging).
+    /// split exists and otherwise do nothing; a fraction outside 0.1–0.9 is an
+    /// error. Consecutive resizes of one split merge under
+    /// [`History::execute_merging`](crate::History::execute_merging), and a
+    /// run that returns to its start leaves no entry.
     Resize(WorkspaceResize),
     /// Show `pane` in its tab group and make it the active pane. Reverting
-    /// shows `previous_tab` in that group again and restores
-    /// `previous_active`; absent panes are skipped.
+    /// shows `previous_tab` in that group again and makes `previous_active`
+    /// the active pane without changing the tab its group shows; absent panes
+    /// are skipped.
     Activate {
         pane: PaneId,
         previous_tab: PaneId,
@@ -161,7 +160,7 @@ impl Command<Workspace> for WorkspaceCommand {
     fn apply(&self, workspace: &mut Workspace) -> Result<bool, String> {
         match self {
             Self::Resize(resize) => {
-                if !resize.after.is_finite() {
+                if !valid_fraction(resize.after) {
                     return Err("invalid split resize fraction".into());
                 }
                 let current = workspace.root.split_fraction(resize.node);
@@ -195,6 +194,9 @@ impl Command<Workspace> for WorkspaceCommand {
     fn revert(&self, workspace: &mut Workspace) -> Result<(), String> {
         match self {
             Self::Resize(resize) => {
+                if !valid_fraction(resize.before) {
+                    return Err("invalid split resize fraction".into());
+                }
                 if workspace.root.split_fraction(resize.node).is_some() {
                     workspace
                         .root
@@ -206,8 +208,12 @@ impl Command<Workspace> for WorkspaceCommand {
                 previous_active,
                 ..
             } => {
+                // Restore the displayed tab, then the active pane without
+                // changing which tab its group displays.
                 workspace.activate(*previous_tab);
-                workspace.activate(*previous_active);
+                if workspace.root.contains_pane(*previous_active) {
+                    workspace.active_pane = *previous_active;
+                }
             }
             Self::Rearrange { before, after } => {
                 if workspace != after.as_ref() {
@@ -228,6 +234,22 @@ impl Command<Workspace> for WorkspaceCommand {
             _ => false,
         }
     }
+
+    fn is_noop(&self) -> bool {
+        match self {
+            Self::Resize(resize) => resize.before == resize.after,
+            Self::Activate {
+                pane,
+                previous_tab,
+                previous_active,
+            } => pane == previous_tab && pane == previous_active,
+            Self::Rearrange { before, after } => before == after,
+        }
+    }
+}
+
+fn valid_fraction(fraction: f32) -> bool {
+    fraction.is_finite() && (0.1..=0.9).contains(&fraction)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -983,6 +1005,56 @@ mod tests {
         assert_eq!(history.undo_len(), 2);
         history.undo(&mut workspace).unwrap();
         history.undo(&mut workspace).unwrap();
+        assert_eq!(workspace, Workspace::analytical_default());
+
+        // Nudging back to the start leaves no undo step.
+        let mut history = crate::History::default();
+        for (before, after) in [(0.72, 0.77), (0.77, 0.72)] {
+            let resize = WorkspaceResize {
+                node: DockNodeId(1),
+                before,
+                after,
+            };
+            let command =
+                WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &workspace);
+            history
+                .execute_merging(command.unwrap().unwrap(), &mut workspace)
+                .unwrap();
+        }
+        assert_eq!(history.undo_len(), 0);
+        assert_eq!(workspace, Workspace::analytical_default());
+    }
+
+    #[test]
+    fn undoing_an_activation_restores_a_hidden_active_pane_without_showing_it() {
+        // Panes 5 and 6 share a group that shows 5, while 6 is the active pane.
+        let mut workspace = Workspace::analytical_default();
+        workspace.active_pane = PaneId(6);
+        workspace.validate().unwrap();
+        let original = workspace.clone();
+        let mut history = crate::History::default();
+        let change = WorkspaceChange::Activate(PaneId(1));
+        let command = WorkspaceCommand::from_change(change, &workspace);
+        history
+            .execute(command.unwrap().unwrap(), &mut workspace)
+            .unwrap();
+        assert_eq!(workspace.active_pane, PaneId(1));
+        history.undo(&mut workspace).unwrap();
+        assert_eq!(workspace, original);
+    }
+
+    #[test]
+    fn resize_commands_reject_fractions_outside_the_split_range() {
+        let mut workspace = Workspace::analytical_default();
+        let resize = |before, after| {
+            WorkspaceCommand::Resize(WorkspaceResize {
+                node: DockNodeId(1),
+                before,
+                after,
+            })
+        };
+        assert!(resize(0.72, 0.99).apply(&mut workspace).is_err());
+        assert!(resize(0.05, 0.6).revert(&mut workspace).is_err());
         assert_eq!(workspace, Workspace::analytical_default());
     }
 

@@ -257,9 +257,9 @@ impl Desk {
             before: self.records[index].clone(),
             after: after.clone(),
         };
-        self.history.execute(edit, &mut self.records)?;
+        let changed = self.history.execute(edit, &mut self.records)?;
         self.draft = Some(after);
-        Ok(true)
+        Ok(changed)
     }
 
     pub fn cancel(&mut self) {
@@ -743,7 +743,13 @@ mod tests {
         assert!(desk.is_saved(), "a draft is not committed state");
         desk.apply().unwrap();
         assert!(!desk.is_saved());
+        let revision = desk.history_revision();
         desk.mark_saved();
+        assert_eq!(
+            desk.history_revision(),
+            revision,
+            "saving keeps undo targets current"
+        );
         edit_title(&mut desk, "Unsaved revision");
         desk.apply().unwrap();
         assert!(!desk.is_saved());

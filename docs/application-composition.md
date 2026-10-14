@@ -218,7 +218,8 @@ Keep a `History<NoteEdit>` beside the state it changes and call it from
   reverted and nothing is recorded.
 - `execute_merging(command, ...)` folds the command into the newest entry when
   your `Command::merge` accepts it, so a run of small steps undoes at once.
-  `seal` ends the run; undo, redo and `mark_saved` also end it.
+  `seal` ends the run; undo, redo and `mark_saved` also end it. Implement
+  `Command::is_noop` so a run that returns to its start leaves no entry.
 - `undo` and `redo` return `Ok(false)` when there is nothing to do. A command
   that returns an error must leave its target unchanged; the entry then stays.
 - `mark_saved` records a save point and `is_saved` reports whether undo and
@@ -238,8 +239,8 @@ self.history.undo(&mut Model { notes: &mut self.notes, workspace: &mut self.work
 To make layout undoable, resolve each dock change with
 `WorkspaceCommand::from_change(change, &self.workspace)` and execute the
 command in a `History<WorkspaceCommand>`, or wrap it in your own command type.
-Use `execute_merging` for resizes so keyboard nudges of one splitter undo
-together. Record Desk's `model.rs` applies each validated draft as one `Edit`
+Execute each resize separately: a pointer drag is one completed resize, and so
+is each keyboard nudge. Record Desk's `model.rs` applies each validated draft as one `Edit`
 command and keeps layout changes out of history.
 
 ## Grow to several panes
