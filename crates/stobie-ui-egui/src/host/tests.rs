@@ -37,6 +37,14 @@ enum Act {
         shortcut = "F"
     )]
     Fit,
+    #[action(label = "Recenter", description = "Recentre the view", shortcut = "R")]
+    Recenter,
+    #[action(
+        label = "Confirm",
+        description = "Confirm the edit",
+        shortcut = "Enter"
+    )]
+    Confirm,
     #[action(
         label = "Level",
         description = "Choose a level",
@@ -63,6 +71,22 @@ struct View {
     tokens: Option<DesignTokens>,
     trigger_reset: bool,
     scroll_viewport: Option<Rect>,
+    /// Text typed into the focus probe's text field.
+    draft: String,
+    focus_probe: Option<Rect>,
+}
+
+/// A focusable control presented to check which focus blocks plain shortcuts.
+#[derive(Clone, Copy, Debug)]
+enum FocusProbe {
+    /// A clickable viewport that takes focus, as image viewports do.
+    Viewport,
+    /// An egui text edit observed as a text input.
+    TextEdit,
+    /// An egui text edit the application does not observe.
+    UnobservedTextEdit,
+    /// A custom widget the application observes as a focused text input.
+    CustomTextInput,
 }
 
 #[derive(Default)]
@@ -71,6 +95,9 @@ struct Counter {
     reset_enabled: bool,
     active_pane: Option<PaneId>,
     fitted: Vec<PaneId>,
+    recentred: u64,
+    confirmed: u64,
+    focus_probe: Option<FocusProbe>,
     errors: Vec<String>,
     discard_first_pass: bool,
     rows: usize,
@@ -177,6 +204,32 @@ impl Application for Counter {
             ui,
             node(format!("pass-{pass}"), UiRole::Status, marker.rect),
         );
+        if let Some(probe) = self.focus_probe {
+            let response = match probe {
+                FocusProbe::Viewport | FocusProbe::CustomTextInput => {
+                    let (_, response) =
+                        ui.allocate_exact_size(egui::vec2(200.0, 60.0), egui::Sense::click());
+                    if response.clicked() {
+                        response.request_focus();
+                    }
+                    response
+                }
+                FocusProbe::TextEdit | FocusProbe::UnobservedTextEdit => {
+                    ui.add(egui::TextEdit::singleline(&mut view.draft))
+                }
+            };
+            view.focus_probe = Some(response.rect);
+            let role = match probe {
+                FocusProbe::Viewport => Some(UiRole::Viewport),
+                FocusProbe::TextEdit | FocusProbe::CustomTextInput => Some(UiRole::TextInput),
+                FocusProbe::UnobservedTextEdit => None,
+            };
+            if let Some(role) = role {
+                let mut node = node("focus-probe", role, response.rect);
+                node.focused = response.has_focus();
+                crate::observe_node(ui, node);
+            }
+        }
         if self.non_finite {
             let rect = Rect::from_min_size(egui::pos2(f32::NAN, 0.0), egui::vec2(4.0, 4.0));
             crate::observe_node(ui, node("broken", UiRole::Status, rect));
@@ -272,6 +325,8 @@ impl Application for Counter {
             Act::Reset => self.count = 0,
             Act::Explode => return Err("Exploded".into()),
             Act::Fit => self.fitted.push(target.pane.expect("pane-scoped")),
+            Act::Recenter => self.recentred += 1,
+            Act::Confirm => self.confirmed += 1,
             Act::Level => return Ok(false),
         }
         Ok(true)
@@ -671,6 +726,111 @@ fn shortcuts_dispatch_only_exact_available_chords() {
     harness.key_press(Key::F);
     harness.run();
     assert_eq!(host(&harness).app().fitted, [PaneId(3)]);
+}
+
+fn click(harness: &mut Harness<'_, Probe>, position: egui::Pos2) {
+    harness.event(egui::Event::PointerMoved(position));
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos: position,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+    }
+    harness.run();
+}
+
+/// Press R as a platform does: a key event followed by its text.
+fn type_r(harness: &mut Harness<'_, Probe>) {
+    harness.key_press(Key::R);
+    harness.event(egui::Event::Text("r".into()));
+    harness.run();
+}
+
+fn focus_probe(harness: &mut Harness<'_, Probe>) {
+    let rect = host(harness)
+        .ui_state
+        .focus_probe
+        .expect("probe is presented");
+    click(harness, rect.center());
+    assert!(harness.ctx.egui_wants_keyboard_input());
+}
+
+#[test]
+fn plain_shortcuts_run_while_a_viewport_or_button_has_focus() {
+    let mut harness = harness(Counter {
+        focus_probe: Some(FocusProbe::Viewport),
+        ..Default::default()
+    });
+    focus_probe(&mut harness);
+    let probe = host(&harness)
+        .ui_snapshot()
+        .node(&SemanticUiId::new("focus-probe"));
+    assert!(probe.expect("probe is observed").focused);
+    type_r(&mut harness);
+    assert_eq!(host(&harness).app().recentred, 1);
+
+    harness.get_by_label("Increment").click();
+    harness.run();
+    assert_eq!(host(&harness).app().count, 1);
+    assert!(harness.ctx.egui_wants_keyboard_input());
+    type_r(&mut harness);
+    assert_eq!(host(&harness).app().recentred, 2);
+}
+
+#[test]
+fn enter_reaches_a_focused_viewport_but_activates_a_focused_button() {
+    let mut harness = harness(Counter {
+        focus_probe: Some(FocusProbe::Viewport),
+        ..Default::default()
+    });
+    focus_probe(&mut harness);
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(host(&harness).app().confirmed, 1);
+
+    // A focused button activates with Enter, so the plain shortcut yields.
+    harness.get_by_label("Increment").click();
+    harness.run();
+    assert_eq!(host(&harness).app().count, 1);
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(host(&harness).app().count, 2);
+    assert_eq!(host(&harness).app().confirmed, 1);
+    // Other plain keys still reach the shortcut.
+    type_r(&mut harness);
+    assert_eq!(host(&harness).app().recentred, 1);
+}
+
+#[test]
+fn text_entry_keeps_plain_keys_but_not_command_chords() {
+    for probe in [
+        FocusProbe::TextEdit,
+        FocusProbe::UnobservedTextEdit,
+        FocusProbe::CustomTextInput,
+    ] {
+        let mut harness = harness(Counter {
+            focus_probe: Some(probe),
+            ..Default::default()
+        });
+        focus_probe(&mut harness);
+        type_r(&mut harness);
+        let host = host(&harness);
+        assert_eq!(host.app().recentred, 0, "{probe:?}");
+        let typed = match probe {
+            FocusProbe::CustomTextInput => "",
+            _ => "r",
+        };
+        assert_eq!(host.ui_state.draft, typed, "{probe:?}");
+        harness.key_press_modifiers(Modifiers::COMMAND, Key::I);
+        harness.run();
+        assert_eq!(
+            harness.state().host.as_ref().unwrap().app().count,
+            1,
+            "{probe:?}"
+        );
+    }
 }
 
 #[test]
