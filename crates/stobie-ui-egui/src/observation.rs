@@ -27,20 +27,29 @@ pub(crate) enum Visibility {
     VisibleWithin(Rect),
 }
 
+/// Who registered a node. An application may observe a recipe's node again to
+/// add context such as its pane or domain; its observation replaces the
+/// recipe's.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Origin {
+    Recipe,
+    Application,
+}
+
 #[derive(Clone, Default)]
 struct Collector {
     enabled: bool,
     pass: u64,
     /// Depth of nested [`observe_visible_only`] regions being presented.
     visible_only: u32,
-    nodes: Vec<(UiNode, Visibility)>,
+    nodes: Vec<(UiNode, Visibility, Origin)>,
     text: Vec<(TextLayoutObservation, bool)>,
 }
 
 /// Observations registered during one UI pass.
 #[derive(Default)]
 pub(crate) struct PassObservations {
-    pub nodes: Vec<(UiNode, Visibility)>,
+    pub nodes: Vec<(UiNode, Visibility, Origin)>,
     /// Text, and whether only its fully visible successes are audited.
     pub text: Vec<(TextLayoutObservation, bool)>,
 }
@@ -111,6 +120,19 @@ pub(crate) fn record(
     nodes: impl IntoIterator<Item = (UiNode, Visibility)>,
     text: impl IntoIterator<Item = (TextLayoutObservation, bool)>,
 ) {
+    let nodes = nodes
+        .into_iter()
+        .map(|(node, visibility)| (node, visibility, Origin::Application));
+    record_with_origin(context, viewport, pass, nodes, text);
+}
+
+fn record_with_origin(
+    context: &Context,
+    viewport: ViewportId,
+    pass: u64,
+    nodes: impl IntoIterator<Item = (UiNode, Visibility, Origin)>,
+    text: impl IntoIterator<Item = (TextLayoutObservation, bool)>,
+) {
     context.data_mut(|data| {
         let collector = data.get_temp_mut_or_default::<Collector>(collector_id(viewport));
         if !collector.enabled || pass < collector.pass {
@@ -149,14 +171,22 @@ pub(crate) fn take(context: &Context) -> PassObservations {
 pub(crate) fn observe_recipe_node(ui: &Ui, node: &UiNode) {
     let context = ui.ctx();
     if is_enabled(context, context.viewport_id()) {
-        observe_node(ui, node.clone());
+        record_with_origin(
+            context,
+            context.viewport_id(),
+            context.cumulative_pass_nr(),
+            [(node.clone(), visibility(ui), Origin::Recipe)],
+            [],
+        );
     }
 }
 
 /// Observe an application-owned semantic node, such as a custom row, in a
 /// hosted application. Inside [`observe_visible_only`] it is published only
 /// where visible within `ui`'s clip rectangle. Recipes and presentation
-/// contexts already observe their own nodes; do not observe those again.
+/// contexts already observe their own nodes. Observe a recipe's node again only
+/// to add context such as its pane or domain: that observation replaces the
+/// recipe's.
 pub fn observe_node(ui: &Ui, node: UiNode) {
     let context = ui.ctx();
     record(
@@ -210,7 +240,7 @@ mod tests {
             let ids: Vec<_> = taken
                 .nodes
                 .iter()
-                .map(|(node, _)| node.id.0.as_str())
+                .map(|(node, _, _)| node.id.0.as_str())
                 .collect();
             assert_eq!(ids, ["second-pass"]);
             assert!(take(ui.ctx()).nodes.is_empty());
@@ -260,7 +290,7 @@ mod tests {
             let nodes: Vec<_> = taken
                 .nodes
                 .iter()
-                .map(|(node, visibility)| (node.id.0.as_str(), *visibility))
+                .map(|(node, visibility, _)| (node.id.0.as_str(), *visibility))
                 .collect();
             assert_eq!(
                 nodes,

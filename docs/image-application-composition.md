@@ -3,9 +3,10 @@
 This guide covers the analytical image path: the image-specific core types,
 the asynchronous tile runtime and the GPU scalar renderer. Most applications
 need none of it; start with the [composition guide](application-composition.md),
-whose hosted path owns the per-pass plumbing. The triangle example below still
-wires its pass by hand with `dock_workspace` and image commands. It moves to
-the hosted path once core history becomes generic.
+whose hosted path owns the per-pass plumbing. The Analytical Workspace Lab runs
+these types on that path; [Host an image application](#host-an-image-application)
+shows how. The triangle example below still wires its pass by hand with
+`dock_workspace` and image commands.
 
 ## Choose the owners
 
@@ -167,3 +168,26 @@ owned messages and renderer callbacks own GPU mutation. `RenderBridge` clones
 share synchronised hand-off/acknowledgement queues. These are public composition
 obligations; the Lab's private pane orchestration is an example of them, not an
 additional API contract.
+
+## Host an image application
+
+The Lab (`apps/analytical-workspace-lab/src/app.rs`) shows the image owners on
+`AppHost`. The host owns observation, shortcuts, inspection and repaint; the
+application keeps these image obligations:
+
+- **Poll workers in `prepare`.** It receives UI state, so decoded thumbnails
+  become egui textures there, and worker completions request a repaint with a
+  recorded reason.
+- **Keep the gesture preview in `Session` and render it in the same frame.**
+  `ui` borrows the application immutably, so panes edit a pass-local copy of
+  `session.gesture`, the overlay and render plan use that copy, and a
+  `Gesture` intent stores it after the pass. A completed gesture still emits
+  one command and one undo record.
+- **Submit the render plan at the end of `ui`**, after camera previews are
+  final, and emit the pass's tile demands as an intent that reconciles the
+  runtime without requesting a repaint.
+- **Keep layout undoable where it was.** The host dock emits `WorkspaceChange`;
+  the Lab applies a resize as a `ResizeSplit` command and other changes
+  directly.
+- **Request delayed repaints for idle gestures** with
+  `Frame::request_repaint_after`, and persist through `Application::save`.

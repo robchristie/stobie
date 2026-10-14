@@ -80,7 +80,13 @@ struct Counter {
     non_finite: bool,
     /// Present a node beyond the bottom of the window.
     overflow: bool,
+    /// Present a range recipe and observe its node again with a pane.
+    refine_recipe: bool,
+    /// Observe a different control under the recipe node's ID.
+    clash_with_recipe: bool,
     animate: bool,
+    /// Schedule a pass after an idle delay.
+    idle_timeout: bool,
     workspace: Option<Workspace>,
     /// The count each completed pass presented.
     presented: Vec<u64>,
@@ -179,6 +185,25 @@ impl Application for Counter {
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
             crate::observe_node(ui, node("twice", UiRole::Status, marker.rect));
         }
+        if self.refine_recipe {
+            let mut level = 0.5;
+            let mut node = crate::range_control(
+                ui,
+                SemanticUiId::new("level"),
+                SemanticUiId::root(),
+                "Level",
+                &mut level,
+                0.0..=1.0,
+                Act::Level,
+                &tokens(),
+            )
+            .node;
+            node.pane = Some(PaneId(3));
+            if self.clash_with_recipe {
+                node.role = UiRole::Status;
+            }
+            crate::observe_node(ui, node);
+        }
         if self.overflow {
             ui.add_space(2_000.0);
             let below = ui.label("Below the window");
@@ -225,6 +250,9 @@ impl Application for Counter {
         }
         if self.animate {
             frame.request_repaint("animation");
+        }
+        if self.idle_timeout {
+            frame.request_repaint_after("idle gesture", std::time::Duration::from_millis(250));
         }
     }
 
@@ -549,6 +577,39 @@ fn invalid_observations_are_audited_without_blocking_publication() {
 }
 
 #[test]
+fn an_application_observation_refines_a_recipe_node() {
+    let refined = harness(Counter {
+        refine_recipe: true,
+        ..Default::default()
+    });
+    let snapshot = host(&refined).ui_snapshot();
+    let levels: Vec<_> = snapshot
+        .nodes
+        .iter()
+        .filter(|node| node.id.0 == "level")
+        .collect();
+    assert_eq!(levels.len(), 1);
+    assert_eq!(levels[0].pane, Some(PaneId(3)));
+    assert!(
+        snapshot.semantic_audit.is_empty(),
+        "{:?}",
+        snapshot.semantic_audit
+    );
+
+    // A different control under the same ID is still a duplicate.
+    let clashing = harness(Counter {
+        refine_recipe: true,
+        clash_with_recipe: true,
+        ..Default::default()
+    });
+    assert!(host(&clashing).ui_snapshot().semantic_audit.contains(
+        &SemanticAuditFinding::DuplicateId {
+            id: SemanticUiId::new("level"),
+        }
+    ));
+}
+
+#[test]
 fn the_root_keeps_the_window_bounds_when_content_overflows() {
     let harness = harness(Counter {
         overflow: true,
@@ -805,6 +866,21 @@ fn repaints_only_for_recorded_reasons() {
         host(&harness).repaint_reasons(),
         [HostRepaint::Application("animation")]
     );
+
+    // A scheduled reason asks for a later pass, not an immediate one.
+    let app = host_mut(&mut harness).app_mut();
+    app.animate = false;
+    app.idle_timeout = true;
+    harness.step();
+    let reasons = host(&harness).repaint_reasons();
+    assert_eq!(
+        reasons,
+        [HostRepaint::Scheduled {
+            reason: "idle gesture",
+            delay: std::time::Duration::from_millis(250),
+        }]
+    );
+    assert!(!reasons[0].is_immediate());
 }
 
 #[test]
@@ -822,6 +898,22 @@ fn the_dock_observes_panes_and_emits_layout_intents() {
     assert!(snapshot.by_role(UiRole::Pane).count() >= 2);
     assert!(snapshot.by_role(UiRole::Tab).count() >= 2);
     assert!(snapshot.by_role(UiRole::Splitter).count() >= 1);
+    // Dock nodes name their pane or dock node as a domain reference.
+    for node in snapshot
+        .by_role(UiRole::Pane)
+        .chain(snapshot.by_role(UiRole::Tab))
+    {
+        assert_eq!(
+            node.domain_reference,
+            Some(crate::DomainReference::Pane(node.pane.unwrap()))
+        );
+    }
+    for splitter in snapshot.by_role(UiRole::Splitter) {
+        assert!(matches!(
+            splitter.domain_reference,
+            Some(crate::DomainReference::DockNode(_))
+        ));
+    }
     let fit = snapshot
         .by_action(Act::Fit)
         .next()

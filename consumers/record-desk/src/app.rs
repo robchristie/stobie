@@ -209,7 +209,7 @@ impl Application for RecordDesk {
         }
     }
 
-    fn prepare(&mut self, pass: &mut PassContext<'_>) {
+    fn prepare(&mut self, pass: &mut PassContext<'_>, _: &mut View) {
         // Adapt the authoritative tree itself; never create a second docking model.
         self.narrow_layout = pass.available_rect().width() < 640.0;
         if self.narrow_layout
