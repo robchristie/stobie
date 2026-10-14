@@ -8,7 +8,7 @@ import { cpus, totalmem, platform, release, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
 import { createProductionServer } from './browser-serve.mjs';
 
 export function spread(values) {
@@ -126,6 +126,7 @@ try {
         report.browser.version = (await browserSession.send('Browser.getVersion')).product;
         const gpu = await browserSession.send('SystemInfo.getInfo');
         report.browser.graphics = gpu.gpu;
+        assertGpuCompositing(gpu.gpu);
         await browserSession.detach();
         const page = context.pages()[0] ?? await context.newPage();
         await page.addInitScript(() => {

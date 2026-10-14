@@ -145,6 +145,15 @@ node tools/browser-startup-compare.mjs BASELINE/results.json FINAL/results.json
 cargo xtask verify
 ```
 
+Headless runs pass `--use-gl=angle --use-angle=swiftshader`. Without an
+explicit GL choice, `chrome-headless-shell` falls back to software compositing
+(`--use-angle=swiftshader-webgl`). A WebGPU canvas cannot allocate its
+swap-chain image there, so nothing presents and the device is lost. The smoke
+and benchmark check Chromium's reported GPU compositing status at launch and
+stop with that status, rather than waiting for content that cannot appear.
+Headful runs (`STOBIE_BROWSER_HEADFUL=1`), as in CI, keep the browser's default
+GL selection.
+
 On Linux the existing launch helper uses SwiftShader WebGPU. Set
 `STOBIE_BROWSER_HEADFUL=1 DISPLAY=:<your-X-display>` where needed for meaningful
 readback, and supply the normal library environment on hosts using the bundled
