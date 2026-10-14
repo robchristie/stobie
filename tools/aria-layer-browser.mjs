@@ -4,6 +4,12 @@
 //
 // node tools/aria-layer-browser.mjs --app record-desk|gallery|lab
 //
+// It then activates controls through the layer (a click event, as a screen
+// reader's default action sends; `element.click()`; and Playwright's forced
+// coordinate click) and checks focus reporting. Where an application publishes
+// facts, the outcome is read through the application interface, enabled with
+// `?automation=1` for this check only.
+//
 // The applications must already be built (`cargo xtask build-web`,
 // `consumers/record-desk/build-web.sh`). Raw evidence goes to
 // STOBIE_EVIDENCE_DIR (default .tools/runtime/aria-layer).
@@ -15,6 +21,7 @@ import { createRequire } from 'node:module';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 import { hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment } from './browser-launch.mjs';
+import { ApplicationClient, BrowserTransport } from './application-client.mjs';
 
 const APPS = {
   'record-desk': 'consumers/record-desk/web',
@@ -60,7 +67,7 @@ try {
       return submit.apply(this, args);
     };
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/${expectations.facts ? '?automation=1' : ''}`);
   await page.waitForSelector(`${LAYER} [role]`, { state: 'attached', timeout: 60000 });
   await page.evaluate(selector => {
     const layer = document.querySelector(selector);
@@ -172,6 +179,88 @@ try {
     assert.notEqual(changed, text, 'the status changed');
     assert.match(changed, new RegExp(then), 'the status reports the change');
     check('live status', { before: text, after: changed });
+  }
+  // Activation through the layer takes the same route as a physical click: a
+  // disabled control does nothing, and a hidden capability has no element.
+  let client;
+  if (expectations.facts) {
+    client = new ApplicationClient(new BrowserTransport(page));
+    await client.hello();
+  }
+  const facts = async () => client ? (await client.observe()).facts : {};
+  for (const step of expectations.activate ?? []) {
+    await page.evaluate(() => { window.__ariaLog = []; });
+    before = await probe();
+    const element = page.getByRole(step.target.role, { name: step.target.name, exact: true }).first();
+    if (step.route === 'event') await element.dispatchEvent('click');
+    else if (step.route === 'element') await element.evaluate(target => target.click());
+    else if (step.route === 'pointer') await element.click({ force: true });
+    else throw new Error(`unknown route ${step.route}`);
+    after = await settle(`activate ${step.target.name}`);
+    const changed = await accessibilityTree(page);
+    for (const expected of step.then ?? []) {
+      assert(changed.some(node => matches(node, expected)), `after ${step.route} activation of ${step.target.name}, expected ${JSON.stringify(expected)}`);
+    }
+    const observed = await facts();
+    for (const [key, value] of Object.entries(step.facts ?? {})) {
+      assert.deepEqual(observed[key], value, `after ${step.route} activation of ${step.target.name}, fact ${key}`);
+    }
+    if (step.writes !== undefined && after.mutations - before.mutations !== step.writes) console.log(await page.evaluate(() => window.__ariaLog.join('\n')));
+    if (step.writes !== undefined) assert.equal(after.mutations - before.mutations, step.writes, `${step.target.name} layer writes`);
+    check(`activate by ${step.route}`, { target: step.target, writes: after.mutations - before.mutations, facts: step.facts });
+  }
+  for (const hidden of expectations.hidden ?? []) {
+    const region = page.getByRole('region', { name: hidden.region, exact: true });
+    assert.equal(await region.getByRole(hidden.role, { name: hidden.name, exact: true }).count(), 0, `${hidden.name} is hidden in ${hidden.region}`);
+    assert.equal(await page.getByRole('region', { name: hidden.shownIn, exact: true }).getByRole(hidden.role, { name: hidden.name, exact: true }).count(), 1, `${hidden.name} is shown in ${hidden.shownIn}`);
+    check('hidden capability', hidden);
+  }
+
+  // Keyboard focus stays on the canvas; the canvas names egui's focus.
+  if (expectations.focus) {
+    const canvas = page.locator('canvas');
+    await canvas.focus();
+    const named = [];
+    for (let press = 0; press < expectations.focus.tabs; press++) {
+      await page.keyboard.press('Tab');
+      await settle('Tab');
+      const state = await page.evaluate(() => {
+        const canvas = document.querySelector('canvas');
+        const active = document.getElementById(canvas.getAttribute('aria-activedescendant') ?? '');
+        return { canvasFocused: document.activeElement === canvas, role: active?.getAttribute('role'), name: active?.getAttribute('aria-label') };
+      });
+      assert(state.canvasFocused, 'Tab keeps DOM focus on the canvas');
+      assert(state.role, 'aria-activedescendant names a layer element');
+      named.push(`${state.role} ${state.name}`);
+    }
+    const tree = await accessibilityTree(page);
+    assert.equal(tree.find(node => node.role === 'application').properties.focused, true, 'the application keeps focus');
+    check('Tab focus', { named });
+    // Focus moved onto a layer element, as assistive technology may move it,
+    // reaches egui and returns to the application; typing then edits the field.
+    if (expectations.focus.edit) {
+      const { target, text, fact } = expectations.focus.edit;
+      await page.getByRole(target.role, { name: target.name, exact: true }).focus();
+      // A focused text field blinks its caret, so wait rather than settle.
+      await page.waitForFunction(name => document.activeElement?.getAttribute('aria-label') === name, target.name, { timeout: 5000 });
+      const agent = await page.evaluate(() => ({ tag: document.activeElement?.tagName, name: document.activeElement?.getAttribute('aria-label') }));
+      assert.deepEqual(agent, { tag: 'INPUT', name: target.name }, 'egui edits text through its named text agent');
+      await page.keyboard.press('End');
+      await page.keyboard.type(text);
+      await page.waitForTimeout(500);
+      const observed = await facts();
+      assert(String(observed[fact]).endsWith(text), `typing reached ${fact}: ${observed[fact]}`);
+      await page.keyboard.press('Escape');
+      check('focus handoff and typing', { target, fact: observed[fact] });
+    }
+  }
+  // Destroying the application removes the layer and restores the canvas.
+  if (expectations.handle) {
+    await page.evaluate(handle => window[handle].destroy(), expectations.handle);
+    assert.equal(await page.locator(LAYER).count(), 0, 'destroy removes the layer');
+    const canvas = await page.evaluate(() => ['role', 'aria-owns', 'aria-activedescendant'].map(name => document.querySelector('canvas').getAttribute(name)));
+    assert.deepEqual(canvas, [null, null, null], 'destroy restores the canvas');
+    check('destroy');
   }
   assert.deepEqual(errors, [], 'no page errors');
   report.passed = true;

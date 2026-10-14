@@ -20,6 +20,14 @@ if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
 else
   export LD_LIBRARY_PATH="$SYSROOT/usr/lib"
   XVFB="$SYSROOT/usr/bin/Xvfb"
+  # Minimal hosts may have fontconfig but no installed system fonts. Chromium's
+  # hidden editable input needs a real font even though egui draws the canvas.
+  export FONTCONFIG_FILE="$SMOKE_TMP/fonts.conf"
+  cat >"$FONTCONFIG_FILE" <<FONTS
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig><dir>$ROOT/crates/stobie-ui-egui/assets/fonts</dir><cachedir>$SMOKE_TMP/font-cache</cachedir></fontconfig>
+FONTS
 fi
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT

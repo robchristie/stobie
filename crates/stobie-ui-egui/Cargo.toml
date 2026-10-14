@@ -30,7 +30,7 @@ wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
 js-sys = { version = "0.3.104", optional = true }
 # eframe already enables these features, so the ARIA layer adds no web-sys code.
-web-sys = { workspace = true, features = ["console", "Document", "DomRect", "Element", "HtmlCanvasElement", "HtmlElement", "Node"], optional = true }
+web-sys = { workspace = true, features = ["console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "Node"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [[example]]

@@ -833,6 +833,44 @@ fn text_entry_keeps_plain_keys_but_not_command_chords() {
     }
 }
 
+/// The browser ARIA layer activates a control with an AccessKit click and
+/// moves focus with an AccessKit focus request, as native assistive technology
+/// does: an enabled action runs once through the click route, while a disabled
+/// one neither runs nor takes focus.
+#[test]
+fn accesskit_click_and_focus_take_the_physical_route() {
+    let mut harness = harness(Counter::default());
+    let focused = |harness: &Harness<'_, Probe>, action| {
+        host(harness)
+            .ui_snapshot()
+            .by_action(action)
+            .next()
+            .is_some_and(|node| node.focused)
+    };
+    harness.get_by_label("Increment").click_accesskit();
+    harness.run();
+    assert_eq!(host(&harness).app().count, 1);
+
+    harness.get_by_label("Explode").focus();
+    harness.run();
+    assert!(focused(&harness, Act::Explode), "focus reaches the control");
+    assert!(
+        host(&harness).app().errors.is_empty(),
+        "focus does not activate"
+    );
+
+    harness.get_by_label("Reset").click_accesskit();
+    harness.get_by_label("Reset").focus();
+    harness.run();
+    assert!(
+        host(&harness).app().errors.is_empty(),
+        "a disabled control does nothing"
+    );
+    assert_eq!(host(&harness).app().count, 1);
+    assert!(!focused(&harness, Act::Reset));
+    assert!(focused(&harness, Act::Explode));
+}
+
 #[test]
 fn availability_gates_clicks_triggers_and_semantic_invocation() {
     let mut harness = harness(Counter::default());

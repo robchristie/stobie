@@ -59,7 +59,7 @@ pub(super) fn thumbnail_grid(
                         _ => ThumbnailState::Error,
                     }
                 };
-                thumbnail_cell(
+                let cell = thumbnail_cell(
                     ui,
                     ThumbnailCellSpec {
                         instance: 70 + index,
@@ -71,6 +71,11 @@ pub(super) fn thumbnail_grid(
                     tokens,
                     font_scale,
                     observations,
+                );
+                stobie_ui_egui::set_position_semantics(
+                    &cell,
+                    index as usize + 1,
+                    Some(count as usize),
                 );
             }
         })

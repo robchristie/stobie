@@ -100,7 +100,7 @@ pub(super) fn results_story(
             ),
             (63, "#842772", "0.0, 0.0", "7.500 %", "Target", false),
         ] {
-            result_row(
+            let row = result_row(
                 ui,
                 stobie_ui_egui::ResultRowSpec {
                     instance,
@@ -114,6 +114,7 @@ pub(super) fn results_story(
                 font_scale,
                 observations,
             );
+            stobie_ui_egui::set_position_semantics(&row, (instance - 59) as usize, Some(4));
         }
     });
 }

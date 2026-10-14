@@ -355,6 +355,20 @@ impl Application for Gallery {
                         .layout(egui::Layout::top_down(egui::Align::Min)),
                 );
                 story_ui.set_clip_rect(content_rect);
+                // The story pane is a region named by its story.
+                story_ui
+                    .ctx()
+                    .accesskit_node_builder(story_ui.unique_id(), |node| {
+                        node.set_role(egui::accesskit::Role::Region);
+                        node.set_label(self.selected.as_str());
+                        node.set_author_id("gallery.story");
+                        node.set_bounds(egui::accesskit::Rect {
+                            x0: f64::from(rect.min.x),
+                            y0: f64::from(rect.min.y),
+                            x1: f64::from(rect.max.x),
+                            y1: f64::from(rect.max.y),
+                        });
+                    });
                 let report = render_story(
                     &mut story_ui,
                     self.selected,
@@ -704,6 +718,38 @@ mod tests {
         );
         assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 1);
         std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    /// Every story's AccessKit tree, which the browser ARIA layer mirrors,
+    /// agrees with its semantic snapshot.
+    #[test]
+    fn every_story_accesskit_tree_matches_its_semantic_snapshot() {
+        for story in STORIES {
+            let context = egui::Context::default();
+            context.enable_accesskit();
+            let mut host = AppHost::new(
+                &context,
+                Gallery::with(story.id, GalleryConfiguration::default()),
+            );
+            let mut update = None;
+            for _ in 0..3 {
+                let mut output = context.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| host.present(ui),
+                );
+                output.textures_delta.clear();
+                update = output.platform_output.accesskit_update.take();
+            }
+            let findings =
+                stobie_ui_egui::audit_accesskit(host.ui_snapshot(), &update.expect("AccessKit"));
+            assert!(findings.is_empty(), "{}: {findings:#?}", story.id.as_str());
+        }
     }
 
     #[test]
