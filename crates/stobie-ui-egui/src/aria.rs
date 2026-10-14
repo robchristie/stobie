@@ -21,6 +21,9 @@ pub const ARIA_ID_PREFIX: &str = "stobie-a11y:";
 pub struct AriaElement {
     /// The AccessKit node this element presents, for routing actions back.
     pub node: NodeId,
+    /// The element's tag: `input` or `textarea` for text fields, whose value
+    /// browsers expose reliably, and `div` otherwise.
+    pub tag: &'static str,
     /// The parent element; `None` is the layer container.
     pub parent: Option<String>,
     pub children: Vec<String>,
@@ -48,6 +51,7 @@ pub struct AriaTree {
 pub enum DomOp {
     Create {
         id: String,
+        tag: &'static str,
     },
     SetAttribute {
         id: String,
@@ -178,11 +182,27 @@ impl Projection<'_> {
                 .get(child)
                 .is_some_and(|child| child.role() != Role::TextRun)
         });
-        let (attributes, text) = presentation(node, contains_text);
+        let (mut attributes, text) = presentation(node, contains_text);
+        let tag = match attributes.get("role").map(String::as_str) {
+            Some("textbox") if attributes.contains_key("aria-multiline") => "textarea",
+            Some("textbox") => "input",
+            _ => "div",
+        };
+        if tag != "div" {
+            // Native text fields carry their role and multiline state. They
+            // never join the page's Tab order, and browser autofill and
+            // spelling tools must not attach to them.
+            attributes.remove("role");
+            attributes.remove("aria-multiline");
+            attributes.insert("tabindex", "-1".to_owned());
+            attributes.insert("autocomplete", "off".to_owned());
+            attributes.insert("spellcheck", "false".to_owned());
+        }
         self.tree.elements.insert(
             element_id.clone(),
             AriaElement {
                 node: id,
+                tag,
                 parent: parent.map(ToOwned::to_owned),
                 children: Vec::new(),
                 attributes,
@@ -590,9 +610,19 @@ fn number(value: f64) -> String {
 /// produce none.
 pub fn diff(previous: &AriaTree, next: &AriaTree) -> Vec<DomOp> {
     let mut operations = Vec::new();
+    // An element whose tag changes is removed and created again.
+    let mut recreated = BTreeSet::new();
     for (id, element) in &next.elements {
-        let Some(before) = previous.elements.get(id) else {
-            operations.push(DomOp::Create { id: id.clone() });
+        let before = previous.elements.get(id);
+        if before.is_some_and(|before| before.tag != element.tag) {
+            operations.push(DomOp::Remove { id: id.clone() });
+            recreated.insert(id);
+        }
+        let Some(before) = before.filter(|before| before.tag == element.tag) else {
+            operations.push(DomOp::Create {
+                id: id.clone(),
+                tag: element.tag,
+            });
             for (name, value) in &element.attributes {
                 operations.push(DomOp::SetAttribute {
                     id: id.clone(),
@@ -653,13 +683,15 @@ pub fn diff(previous: &AriaTree, next: &AriaTree) -> Vec<DomOp> {
                 .get(parent)
                 .map(|before| before.children.as_slice()),
         };
-        if before != Some(children) {
-            place_children(
-                parent,
-                before.unwrap_or_default(),
-                children,
-                &mut operations,
-            );
+        // A recreated child is new to its parent.
+        let before: Vec<String> = before
+            .unwrap_or_default()
+            .iter()
+            .filter(|child| !recreated.contains(child))
+            .cloned()
+            .collect();
+        if before != children {
+            place_children(parent, &before, children, &mut operations);
         }
         for child in children.iter().rev() {
             pending.push((Some(child), &next.elements[child].children));

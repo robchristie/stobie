@@ -55,7 +55,8 @@ snapshot, is the source.
   whose tree is unchanged writes nothing. Hover repaints, for example, write
   nothing.
 - **Root.** The canvas becomes `role="application"`, named by the application
-  identity, and owns the layer through `aria-owns`. The application role makes
+  identity, and owns the layer and eframe's text agent through `aria-owns`.
+  The application role makes
   screen readers pass keys to egui, which handles Tab, arrows and shortcuts.
   The layer can still be read in browse mode. Destroying the host removes the
   layer and restores the canvas.
@@ -74,9 +75,15 @@ snapshot, is the source.
   layer requests egui focus for its node and returns DOM focus to the canvas.
   While egui edits text, eframe's text agent holds DOM focus. It is named after
   the focused field, so typing after focusing "Record title" edits that field.
-- **Values.** Combo boxes and focusable text fields expose their current text
-  as their value. Sliders and splitters expose `aria-valuenow`, minimum and
-  maximum.
+- **Values.** Text fields are hidden `input` and `textarea` elements whose
+  `value` mirrors egui's text, so browsers and Playwright snapshots expose it.
+  Direct edits to them are reverted; text is edited through egui. Combo boxes
+  expose their current text. Sliders expose `aria-valuenow`, minimum and
+  maximum. Splitters expose the first pane's share as a percentage within
+  10–90%, because Chromium ignores `aria-valuetext` on `separator`.
+- **Shortcuts.** An action button's registered shortcut is its
+  `aria-keyshortcuts`. In the browser a Cmd shortcut lists both forms, such
+  as `Control+S Meta+S`; native AccessKit gives the platform's form.
 - **Limits.** The layer is positioned from the canvas's client rectangle on
   each pass. A page that scrolls, or transforms an ancestor, without a pass
   leaves it misaligned until the next pass. It is not a substitute for a text
@@ -86,14 +93,14 @@ snapshot, is the source.
 | --- | --- | --- |
 | `Application` | egui root | `application` on the canvas, named by the application |
 | `ApplicationBar`, `Toolbar` | As the recipe sets it | `toolbar` when its node has the AccessKit toolbar role; otherwise flattened |
-| `Button` | `Button` | `button`; a toggle adds `aria-pressed`; a disabled control adds `aria-disabled` and its reason in `aria-description` |
+| `Button` | `Button` | `button` with `aria-keyshortcuts` for its shortcut; a toggle adds `aria-pressed`; a disabled control adds `aria-disabled` and its reason in `aria-description` |
 | `NavigationItem` | `Button` with current state | `button` with `aria-current` |
 | `RadioButton` | `RadioButton` | `radio` with `aria-checked` |
 | `ComboBox` | `ComboBox` | `combobox` with its value as text and `aria-expanded` (`false` when unset) |
-| `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | Focusable `textbox` whose text is its current value; multiline adds `aria-multiline` |
+| `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | Focusable `input` or `textarea` (implicit `textbox`) whose `value` is the current text |
 | `Slider` | `Slider` | `slider` with `aria-valuenow`, `aria-valuemin` and `aria-valuemax` |
 | `Tab` | `Tab` in the dock's `TabList` | `tab` with `aria-selected`, inside `tablist` |
-| `Splitter` | `Splitter` | Focusable `separator` with orientation, `aria-valuenow`, `aria-valuemin` and `aria-valuemax` |
+| `Splitter` | `Splitter`, valued in percent | Focusable `separator` with orientation, `aria-valuenow` (10–90) and `aria-valuemin`/`aria-valuemax` |
 | `Pane` | `Region` named by the tab title | `region` landmark |
 | `Viewport` | `Canvas` | `group` with `aria-roledescription="viewport"` |
 | `ScrollArea` | egui container | Flattened |
@@ -126,7 +133,10 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
   restores the canvas.
 
 This proves the browser accessibility tree only. It is not screen-reader
-qualification.
+qualification. `tools/aria-layer-orca/run.sh` runs Record Desk under actual
+Orca in a container; the
+[integration evidence](../accessibility-integration-report.md#browser-aria-layer-with-orca)
+records its result and limits.
 
 ## Review checks
 

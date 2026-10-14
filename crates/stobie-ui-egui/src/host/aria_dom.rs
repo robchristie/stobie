@@ -126,8 +126,10 @@ struct Layer {
     canvas_named: bool,
     container: HtmlElement,
     container_geometry: String,
-    /// eframe's text agent and the name last given to it.
+    /// eframe's text agent, whether the layer gave it its ID, and the name
+    /// last given to it.
     text_agent: Option<Element>,
+    text_agent_identified: bool,
     text_agent_name: String,
     elements: HashMap<String, HtmlElement>,
     tree: AriaTree,
@@ -158,16 +160,26 @@ impl Layer {
         if canvas_named {
             canvas.set_attribute("aria-label", name)?;
         }
-        canvas.set_attribute("aria-owns", &container_id)?;
         // eframe's text agent is a hidden input beside the canvas that holds
-        // keyboard focus while egui edits text. It is named after the focused
-        // text field, so assistive technology announces what is being edited.
+        // keyboard focus while egui edits text. The application owns it, and
+        // it is named after the focused text field, so assistive technology
+        // announces what is being edited.
         let text_agent = canvas
             .parent_element()
             .map(|parent| parent.query_selector(":scope > input"))
             .transpose()?
             .flatten()
             .filter(|agent| !agent.has_attribute("aria-label"));
+        let mut owned = container_id.clone();
+        let mut text_agent_identified = false;
+        if let Some(agent) = &text_agent {
+            if agent.id().is_empty() {
+                agent.set_id(&format!("{}text-agent-{key}", aria::ARIA_ID_PREFIX));
+                text_agent_identified = true;
+            }
+            owned = format!("{owned} {}", agent.id());
+        }
+        canvas.set_attribute("aria-owns", &owned)?;
         let mut listeners = Vec::new();
         for (event, action) in [("click", Action::Click), ("focusin", Action::Focus)] {
             let listener = Listener::new(move |event: Event| {
@@ -176,6 +188,11 @@ impl Layer {
             container.add_event_listener_with_callback(event, listener.as_ref().unchecked_ref())?;
             listeners.push((event, listener));
         }
+        // Text is edited through egui, so an edit made directly to a layer
+        // field is reverted to the mirrored value.
+        let listener = Listener::new(move |event: Event| restore(key, &event));
+        container.add_event_listener_with_callback("input", listener.as_ref().unchecked_ref())?;
+        listeners.push(("input", listener));
         let mut layer = Self {
             context: context.clone(),
             document,
@@ -185,6 +202,7 @@ impl Layer {
             container,
             container_geometry: String::new(),
             text_agent,
+            text_agent_identified,
             text_agent_name: String::new(),
             elements: HashMap::new(),
             tree: AriaTree::default(),
@@ -214,6 +232,9 @@ impl Layer {
         }
         if let Some(agent) = &self.text_agent {
             let _ = agent.remove_attribute("aria-label");
+            if self.text_agent_identified {
+                agent.remove_attribute("id").ok();
+            }
         }
     }
 
@@ -227,7 +248,7 @@ impl Layer {
             .active
             .as_ref()
             .and_then(|id| self.tree.elements.get(id))
-            .filter(|element| element.attributes.get("role").map(String::as_str) == Some("textbox"))
+            .filter(|element| element.tag != "div")
             .and_then(|element| element.attributes.get("aria-label"))
             .map_or("Text entry", String::as_str);
         if name != self.text_agent_name {
@@ -268,8 +289,8 @@ impl Layer {
 
     fn perform(&mut self, operation: DomOp) -> Result<(), JsValue> {
         match operation {
-            DomOp::Create { id } => {
-                let element: HtmlElement = self.document.create_element("div")?.unchecked_into();
+            DomOp::Create { id, tag } => {
+                let element: HtmlElement = self.document.create_element(tag)?.unchecked_into();
                 element.set_id(&id);
                 self.elements.insert(id, element);
             }
@@ -279,9 +300,7 @@ impl Layer {
             DomOp::RemoveAttribute { id, name } => {
                 self.element(&id)?.remove_attribute(name)?;
             }
-            DomOp::SetText { id, text } => {
-                self.element(&id)?.set_text_content(text.as_deref());
-            }
+            DomOp::SetText { id, text } => set_text(self.element(&id)?, text.as_deref())?,
             DomOp::SetStyle { id, style } => {
                 self.element(&id)?
                     .set_attribute("style", &format!("{ELEMENT_STYLE}{style}"))?;
@@ -343,6 +362,42 @@ fn request(key: u32, event: &Event, action: Action) {
             let _ = layer.canvas.focus_with_options(&options);
         }
         layer.context.request_repaint();
+    });
+}
+
+/// Set an element's text: a text field's value, or another element's content.
+fn set_text(element: &HtmlElement, text: Option<&str>) -> Result<(), JsValue> {
+    if matches!(element.tag_name().as_str(), "INPUT" | "TEXTAREA") {
+        js_sys::Reflect::set(
+            element,
+            &JsValue::from_str("value"),
+            &JsValue::from_str(text.unwrap_or_default()),
+        )?;
+    } else {
+        element.set_text_content(text);
+    }
+    Ok(())
+}
+
+/// Revert a direct edit of a layer text field to its mirrored value.
+fn restore(key: u32, event: &Event) {
+    let Some(target) = event
+        .target()
+        .and_then(|target| target.dyn_into::<HtmlElement>().ok())
+    else {
+        return;
+    };
+    LAYERS.with(|layers| {
+        let Ok(layers) = layers.try_borrow() else {
+            return;
+        };
+        if let Some(element) = layers
+            .get(&key)
+            .and_then(|layer| layer.tree.elements.get(&target.id()))
+            && let Err(error) = set_text(&target, element.text.as_deref())
+        {
+            log_error(&error);
+        }
     });
 }
 

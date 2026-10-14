@@ -2,173 +2,692 @@
   "record-desk": {
     "application": "Record Desk",
     "required": [
-      { "role": "textbox", "name": "Text entry" },
-      { "role": "heading", "name": "Record Desk", "properties": { "level": 2 } },
-      { "role": "button", "name": "Undo", "properties": { "disabled": true } },
-      { "role": "button", "name": "Save", "properties": { "disabled": null } },
-      { "role": "button", "name": "Restore", "properties": { "disabled": true } },
-      { "role": "status", "properties": { "live": "polite" } },
-      { "role": "separator", "name": "Vertical splitter", "properties": { "orientation": "vertical" } },
-      { "role": "tablist", "name": "Workspace panes", "parent": "application" },
-      { "role": "tab", "name": "Records", "parent": "tablist", "properties": { "selected": true } },
-      { "role": "tab", "name": "Detail", "parent": "tablist", "properties": { "selected": true } },
-      { "role": "region", "name": "Records", "parent": "application" },
-      { "role": "region", "name": "Detail", "parent": "application" },
-      { "role": "textbox", "name": "Search records", "parent": "region" },
-      { "role": "combobox", "name": "Category filter", "parent": "region", "properties": { "expanded": false } },
-      { "role": "button", "name": "Reset filters", "properties": { "disabled": true } },
-      { "role": "listbox", "name": "Records", "parent": "region" },
       {
-        "role": "option", "name": "Compare field notes · Research · Unreviewed", "parent": "listbox",
-        "properties": { "selected": true }, "dom": { "aria-posinset": "1", "aria-setsize": "12" }
+        "role": "textbox",
+        "name": "Text entry"
       },
-      { "role": "option", "name": "Prepare review agenda · Operations · Reviewed", "properties": { "selected": false } },
-      { "role": "heading", "name": "Record detail", "parent": "region", "properties": { "level": 2 } },
-      { "role": "textbox", "name": "Record title", "parent": "region" },
-      { "role": "combobox", "name": "Record category", "parent": "region" },
-      { "role": "button", "name": "Reviewed", "properties": { "pressed": "false" } },
-      { "role": "textbox", "name": "Record notes", "properties": { "multiline": true } },
       {
-        "role": "button", "name": "Apply", "properties": { "disabled": true },
-        "dom": { "aria-description": "Validate and commit this draft as one undoable change; unavailable: There are no draft changes" }
+        "role": "heading",
+        "name": "Record Desk",
+        "properties": {
+          "level": 2
+        }
       },
-      { "role": "button", "name": "Cancel edits", "properties": { "disabled": true } }
+      {
+        "role": "button",
+        "name": "Undo",
+        "properties": {
+          "disabled": true
+        }
+      },
+      {
+        "role": "button",
+        "name": "Save",
+        "properties": {
+          "disabled": null
+        },
+        "dom": {
+          "aria-keyshortcuts": "Control+S Meta+S"
+        }
+      },
+      {
+        "role": "button",
+        "name": "Restore",
+        "properties": {
+          "disabled": true
+        }
+      },
+      {
+        "role": "status",
+        "properties": {
+          "live": "polite"
+        }
+      },
+      {
+        "role": "separator",
+        "name": "Vertical splitter",
+        "properties": {
+          "orientation": "vertical",
+          "valuemin": 10,
+          "valuemax": 90
+        },
+        "value": 36
+      },
+      {
+        "role": "tablist",
+        "name": "Workspace panes",
+        "parent": "application"
+      },
+      {
+        "role": "tab",
+        "name": "Records",
+        "parent": "tablist",
+        "properties": {
+          "selected": true
+        }
+      },
+      {
+        "role": "tab",
+        "name": "Detail",
+        "parent": "tablist",
+        "properties": {
+          "selected": true
+        }
+      },
+      {
+        "role": "region",
+        "name": "Records",
+        "parent": "application"
+      },
+      {
+        "role": "region",
+        "name": "Detail",
+        "parent": "application"
+      },
+      {
+        "role": "textbox",
+        "name": "Search records",
+        "parent": "region"
+      },
+      {
+        "role": "combobox",
+        "name": "Category filter",
+        "parent": "region",
+        "properties": {
+          "expanded": false
+        },
+        "value": "All categories"
+      },
+      {
+        "role": "button",
+        "name": "Reset filters",
+        "properties": {
+          "disabled": true
+        }
+      },
+      {
+        "role": "listbox",
+        "name": "Records",
+        "parent": "region"
+      },
+      {
+        "role": "option",
+        "name": "Compare field notes · Research · Unreviewed",
+        "parent": "listbox",
+        "properties": {
+          "selected": true
+        },
+        "dom": {
+          "aria-posinset": "1",
+          "aria-setsize": "12"
+        }
+      },
+      {
+        "role": "option",
+        "name": "Prepare review agenda · Operations · Reviewed",
+        "properties": {
+          "selected": false
+        }
+      },
+      {
+        "role": "heading",
+        "name": "Record detail",
+        "parent": "region",
+        "properties": {
+          "level": 2
+        }
+      },
+      {
+        "role": "textbox",
+        "name": "Record title",
+        "parent": "region",
+        "value": "Compare field notes"
+      },
+      {
+        "role": "combobox",
+        "name": "Record category",
+        "parent": "region",
+        "value": "Research"
+      },
+      {
+        "role": "button",
+        "name": "Reviewed",
+        "properties": {
+          "pressed": "false"
+        }
+      },
+      {
+        "role": "textbox",
+        "name": "Record notes",
+        "properties": {
+          "multiline": true
+        },
+        "value": "Review the observations from the synthetic coastal survey."
+      },
+      {
+        "role": "button",
+        "name": "Apply",
+        "properties": {
+          "disabled": true
+        },
+        "dom": {
+          "aria-description": "Validate and commit this draft as one undoable change; unavailable: There are no draft changes"
+        }
+      },
+      {
+        "role": "button",
+        "name": "Cancel edits",
+        "properties": {
+          "disabled": true
+        }
+      }
     ],
-    "hover": { "role": "option", "name": "Prepare review agenda · Operations · Reviewed" },
+    "hover": {
+      "role": "option",
+      "name": "Prepare review agenda · Operations · Reviewed"
+    },
     "click": {
-      "target": { "role": "option", "name": "Prepare review agenda · Operations · Reviewed" },
+      "target": {
+        "role": "option",
+        "name": "Prepare review agenda · Operations · Reviewed"
+      },
       "then": [
-        { "role": "option", "name": "Prepare review agenda · Operations · Reviewed", "properties": { "selected": true } },
-        { "role": "option", "name": "Compare field notes · Research · Unreviewed", "properties": { "selected": false } },
-        { "role": "button", "name": "Reviewed", "properties": { "pressed": "true" } }
+        {
+          "role": "option",
+          "name": "Prepare review agenda · Operations · Reviewed",
+          "properties": {
+            "selected": true
+          }
+        },
+        {
+          "role": "option",
+          "name": "Compare field notes · Research · Unreviewed",
+          "properties": {
+            "selected": false
+          }
+        },
+        {
+          "role": "button",
+          "name": "Reviewed",
+          "properties": {
+            "pressed": "true"
+          }
+        }
       ]
     },
-    "status": { "press": "Control+s", "then": "^Saved committed records and layout" },
-    "facts": true,
+    "status": {
+      "press": "Control+s",
+      "then": "^Saved committed records and layout"
+    },
     "handle": "__RECORD_DESK",
     "activate": [
       {
-        "route": "event", "target": { "role": "button", "name": "Reviewed" },
+        "route": "event",
+        "target": {
+          "role": "button",
+          "name": "Reviewed"
+        },
         "then": [
-          { "role": "button", "name": "Reviewed", "properties": { "pressed": "false" } },
-          { "role": "button", "name": "Apply", "properties": { "disabled": null } }
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "false"
+            }
+          },
+          {
+            "role": "button",
+            "name": "Apply",
+            "properties": {
+              "disabled": null
+            }
+          }
         ],
-        "facts": { "draft_dirty": true, "undo_entries": 0 }
+        "facts": {
+          "draft_dirty": true,
+          "undo_entries": 0
+        }
       },
       {
-        "route": "element", "target": { "role": "button", "name": "Apply" },
+        "route": "element",
+        "target": {
+          "role": "button",
+          "name": "Apply"
+        },
         "then": [
-          { "role": "button", "name": "Apply", "properties": { "disabled": true } },
-          { "role": "option", "name": "Prepare review agenda · Operations · Unreviewed", "properties": { "selected": true } }
+          {
+            "role": "button",
+            "name": "Apply",
+            "properties": {
+              "disabled": true
+            }
+          },
+          {
+            "role": "option",
+            "name": "Prepare review agenda · Operations · Unreviewed",
+            "properties": {
+              "selected": true
+            }
+          }
         ],
-        "facts": { "draft_dirty": false, "undo_entries": 1 }
+        "facts": {
+          "draft_dirty": false,
+          "undo_entries": 1
+        }
       },
       {
-        "route": "pointer", "target": { "role": "button", "name": "Undo" },
+        "route": "pointer",
+        "target": {
+          "role": "button",
+          "name": "Undo"
+        },
         "then": [
-          { "role": "button", "name": "Undo", "properties": { "disabled": true } },
-          { "role": "button", "name": "Reviewed", "properties": { "pressed": "true" } }
+          {
+            "role": "button",
+            "name": "Undo",
+            "properties": {
+              "disabled": true
+            }
+          },
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "true"
+            }
+          }
         ],
-        "facts": { "undo_entries": 0, "redo_entries": 1 }
+        "facts": {
+          "undo_entries": 0,
+          "redo_entries": 1
+        }
       },
       {
-        "route": "element", "target": { "role": "button", "name": "Undo" },
-        "then": [{ "role": "button", "name": "Undo", "properties": { "disabled": true } }],
-        "facts": { "undo_entries": 0, "redo_entries": 1 },
+        "route": "element",
+        "target": {
+          "role": "button",
+          "name": "Undo"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Undo",
+            "properties": {
+              "disabled": true
+            }
+          }
+        ],
+        "facts": {
+          "undo_entries": 0,
+          "redo_entries": 1
+        },
         "writes": 0
       }
     ],
     "focus": {
       "tabs": 3,
       "edit": {
-        "target": { "role": "textbox", "name": "Record title" },
+        "target": {
+          "role": "textbox",
+          "name": "Record title"
+        },
         "text": " (checked)",
         "fact": "draft_title"
       }
+    },
+    "plainClick": {
+      "role": "button",
+      "name": "Save"
     }
   },
   "gallery": {
     "application": "Stobie Component Gallery",
     "required": [
-      { "role": "combobox", "name": "Appearance", "properties": { "expanded": false } },
-      { "role": "combobox", "name": "Gallery width" },
-      { "role": "button", "name": "Appearance workbench" },
-      { "role": "button", "name": "reference/application-shell", "properties": { "pressed": "true" } },
-      { "role": "button", "name": "button/default", "properties": { "pressed": "false" } },
-      { "role": "separator", "name": "Vertical splitter" },
-      { "role": "region", "name": "Primary image — Antarctic reconstruction sector 04", "parent": "application" },
-      { "role": "tab", "name": "Primary image — Antarctic reconstruction sector 04", "parent": "tablist", "properties": { "selected": true } },
-      { "role": "tab", "name": "Overview", "parent": "tablist", "properties": { "selected": false } },
-      { "role": "tab", "name": "Inspector", "parent": "tablist", "properties": { "selected": true } }
+      {
+        "role": "combobox",
+        "name": "Appearance",
+        "properties": {
+          "expanded": false
+        },
+        "value": "Dark"
+      },
+      {
+        "role": "combobox",
+        "name": "Gallery width"
+      },
+      {
+        "role": "button",
+        "name": "Appearance workbench"
+      },
+      {
+        "role": "button",
+        "name": "reference/application-shell",
+        "properties": {
+          "pressed": "true"
+        }
+      },
+      {
+        "role": "button",
+        "name": "button/default",
+        "properties": {
+          "pressed": "false"
+        }
+      },
+      {
+        "role": "separator",
+        "name": "Vertical splitter",
+        "value": 62,
+        "properties": {
+          "valuemin": 10,
+          "valuemax": 90
+        }
+      },
+      {
+        "role": "region",
+        "name": "Primary image — Antarctic reconstruction sector 04",
+        "parent": "application"
+      },
+      {
+        "role": "tab",
+        "name": "Primary image — Antarctic reconstruction sector 04",
+        "parent": "tablist",
+        "properties": {
+          "selected": true
+        }
+      },
+      {
+        "role": "tab",
+        "name": "Overview",
+        "parent": "tablist",
+        "properties": {
+          "selected": false
+        }
+      },
+      {
+        "role": "tab",
+        "name": "Inspector",
+        "parent": "tablist",
+        "properties": {
+          "selected": true
+        }
+      }
     ],
-    "hover": { "role": "combobox", "name": "Gallery width" },
+    "hover": {
+      "role": "combobox",
+      "name": "Gallery width"
+    },
     "click": {
-      "target": { "role": "tab", "name": "Overview" },
+      "target": {
+        "role": "tab",
+        "name": "Overview"
+      },
       "then": [
-        { "role": "tab", "name": "Overview", "properties": { "selected": true } },
-        { "role": "region", "name": "Overview" }
+        {
+          "role": "tab",
+          "name": "Overview",
+          "properties": {
+            "selected": true
+          }
+        },
+        {
+          "role": "region",
+          "name": "Overview"
+        }
       ]
     },
     "activate": [
       {
-        "route": "event", "target": { "role": "tab", "name": "Primary image — Antarctic reconstruction sector 04" },
-        "then": [{ "role": "tab", "name": "Primary image — Antarctic reconstruction sector 04", "properties": { "selected": true } }]
+        "route": "event",
+        "target": {
+          "role": "tab",
+          "name": "Primary image — Antarctic reconstruction sector 04"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Primary image — Antarctic reconstruction sector 04",
+            "properties": {
+              "selected": true
+            }
+          }
+        ]
       },
       {
-        "route": "element", "target": { "role": "button", "name": "button/default" },
-        "then": [{ "role": "button", "name": "button/default", "properties": { "pressed": "true" } }]
+        "route": "element",
+        "target": {
+          "role": "button",
+          "name": "button/default"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "button/default",
+            "properties": {
+              "pressed": "true"
+            }
+          }
+        ]
       }
     ],
-    "focus": { "tabs": 3 }
+    "focus": {
+      "tabs": 3
+    }
   },
   "lab": {
     "application": "Analytical Workspace Lab",
     "required": [
-      { "role": "button", "name": "Undo", "properties": { "disabled": true } },
-      { "role": "button", "name": "Save layout", "properties": { "disabled": null } },
-      { "role": "status", "properties": { "live": "polite" } },
-      { "role": "status", "name": "Image coordinates and tile level" },
-      { "role": "separator", "name": "Horizontal splitter", "properties": { "orientation": "horizontal" } },
-      { "role": "region", "name": "Primary View", "parent": "application" },
-      { "role": "button", "name": "Navigate", "parent": "region", "properties": { "pressed": "true" } },
-      { "role": "button", "name": "Polygon", "properties": { "pressed": "false" } },
-      { "role": "group", "name": "Primary View viewport", "parent": "region", "properties": { "roledescription": "viewport" } },
-      { "role": "tab", "name": "Results", "parent": "tablist", "properties": { "selected": true } },
-      { "role": "tab", "name": "Thumbnails", "parent": "tablist", "properties": { "selected": false } },
-      { "role": "listbox", "name": "Results", "parent": "region" },
       {
-        "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge", "parent": "listbox",
-        "properties": { "selected": false }, "dom": { "aria-posinset": "3", "aria-setsize": "1000000" }
+        "role": "button",
+        "name": "Undo",
+        "properties": {
+          "disabled": true
+        }
       },
-      { "role": "heading", "name": "Selection", "parent": "region", "properties": { "level": 2 } }
+      {
+        "role": "button",
+        "name": "Save layout",
+        "properties": {
+          "disabled": null
+        }
+      },
+      {
+        "role": "status",
+        "properties": {
+          "live": "polite"
+        }
+      },
+      {
+        "role": "status",
+        "name": "Image coordinates and tile level"
+      },
+      {
+        "role": "separator",
+        "name": "Horizontal splitter",
+        "properties": {
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "role": "region",
+        "name": "Primary View",
+        "parent": "application"
+      },
+      {
+        "role": "button",
+        "name": "Navigate",
+        "parent": "region",
+        "properties": {
+          "pressed": "true"
+        }
+      },
+      {
+        "role": "button",
+        "name": "Polygon",
+        "properties": {
+          "pressed": "false"
+        }
+      },
+      {
+        "role": "group",
+        "name": "Primary View viewport",
+        "parent": "region",
+        "properties": {
+          "roledescription": "viewport"
+        }
+      },
+      {
+        "role": "tab",
+        "name": "Results",
+        "parent": "tablist",
+        "properties": {
+          "selected": true
+        }
+      },
+      {
+        "role": "tab",
+        "name": "Thumbnails",
+        "parent": "tablist",
+        "properties": {
+          "selected": false
+        }
+      },
+      {
+        "role": "listbox",
+        "name": "Results",
+        "parent": "region"
+      },
+      {
+        "role": "option",
+        "name": "#0000002; 30941, 85890; 72.5%; Edge",
+        "parent": "listbox",
+        "properties": {
+          "selected": false
+        },
+        "dom": {
+          "aria-posinset": "3",
+          "aria-setsize": "1000000"
+        }
+      },
+      {
+        "role": "heading",
+        "name": "Selection",
+        "parent": "region",
+        "properties": {
+          "level": 2
+        }
+      },
+      {
+        "role": "separator",
+        "name": "Vertical splitter",
+        "value": 72,
+        "properties": {
+          "orientation": "vertical",
+          "valuemin": 10,
+          "valuemax": 90
+        }
+      },
+      {
+        "role": "button",
+        "name": "Undo",
+        "dom": {
+          "aria-keyshortcuts": "Control+Z Meta+Z"
+        }
+      }
     ],
-    "hover": { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge" },
+    "hover": {
+      "role": "option",
+      "name": "#0000002; 30941, 85890; 72.5%; Edge"
+    },
     "click": {
-      "target": { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge" },
+      "target": {
+        "role": "option",
+        "name": "#0000002; 30941, 85890; 72.5%; Edge"
+      },
       "then": [
-        { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge", "properties": { "selected": true } }
+        {
+          "role": "option",
+          "name": "#0000002; 30941, 85890; 72.5%; Edge",
+          "properties": {
+            "selected": true
+          }
+        }
       ]
     },
     "activate": [
       {
-        "route": "event", "target": { "role": "button", "name": "Polygon" },
-        "then": [{ "role": "button", "name": "Polygon", "properties": { "pressed": "true" } }]
-      },
-      {
-        "route": "element", "target": { "role": "button", "name": "Undo" },
+        "route": "event",
+        "target": {
+          "role": "button",
+          "name": "Polygon"
+        },
         "then": [
-          { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge", "properties": { "selected": false } },
-          { "role": "button", "name": "Undo", "properties": { "disabled": true } },
-          { "role": "button", "name": "Redo", "properties": { "disabled": null } }
+          {
+            "role": "button",
+            "name": "Polygon",
+            "properties": {
+              "pressed": "true"
+            }
+          }
         ]
       },
       {
-        "route": "element", "target": { "role": "button", "name": "Undo" },
-        "then": [{ "role": "button", "name": "Redo", "properties": { "disabled": null } }],
+        "route": "element",
+        "target": {
+          "role": "button",
+          "name": "Undo"
+        },
+        "then": [
+          {
+            "role": "option",
+            "name": "#0000002; 30941, 85890; 72.5%; Edge",
+            "properties": {
+              "selected": false
+            }
+          },
+          {
+            "role": "button",
+            "name": "Undo",
+            "properties": {
+              "disabled": true
+            }
+          },
+          {
+            "role": "button",
+            "name": "Redo",
+            "properties": {
+              "disabled": null
+            }
+          }
+        ]
+      },
+      {
+        "route": "element",
+        "target": {
+          "role": "button",
+          "name": "Undo"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Redo",
+            "properties": {
+              "disabled": null
+            }
+          }
+        ],
         "writes": 0
       }
     ],
-    "hidden": [{ "role": "button", "name": "Polygon", "region": "Overview", "shownIn": "Primary View" }],
-    "focus": { "tabs": 3 }
+    "hidden": [
+      {
+        "role": "button",
+        "name": "Polygon",
+        "region": "Overview",
+        "shownIn": "Primary View"
+      }
+    ],
+    "focus": {
+      "tabs": 3
+    }
   }
 }
