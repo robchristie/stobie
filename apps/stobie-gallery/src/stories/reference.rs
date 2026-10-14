@@ -72,48 +72,50 @@ pub(super) fn results_story(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) {
-    for (instance, id, position, confidence, category, selected) in [
-        (
-            60,
-            "#842769",
-            "−12345.6, 98765.1",
-            "−0.125 %",
-            "Edge",
-            false,
-        ),
-        (
-            61,
-            "#842770",
-            "65536.0, 65536.0",
-            "99.875 %",
-            "Selected review target with long label",
-            true,
-        ),
-        (
-            62,
-            "#842771",
-            "131071.9, −0.125",
-            "100.000 %",
-            "Cluster",
-            false,
-        ),
-        (63, "#842772", "0.0, 0.0", "7.500 %", "Target", false),
-    ] {
-        result_row(
-            ui,
-            stobie_ui_egui::ResultRowSpec {
-                instance,
-                identifier: id,
-                position,
-                confidence,
-                category,
-                selected,
-            },
-            tokens,
-            font_scale,
-            observations,
-        );
-    }
+    stobie_ui_egui::list_box(ui, "Results", |ui| {
+        for (instance, id, position, confidence, category, selected) in [
+            (
+                60,
+                "#842769",
+                "−12345.6, 98765.1",
+                "−0.125 %",
+                "Edge",
+                false,
+            ),
+            (
+                61,
+                "#842770",
+                "65536.0, 65536.0",
+                "99.875 %",
+                "Selected review target with long label",
+                true,
+            ),
+            (
+                62,
+                "#842771",
+                "131071.9, −0.125",
+                "100.000 %",
+                "Cluster",
+                false,
+            ),
+            (63, "#842772", "0.0, 0.0", "7.500 %", "Target", false),
+        ] {
+            result_row(
+                ui,
+                stobie_ui_egui::ResultRowSpec {
+                    instance,
+                    identifier: id,
+                    position,
+                    confidence,
+                    category,
+                    selected,
+                },
+                tokens,
+                font_scale,
+                observations,
+            );
+        }
+    });
 }
 
 pub(super) fn diagnostics_story(

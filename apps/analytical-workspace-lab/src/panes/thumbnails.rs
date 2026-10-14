@@ -5,8 +5,8 @@ use stobie_imaging::{DemandPriority, ImageIntent, ResultId, SourceId, TileDemand
 use crate::{demo::THUMBNAIL_COUNT, metrics::VirtualisationMetrics};
 use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, TextOverflow, TextRole, ThumbnailCellSpec,
-    ThumbnailState, TileReference, UiNode, UiRole, VirtualGridPresenter, measured_content_label,
-    thumbnail_cell, thumbnail_cell_side,
+    ThumbnailState, TileReference, UiNode, UiRole, VirtualGridPresenter, list_box,
+    measured_content_label, set_position_semantics, thumbnail_cell, thumbnail_cell_side,
 };
 
 use crate::thumbnail_cache::ThumbnailCache;
@@ -57,89 +57,92 @@ pub fn show(
         ui.id().with("thumbnail-grid"),
         THUMBNAIL_COUNT as usize,
         |grid_ui, layout, origin| {
-            for index in layout.materialised_items.clone() {
-                let row = index / layout.columns;
-                let column = index % layout.columns;
-                let rect = egui::Rect::from_min_size(
-                    origin + egui::vec2(column as f32 * cell.x, row as f32 * cell.y),
-                    egui::vec2(side, side),
-                );
-                let key = TileKey {
-                    source: SourceId(2),
-                    level: 0,
-                    x: index as u32,
-                    y: 0,
-                };
-                outputs.demands.push(TileDemand {
-                    key,
-                    priority: if layout.visible_items.contains(&index) {
-                        DemandPriority::Visible
+            list_box(grid_ui, "Thumbnails", |grid_ui| {
+                for index in layout.materialised_items.clone() {
+                    let row = index / layout.columns;
+                    let column = index % layout.columns;
+                    let rect = egui::Rect::from_min_size(
+                        origin + egui::vec2(column as f32 * cell.x, row as f32 * cell.y),
+                        egui::vec2(side, side),
+                    );
+                    let key = TileKey {
+                        source: SourceId(2),
+                        level: 0,
+                        x: index as u32,
+                        y: 0,
+                    };
+                    outputs.demands.push(TileDemand {
+                        key,
+                        priority: if layout.visible_items.contains(&index) {
+                            DemandPriority::Visible
+                        } else {
+                            DemandPriority::Prefetch
+                        },
+                        generation,
+                    });
+                    let texture = cache.texture(key);
+                    let selected = selected_result == Some(ResultId(index as u64));
+                    let state = if texture.is_some() {
+                        ThumbnailState::Resident
                     } else {
-                        DemandPriority::Prefetch
-                    },
-                    generation,
-                });
-                let texture = cache.texture(key);
-                let selected = selected_result == Some(ResultId(index as u64));
-                let state = if texture.is_some() {
-                    ThumbnailState::Resident
-                } else {
-                    ThumbnailState::Loading
-                };
-                let label = format!("Result #{index}");
-                let response = grid_ui
-                    .scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
-                        ui.set_width(side);
-                        thumbnail_cell(
-                            ui,
-                            ThumbnailCellSpec {
-                                instance: index as u64,
-                                label: &label,
-                                state,
-                                selected,
-                                texture,
-                            },
-                            tokens,
-                            font_scale,
-                            &mut outputs.ui_geometry.text_layouts,
-                        )
-                    })
-                    .inner;
-                if response.clicked() {
-                    outputs.intents.push(ImageIntent::SelectResult {
-                        result: ResultId(index as u64),
-                    });
+                        ThumbnailState::Loading
+                    };
+                    let label = format!("Result #{index}");
+                    let response = grid_ui
+                        .scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+                            ui.set_width(side);
+                            thumbnail_cell(
+                                ui,
+                                ThumbnailCellSpec {
+                                    instance: index as u64,
+                                    label: &label,
+                                    state,
+                                    selected,
+                                    texture,
+                                },
+                                tokens,
+                                font_scale,
+                                &mut outputs.ui_geometry.text_layouts,
+                            )
+                        })
+                        .inner;
+                    set_position_semantics(&response, index + 1, Some(THUMBNAIL_COUNT as usize));
+                    if response.clicked() {
+                        outputs.intents.push(ImageIntent::SelectResult {
+                            result: ResultId(index as u64),
+                        });
+                    }
+                    let inside_root = outputs
+                        .ui_geometry
+                        .root
+                        .is_some_and(|root| root.contains(response.rect.into(), 1.0));
+                    if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
+                        outputs.ui_geometry.record_node(UiNode {
+                            id: SemanticUiId::new(format!("stobie.thumbnail-cell.{index}")),
+                            parent: Some(SemanticUiId::pane(PaneId(6))),
+                            role: UiRole::ThumbnailCell,
+                            name: format!("{label}; {state:?}"),
+                            description: None,
+                            rect: response.rect.into(),
+                            enabled: true,
+                            focused: response.has_focus(),
+                            selected,
+                            checked: None,
+                            expanded: None,
+                            pane: Some(PaneId(6)),
+                            domain_reference: Some(DomainReference::Thumbnail(TileReference {
+                                source: key.source.0,
+                                level: key.level,
+                                x: key.x,
+                                y: key.y,
+                            })),
+                            actions: Vec::new(),
+                            text_selectable: false,
+                            disabled_reason: None,
+                        });
+                    }
                 }
-                let inside_root = outputs
-                    .ui_geometry
-                    .root
-                    .is_some_and(|root| root.contains(response.rect.into(), 1.0));
-                if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
-                    outputs.ui_geometry.record_node(UiNode {
-                        id: SemanticUiId::new(format!("stobie.thumbnail-cell.{index}")),
-                        parent: Some(SemanticUiId::pane(PaneId(6))),
-                        role: UiRole::ThumbnailCell,
-                        name: format!("{label}; {state:?}"),
-                        description: None,
-                        rect: response.rect.into(),
-                        enabled: true,
-                        focused: response.has_focus(),
-                        selected,
-                        checked: None,
-                        expanded: None,
-                        pane: Some(PaneId(6)),
-                        domain_reference: Some(DomainReference::Thumbnail(TileReference {
-                            source: key.source.0,
-                            level: key.level,
-                            x: key.x,
-                            y: key.y,
-                        })),
-                        actions: Vec::new(),
-                        text_selectable: false,
-                        disabled_reason: None,
-                    });
-                }
-            }
+            });
         },
     );
     virtualisation.visible_thumbnails = (

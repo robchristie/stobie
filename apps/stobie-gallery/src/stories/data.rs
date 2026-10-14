@@ -46,31 +46,33 @@ pub(super) fn thumbnail_grid(
     observations: &mut Vec<TextLayoutObservation>,
 ) {
     let count = if ui.available_width() < 400.0 { 4 } else { 8 };
-    ui.horizontal_wrapped(|ui| {
-        for index in 0..count {
-            let state = if !partial {
-                ThumbnailState::Loading
-            } else {
-                match index % 4 {
-                    0 => ThumbnailState::Resident,
-                    1 => ThumbnailState::Loading,
-                    2 => ThumbnailState::Empty,
-                    _ => ThumbnailState::Error,
-                }
-            };
-            thumbnail_cell(
-                ui,
-                ThumbnailCellSpec {
-                    instance: 70 + index,
-                    label: &format!("Tile {:06}", 120_000 + index),
-                    state,
-                    selected: index == 0,
-                    texture: None,
-                },
-                tokens,
-                font_scale,
-                observations,
-            );
-        }
+    stobie_ui_egui::list_box(ui, "Thumbnails", |ui| {
+        ui.horizontal_wrapped(|ui| {
+            for index in 0..count {
+                let state = if !partial {
+                    ThumbnailState::Loading
+                } else {
+                    match index % 4 {
+                        0 => ThumbnailState::Resident,
+                        1 => ThumbnailState::Loading,
+                        2 => ThumbnailState::Empty,
+                        _ => ThumbnailState::Error,
+                    }
+                };
+                thumbnail_cell(
+                    ui,
+                    ThumbnailCellSpec {
+                        instance: 70 + index,
+                        label: &format!("Tile {:06}", 120_000 + index),
+                        state,
+                        selected: index == 0,
+                        texture: None,
+                    },
+                    tokens,
+                    font_scale,
+                    observations,
+                );
+            }
+        })
     });
 }

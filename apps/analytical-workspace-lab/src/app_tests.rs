@@ -409,3 +409,32 @@ fn a_preference_change_counts_one_repaint() {
     harness.step();
     assert_eq!(preferences(&harness), before + 1);
 }
+
+/// The whole hosted Lab's AccessKit tree, which the browser ARIA layer mirrors,
+/// agrees with its semantic snapshot, including status and pane regions.
+#[test]
+fn hosted_accesskit_tree_matches_the_semantic_snapshot() {
+    fn collect(
+        node: egui_kittest::kittest::AccessKitNode<'_>,
+        update: &mut egui::accesskit::TreeUpdate,
+    ) {
+        update.nodes.push((node.locate().0, node.data().clone()));
+        for child in node.children() {
+            collect(child, update);
+        }
+    }
+    let harness = harness();
+    let root = harness.kittest_state().root();
+    let mut update = egui::accesskit::TreeUpdate {
+        nodes: Vec::new(),
+        tree: Some(egui::accesskit::Tree::new(root.locate().0)),
+        tree_id: egui::accesskit::TreeId::ROOT,
+        focus: root.locate().0,
+    };
+    collect(root, &mut update);
+    let snapshot = host(&harness).ui_snapshot();
+    assert!(snapshot.by_role(UiRole::Status).count() >= 2);
+    assert!(snapshot.by_role(UiRole::Pane).count() >= 2);
+    let findings = stobie_ui_egui::audit_accesskit(snapshot, &update);
+    assert!(findings.is_empty(), "{findings:#?}");
+}

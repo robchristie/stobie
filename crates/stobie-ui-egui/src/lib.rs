@@ -55,6 +55,8 @@ pub mod __private {
 
 mod actions;
 mod application_theme;
+#[cfg(any(target_arch = "wasm32", test))]
+mod aria;
 mod virtual_grid;
 
 mod components;
@@ -771,6 +773,19 @@ fn render_node(
                         .layout(egui::Layout::top_down(egui::Align::Min)),
                     |ui| {
                         ui.set_clip_rect(ui.clip_rect().intersect(body));
+                        // The pane body is a region named by its tab title.
+                        let title = presenter.title(target);
+                        ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+                            node.set_role(egui::accesskit::Role::Region);
+                            node.set_label(title);
+                            node.set_author_id(SemanticUiId::pane(target).0);
+                            node.set_bounds(egui::accesskit::Rect {
+                                x0: f64::from(body.min.x),
+                                y0: f64::from(body.min.y),
+                                x1: f64::from(body.max.x),
+                                y1: f64::from(body.max.y),
+                            });
+                        });
                         presenter.pane_ui(ui, target, body);
                     },
                 );

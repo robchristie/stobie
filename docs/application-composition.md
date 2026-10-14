@@ -153,8 +153,13 @@ parent. Record native egui text fields with
 `PresentationContext::native(NativeTextControlKind::TextEdit, ...)` and observe
 them as `UiRole::TextInput`. Observe a selectable list row as
 `UiRole::ResultRow` with `selected` and, for a done or checked state,
-`checked`. Observe a recipe's own node again only to add context such as its
-pane or domain; that observation replaces the recipe's.
+`checked`. Present the rows inside `list_box(ui, name, ...)`, and give each one
+`set_position_semantics(&response, position, Some(total))`, so a virtualised
+list still reports each row's place. Observe a recipe's own node again only to
+add context such as its pane or domain; that observation replaces the recipe's.
+A custom widget's AccessKit node must agree with its semantic node:
+`audit_accesskit` checks roles, names, states, live settings, list containers
+and bounds, and the browser layer mirrors the AccessKit side.
 
 ## Keep these rules
 
@@ -279,6 +284,12 @@ the handle around `WebHost` yourself: `with_host` reads the running host and
 `with_host_mut(|host| host.submit(intent))` sends an intent through `apply`.
 The component Gallery's `lib.rs` is an example. The
 [browser startup guide](browser-startup.md) covers packaging.
+
+`WebHost` also mirrors the accessibility tree into a hidden ARIA layer beside
+the canvas, so screen readers and accessibility-tree browser agents can read
+the application. The [accessibility guide](ui-guides/accessibility.md#browser-aria-layer)
+describes it. Return `false` from `Application::web_accessibility_layer` to opt
+out.
 
 ## Choose dependencies
 

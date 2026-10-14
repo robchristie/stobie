@@ -42,8 +42,14 @@ pub fn run_native<A: Application>(
 pub use web::WebHost;
 
 #[cfg(target_arch = "wasm32")]
+#[path = "aria_dom.rs"]
+mod aria_dom;
+
+#[cfg(target_arch = "wasm32")]
 mod web {
+    use std::cell::Cell;
     use std::marker::PhantomData;
+    use std::rc::Rc;
 
     use wasm_bindgen::JsValue;
 
@@ -53,6 +59,8 @@ mod web {
     /// exports it to JavaScript; applications rarely use it directly.
     pub struct WebHost<A: Application> {
         runner: eframe::WebRunner,
+        /// The key of the ARIA layer this host installed, if any.
+        layer: Rc<Cell<Option<u32>>>,
         application: PhantomData<fn() -> A>,
     }
 
@@ -61,6 +69,7 @@ mod web {
             console_error_panic_hook::set_once();
             Self {
                 runner: eframe::WebRunner::new(),
+                layer: Rc::default(),
                 application: PhantomData,
             }
         }
@@ -68,19 +77,31 @@ mod web {
 
     impl<A: Application> WebHost<A> {
         /// Start the application in `canvas`; the promise settles once it runs.
+        /// Unless [`Application::web_accessibility_layer`] opts out, the host
+        /// mirrors the accessibility tree into a hidden ARIA layer beside it.
         pub fn start(
             &self,
             canvas: web_sys::HtmlCanvasElement,
             create: impl FnOnce(&eframe::CreationContext<'_>) -> A + 'static,
         ) -> js_sys::Promise {
             let runner = self.runner.clone();
+            let layer = self.layer.clone();
             wasm_bindgen_futures::future_to_promise(async move {
+                let layer_canvas = canvas.clone();
                 runner
                     .start(
                         canvas,
                         eframe::WebOptions::default(),
                         Box::new(move |creation| {
-                            Ok(Box::new(AppHost::new(&creation.egui_ctx, create(creation))))
+                            let app = create(creation);
+                            if app.web_accessibility_layer() {
+                                layer.set(super::aria_dom::install(
+                                    &creation.egui_ctx,
+                                    &layer_canvas,
+                                    &app.identity().name,
+                                ));
+                            }
+                            Ok(Box::new(AppHost::new(&creation.egui_ctx, app)))
                         }),
                     )
                     .await?;
@@ -138,6 +159,9 @@ mod web {
 
         pub fn destroy(&self) {
             self.runner.destroy();
+            if let Some(key) = self.layer.take() {
+                super::aria_dom::remove(key);
+            }
         }
     }
 }

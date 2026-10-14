@@ -132,6 +132,14 @@ pub trait Application: 'static {
     /// therefore agree.
     fn completed(&mut self, _pass: &CompletedPass<'_>, _state: &Self::UiState) {}
 
+    /// Whether the browser host mirrors this application's accessibility tree
+    /// into a hidden ARIA layer over its canvas, for screen readers and
+    /// accessibility-tree browser agents. On by default; it has no effect
+    /// natively, where eframe's AccessKit adapter serves assistive technology.
+    fn web_accessibility_layer(&self) -> bool {
+        true
+    }
+
     /// The pane that receives pane-scoped shortcuts. Without one, pane and
     /// active-pane shortcuts do not dispatch.
     fn active_pane(&self) -> Option<PaneId> {

@@ -28,7 +28,9 @@ pub use navigation::{
 };
 pub use property::property_row;
 pub use range::range_control;
-pub use result_row::{ResultRowSpec, result_row, result_row_height};
+pub use result_row::{
+    ResultRowSpec, list_box, result_row, result_row_height, set_position_semantics,
+};
 pub use status::{StatusTone, status_badge};
 pub use status_chip::{
     StatusChipColours, StatusChipResponse, StatusChipSpec, StatusChipWidth, status_chip,

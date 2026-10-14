@@ -353,19 +353,53 @@ pub enum SemanticAuditFinding {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum AccessKitMismatch {
-    MissingNode { id: SemanticUiId },
-    DuplicateNode { id: SemanticUiId },
-    Role { id: SemanticUiId },
-    Name { id: SemanticUiId },
-    Enabled { id: SemanticUiId },
-    Selected { id: SemanticUiId },
-    Description { id: SemanticUiId },
-    Checked { id: SemanticUiId },
-    ClickAction { id: SemanticUiId },
-    AdjustAction { id: SemanticUiId },
-    CustomActions { id: SemanticUiId },
-    Bounds { id: SemanticUiId },
-    InformationalState { id: SemanticUiId },
+    MissingNode {
+        id: SemanticUiId,
+    },
+    DuplicateNode {
+        id: SemanticUiId,
+    },
+    Role {
+        id: SemanticUiId,
+    },
+    Name {
+        id: SemanticUiId,
+    },
+    Enabled {
+        id: SemanticUiId,
+    },
+    Selected {
+        id: SemanticUiId,
+    },
+    Description {
+        id: SemanticUiId,
+    },
+    Checked {
+        id: SemanticUiId,
+    },
+    ClickAction {
+        id: SemanticUiId,
+    },
+    AdjustAction {
+        id: SemanticUiId,
+    },
+    CustomActions {
+        id: SemanticUiId,
+    },
+    Bounds {
+        id: SemanticUiId,
+    },
+    InformationalState {
+        id: SemanticUiId,
+    },
+    /// A status lacks an explicit live setting, or another control has one.
+    Live {
+        id: SemanticUiId,
+    },
+    /// A result row or thumbnail is not inside a list box.
+    Container {
+        id: SemanticUiId,
+    },
 }
 
 /// Compare the common semantics for Stobie-owned custom controls. Snapshot
@@ -377,10 +411,18 @@ pub fn audit_accesskit(
     snapshot: &UiSnapshot,
     update: &egui::accesskit::TreeUpdate,
 ) -> Vec<AccessKitMismatch> {
-    let mut by_author: BTreeMap<&str, Vec<&egui::accesskit::Node>> = BTreeMap::new();
-    for (_, node) in &update.nodes {
+    let by_id: BTreeMap<egui::accesskit::NodeId, &egui::accesskit::Node> =
+        update.nodes.iter().map(|(id, node)| (*id, node)).collect();
+    let parents: BTreeMap<egui::accesskit::NodeId, egui::accesskit::NodeId> = update
+        .nodes
+        .iter()
+        .flat_map(|(id, node)| node.children().iter().map(move |child| (*child, *id)))
+        .collect();
+    let mut by_author: BTreeMap<&str, Vec<(egui::accesskit::NodeId, &egui::accesskit::Node)>> =
+        BTreeMap::new();
+    for (id, node) in &update.nodes {
         if let Some(author) = node.author_id() {
-            by_author.entry(author).or_default().push(node);
+            by_author.entry(author).or_default().push((*id, node));
         }
     }
     let mut findings = Vec::new();
@@ -400,6 +442,8 @@ pub fn audit_accesskit(
                 | UiRole::ResultRow
                 | UiRole::ThumbnailCell
                 | UiRole::StatusChip
+                | UiRole::Status
+                | UiRole::Pane
         )
     }) {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
@@ -414,7 +458,22 @@ pub fn audit_accesskit(
             });
             continue;
         }
-        let node = candidates[0];
+        let (node_id, node) = candidates[0];
+        if matches!(semantic.role, UiRole::ResultRow | UiRole::ThumbnailCell) {
+            let mut ancestor = parents.get(&node_id);
+            while let Some(id) = ancestor
+                && by_id
+                    .get(id)
+                    .is_some_and(|node| node.role() != egui::accesskit::Role::ListBox)
+            {
+                ancestor = parents.get(id);
+            }
+            if ancestor.is_none() {
+                findings.push(AccessKitMismatch::Container {
+                    id: semantic.id.clone(),
+                });
+            }
+        }
         let expected_role = match semantic.role {
             UiRole::Button | UiRole::NavigationItem => egui::accesskit::Role::Button,
             UiRole::RadioButton => egui::accesskit::Role::RadioButton,
@@ -427,6 +486,8 @@ pub fn audit_accesskit(
             UiRole::Viewport => egui::accesskit::Role::Canvas,
             UiRole::ResultRow | UiRole::ThumbnailCell => egui::accesskit::Role::ListBoxOption,
             UiRole::StatusChip => egui::accesskit::Role::Label,
+            UiRole::Status => egui::accesskit::Role::Status,
+            UiRole::Pane => egui::accesskit::Role::Region,
             _ => unreachable!(),
         };
         if node.role() != expected_role {
@@ -434,13 +495,21 @@ pub fn audit_accesskit(
                 id: semantic.id.clone(),
             });
         }
-        let accessible_name = if semantic.role == UiRole::StatusChip {
-            node.value()
-        } else {
-            node.label()
+        let accessible_name = match semantic.role {
+            UiRole::StatusChip => node.value().unwrap_or_default().to_owned(),
+            // A status container's text belongs to the labels inside it.
+            UiRole::Status if node.label().is_none() => descendant_text(&by_id, node),
+            _ => node.label().unwrap_or_default().to_owned(),
         };
-        if accessible_name.unwrap_or_default() != semantic.name {
+        if accessible_name != semantic.name {
             findings.push(AccessKitMismatch::Name {
+                id: semantic.id.clone(),
+            });
+        }
+        // Status messages are polite live regions. A readout that changes with
+        // the pointer may declare itself off instead; either way it is explicit.
+        if (semantic.role == UiRole::Status) != node.live().is_some() {
+            findings.push(AccessKitMismatch::Live {
                 id: semantic.id.clone(),
             });
         }
@@ -577,6 +646,26 @@ pub fn audit_accesskit(
         }
     }
     findings
+}
+
+/// The text of the labels under `node`, in tree order.
+fn descendant_text(
+    nodes: &BTreeMap<egui::accesskit::NodeId, &egui::accesskit::Node>,
+    node: &egui::accesskit::Node,
+) -> String {
+    let mut text = Vec::new();
+    let mut pending: Vec<_> = node.children().iter().rev().collect();
+    while let Some(id) = pending.pop() {
+        let Some(child) = nodes.get(id) else {
+            continue;
+        };
+        if child.role() == egui::accesskit::Role::Label {
+            text.extend(child.value().or(child.label()));
+        } else {
+            pending.extend(child.children().iter().rev());
+        }
+    }
+    text.join(" ")
 }
 
 #[cfg(test)]
