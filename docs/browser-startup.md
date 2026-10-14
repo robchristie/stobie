@@ -147,10 +147,12 @@ cargo xtask verify
 
 On Linux the existing launch helper uses SwiftShader WebGPU. Set
 `STOBIE_BROWSER_HEADFUL=1 DISPLAY=:<your-X-display>` where needed for meaningful
-readback, and supply the normal library environment on hosts using the bundled
-UI sysroot. Evidence records browser version/flags, actual adapter/backend,
-hardware, viewport, artifact identity, resources, headers, streaming calls and
-per-instance memory. Software rendering establishes only that environment.
+readback. The benchmark and smoke launch Chromium with the repository UI
+sysroot when `tools/bootstrap-linux-ui.sh` has provisioned it, as
+`cargo xtask verify` does; `STOBIE_USE_SYSTEM_UI_LIBS=1` selects the host's
+libraries instead. Evidence records browser version/flags, UI library source,
+actual adapter/backend, hardware, viewport, artifact identity, resources,
+headers, streaming calls and per-instance memory. Software rendering establishes only that environment.
 
 Each cold visit starts a new Chromium process/profile. Its repeat revisits the
 same origin, URLs and profile with ordinary caching. The harness restores empty
