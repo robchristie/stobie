@@ -191,9 +191,11 @@ fn projection_maps_states_values_and_relations() {
     );
     assert_eq!(attributes(7)["role"], "heading");
     assert_eq!(attributes(7)["aria-level"], "2");
-    assert_eq!(attributes(8)["role"], "textbox");
+    // A text field is a native input, whose value browsers expose.
+    assert!(!attributes(8).contains_key("role"));
     assert_eq!(attributes(8)["aria-labelledby"], "stobie-a11y:egui-a");
     let field = &tree.elements["stobie-a11y:egui-8"];
+    assert_eq!(field.tag, "input");
     assert_eq!(field.text.as_deref(), Some("Survey notes"));
     assert!(
         field.children.is_empty(),
@@ -229,7 +231,8 @@ fn an_unchanged_tree_needs_no_dom_operation() {
     let first = project(&sample("Apply", 1), 1.0);
     let initial = diff(&AriaTree::default(), &first);
     assert!(initial.contains(&DomOp::Create {
-        id: "stobie-a11y:pane.2".into()
+        id: "stobie-a11y:pane.2".into(),
+        tag: "div",
     }));
     assert!(initial.contains(&DomOp::Place {
         id: "stobie-a11y:pane.2".into(),
@@ -357,6 +360,72 @@ fn moving_an_ancestor_below_its_former_child_places_top_down() {
                 before: None,
             },
         ]
+    );
+}
+
+#[test]
+fn a_changed_tag_recreates_the_element_in_place() {
+    let field = |multiline: bool| {
+        let mut field = node(
+            if multiline {
+                Role::MultilineTextInput
+            } else {
+                Role::TextInput
+            },
+            &[],
+        );
+        field.set_label("Notes");
+        field.set_value("Draft");
+        let mut first = node(Role::Button, &[]);
+        first.set_label("First");
+        let mut last = node(Role::Button, &[]);
+        last.set_label("Last");
+        project(
+            &update(
+                vec![
+                    (1, node(Role::Window, &[2, 3, 4])),
+                    (2, first),
+                    (3, field),
+                    (4, last),
+                ],
+                1,
+            ),
+            1.0,
+        )
+    };
+    let single = field(false);
+    let multiline = field(true);
+    assert_eq!(single.elements["stobie-a11y:egui-3"].tag, "input");
+    assert_eq!(multiline.elements["stobie-a11y:egui-3"].tag, "textarea");
+    let operations = diff(&single, &multiline);
+    assert_eq!(
+        operations[..2],
+        [
+            DomOp::Remove {
+                id: "stobie-a11y:egui-3".into()
+            },
+            DomOp::Create {
+                id: "stobie-a11y:egui-3".into(),
+                tag: "textarea",
+            },
+        ]
+    );
+    assert!(operations.contains(&DomOp::SetText {
+        id: "stobie-a11y:egui-3".into(),
+        text: Some("Draft".into()),
+    }));
+    assert!(operations.contains(&DomOp::Place {
+        id: "stobie-a11y:egui-3".into(),
+        parent: None,
+        before: Some("stobie-a11y:egui-4".into()),
+    }));
+    assert_eq!(
+        operations
+            .iter()
+            .filter(|operation| matches!(operation, DomOp::Place { .. }))
+            .count(),
+        1,
+        "only the recreated element is placed"
     );
 }
 

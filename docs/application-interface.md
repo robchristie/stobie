@@ -307,8 +307,13 @@ snapshot. It offers nothing that a pointer or keyboard user cannot do.
 - A plain `locator.click()` waits and then fails, reporting that the canvas
   intercepts pointer events. Layer elements pass the pointer through to the
   canvas, so they are never hit targets.
-- Edit text with `locator.focus()`, then `page.keyboard.type(text)`.
-  `locator.fill()` is not supported, because layer elements are not form
-  inputs.
+- Read a text field's value from the snapshot, for example
+  `textbox "Record title": Survey notes`.
+- Edit text with `locator.focus()`, then `page.keyboard.type(text)`. Press
+  `Control+A` first to replace the text. `locator.fill()` does not edit:
+  focus returns to the application, egui owns the text, and a direct edit of a
+  layer field is reverted.
+- Action buttons list their shortcuts in `aria-keyshortcuts`, for example
+  `Control+S Meta+S`.
 - Read results from the tree again after a pass. A disabled control's
   `aria-description` gives its reason.

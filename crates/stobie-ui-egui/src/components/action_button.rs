@@ -230,6 +230,9 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
             node.set_role(Role::Button);
             node.set_label(action.label);
             node.set_author_id(identity.semantic_id.0.clone());
+            if let Some(shortcut) = action.shortcut {
+                node.set_keyboard_shortcut(shortcut.aria_keyshortcuts());
+            }
             // Match the current pointer target when a scroll area clips the control.
             if response.interact_rect.is_positive() {
                 node.set_bounds(egui::accesskit::Rect {

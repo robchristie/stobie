@@ -118,12 +118,79 @@ This directly qualifies that exact combination, not Linux generally.
 | Linux native, Debian 13/GNOME 48/RDP/Orca 48.1 | Qualified for this exact environment | The repeatable VM probe completed the workflow and a human operator confirmed audible Orca output in the GNOME remote-login desktop; [retained evidence](accessibility-integration-evidence/linux-gnome-rdp.md) | Keep the claim limited to this versioned remote-desktop configuration; qualify other distributions, desktops, local-seat sessions and Orca versions independently |
 | Windows native | Unavailable in the current environment | None | Run the exact candidate on versioned Windows with NVDA or Narrator and retain the workflow transcript/tree evidence |
 | macOS native | Unavailable in the current environment | None | Run the exact candidate on versioned macOS with VoiceOver and retain the workflow observations |
-| Browser, any OS/AT pair | Not qualified; automated accessibility-tree evidence only | None | The [browser ARIA layer](ui-guides/accessibility.md#browser-aria-layer) exposes roles, names, states and values, routes activation and focus through AccessKit requests, and reports focus with `aria-activedescendant`. CDP tree comparison, axe-core and activation checks in Chromium cover it. Qualify each browser/OS/AT combination independently |
+| Browser: Chrome for Testing 151 on Arch/Xvfb with Orca 51.0, no audio device | Partially qualified | Actual Orca generated speech for a short Record Desk journey through the [browser ARIA layer](#browser-aria-layer-with-orca) | Repeat with audible output on a human-operated desktop, and cover the representative workflow, before any direct claim |
+| Browser, any other OS/AT pair | Not qualified; automated accessibility-tree evidence only | None | The [browser ARIA layer](ui-guides/accessibility.md#browser-aria-layer) exposes roles, names, states and values, routes activation and focus through AccessKit requests, and reports focus with `aria-activedescendant`. CDP tree comparison, axe-core and activation checks in Chromium cover it. Qualify each browser/OS/AT combination independently |
 
 One exact human-operated Linux environment is directly qualified and the Arch
 virtual environment remains partially qualified with actual Orca. Compilation,
 `egui_kittest`, semantic snapshots, browser automation and an accessibility-
 tree dump alone remain insufficient.
+
+## Browser ARIA layer with Orca
+
+Since the native qualification above, the shared AccessKit tree gained:
+
+- status roles with live settings;
+- named pane regions;
+- headings;
+- list boxes with position and set size;
+- keyboard shortcuts;
+- percentage splitter values.
+
+Native assistive technology receives the same tree. The Debian and Arch native
+runs predate these additions and have not been repeated.
+
+
+The [browser ARIA layer](ui-guides/accessibility.md#browser-aria-layer) was
+checked with actual Orca on 14 October 2026, Australia/Adelaide.
+
+Environment:
+
+- host: Arch Linux, Linux `7.2.7-arch1-1`, rootless Podman;
+- container: `docker.io/library/archlinux:base` with Orca 51.0-2, AT-SPI2
+  2.62.1-1, Speech Dispatcher 0.12.1-3, espeak-ng 1.52.0-1 and
+  xorg-server-xvfb 21.1.25-1;
+- browser: Playwright's Chrome for Testing 151.0.7922.34 with
+  `--force-renderer-accessibility` and SwiftShader WebGPU, headful on Xvfb;
+- application: Record Desk, built from the increment-3 tree, served on
+  loopback without `?automation=1`.
+
+`tools/aria-layer-orca/run.sh` reproduces the session. Orca's say-all and page
+summary on load are turned off. Without an audio device a say-all never
+completes, and Orca then ignores focus changes. The journey clicks the canvas
+once, then uses only the keyboard.
+
+Orca's speech output, from its debug transcript, after each step:
+
+| Step | Orca speech |
+| --- | --- |
+| Page loads | "Loading. Please wait." "Record Desk" "embedded" |
+| Click the canvas | "Detail" "page tab" |
+| Tab | "Save" "button" "Ctrl+S Meta+S" "Save committed records and layout locally; drafts are excluded" |
+| Tab | "Arrange panes" "button" "Ctrl+L Meta+L" "Switch between stacked and side-by-side panes" |
+| Tab | "Vertical splitter" "vertical splitter" "36%" "32 percent." "Resize adjacent dock panes" |
+| Ctrl+S | "Saved committed records and layout locally." |
+| Ctrl+F | "Records region" "Search records" "entry" |
+| Escape | "Record Desk" "embedded" |
+
+What this shows:
+
+- AT-SPI reaches the layer.
+- Orca announces `aria-activedescendant` focus moves with each control's role,
+  shortcuts and description, and a splitter's value.
+- The polite live status is read.
+- The focus handoff names eframe's text agent after the focused field.
+- Orca reports the application root as "embedded". It reads the splitter's
+  32 percent as its position within the 10–90% range.
+
+Limits:
+
+- There was no audio device, so this proves speech generation, not audible
+  output.
+- It covers a short journey, not the representative workflow below.
+- The virtual display does not qualify a human-operated desktop.
+- An earlier run with say-all on load left Orca reading the page and ignoring
+  focus changes; the retained setting avoids that.
 
 ## Qualification workflow
 
@@ -178,9 +245,9 @@ The five evidence axes remain deliberately separate:
 | --- | --- | --- |
 | Framework semantic tests | Pass | A production-path representative frame contains the expected application action, disabled reason, dock tabs, splitters, bounded selected result and viewport; the snapshot and generated AccessKit nodes have matching stable identity, role, state, bounds and actions, with no duplicate owners. These tests exercise AccessKit's framework transport, not Linux AT-SPI custom-action delivery |
 | Keyboard tests | Pass | Deterministic repeated-frame Tab/Shift+Tab traversal reaches application actions, splitters, the active tab, pane tools and viewport; tool shortcuts and result selection update viewport context through existing commands/intents |
-| Platform-adapter integration | Native pass at build/architecture level; browser ARIA layer automated pass | The native dependency route is compiled and guarded. Stock eframe 0.36.1 still discards browser AccessKit updates; Stobie's ARIA layer takes them first and mirrors the tree, which automated Chromium checks cover. No browser screen-reader claim follows |
+| Platform-adapter integration | Native pass at build/architecture level; browser ARIA layer automated pass and Orca speech observed | The native dependency route is compiled and guarded. Stock eframe 0.36.1 still discards browser AccessKit updates; Stobie's ARIA layer takes them first and mirrors the tree, which automated Chromium checks cover. No browser screen-reader claim follows |
 | Automated tree and physical input | Pass within the stated limits | Generated AccessKit updates, bounded virtualisation, dock move/restoration, dynamic state and action routing pass automated tests. Native Xvfb/llvmpipe and Playwright Chromium/WebGPU physically exercise keyboard and pointer workflows, and deterministic UI/text checks pass. These are not actual AT sessions |
-| Actual assistive technology | One exact native environment qualified; browser blocked | The repeatable Debian VM journey plus human-confirmed audible Orca output directly qualify Debian 13/GNOME 48/RDP/Orca 48.1. Arch/Xvfb remains partial, and no claim extends to other native environments or browsers |
+| Actual assistive technology | One exact native environment qualified; one browser environment partial | The repeatable Debian VM journey plus human-confirmed audible Orca output directly qualify Debian 13/GNOME 48/RDP/Orca 48.1. Arch/Xvfb remains partial. In the browser, Orca 51.0 generated speech through the ARIA layer without an audio device, which is partial. No claim extends to other environments |
 
 On 4 September 2026 the candidate passed `cargo xtask verify` with npm's
 unrelated registry audit request disabled after the registry request stalled.

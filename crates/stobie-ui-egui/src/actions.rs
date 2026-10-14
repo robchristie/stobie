@@ -102,6 +102,32 @@ impl ActionShortcut {
         )
     }
 
+    /// The shortcut as an `aria-keyshortcuts` value, which assistive
+    /// technology announces. A command shortcut lists both its Control and
+    /// Meta forms, because Cmd is Meta on macOS.
+    pub fn aria_keyshortcuts(self) -> String {
+        let key = match self.key.egui() {
+            Key::ArrowUp => "ArrowUp",
+            Key::ArrowDown => "ArrowDown",
+            Key::ArrowLeft => "ArrowLeft",
+            Key::ArrowRight => "ArrowRight",
+            key => key.name(),
+        };
+        let mut chord = String::new();
+        if self.shift {
+            chord.push_str("Shift+");
+        }
+        if self.alt {
+            chord.push_str("Alt+");
+        }
+        chord.push_str(key);
+        if self.command {
+            format!("Control+{chord} Meta+{chord}")
+        } else {
+            chord
+        }
+    }
+
     pub fn display(self) -> String {
         let mut parts = Vec::new();
         if self.command {
@@ -369,6 +395,26 @@ pub(crate) fn stable_action_hash<A: ActionKey>(action: A, pane: Option<PaneId>) 
 mod tests {
     use super::*;
     use crate::test_actions::TestAction;
+
+    #[test]
+    fn shortcuts_have_aria_key_names() {
+        assert_eq!(
+            ActionShortcut::command(ShortcutKey::Enter).aria_keyshortcuts(),
+            "Control+Enter Meta+Enter"
+        );
+        assert_eq!(
+            ActionShortcut::command_shift(ShortcutKey::Z).aria_keyshortcuts(),
+            "Control+Shift+Z Meta+Shift+Z"
+        );
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::ArrowUp).aria_keyshortcuts(),
+            "ArrowUp"
+        );
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::PageDown).aria_keyshortcuts(),
+            "PageDown"
+        );
+    }
 
     #[test]
     fn registry_is_complete_unique_and_has_stable_identity() {
