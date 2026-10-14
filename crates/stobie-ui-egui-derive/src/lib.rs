@@ -6,8 +6,8 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, quote_spanned};
 use syn::{
-    Data, DeriveInput, Error, Fields, Ident, LitStr, Path, Variant, ext::IdentExt,
-    meta::ParseNestedMeta, parse_macro_input,
+    Data, DeriveInput, Error, Expr, Fields, Ident, Lit, LitBool, LitInt, LitStr, Path, UnOp,
+    Variant, ext::IdentExt, meta::ParseNestedMeta, parse_macro_input, spanned::Spanned,
 };
 
 /// Implement `ActionKey` and `ActionSet` for an enum of unit variants.
@@ -15,8 +15,11 @@ use syn::{
 /// The enum takes `#[action(prefix = "app")]`. Each variant takes
 /// `#[action(label = "…", description = "…")]` and, optionally, `compact`,
 /// `shortcut` (for example `"Cmd+Shift+Z"`), `scope` (`"application"`,
-/// `"pane"` or `"active_pane"`), `id` and `physical_only = "reason"`. The stable
-/// ID defaults to `<prefix>.<kebab-case variant>`. See the `stobie_ui_egui`
+/// `"pane"` or `"active_pane"`), `id`, `physical_only = "reason"` and an
+/// `argument`: `"text"` (with an optional `max_length`), `"boolean"`,
+/// `"number"` (with `minimum`, `maximum` and an optional `integer = true`) or
+/// `"choice"` (with `choices = Type`, a `ChoiceArgument`). The stable ID
+/// defaults to `<prefix>.<kebab-case variant>`. See the `stobie_ui_egui`
 /// re-export for a compiled example.
 #[proc_macro_derive(Action, attributes(action))]
 pub fn derive_action(input: TokenStream) -> TokenStream {
@@ -26,7 +29,7 @@ pub fn derive_action(input: TokenStream) -> TokenStream {
         .into()
 }
 
-const VARIANT_KEYS: &str = "label, description, compact, shortcut, scope, id or physical_only";
+const VARIANT_KEYS: &str = "label, description, compact, shortcut, scope, id, physical_only, argument, max_length, minimum, maximum, integer or choices";
 
 struct EnumOptions {
     prefix: Option<LitStr>,
@@ -42,6 +45,26 @@ struct VariantOptions {
     scope: Option<Ident>,
     id: Option<LitStr>,
     physical_only: Option<LitStr>,
+    argument: Option<LitStr>,
+    max_length: Option<LitInt>,
+    minimum: Option<(Span, f64)>,
+    maximum: Option<(Span, f64)>,
+    integer: Option<LitBool>,
+    choices: Option<Path>,
+}
+
+/// A variant's declared argument.
+enum Argument {
+    Text {
+        max_length: Option<u32>,
+    },
+    Boolean,
+    Number {
+        minimum: f64,
+        maximum: f64,
+        integer: bool,
+    },
+    Choice(Path),
 }
 
 struct ActionVariant {
@@ -54,6 +77,7 @@ struct ActionVariant {
     shortcut: Option<(LitStr, Shortcut)>,
     scope: Ident,
     physical_only: Option<LitStr>,
+    argument: Option<Argument>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -188,7 +212,7 @@ fn action_variant(variant: &Variant, prefix: Option<&LitStr>) -> syn::Result<Act
     if !matches!(variant.fields, Fields::Unit) {
         return Err(Error::new_spanned(
             &variant.fields,
-            "action variants cannot carry data; actions with arguments are not supported yet",
+            "action variants cannot carry data; declare a value with `argument = \"…\"` instead",
         ));
     }
     let mut options = VariantOptions::default();
@@ -208,6 +232,13 @@ fn action_variant(variant: &Variant, prefix: Option<&LitStr>) -> syn::Result<Act
     };
     if !annotated {
         return Err(missing("label"));
+    }
+    let argument = argument(&variant.ident, &mut options)?;
+    if let (Some(_), Some((literal, _))) = (&argument, &options.shortcut) {
+        return Err(Error::new(
+            literal.span(),
+            "an action with an argument cannot have a shortcut: a key press supplies no value",
+        ));
     }
     let label = options.label.ok_or_else(|| missing("label"))?;
     let description = options.description.ok_or_else(|| missing("description"))?;
@@ -240,7 +271,100 @@ fn action_variant(variant: &Variant, prefix: Option<&LitStr>) -> syn::Result<Act
             .scope
             .unwrap_or_else(|| Ident::new("Application", Span::call_site())),
         physical_only: options.physical_only,
+        argument,
     })
+}
+
+/// Check that argument keys match the declared kind and build the argument.
+fn argument(ident: &Ident, options: &mut VariantOptions) -> syn::Result<Option<Argument>> {
+    let kind = options.argument.as_ref().map(LitStr::value);
+    let unexpected = |key: &str, span: Span| {
+        Err(Error::new(
+            span,
+            match &kind {
+                Some(kind) => format!("`{key}` does not apply to a {kind} argument"),
+                None => format!("`{key}` needs an `argument`"),
+            },
+        ))
+    };
+    let max_length = match (&options.max_length, kind.as_deref()) {
+        (Some(literal), Some("text")) => Some(literal.base10_parse::<u32>()?),
+        (Some(literal), _) => return unexpected("max_length", literal.span()),
+        (None, _) => None,
+    };
+    if !matches!(kind.as_deref(), Some("number")) {
+        for (key, value) in [("minimum", &options.minimum), ("maximum", &options.maximum)] {
+            if let Some((span, _)) = value {
+                return unexpected(key, *span);
+            }
+        }
+        if let Some(literal) = &options.integer {
+            return unexpected("integer", literal.span());
+        }
+    }
+    if let (Some(path), false) = (&options.choices, kind.as_deref() == Some("choice")) {
+        return unexpected("choices", path.span());
+    }
+    let Some(literal) = &options.argument else {
+        return Ok(None);
+    };
+    Ok(Some(match literal.value().as_str() {
+        "text" => Argument::Text { max_length },
+        "boolean" => Argument::Boolean,
+        "number" => {
+            let (Some((_, minimum)), Some((span, maximum))) = (options.minimum, options.maximum)
+            else {
+                return Err(Error::new_spanned(
+                    ident,
+                    "a number argument needs `minimum` and `maximum`",
+                ));
+            };
+            if minimum > maximum {
+                return Err(Error::new(span, "`maximum` is less than `minimum`"));
+            }
+            Argument::Number {
+                minimum,
+                maximum,
+                integer: options.integer.as_ref().is_some_and(LitBool::value),
+            }
+        }
+        "choice" => Argument::Choice(options.choices.take().ok_or_else(|| {
+            Error::new_spanned(ident, "a choice argument needs `choices = Type`")
+        })?),
+        _ => {
+            return Err(Error::new(
+                literal.span(),
+                "argument must be \"text\", \"boolean\", \"number\" or \"choice\"",
+            ));
+        }
+    }))
+}
+
+/// A finite number literal, optionally negated.
+fn number(meta: &ParseNestedMeta, slot: &mut Option<(Span, f64)>, key: &str) -> syn::Result<()> {
+    if slot.is_some() {
+        return Err(meta.error(format!("duplicate `{key}`")));
+    }
+    let expression: Expr = meta.value()?.parse()?;
+    let span = expression.span();
+    let (negated, literal) = match &expression {
+        Expr::Unary(unary) if matches!(unary.op, UnOp::Neg(_)) => (true, &*unary.expr),
+        expression => (false, expression),
+    };
+    let value = match literal {
+        Expr::Lit(literal) => match &literal.lit {
+            Lit::Int(int) => int.base10_parse::<f64>()?,
+            Lit::Float(float) => float.base10_parse::<f64>()?,
+            _ => return Err(Error::new(span, format!("`{key}` must be a number"))),
+        },
+        _ => return Err(Error::new(span, format!("`{key}` must be a number"))),
+    };
+    let value = if negated { -value } else { value };
+    if !value.is_finite() {
+        return Err(Error::new(span, format!("`{key}` must be finite")));
+    }
+    *slot = Some((span, value));
+    Ok(())
 }
 
 fn variant_option(meta: &ParseNestedMeta, options: &mut VariantOptions) -> syn::Result<()> {
@@ -255,6 +379,30 @@ fn variant_option(meta: &ParseNestedMeta, options: &mut VariantOptions) -> syn::
         "compact" => string(meta, &mut options.compact, "compact").map(drop),
         "physical_only" => string(meta, &mut options.physical_only, "physical_only").map(drop),
         "id" => identity(&string(meta, &mut options.id, "id")?),
+        "argument" => string(meta, &mut options.argument, "argument").map(drop),
+        "max_length" => {
+            if options.max_length.is_some() {
+                return Err(meta.error("duplicate `max_length`"));
+            }
+            options.max_length = Some(meta.value()?.parse()?);
+            Ok(())
+        }
+        "minimum" => number(meta, &mut options.minimum, "minimum"),
+        "maximum" => number(meta, &mut options.maximum, "maximum"),
+        "integer" => {
+            if options.integer.is_some() {
+                return Err(meta.error("duplicate `integer`"));
+            }
+            options.integer = Some(meta.value()?.parse()?);
+            Ok(())
+        }
+        "choices" => {
+            if options.choices.is_some() {
+                return Err(meta.error("duplicate `choices`"));
+            }
+            options.choices = Some(meta.value()?.parse()?);
+            Ok(())
+        }
         "shortcut" => {
             if options.shortcut.is_some() {
                 return Err(meta.error("duplicate `shortcut`"));
@@ -549,6 +697,54 @@ fn generate(name: &Ident, krate: &Path, variants: &[ActionVariant]) -> TokenStre
             }
         }
     };
+    let arguments: Vec<_> = variants
+        .iter()
+        .filter_map(|variant| {
+            let ident = &variant.ident;
+            let contract = match variant.argument.as_ref()? {
+                Argument::Text { max_length } => {
+                    let max_length = match max_length {
+                        Some(limit) => quote!(::core::option::Option::Some(#limit)),
+                        None => quote!(::core::option::Option::None),
+                    };
+                    quote!(#krate::ArgumentContract::Text { max_length: #max_length })
+                }
+                Argument::Boolean => quote!(#krate::ArgumentContract::Boolean),
+                Argument::Number {
+                    minimum,
+                    maximum,
+                    integer,
+                } => {
+                    let minimum = proc_macro2::Literal::f64_suffixed(*minimum);
+                    let maximum = proc_macro2::Literal::f64_suffixed(*maximum);
+                    quote!(#krate::ArgumentContract::Number {
+                        minimum: #minimum,
+                        maximum: #maximum,
+                        integer: #integer,
+                    })
+                }
+                Argument::Choice(path) => {
+                    quote_spanned!(path.span()=> #krate::ArgumentContract::Choice {
+                        options: <#path as #krate::ChoiceArgument>::options(),
+                    })
+                }
+            };
+            Some(quote!(Self::#ident => #contract,))
+        })
+        .collect();
+    let argument = if arguments.is_empty() {
+        quote!()
+    } else {
+        quote! {
+            fn argument(self) -> #krate::ArgumentContract {
+                #[allow(unreachable_patterns)]
+                match self {
+                    #(#arguments)*
+                    _ => #krate::ArgumentContract::None,
+                }
+            }
+        }
+    };
     quote! {
         impl #krate::ActionKey for #name {
             fn stable_id(self) -> &'static str {
@@ -564,6 +760,8 @@ fn generate(name: &Ident, krate: &Path, variants: &[ActionVariant]) -> TokenStre
             }
 
             #invocation
+
+            #argument
         }
 
         impl #krate::ActionSet for #name {

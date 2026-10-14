@@ -145,6 +145,30 @@ async function journey(app, host, client, physical, build) {
     await key('Control+Shift+z');
     await client.wait(fact('undo_entries', 2));
     await observe('physical-redo');
+    // Typed arguments and framework set text reach the draft as the combo box
+    // and typing do; an invalid choice changes nothing.
+    const notes = { id: 'record-desk.notes.1013' };
+    assert.equal((await client.discover(notes)).capabilities[0].capability, 'stobie.set-text');
+    assert.equal((await invoke(notes, { arguments: { value: 'Set through\nthe protocol' } })).state, 'completed');
+    await client.wait({ condition: 'value', selector: notes, value: 'Set through\nthe protocol' });
+    await client.wait(fact('draft_dirty', true));
+    const category = selector('record-desk.edit-category');
+    assert.deepEqual((await client.discover(category)).capabilities[0].arguments.options.map(option => option.id), ['research', 'operations', 'ideas']);
+    await failure('unknown category', category, 'invalid_arguments', { arguments: { value: 'archive' } });
+    const chosen = await invoke(category, { arguments: { value: 'ideas' } });
+    assert.equal(chosen.state, 'completed', JSON.stringify(chosen));
+    // Apply's meaning tracks the draft, so discover it from an observation
+    // that includes the chosen category.
+    const deadline = Date.now() + 15000;
+    while ((await client.observe()).id < chosen.after_observation) {
+      assert(Date.now() < deadline, `observation ${chosen.after_observation} was not published`);
+      await new Promise(done => setTimeout(done, 50));
+    }
+    const applied = await invoke(selector('record-desk.apply'));
+    assert.equal(applied.state, 'completed', JSON.stringify(applied));
+    await client.wait(fact('undo_entries', 3));
+    assert.match((await client.query({ id: 'record-desk.record.1013' })).nodes[0].node.name, / · Ideas · /);
+    await observe('typed-arguments');
     }
   } else {
     const fit = { capability: 'fit_view', pane: 1 };

@@ -149,6 +149,7 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
         options: option_nodes,
         control: SemanticControlOutput {
             node: UiNode {
+                value: None,
                 id: semantic_id,
                 parent: Some(parent),
                 role: UiRole::ComboBox,

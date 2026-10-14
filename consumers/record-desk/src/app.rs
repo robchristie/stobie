@@ -3,7 +3,12 @@ use serde::Serialize;
 use stobie_core::{DockNode, SplitAxis, Workspace, WorkspaceChange};
 use stobie_ui_egui::*;
 
-use crate::{actions::Action, model::*, panes::*, store::Store};
+use crate::{
+    actions::{Action, CategoryFilter},
+    model::*,
+    panes::*,
+    store::Store,
+};
 
 /// The hosted application: domain state, persistence feedback and layout.
 pub struct RecordDesk {
@@ -351,8 +356,9 @@ impl Application for RecordDesk {
                 draft.reviewed = !draft.reviewed;
                 self.desk.edit_draft(draft)?;
             }
+            // The host delivers these with their choice to `perform_with`.
             Action::FilterCategory | Action::FilterReview | Action::EditCategory => {
-                return Ok(false);
+                return Err(format!("{} needs a choice", action.specification().label));
             }
         }
         // Restore reports its own outcome; toggling edits only the draft.
@@ -360,6 +366,38 @@ impl Application for RecordDesk {
             self.error = false;
         }
         Ok(true)
+    }
+
+    /// A chosen category or review state applies the same intent as its combo box.
+    fn perform_with(
+        &mut self,
+        target: ActionTarget<Action>,
+        argument: ActionArgument,
+        view: &mut View,
+    ) -> Result<bool, String> {
+        match target.action {
+            Action::FilterCategory => {
+                let CategoryFilter(category) = argument.as_choice()?;
+                let filters = Filters {
+                    category,
+                    ..self.desk.filters().clone()
+                };
+                self.apply(Intent::Filters(filters), view)
+            }
+            Action::FilterReview => {
+                let filters = Filters {
+                    review: argument.as_choice()?,
+                    ..self.desk.filters().clone()
+                };
+                self.apply(Intent::Filters(filters), view)
+            }
+            Action::EditCategory => {
+                let mut draft = self.desk.draft().ok_or("Choose a record first")?.clone();
+                draft.category = argument.as_choice()?;
+                self.apply(Intent::Draft(draft), view)
+            }
+            _ => self.perform(target, view),
+        }
     }
 
     fn report_error(&mut self, message: String) {

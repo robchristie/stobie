@@ -73,11 +73,21 @@ snapshot, is the source.
   egui's focused element, so a Tab move is announced. Focusable controls carry
   `tabindex="-1"`. When assistive technology moves DOM focus onto one, the
   layer requests egui focus for its node and returns DOM focus to the canvas.
-  While egui edits text, eframe's text agent holds DOM focus. It is named after
-  the focused field, so typing after focusing "Record title" edits that field.
+  A layer text field instead keeps DOM focus (see Values). While egui edits
+  text, eframe's text agent holds DOM focus. It is named after the focused
+  field, so typing after clicking "Record title" edits that field.
 - **Values.** Text fields are hidden `input` and `textarea` elements whose
   `value` mirrors egui's text, so browsers and Playwright snapshots expose it.
-  Direct edits to them are reverted; text is edited through egui. Combo boxes
+  A focused layer field keeps DOM focus and can be edited in place, as
+  `locator.fill()` and typing do. Each `input` event becomes an AccessKit
+  `SetValue` request with the field's whole text. The host applies it as
+  typed input: it focuses the egui field, selects its text and pastes the new
+  text over it. The application therefore sees its ordinary change, and a
+  value egui does not take is restored after the pass. Tab and Escape return
+  DOM focus to the canvas and reach egui as the same keys. Cmd or Ctrl chords,
+  other than the field's own selection, clipboard, undo and caret keys, reach
+  egui as application shortcuts while focus stays in the field. Password
+  fields are never edited this way. Combo boxes
   expose their current text. Sliders expose `aria-valuenow`, minimum and
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.
@@ -129,7 +139,8 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
   writes nothing, and a capability hidden in a pane has no element there;
 - Tab keeps DOM focus on the canvas and moves `aria-activedescendant`;
 - in Record Desk, focusing a text field through the layer then typing edits
-  it, a status change reaches its polite live region, and destroying the host
+  it, `locator.fill()` edits a single-line and a multiline field as typing
+  would, a status change reaches its polite live region, and destroying the host
   restores the canvas.
 
 This proves the browser accessibility tree only. It is not screen-reader

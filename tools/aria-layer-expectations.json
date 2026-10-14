@@ -338,7 +338,33 @@
     "plainClick": {
       "role": "button",
       "name": "Save"
-    }
+    },
+    "fill": [
+      {
+        "target": {
+          "role": "textbox",
+          "name": "Record title"
+        },
+        "text": "Filled title",
+        "facts": {
+          "draft_title": "Filled title",
+          "draft_dirty": true
+        },
+        "press": {
+          "key": "Control+Enter",
+          "facts": {
+            "draft_dirty": false
+          }
+        }
+      },
+      {
+        "target": {
+          "role": "textbox",
+          "name": "Record notes"
+        },
+        "text": "First line\nSecond line"
+      }
+    ]
   },
   "gallery": {
     "application": "Stobie Component Gallery",

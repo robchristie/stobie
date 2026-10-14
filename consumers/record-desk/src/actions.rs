@@ -1,5 +1,36 @@
 use serde::Serialize;
-use stobie_ui_egui::Action;
+use stobie_ui_egui::{Action, ChoiceArgument};
+
+use crate::model::{Category, ReviewFilter};
+
+impl ChoiceArgument for Category {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Research, "research", "Research"),
+        (Self::Operations, "operations", "Operations"),
+        (Self::Ideas, "ideas", "Ideas"),
+    ];
+}
+
+impl ChoiceArgument for ReviewFilter {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::All, "all", "All records"),
+        (Self::Reviewed, "reviewed", "Reviewed"),
+        (Self::Unreviewed, "unreviewed", "Unreviewed"),
+    ];
+}
+
+/// The category filter's choice: every category, or one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CategoryFilter(pub Option<Category>);
+
+impl ChoiceArgument for CategoryFilter {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] = &[
+        (Self(None), "all", "All categories"),
+        (Self(Some(Category::Research)), "research", "Research"),
+        (Self(Some(Category::Operations)), "operations", "Operations"),
+        (Self(Some(Category::Ideas)), "ideas", "Ideas"),
+    ];
+}
 
 #[derive(Action, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
 #[action(prefix = "record-desk")]
@@ -66,19 +97,22 @@ pub enum Action {
     #[action(
         label = "Category filter",
         description = "Limit the list by category",
-        physical_only = "Chooses a category; actions with arguments are not supported yet"
+        argument = "choice",
+        choices = CategoryFilter
     )]
     FilterCategory,
     #[action(
         label = "Review filter",
         description = "Limit the list by review state",
-        physical_only = "Chooses a review state; actions with arguments are not supported yet"
+        argument = "choice",
+        choices = ReviewFilter
     )]
     FilterReview,
     #[action(
         label = "Record category",
         description = "Change the draft's category",
-        physical_only = "Chooses a category; actions with arguments are not supported yet"
+        argument = "choice",
+        choices = Category
     )]
     EditCategory,
 }

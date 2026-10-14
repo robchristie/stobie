@@ -492,6 +492,7 @@ impl stobie_ui_egui::PanePresenter for PaneSurface<'_> {
             rect: rect.into(),
         });
         self.outputs.ui_geometry.record_node(UiNode {
+            value: None,
             id: SemanticUiId::tab(pane),
             parent: Some(SemanticUiId::root()),
             role: UiRole::Tab,
@@ -527,6 +528,7 @@ impl stobie_ui_egui::PanePresenter for PaneSurface<'_> {
             rect: rect.into(),
         });
         self.outputs.ui_geometry.record_node(UiNode {
+            value: None,
             id: SemanticUiId::splitter(node),
             parent: Some(SemanticUiId::root()),
             role: UiRole::Splitter,

@@ -429,6 +429,7 @@ pub fn action_semantic_node_with_identity<A: ActionKey>(
 ) -> UiNode {
     let action = target.action.specification();
     UiNode {
+        value: None,
         id: identity.semantic_id.clone(),
         parent: Some(parent),
         role: UiRole::Button,

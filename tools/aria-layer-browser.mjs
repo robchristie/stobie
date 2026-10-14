@@ -272,6 +272,36 @@ try {
       check('focus handoff and typing', { target, fact: observed[fact] });
     }
   }
+  // `locator.fill()` edits a text field through the layer: the field keeps
+  // DOM focus, and egui takes its text as typed input. Escape then returns
+  // focus to the canvas.
+  for (const step of expectations.fill ?? []) {
+    const field = page.getByRole(step.target.role, { name: step.target.name, exact: true });
+    await field.fill(step.text);
+    await page.waitForFunction(name => document.activeElement?.getAttribute('aria-label') === name, step.target.name, { timeout: 5000 });
+    await page.waitForTimeout(500);
+    assert.equal(await field.inputValue(), step.text, `${step.target.name} keeps the filled text`);
+    if (client) {
+      const node = (await client.observe()).snapshot.nodes.find(node => node.name === step.target.name);
+      assert.equal(node?.value, step.text, `egui took the filled text for ${step.target.name}`);
+    }
+    const observed = await facts();
+    for (const [key, value] of Object.entries(step.facts ?? {})) {
+      assert.deepEqual(observed[key], value, `after filling ${step.target.name}, fact ${key}`);
+    }
+    // An application shortcut pressed in the field still reaches egui.
+    if (step.press) {
+      await page.keyboard.press(step.press.key);
+      await page.waitForTimeout(500);
+      const pressed = await facts();
+      for (const [key, value] of Object.entries(step.press.facts)) {
+        assert.deepEqual(pressed[key], value, `after ${step.press.key} in ${step.target.name}, fact ${key}`);
+      }
+    }
+    await page.keyboard.press('Escape');
+    assert(await page.evaluate(() => document.activeElement === document.querySelector('canvas')), 'Escape returns focus to the canvas');
+    check('fill', { target: step.target, length: step.text.length, facts: step.facts });
+  }
   // Destroying the application removes the layer and restores the canvas.
   if (expectations.handle) {
     await page.evaluate(handle => window[handle].destroy(), expectations.handle);

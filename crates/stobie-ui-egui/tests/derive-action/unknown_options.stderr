@@ -1,4 +1,4 @@
-error: unknown action attribute; expected label, description, compact, shortcut, scope, id or physical_only
+error: unknown action attribute; expected label, description, compact, shortcut, scope, id, physical_only, argument, max_length, minimum, maximum, integer or choices
  --> tests/derive-action/unknown_options.rs:7:52
   |
 7 |     #[action(label = "Save", description = "Save", tooltip = "Not an option")]

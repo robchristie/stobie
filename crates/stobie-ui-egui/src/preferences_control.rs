@@ -212,6 +212,7 @@ fn preference_slider<A: ActionKey>(
         node.add_action(Action::Decrement);
     });
     semantics.nodes.push(UiNode {
+        value: None,
         id: semantic_id,
         parent: Some(semantics.parent.clone()),
         role: UiRole::Slider,
@@ -267,6 +268,7 @@ fn preference_radio_node<A: ActionKey>(
     action: A,
 ) -> UiNode {
     UiNode {
+        value: None,
         id,
         parent: Some(parent.clone()),
         role: UiRole::RadioButton,
