@@ -1,7 +1,7 @@
 # Hidden ARIA layer for hosted web applications
 
-Status: active
-Next action: Land increment 2, activation and focus synchronisation through AccessKit requests.
+Status: complete
+Delivery: [PR #76](https://github.com/robchristie/stobie/pull/76) completes the plan; increments 1 and 2 landed in PRs #74 and #75.
 
 ## Outcome and boundaries
 
@@ -119,18 +119,18 @@ AccessKit to ARIA. Summary:
 | Element | ARIA |
 | --- | --- |
 | Application root | `application` on the canvas |
-| Buttons and toggles | `button`; toggles add `aria-pressed` |
+| Buttons and toggles | `button` with `aria-keyshortcuts`; toggles add `aria-pressed` |
 | Navigation item | `button` with `aria-current` |
 | Radio button | `radio` |
 | Combo box | `combobox` with its value |
-| Text inputs | `textbox`, with `aria-multiline` for multiline input |
+| Text inputs | Hidden `input` or `textarea` (implicit `textbox`) carrying the value |
 | Slider | `slider` with its values |
 | Tabs | `tab` inside the dock's `tablist` |
-| Splitter | focusable `separator` with its value |
+| Splitter | Focusable `separator` valued in percent (10–90) |
 | Pane | `region` named by its title |
 | Viewport | `group` with an `aria-roledescription` |
 | Result rows and thumbnails | `option` inside a `listbox`, with position and set size where known |
-| Status | `status`, a polite live region |
+| Status line | `status`, a polite live region |
 | Status chip | Plain text; never a live region |
 | Section | `group` |
 | Headings | `heading` |
@@ -141,8 +141,8 @@ AccessKit to ARIA. Summary:
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | 1. Read-only tree: role mapping, incremental updates, live status, opt-out | Landed | [PR #74](https://github.com/robchristie/stobie/pull/74): projection and diff unit tests. The parity audit is extended to status, pane and list containers, with a hosted Lab audit. `tools/aria-layer-browser.mjs` passes for all three applications. Brotli WASM +0.57%; every startup regression gate passes. |
-| 2. Activation and focus synchronisation | In progress | A host test covers the AccessKit click and focus route. Negative tests cover the live and list-container audits. Every Gallery story passes a whole-tree parity audit. `tools/aria-layer-browser.mjs` covers three activation routes, disabled and hidden controls, Tab focus, the focus handoff with typing, and destroy, for all three applications. |
-| 3. Values, documentation and the general-agent probe | Planned | |
+| 2. Activation and focus synchronisation | Landed | [PR #75](https://github.com/robchristie/stobie/pull/75): a host test covers the AccessKit click and focus route. Negative tests cover the live and list-container audits. Every Gallery story passes a whole-tree parity audit. `tools/aria-layer-browser.mjs` covers three activation routes, disabled and hidden controls, Tab focus, the focus handoff with typing, and destroy, for all three applications. |
+| 3. Values, documentation and the general-agent probe | Complete | [PR #76](https://github.com/robchristie/stobie/pull/76): native text fields with mirrored values, percentage splitter values, `aria-keyshortcuts` and an owned text agent. The browser check asserts values, a failing plain click and Tab movement, with Record Desk's structural checks on the default page. Two general-agent probes and an Orca session are recorded below. |
 
 Each increment lands through review in order, rebased on the previous merge.
 
@@ -186,10 +186,14 @@ Each increment lands through review in order, rebased on the previous merge.
   - the Gallery's appearance combo boxes are named.
 - The Lab's coordinate readouts and decoding count change with the pointer or
   worker progress. They declare live off, so they do not flood a screen reader.
-- CDP does not report set position, so the check reads it from the DOM. A
-  non-focusable separator or text field exposes no value. Making focusable
-  controls `tabindex="-1"` in increment 2 exposed splitter and text-field
-  values.
+- CDP does not report set position, so the check reads it from the DOM.
+- A non-focusable separator exposes no value. Making focusable controls
+  `tabindex="-1"` in increment 2 exposed splitter values.
+- A `div` with `role="textbox"` exposed its text as a value only
+  inconsistently. Hidden native `input` and `textarea` elements now carry the
+  value.
+- Chromium ignores `aria-valuetext` on a separator, so the dock's splitter now
+  reports its value in percent (10–90) in AccessKit itself.
 - egui refuses AccessKit focus for a disabled widget, as it refuses a click.
 - Chromium's hidden text agent fires no `input` events without a usable font.
   Like the Record Desk smoke, the layer check's Linux wrapper supplies
@@ -202,6 +206,69 @@ Each increment lands through review in order, rebased on the previous merge.
   the opt-out.
 - axe-core reports only moderate best-practice findings: no `main` landmark, no
   level-one heading, and content outside landmarks.
+
+## General-agent probe
+
+A fresh agent was given only a command that runs a Playwright snippet against
+the open Record Desk page. It had no Stobie documentation, CLI or
+`?automation=1`, and it was told to use only role and accessibility-tree
+interaction. Its task: select "Check sampling assumptions", toggle Reviewed,
+Apply, then Undo.
+
+- **First probe** (increment 2 build). All four steps succeeded.
+  - A plain `locator.click()` timed out because the canvas intercepts pointer
+    events. The agent switched to `dispatchEvent('click')` unaided.
+  - The application interface, enabled afterwards on the same page, confirmed
+    record 1049 selected, one redo entry, no undo entry and the status "Undid
+    one record change."
+  - Reported gaps:
+    - text fields showed no values;
+    - shortcuts appeared only as text;
+    - eframe's "Text entry" field sat outside the application.
+
+  Increment 3 fixes all three.
+- **Second probe** (increment 3 build). With a fresh agent and the same prompt,
+  all four steps succeeded again.
+  - The agent read "Record title" as "Check sampling assumptions" and found
+    the shortcuts.
+  - The same application-interface facts confirmed the outcome.
+  - The plain-click timeout remains: elements that pass pointer input through
+    to the canvas cannot be Playwright hit targets. The agent guide documents
+    the routes instead.
+- **Remaining observations, recorded rather than changed:**
+  - A toggle reports `pressed=false` only in CDP, not in Playwright snapshots.
+  - Record Desk's row names join title, category and state.
+  - The dock's two tab lists share a name.
+  - Property labels are loose text.
+
+## Screen reader
+
+`tools/aria-layer-orca/run.sh` ran Record Desk under actual Orca 51.0 in a
+rootless Arch container with Chrome for Testing 151 on Xvfb. Orca announced:
+
+- `aria-activedescendant` moves, with each control's shortcuts and
+  description;
+- a splitter's value;
+- the polite status;
+- the focus handoff to "Search records".
+
+There was no audio device and the journey was short, so this is observed
+speech generation, not a qualification. The
+[integration evidence](accessibility-integration-report.md#browser-aria-layer-with-orca)
+records the transcript and limits.
+
+## Closeout
+
+Every acceptance item has its evidence in the increment PRs and above.
+
+- axe-core reports no serious violations.
+- Activation matches physical clicks.
+- Idle and hover write nothing.
+- Startup and size are in each PR.
+- `cargo xtask verify` passes.
+
+The screen-reader result is observed speech generation, not a qualification,
+and no browser and screen-reader pair is qualified.
 
 ## Later work
 

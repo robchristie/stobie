@@ -6,9 +6,10 @@
 //
 // It then activates controls through the layer (a click event, as a screen
 // reader's default action sends; `element.click()`; and Playwright's forced
-// coordinate click) and checks focus reporting. Where an application publishes
-// facts, the outcome is read through the application interface, enabled with
-// `?automation=1` for this check only.
+// coordinate click) and checks focus reporting. Where an application exposes
+// its handle, the outcome is read through the application interface, which
+// the check enables on the running page only after the structural, idle and
+// hover checks, so those see the default page.
 //
 // The applications must already be built (`cargo xtask build-web`,
 // `consumers/record-desk/build-web.sh`). Raw evidence goes to
@@ -67,11 +68,11 @@ try {
       return submit.apply(this, args);
     };
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/${expectations.facts ? '?automation=1' : ''}`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.waitForSelector(`${LAYER} [role]`, { state: 'attached', timeout: 60000 });
   await page.evaluate(selector => {
     const layer = document.querySelector(selector);
-    const canvas = document.querySelector(`[aria-owns="${layer.id}"]`);
+    const canvas = document.querySelector(`[aria-owns~="${layer.id}"]`);
     const observer = new MutationObserver(records => {
       window.__ariaProbe.mutations += records.length;
       window.__ariaLog = (window.__ariaLog ?? []).concat(records.map(record => `${record.type} ${record.target.id || record.target.parentElement?.id} ${record.target.getAttribute?.('role')} ${record.target.getAttribute?.('aria-label') ?? record.target.textContent?.slice(0, 40)} ${record.attributeName ?? ''} ${record.type === 'characterData' ? record.target.data : (record.attributeName ? record.target.getAttribute(record.attributeName) : '')}`)).slice(-80);
@@ -182,8 +183,23 @@ try {
   }
   // Activation through the layer takes the same route as a physical click: a
   // disabled control does nothing, and a hidden capability has no element.
+  // A plain Playwright click cannot target a layer element: the pointer passes
+  // through to the canvas, as the agent guide documents.
+  if (expectations.plainClick) {
+    const { role, name } = expectations.plainClick;
+    const failure = await page.getByRole(role, { name, exact: true }).click({ timeout: 2000 }).then(() => null, error => error.message);
+    assert.match(failure ?? 'clicked', /intercepts pointer events/, 'a plain click reports the canvas intercepting it');
+    await settle('plain click');
+    check('plain click', { target: { role, name } });
+  }
   let client;
-  if (expectations.facts) {
+  if (expectations.handle) {
+    // Enable automation as the maintained bootstraps do with ?automation=1.
+    await page.evaluate(handle => {
+      window[handle].enable_automation(crypto.randomUUID());
+      window.__STOBIE_AUTOMATION = Object.freeze({ request: json => window[handle].automation_request(json) });
+    }, expectations.handle);
+    await settle('automation');
     client = new ApplicationClient(new BrowserTransport(page));
     await client.hello();
   }
@@ -213,7 +229,7 @@ try {
     const region = page.getByRole('region', { name: hidden.region, exact: true });
     assert.equal(await region.getByRole(hidden.role, { name: hidden.name, exact: true }).count(), 0, `${hidden.name} is hidden in ${hidden.region}`);
     assert.equal(await page.getByRole('region', { name: hidden.shownIn, exact: true }).getByRole(hidden.role, { name: hidden.name, exact: true }).count(), 1, `${hidden.name} is shown in ${hidden.shownIn}`);
-    check('hidden capability', hidden);
+    check('hidden capability', { target: hidden });
   }
 
   // Keyboard focus stays on the canvas; the canvas names egui's focus.
@@ -231,7 +247,9 @@ try {
       });
       assert(state.canvasFocused, 'Tab keeps DOM focus on the canvas');
       assert(state.role, 'aria-activedescendant names a layer element');
-      named.push(`${state.role} ${state.name}`);
+      const current = `${state.role} ${state.name}`;
+      assert.notEqual(current, named.at(-1), 'each Tab moves to another control');
+      named.push(current);
     }
     const tree = await accessibilityTree(page);
     assert.equal(tree.find(node => node.role === 'application').properties.focused, true, 'the application keeps focus');

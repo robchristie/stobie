@@ -1,0 +1,9 @@
+# A disposable Arch Linux session with Orca, AT-SPI, Speech Dispatcher and
+# Xvfb. Chromium is mounted from Playwright's pinned download.
+FROM docker.io/library/archlinux:base
+RUN pacman -Syu --noconfirm --needed orca at-spi2-core speech-dispatcher espeak-ng \
+      xorg-server-xvfb xdotool dbus glib2 gsettings-desktop-schemas python-gobject \
+      python-atspi nss gtk3 libcups libxkbcommon mesa vulkan-swrast alsa-lib \
+      libxcomposite libxdamage libxrandr pango cairo libdrm libxshmfence ttf-dejavu \
+      procps-ng \
+    && pacman -Scc --noconfirm

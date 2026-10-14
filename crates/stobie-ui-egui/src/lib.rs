@@ -372,10 +372,14 @@ fn render_node(
                 } else {
                     Orientation::Horizontal
                 });
-                node.set_numeric_value(f64::from(initial_fraction));
-                node.set_min_numeric_value(0.1);
-                node.set_max_numeric_value(0.9);
-                node.set_numeric_value_step(f64::from(SPLITTER_KEY_STEP));
+                // Assistive technology announces the split as a percentage of
+                // the first pane, within the 10–90% the dock allows.
+                let percent = |fraction: f32| (f64::from(fraction) * 100.0).round();
+                node.set_numeric_value(percent(initial_fraction));
+                node.set_value(format!("{}%", percent(initial_fraction)));
+                node.set_min_numeric_value(10.0);
+                node.set_max_numeric_value(90.0);
+                node.set_numeric_value_step(percent(SPLITTER_KEY_STEP));
                 node.add_action(Action::Increment);
                 node.add_action(Action::Decrement);
             });
@@ -1270,8 +1274,11 @@ mod tests {
             .find(|node| node.role() == egui::accesskit::Role::Splitter)
             .expect("splitter node");
         assert!(splitter.numeric_value().is_some());
-        assert_eq!(splitter.min_numeric_value(), Some(0.1));
-        assert_eq!(splitter.max_numeric_value(), Some(0.9));
+        assert_eq!(splitter.min_numeric_value(), Some(10.0));
+        assert_eq!(splitter.max_numeric_value(), Some(90.0));
+        assert_eq!(splitter.numeric_value_step(), Some(5.0));
+        let value = splitter.numeric_value().unwrap();
+        assert_eq!(splitter.value(), Some(format!("{value}%").as_str()));
         assert!(splitter.supports_action(egui::accesskit::Action::Increment));
         assert!(splitter.supports_action(egui::accesskit::Action::Decrement));
         let splitter_bounds = splitter.bounds().expect("splitter semantic bounds");

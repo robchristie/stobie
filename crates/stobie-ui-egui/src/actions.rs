@@ -102,6 +102,45 @@ impl ActionShortcut {
         )
     }
 
+    /// The shortcut as an `aria-keyshortcuts` value, which assistive
+    /// technology announces. Cmd is Control, or Meta on macOS; in the browser,
+    /// where the platform is decided at run time, a command shortcut lists
+    /// both forms.
+    pub fn aria_keyshortcuts(self) -> String {
+        let key = match self.key {
+            ShortcutKey::ArrowUp => "ArrowUp",
+            ShortcutKey::ArrowDown => "ArrowDown",
+            ShortcutKey::ArrowLeft => "ArrowLeft",
+            ShortcutKey::ArrowRight => "ArrowRight",
+            ShortcutKey::PageUp => "PageUp",
+            ShortcutKey::PageDown => "PageDown",
+            // Printable keys use their character.
+            ShortcutKey::Comma
+            | ShortcutKey::Period
+            | ShortcutKey::Minus
+            | ShortcutKey::Equals
+            | ShortcutKey::Slash => self.key.label(),
+            key => key.egui().name(),
+        };
+        let mut chord = String::new();
+        if self.shift {
+            chord.push_str("Shift+");
+        }
+        if self.alt {
+            chord.push_str("Alt+");
+        }
+        chord.push_str(key);
+        if !self.command {
+            chord
+        } else if cfg!(target_arch = "wasm32") {
+            format!("Control+{chord} Meta+{chord}")
+        } else if cfg!(target_os = "macos") {
+            format!("Meta+{chord}")
+        } else {
+            format!("Control+{chord}")
+        }
+    }
+
     pub fn display(self) -> String {
         let mut parts = Vec::new();
         if self.command {
@@ -369,6 +408,47 @@ pub(crate) fn stable_action_hash<A: ActionKey>(action: A, pane: Option<PaneId>) 
 mod tests {
     use super::*;
     use crate::test_actions::TestAction;
+
+    #[test]
+    fn shortcuts_have_aria_key_names() {
+        let command = if cfg!(target_os = "macos") {
+            "Meta"
+        } else {
+            "Control"
+        };
+        assert_eq!(
+            ActionShortcut::command(ShortcutKey::Enter).aria_keyshortcuts(),
+            format!("{command}+Enter")
+        );
+        assert_eq!(
+            ActionShortcut::command_shift(ShortcutKey::Z).aria_keyshortcuts(),
+            format!("{command}+Shift+Z")
+        );
+        assert_eq!(
+            ActionShortcut::command(ShortcutKey::Equals).aria_keyshortcuts(),
+            format!("{command}+=")
+        );
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::ArrowUp).aria_keyshortcuts(),
+            "ArrowUp"
+        );
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::PageDown).aria_keyshortcuts(),
+            "PageDown"
+        );
+        for key in [
+            ShortcutKey::Comma,
+            ShortcutKey::Period,
+            ShortcutKey::Minus,
+            ShortcutKey::Slash,
+        ] {
+            assert_eq!(ActionShortcut::new(key).aria_keyshortcuts(), key.label());
+        }
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::F5).aria_keyshortcuts(),
+            "F5"
+        );
+    }
 
     #[test]
     fn registry_is_complete_unique_and_has_stable_identity() {
