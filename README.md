@@ -278,8 +278,8 @@ other Linux configurations or browsers.
 In the browser, hosted applications mirror the same AccessKit tree into a
 hidden [ARIA layer](docs/ui-guides/accessibility.md#browser-aria-layer).
 Automated Chromium checks cover its tree, rule conformance, activation and
-focus reporting. Actual Orca generated speech through it in one containerised
-Chromium environment without audio, which is a partial result. No browser and
+focus reporting. Actual Orca generated speech through it for a short journey in
+one containerised Chromium environment without audio. No browser and
 screen-reader combination is qualified. The exact qualification and remaining platform boundaries are in the
 [accessibility integration evidence](docs/accessibility-integration-report.md).
 

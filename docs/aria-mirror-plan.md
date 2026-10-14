@@ -252,7 +252,8 @@ rootless Arch container with Chrome for Testing 151 on Xvfb. Orca announced:
 - the polite status;
 - the focus handoff to "Search records".
 
-There was no audio device, so this is speech generation, a partial result. The
+There was no audio device and the journey was short, so this is observed
+speech generation, not a qualification. The
 [integration evidence](accessibility-integration-report.md#browser-aria-layer-with-orca)
 records the transcript and limits.
 
@@ -266,8 +267,8 @@ Every acceptance item has its evidence in the increment PRs and above.
 - Startup and size are in each PR.
 - `cargo xtask verify` passes.
 
-The screen-reader result is partial, as stated, and no browser and
-screen-reader pair is qualified.
+The screen-reader result is observed speech generation, not a qualification,
+and no browser and screen-reader pair is qualified.
 
 ## Later work
 

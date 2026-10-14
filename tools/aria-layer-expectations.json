@@ -146,7 +146,8 @@
       {
         "role": "combobox",
         "name": "Record category",
-        "parent": "region"
+        "parent": "region",
+        "value": "Research"
       },
       {
         "role": "button",
@@ -160,7 +161,8 @@
         "name": "Record notes",
         "properties": {
           "multiline": true
-        }
+        },
+        "value": "Review the observations from the synthetic coastal survey."
       },
       {
         "role": "button",
@@ -346,7 +348,8 @@
         "name": "Appearance",
         "properties": {
           "expanded": false
-        }
+        },
+        "value": "Dark"
       },
       {
         "role": "combobox",
@@ -372,7 +375,12 @@
       },
       {
         "role": "separator",
-        "name": "Vertical splitter"
+        "name": "Vertical splitter",
+        "value": 62,
+        "properties": {
+          "valuemin": 10,
+          "valuemax": 90
+        }
       },
       {
         "role": "region",
@@ -566,6 +574,23 @@
         "parent": "region",
         "properties": {
           "level": 2
+        }
+      },
+      {
+        "role": "separator",
+        "name": "Vertical splitter",
+        "value": 72,
+        "properties": {
+          "orientation": "vertical",
+          "valuemin": 10,
+          "valuemax": 90
+        }
+      },
+      {
+        "role": "button",
+        "name": "Undo",
+        "dom": {
+          "aria-keyshortcuts": "Control+Z Meta+Z"
         }
       }
     ],

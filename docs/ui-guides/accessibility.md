@@ -82,8 +82,8 @@ snapshot, is the source.
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.
 - **Shortcuts.** An action button's registered shortcut is its
-  `aria-keyshortcuts`. A Cmd shortcut lists both forms, such as
-  `Control+S Meta+S`.
+  `aria-keyshortcuts`. In the browser a Cmd shortcut lists both forms, such
+  as `Control+S Meta+S`; native AccessKit gives the platform's form.
 - **Limits.** The layer is positioned from the canvas's client rectangle on
   each pass. A page that scrolls, or transforms an ancestor, without a pass
   leaves it misaligned until the next pass. It is not a substitute for a text

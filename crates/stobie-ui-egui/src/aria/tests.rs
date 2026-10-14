@@ -196,6 +196,9 @@ fn projection_maps_states_values_and_relations() {
     assert_eq!(attributes(8)["aria-labelledby"], "stobie-a11y:egui-a");
     let field = &tree.elements["stobie-a11y:egui-8"];
     assert_eq!(field.tag, "input");
+    assert_eq!(field.attributes["tabindex"], "-1");
+    assert_eq!(field.attributes["autocomplete"], "off");
+    assert_eq!(field.attributes["spellcheck"], "false");
     assert_eq!(field.text.as_deref(), Some("Survey notes"));
     assert!(
         field.children.is_empty(),

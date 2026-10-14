@@ -189,9 +189,14 @@ impl Projection<'_> {
             _ => "div",
         };
         if tag != "div" {
-            // Native text fields carry their role and multiline state.
+            // Native text fields carry their role and multiline state. They
+            // never join the page's Tab order, and browser autofill and
+            // spelling tools must not attach to them.
             attributes.remove("role");
             attributes.remove("aria-multiline");
+            attributes.insert("tabindex", "-1".to_owned());
+            attributes.insert("autocomplete", "off".to_owned());
+            attributes.insert("spellcheck", "false".to_owned());
         }
         self.tree.elements.insert(
             element_id.clone(),

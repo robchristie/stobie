@@ -103,15 +103,24 @@ impl ActionShortcut {
     }
 
     /// The shortcut as an `aria-keyshortcuts` value, which assistive
-    /// technology announces. A command shortcut lists both its Control and
-    /// Meta forms, because Cmd is Meta on macOS.
+    /// technology announces. Cmd is Control, or Meta on macOS; in the browser,
+    /// where the platform is decided at run time, a command shortcut lists
+    /// both forms.
     pub fn aria_keyshortcuts(self) -> String {
-        let key = match self.key.egui() {
-            Key::ArrowUp => "ArrowUp",
-            Key::ArrowDown => "ArrowDown",
-            Key::ArrowLeft => "ArrowLeft",
-            Key::ArrowRight => "ArrowRight",
-            key => key.name(),
+        let key = match self.key {
+            ShortcutKey::ArrowUp => "ArrowUp",
+            ShortcutKey::ArrowDown => "ArrowDown",
+            ShortcutKey::ArrowLeft => "ArrowLeft",
+            ShortcutKey::ArrowRight => "ArrowRight",
+            ShortcutKey::PageUp => "PageUp",
+            ShortcutKey::PageDown => "PageDown",
+            // Printable keys use their character.
+            ShortcutKey::Comma
+            | ShortcutKey::Period
+            | ShortcutKey::Minus
+            | ShortcutKey::Equals
+            | ShortcutKey::Slash => self.key.label(),
+            key => key.egui().name(),
         };
         let mut chord = String::new();
         if self.shift {
@@ -121,10 +130,14 @@ impl ActionShortcut {
             chord.push_str("Alt+");
         }
         chord.push_str(key);
-        if self.command {
-            format!("Control+{chord} Meta+{chord}")
-        } else {
+        if !self.command {
             chord
+        } else if cfg!(target_arch = "wasm32") {
+            format!("Control+{chord} Meta+{chord}")
+        } else if cfg!(target_os = "macos") {
+            format!("Meta+{chord}")
+        } else {
+            format!("Control+{chord}")
         }
     }
 
@@ -398,13 +411,22 @@ mod tests {
 
     #[test]
     fn shortcuts_have_aria_key_names() {
+        let command = if cfg!(target_os = "macos") {
+            "Meta"
+        } else {
+            "Control"
+        };
         assert_eq!(
             ActionShortcut::command(ShortcutKey::Enter).aria_keyshortcuts(),
-            "Control+Enter Meta+Enter"
+            format!("{command}+Enter")
         );
         assert_eq!(
             ActionShortcut::command_shift(ShortcutKey::Z).aria_keyshortcuts(),
-            "Control+Shift+Z Meta+Shift+Z"
+            format!("{command}+Shift+Z")
+        );
+        assert_eq!(
+            ActionShortcut::command(ShortcutKey::Equals).aria_keyshortcuts(),
+            format!("{command}+=")
         );
         assert_eq!(
             ActionShortcut::new(ShortcutKey::ArrowUp).aria_keyshortcuts(),
@@ -413,6 +435,18 @@ mod tests {
         assert_eq!(
             ActionShortcut::new(ShortcutKey::PageDown).aria_keyshortcuts(),
             "PageDown"
+        );
+        for key in [
+            ShortcutKey::Comma,
+            ShortcutKey::Period,
+            ShortcutKey::Minus,
+            ShortcutKey::Slash,
+        ] {
+            assert_eq!(ActionShortcut::new(key).aria_keyshortcuts(), key.label());
+        }
+        assert_eq!(
+            ActionShortcut::new(ShortcutKey::F5).aria_keyshortcuts(),
+            "F5"
         );
     }
 
