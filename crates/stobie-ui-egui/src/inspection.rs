@@ -226,7 +226,7 @@ impl<A: ActionKey> InspectionBinding<A> {
             rendered: false,
             control_enabled: None,
             semantic_invocable: self.semantic_invocable,
-            arguments: ArgumentContract::None,
+            arguments: self.target.action.argument(),
             target: ResolvedTarget {
                 id: self.id.clone(),
                 capability: self.target.action.stable_id().into(),
@@ -239,13 +239,401 @@ impl<A: ActionKey> InspectionBinding<A> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+/// The framework capability that replaces a text field's text as typing would.
+pub const SET_TEXT_CAPABILITY: &str = "stobie.set-text";
+
+/// A rendered framework text field that set text can edit: its semantic
+/// identity and the egui widget that edits it. Hosts bind every such field,
+/// without application code.
+#[derive(Clone, Debug)]
+pub struct TextFieldBinding {
+    pub id: SemanticUiId,
+    pub widget: egui::Id,
+    pub pane: Option<PaneId>,
+    pub domain: Option<DomainReference>,
+    pub availability: Availability,
+}
+
+impl TextFieldBinding {
+    fn describe(&self, observation: u64) -> CapabilityDescription {
+        let target = ResolvedTarget {
+            id: self.id.clone(),
+            capability: SET_TEXT_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            meaning: "text-field".into(),
+            observation,
+        };
+        CapabilityDescription {
+            id: self.id.clone(),
+            capability: SET_TEXT_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            label: "Set text".into(),
+            description: "Replace the field's text through the same edit route as typing".into(),
+            scope: if self.pane.is_some() {
+                ActionScope::Pane
+            } else {
+                ActionScope::Application
+            },
+            shortcut: None,
+            availability: self.availability.clone(),
+            rendered: false,
+            control_enabled: None,
+            semantic_invocable: true,
+            arguments: ArgumentContract::Text { max_length: None },
+            target,
+        }
+    }
+}
+
+/// One admitted invocation, executed on the application thread.
+#[derive(Clone, Debug)]
+pub enum Invocation<A: ActionKey> {
+    /// Perform an application action with its validated argument.
+    Action {
+        target: ActionTarget<A>,
+        argument: ActionArgument,
+    },
+    /// Replace a framework text field's text.
+    SetText {
+        field: TextFieldBinding,
+        text: String,
+    },
+}
+
+/// The value a capability takes, published by discovery. An action takes at
+/// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
+/// as `"none"`; the others as objects tagged by `kind`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(from = "ContractWire", into = "ContractWire")]
 pub enum ArgumentContract {
+    None,
+    /// A string of at most `max_length` characters, when set.
+    Text {
+        max_length: Option<u32>,
+    },
+    Boolean,
+    /// A finite number within `minimum..=maximum`, whole when `integer`.
+    Number {
+        minimum: f64,
+        maximum: f64,
+        integer: bool,
+    },
+    /// One of the published option IDs.
+    Choice {
+        options: Vec<ArgumentOption>,
+    },
+}
+
+/// One option of an [`ArgumentContract::Choice`]: a stable ID for agents and
+/// the label a user sees.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArgumentOption {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+enum ContractWire {
+    Unit(UnitContract),
+    Typed(TypedContract),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum UnitContract {
     None,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+enum TypedContract {
+    Text {
+        max_length: Option<u32>,
+    },
+    Boolean,
+    Number {
+        minimum: f64,
+        maximum: f64,
+        integer: bool,
+    },
+    Choice {
+        options: Vec<ArgumentOption>,
+    },
+}
+
+impl From<ContractWire> for ArgumentContract {
+    fn from(wire: ContractWire) -> Self {
+        match wire {
+            ContractWire::Unit(UnitContract::None) => Self::None,
+            ContractWire::Typed(TypedContract::Text { max_length }) => Self::Text { max_length },
+            ContractWire::Typed(TypedContract::Boolean) => Self::Boolean,
+            ContractWire::Typed(TypedContract::Number {
+                minimum,
+                maximum,
+                integer,
+            }) => Self::Number {
+                minimum,
+                maximum,
+                integer,
+            },
+            ContractWire::Typed(TypedContract::Choice { options }) => Self::Choice { options },
+        }
+    }
+}
+
+impl From<ArgumentContract> for ContractWire {
+    fn from(contract: ArgumentContract) -> Self {
+        match contract {
+            ArgumentContract::None => Self::Unit(UnitContract::None),
+            ArgumentContract::Text { max_length } => {
+                Self::Typed(TypedContract::Text { max_length })
+            }
+            ArgumentContract::Boolean => Self::Typed(TypedContract::Boolean),
+            ArgumentContract::Number {
+                minimum,
+                maximum,
+                integer,
+            } => Self::Typed(TypedContract::Number {
+                minimum,
+                maximum,
+                integer,
+            }),
+            ArgumentContract::Choice { options } => Self::Typed(TypedContract::Choice { options }),
+        }
+    }
+}
+
+/// A validated argument, delivered to the application with its action.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum ActionArgument {
+    /// The action takes no argument.
+    #[default]
+    None,
+    Text(String),
+    Boolean(bool),
+    Number(f64),
+    /// The chosen option's ID.
+    Choice(String),
+}
+
+impl ActionArgument {
+    /// A choice argument for `value`, as a control presenting the choice
+    /// would trigger it.
+    pub fn choice<C: ChoiceArgument>(value: C) -> Self {
+        Self::Choice(value.choice_id().to_owned())
+    }
+
+    pub fn as_text(&self) -> Option<&str> {
+        match self {
+            Self::Text(text) => Some(text),
+            _ => None,
+        }
+    }
+
+    pub fn as_boolean(&self) -> Option<bool> {
+        match self {
+            Self::Boolean(value) => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn as_number(&self) -> Option<f64> {
+        match self {
+            Self::Number(value) => Some(*value),
+            _ => None,
+        }
+    }
+
+    /// The chosen option as the application's choice type.
+    pub fn as_choice<C: ChoiceArgument>(&self) -> Result<C, String> {
+        match self {
+            Self::Choice(id) => {
+                C::from_choice_id(id).ok_or_else(|| format!("unknown option {id:?}"))
+            }
+            _ => Err("expected a choice".into()),
+        }
+    }
+
+    fn kind(&self) -> &'static str {
+        match self {
+            Self::None => "no argument",
+            Self::Text(_) => "text",
+            Self::Boolean(_) => "a boolean",
+            Self::Number(_) => "a number",
+            Self::Choice(_) => "a choice",
+        }
+    }
+}
+
+/// A closed set of options an action can take, such as an application's
+/// category enum. Option IDs are stable external identities; labels are what
+/// a user sees.
+pub trait ChoiceArgument: Copy + PartialEq + 'static {
+    /// Every option in presentation order: value, stable ID and label.
+    const CHOICES: &'static [(Self, &'static str, &'static str)];
+
+    fn choice_id(self) -> &'static str {
+        Self::CHOICES
+            .iter()
+            .find(|(value, ..)| *value == self)
+            .map(|(_, id, _)| *id)
+            .expect("every value is listed in CHOICES")
+    }
+
+    fn from_choice_id(id: &str) -> Option<Self> {
+        Self::CHOICES
+            .iter()
+            .find(|(_, option, _)| *option == id)
+            .map(|(value, ..)| *value)
+    }
+
+    /// The published options.
+    fn options() -> Vec<ArgumentOption> {
+        Self::CHOICES
+            .iter()
+            .map(|(_, id, label)| ArgumentOption {
+                id: (*id).to_owned(),
+                label: (*label).to_owned(),
+            })
+            .collect()
+    }
+}
+
+impl ArgumentContract {
+    /// Validate a wire `arguments` value: missing, `null` or `{}` for no
+    /// argument, otherwise exactly `{"value": …}` of the contract's kind.
+    pub fn parse(&self, arguments: &serde_json::Value) -> Result<ActionArgument, InspectionError> {
+        let empty =
+            arguments.is_null() || arguments.as_object().is_some_and(serde_json::Map::is_empty);
+        if *self == Self::None {
+            return if empty {
+                Ok(ActionArgument::None)
+            } else {
+                Err(invalid_arguments("this capability accepts no arguments"))
+            };
+        }
+        let expected = self.expected();
+        let value = arguments
+            .as_object()
+            .filter(|object| object.len() == 1)
+            .and_then(|object| object.get("value"))
+            .ok_or_else(|| {
+                invalid_arguments(format!(
+                    "this capability requires arguments {{\"value\": …}} with {expected}"
+                ))
+            })?;
+        let argument = match (self, value) {
+            (Self::Text { .. }, serde_json::Value::String(text)) => {
+                ActionArgument::Text(text.clone())
+            }
+            (Self::Boolean, serde_json::Value::Bool(value)) => ActionArgument::Boolean(*value),
+            (Self::Number { .. }, serde_json::Value::Number(number)) => {
+                ActionArgument::Number(number.as_f64().unwrap_or(f64::NAN))
+            }
+            (Self::Choice { .. }, serde_json::Value::String(id)) => {
+                ActionArgument::Choice(id.clone())
+            }
+            _ => return Err(invalid_arguments(format!("value must be {expected}"))),
+        };
+        self.validate(&argument)?;
+        Ok(argument)
+    }
+
+    /// Check a typed argument against the contract, as for a physical trigger.
+    pub fn validate(&self, argument: &ActionArgument) -> Result<(), InspectionError> {
+        let expected = self.expected();
+        match (self, argument) {
+            (Self::None, ActionArgument::None) | (Self::Boolean, ActionArgument::Boolean(_)) => {
+                Ok(())
+            }
+            (Self::Text { max_length }, ActionArgument::Text(text)) => {
+                // Longer than the limit when a character exists past it.
+                match max_length.filter(|limit| text.chars().nth(*limit as usize).is_some()) {
+                    Some(limit) => Err(invalid_arguments(format!(
+                        "text exceeds {limit} characters"
+                    ))),
+                    None => Ok(()),
+                }
+            }
+            (
+                Self::Number {
+                    minimum,
+                    maximum,
+                    integer,
+                },
+                ActionArgument::Number(value),
+            ) => {
+                let in_range = value.is_finite() && value >= minimum && value <= maximum;
+                if in_range && (!*integer || value.fract() == 0.0) {
+                    Ok(())
+                } else {
+                    Err(invalid_arguments(format!(
+                        "value must be {expected}, not {value}"
+                    )))
+                }
+            }
+            (Self::Choice { options }, ActionArgument::Choice(id)) => {
+                if options.iter().any(|option| &option.id == id) {
+                    Ok(())
+                } else {
+                    Err(invalid_arguments(format!(
+                        "unknown option {id:?}; value must be {expected}"
+                    )))
+                }
+            }
+            (Self::None, argument) => Err(invalid_arguments(format!(
+                "this capability accepts no arguments, not {}",
+                argument.kind()
+            ))),
+            (_, argument) => Err(invalid_arguments(format!(
+                "value must be {expected}, not {}",
+                argument.kind()
+            ))),
+        }
+    }
+
+    /// What the contract accepts, for error messages.
+    fn expected(&self) -> String {
+        match self {
+            Self::None => "no argument".into(),
+            Self::Text {
+                max_length: Some(limit),
+            } => format!("a string of at most {limit} characters"),
+            Self::Text { max_length: None } => "a string".into(),
+            Self::Boolean => "true or false".into(),
+            Self::Number {
+                minimum,
+                maximum,
+                integer,
+            } => format!(
+                "{} from {minimum} to {maximum}",
+                if *integer { "an integer" } else { "a number" }
+            ),
+            Self::Choice { options } => {
+                let ids: Vec<String> = options
+                    .iter()
+                    .take(16)
+                    .map(|option| format!("{:?}", option.id))
+                    .collect();
+                let more = if options.len() > ids.len() {
+                    ", …"
+                } else {
+                    ""
+                };
+                format!("one of {}{more}", ids.join(", "))
+            }
+        }
+    }
+}
+
+fn invalid_arguments(message: impl Into<String>) -> InspectionError {
+    InspectionError::new(InspectionErrorCode::InvalidArguments, message)
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CapabilityDescription {
     pub id: SemanticUiId,
     pub capability: String,
@@ -454,6 +842,11 @@ pub struct InvocationReceipt {
     pub route: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub before_observation: Option<u64>,
+    /// For a completed invocation, the first observation that includes its
+    /// effect. Wait for an observation at least this new before reading the
+    /// outcome or discovering targets whose meaning it changed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after_observation: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<ResolvedTarget>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -665,7 +1058,21 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<(), InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, metadata, facts)?;
+        self.stage_completed_with_fields(context, snapshot, bindings, &[], metadata, facts)
+    }
+
+    /// [`Self::stage_completed`] with the pass's framework text fields, which
+    /// discovery publishes as `stobie.set-text` capabilities.
+    pub fn stage_completed_with_fields<A: ActionKey>(
+        &self,
+        context: &egui::Context,
+        snapshot: UiSnapshot,
+        bindings: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        metadata: CollectionMetadata,
+        facts: BTreeMap<String, ObservationValue>,
+    ) -> Result<(), InspectionError> {
+        let publication = prepare_publication(snapshot, bindings, text_fields, metadata, facts)?;
         self.state.lock().expect("inspection mutex poisoned").staged = Some(StagedPublication {
             viewport: context.viewport_id(),
             pass: context.cumulative_pass_nr(),
@@ -683,7 +1090,7 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<u64, InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, metadata, facts)?;
+        let publication = prepare_publication(snapshot, bindings, &[], metadata, facts)?;
         Ok(self
             .state
             .lock()
@@ -804,13 +1211,35 @@ impl Inspection {
             .is_empty()
     }
 
-    /// Execute at most one queued mutation. Recalculate bindings from current
-    /// application state before every call, including between queued actions.
-    /// Success proves validated dispatch only, never a later observed postcondition.
+    /// Execute at most one queued no-argument action. Recalculate bindings
+    /// from current application state before every call, including between
+    /// queued actions. Success proves validated dispatch only, never a later
+    /// observed postcondition. Hosts with typed arguments or text fields use
+    /// [`Self::drain_invocation`].
     pub fn drain<A: ActionKey>(
         &self,
         current: &[InspectionBinding<A>],
         mut execute: impl FnMut(ActionTarget<A>) -> Result<(), InspectionError>,
+    ) -> bool {
+        self.drain_invocation(current, &[], |invocation| match invocation {
+            Invocation::Action {
+                target,
+                argument: ActionArgument::None,
+            } => execute(target),
+            _ => Err(InspectionError::validation(
+                "this host executes only no-argument actions",
+            )),
+        })
+    }
+
+    /// Execute at most one queued invocation against the current action
+    /// bindings and text fields, with its argument revalidated against the
+    /// current contract.
+    pub fn drain_invocation<A: ActionKey>(
+        &self,
+        current: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        mut execute: impl FnMut(Invocation<A>) -> Result<(), InspectionError>,
     ) -> bool {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
         let Some(request_id) = state.pending.pop_front() else {
@@ -823,12 +1252,15 @@ impl Inspection {
             .operation
             .clone();
         let InspectionOperation::Invoke {
-            selector, expected, ..
+            selector,
+            expected,
+            arguments,
         } = operation
         else {
             unreachable!("only invocation is queued")
         };
-        let validation = state.resolve_current(current, &selector, &expected);
+        let validation =
+            state.resolve_current(current, text_fields, &selector, &expected, &arguments);
         state
             .ledger
             .get_mut(&request_id)
@@ -837,6 +1269,7 @@ impl Inspection {
         drop(state);
         let outcome = validation.and_then(&mut execute);
         let mut state = self.state.lock().expect("inspection mutex poisoned");
+        let observation = state.observation;
         let entry = state
             .ledger
             .get_mut(&request_id)
@@ -848,6 +1281,11 @@ impl Inspection {
             ReceiptState::Rejected
         };
         entry.receipt.error = outcome.err();
+        // Execution precedes the next publication, which therefore presents
+        // the effect; a discarded pass publishes nothing.
+        if entry.receipt.state == ReceiptState::Completed {
+            entry.receipt.after_observation = Some(observation + 1);
+        }
         true
     }
 
@@ -858,7 +1296,26 @@ impl Inspection {
         &self,
         request: InspectionRequest,
         current: &[InspectionBinding<A>],
-        execute: impl FnMut(ActionTarget<A>) -> Result<(), InspectionError>,
+        mut execute: impl FnMut(ActionTarget<A>) -> Result<(), InspectionError>,
+    ) -> InspectionReply {
+        self.dispatch_invocation(request, current, &[], |invocation| match invocation {
+            Invocation::Action {
+                target,
+                argument: ActionArgument::None,
+            } => execute(target),
+            _ => Err(InspectionError::validation(
+                "this host executes only no-argument actions",
+            )),
+        })
+    }
+
+    /// [`Self::dispatch`] for hosts with typed arguments and text fields.
+    pub fn dispatch_invocation<A: ActionKey>(
+        &self,
+        request: InspectionRequest,
+        current: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        execute: impl FnMut(Invocation<A>) -> Result<(), InspectionError>,
     ) -> InspectionReply {
         let invocation = matches!(request.operation, InspectionOperation::Invoke { .. });
         let request_id = request.request_id.clone();
@@ -866,7 +1323,7 @@ impl Inspection {
         let queued = matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
             if receipt.state == ReceiptState::Queued);
         if invocation && queued {
-            self.drain(current, execute);
+            self.drain_invocation(current, text_fields, execute);
             let state = self.state.lock().expect("inspection mutex poisoned");
             if let Some(entry) = state.ledger.get(&request_id) {
                 return state.reply(
@@ -986,6 +1443,7 @@ impl InspectionState {
                         state: ReceiptState::Uncertain,
                         route: None,
                         before_observation: None,
+                        after_observation: None,
                         target: None,
                         error: Some(InspectionError::new(
                             Code::WrongInstance,
@@ -1112,8 +1570,7 @@ impl InspectionState {
                     ));
                 }
                 let validation = validate_selector(selector)
-                    .and_then(|()| validate_arguments(arguments))
-                    .and_then(|()| self.resolve_published(selector, expected));
+                    .and_then(|()| self.resolve_published(selector, expected, arguments));
                 let validation = validation.and_then(|()| {
                     if self.pending.len() >= INSPECTION_QUEUE_LIMIT {
                         Err(InspectionError::new(
@@ -1136,6 +1593,7 @@ impl InspectionState {
                         .publication
                         .as_ref()
                         .map(|publication| publication.observation.id),
+                    after_observation: None,
                     target: Some(expected.clone()),
                     error: validation.err(),
                 };
@@ -1160,6 +1618,7 @@ impl InspectionState {
                         state: ReceiptState::Unknown,
                         route: None,
                         before_observation: None,
+                        after_observation: None,
                         target: None,
                         error: None,
                     },
@@ -1202,6 +1661,7 @@ impl InspectionState {
         &self,
         selector: &InspectionSelector,
         expected: &ResolvedTarget,
+        arguments: &serde_json::Value,
     ) -> Result<(), InspectionError> {
         let publication = self.publication()?;
         let candidates: Vec<_> = publication
@@ -1217,24 +1677,35 @@ impl InspectionState {
             .collect();
         let capability = unique_binding(&candidates)?;
         validate_expected(&capability.target, expected)?;
-        validate_invocable(capability)
+        validate_invocable(capability)?;
+        capability.arguments.parse(arguments).map(drop)
     }
 
     fn resolve_current<A: ActionKey>(
         &self,
         bindings: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
         selector: &InspectionSelector,
         expected: &ResolvedTarget,
-    ) -> Result<ActionTarget<A>, InspectionError> {
+        arguments: &serde_json::Value,
+    ) -> Result<Invocation<A>, InspectionError> {
         let publication = self.publication()?;
-        let candidates: Vec<_> = bindings
+        let observation = publication.observation.id;
+        let snapshot = &publication.observation.snapshot;
+        let actions = bindings.iter().map(|binding| {
+            (
+                binding.describe(observation),
+                Some(binding),
+                None::<&TextFieldBinding>,
+            )
+        });
+        let fields = text_fields
             .iter()
-            .filter(|binding| {
-                selector_matches_binding(
-                    selector,
-                    &binding.describe(publication.observation.id),
-                    publication.observation.snapshot.node(&binding.id),
-                )
+            .map(|field| (field.describe(observation), None, Some(field)));
+        let candidates: Vec<_> = actions
+            .chain(fields)
+            .filter(|(description, ..)| {
+                selector_matches_binding(selector, description, snapshot.node(&description.id))
             })
             .collect();
         if candidates.is_empty() {
@@ -1249,24 +1720,38 @@ impl InspectionState {
                 "current selector resolves multiple bindings",
             ));
         }
-        let binding = candidates[0];
-        let description = binding.describe(publication.observation.id);
+        let (description, binding, field) = &candidates[0];
         validate_expected(&description.target, expected)?;
-        validate_invocable(&description)?;
-        Ok(binding.target)
+        validate_invocable(description)?;
+        let argument = description.arguments.parse(arguments)?;
+        match (binding, field) {
+            (Some(binding), _) => Ok(Invocation::Action {
+                target: binding.target,
+                argument,
+            }),
+            (None, Some(field)) => Ok(Invocation::SetText {
+                field: (*field).clone(),
+                text: match argument {
+                    ActionArgument::Text(text) => text,
+                    _ => unreachable!("set text takes a text argument"),
+                },
+            }),
+            (None, None) => unreachable!("each candidate has a binding"),
+        }
     }
 }
 
 fn prepare_publication<A: ActionKey>(
     snapshot: UiSnapshot,
     bindings: &[InspectionBinding<A>],
+    text_fields: &[TextFieldBinding],
     metadata: CollectionMetadata,
     facts: BTreeMap<String, ObservationValue>,
 ) -> Result<Publication, InspectionError> {
     use InspectionErrorCode as Code;
     if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
         || snapshot.text.len() > INSPECTION_TEXT_LIMIT
-        || bindings.len() > INSPECTION_NODE_LIMIT
+        || bindings.len() + text_fields.len() > INSPECTION_NODE_LIMIT
         || metadata.collections.len() > 256
         || facts.len() > 256
     {
@@ -1308,6 +1793,22 @@ fn prepare_publication<A: ActionKey>(
             ));
         }
     }
+    for field in text_fields {
+        let presented = snapshot.node(&field.id).is_some_and(|node| {
+            matches!(node.role, UiRole::TextInput | UiRole::MultilineTextInput)
+        });
+        if !presented || !targets.insert((&field.id, SET_TEXT_CAPABILITY)) {
+            return Err(InspectionError::new(
+                Code::InvalidRequest,
+                "text fields require a unique, presented text input node",
+            ));
+        }
+    }
+    let capabilities = bindings
+        .iter()
+        .map(|binding| binding.describe(0))
+        .chain(text_fields.iter().map(|field| field.describe(0)))
+        .collect();
     let publication = Publication {
         observation: CompletedObservation {
             instance: String::new(),
@@ -1317,7 +1818,7 @@ fn prepare_publication<A: ActionKey>(
             collection: metadata,
             facts,
         },
-        capabilities: bindings.iter().map(|binding| binding.describe(0)).collect(),
+        capabilities,
     };
     let observation_size = serde_json::to_vec(&publication.observation)
         .map_err(|error| {
@@ -1455,17 +1956,6 @@ fn validate_invocable(capability: &CapabilityDescription) -> Result<(), Inspecti
         ));
     }
     Ok(())
-}
-
-fn validate_arguments(arguments: &serde_json::Value) -> Result<(), InspectionError> {
-    if arguments.is_null() || arguments.as_object().is_some_and(serde_json::Map::is_empty) {
-        Ok(())
-    } else {
-        Err(InspectionError::new(
-            InspectionErrorCode::InvalidArguments,
-            "this capability accepts no arguments",
-        ))
-    }
 }
 
 fn page_bounds(

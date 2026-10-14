@@ -1,4 +1,4 @@
-error: action variants cannot carry data; actions with arguments are not supported yet
+error: action variants cannot carry data; declare a value with `argument = "…"` instead
  --> tests/derive-action/data_variant.rs:8:9
   |
 8 |     Open(u32),

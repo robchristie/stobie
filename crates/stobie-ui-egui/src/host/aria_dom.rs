@@ -10,6 +10,13 @@
 //! availability. DOM focus returns to the canvas, which keeps keyboard and IME
 //! input working; the canvas's `aria-activedescendant` names egui's focus.
 //!
+//! A layer text field keeps DOM focus instead, so assistive technology and
+//! browser agents (`locator.fill()`, typing) can edit it. Each `input` event
+//! becomes an AccessKit `SetValue` request with the field's whole text, which
+//! the host applies through egui's own text editing. A value egui does not take
+//! is restored from the mirror after the pass. Tab and Escape return DOM focus
+//! to the canvas and reach egui as the same keys.
+//!
 //! DOM objects are not `Send`, but egui plugins must be. The plugin therefore
 //! holds only a key into a thread-local registry; WASM runs the UI on one
 //! thread.
@@ -17,10 +24,10 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
 
-use egui::accesskit::{Action, ActionRequest, TreeId};
+use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, Event, HtmlCanvasElement, HtmlElement};
+use web_sys::{Document, Element, Event, HtmlCanvasElement, HtmlElement, KeyboardEvent};
 
 use crate::aria::{self, AriaTree, DomOp};
 
@@ -90,6 +97,9 @@ impl egui::Plugin for AriaPlugin {
                         .drain(..)
                         .map(egui::Event::AccessKitActionRequest),
                 );
+                input.events.append(&mut layer.keys);
+                // This pass applies the edits; check their fields after it.
+                layer.checking = std::mem::take(&mut layer.edited);
             }
         });
     }
@@ -135,6 +145,12 @@ struct Layer {
     tree: AriaTree,
     /// Action requests from the layer, for egui's next input.
     requests: Vec<ActionRequest>,
+    /// Keys a layer text field hands back to egui, for its next input.
+    keys: Vec<egui::Event>,
+    /// Text fields edited since egui last took input, and those whose edits
+    /// the current pass applies, checked against the mirror after it.
+    edited: Vec<String>,
+    checking: Vec<String>,
     /// The layer's event listeners, kept alive while it is installed.
     listeners: Vec<(&'static str, Listener)>,
 }
@@ -188,11 +204,13 @@ impl Layer {
             container.add_event_listener_with_callback(event, listener.as_ref().unchecked_ref())?;
             listeners.push((event, listener));
         }
-        // Text is edited through egui, so an edit made directly to a layer
-        // field is reverted to the mirrored value.
-        let listener = Listener::new(move |event: Event| restore(key, &event));
+        // An edit made in a layer field sets the egui field's text.
+        let listener = Listener::new(move |event: Event| edit(key, &event));
         container.add_event_listener_with_callback("input", listener.as_ref().unchecked_ref())?;
         listeners.push(("input", listener));
+        let listener = Listener::new(move |event: Event| hand_back(key, &event));
+        container.add_event_listener_with_callback("keydown", listener.as_ref().unchecked_ref())?;
+        listeners.push(("keydown", listener));
         let mut layer = Self {
             context: context.clone(),
             document,
@@ -207,6 +225,9 @@ impl Layer {
             elements: HashMap::new(),
             tree: AriaTree::default(),
             requests: Vec::new(),
+            keys: Vec::new(),
+            edited: Vec::new(),
+            checking: Vec::new(),
             listeners,
         };
         layer.name_text_agent()?;
@@ -239,14 +260,21 @@ impl Layer {
     }
 
     /// Name eframe's text agent after the focused text field, or generically.
+    /// While a layer text field itself holds DOM focus, the agent keeps its
+    /// generic name, so one field's name finds one textbox.
     fn name_text_agent(&mut self) -> Result<(), JsValue> {
         let Some(agent) = &self.text_agent else {
             return Ok(());
         };
+        let in_layer_field = self.document.active_element().is_some_and(|active| {
+            self.container.contains(Some(&active))
+                && matches!(active.tag_name().as_str(), "INPUT" | "TEXTAREA")
+        });
         let name = self
             .tree
             .active
             .as_ref()
+            .filter(|_| !in_layer_field)
             .and_then(|id| self.tree.elements.get(id))
             .filter(|element| element.tag != "div")
             .and_then(|element| element.attributes.get("aria-label"))
@@ -275,9 +303,29 @@ impl Layer {
         }
         let next = aria::project(update, scale);
         for operation in aria::diff(&self.tree, &next) {
+            // A field edited again since this pass took its input already
+            // holds newer text than this pass mirrors.
+            if let DomOp::SetText { id, .. } = &operation
+                && self.edited.contains(id)
+            {
+                continue;
+            }
             self.perform(operation)?;
         }
         self.tree = next;
+        // Restore any field whose edit egui did not take as typed.
+        for id in std::mem::take(&mut self.checking) {
+            if self.edited.contains(&id) {
+                continue;
+            }
+            if let (Some(element), Some(mirrored)) =
+                (self.elements.get(&id), self.tree.elements.get(&id))
+                && is_text_field(element)
+                && field_value(element) != mirrored.text.clone().unwrap_or_default()
+            {
+                set_text(element, mirrored.text.as_deref())?;
+            }
+        }
         self.name_text_agent()
     }
 
@@ -343,20 +391,21 @@ fn request(key: u32, event: &Event, action: Action) {
         let Some(layer) = layers.get_mut(&key) else {
             return;
         };
-        let node = std::iter::successors(target, |element| element.parent_element())
+        let element = std::iter::successors(target, |element| element.parent_element())
             .take_while(|element| element != layer.container.unchecked_ref::<Element>())
-            .find_map(|element| layer.tree.elements.get(&element.id()))
-            .map(|element| element.node);
-        let Some(node) = node else {
+            .find_map(|element| layer.tree.elements.get(&element.id()));
+        let Some(element) = element else {
             return;
         };
+        let text_field = element.tag != "div";
         layer.requests.push(ActionRequest {
             action,
-            target_node: node,
+            target_node: element.node,
             target_tree: TreeId::ROOT,
             data: None,
         });
-        if action == Action::Focus {
+        // A text field keeps focus, so it can be edited in place.
+        if action == Action::Focus && !text_field {
             let options = web_sys::FocusOptions::new();
             options.set_prevent_scroll(true);
             let _ = layer.canvas.focus_with_options(&options);
@@ -379,25 +428,97 @@ fn set_text(element: &HtmlElement, text: Option<&str>) -> Result<(), JsValue> {
     Ok(())
 }
 
-/// Revert a direct edit of a layer text field to its mirrored value.
-fn restore(key: u32, event: &Event) {
+fn is_text_field(element: &HtmlElement) -> bool {
+    matches!(element.tag_name().as_str(), "INPUT" | "TEXTAREA")
+}
+
+fn field_value(element: &HtmlElement) -> String {
+    js_sys::Reflect::get(element, &JsValue::from_str("value"))
+        .ok()
+        .and_then(|value| value.as_string())
+        .unwrap_or_default()
+}
+
+/// Send a layer text field's edited text to egui as a `SetValue` request for
+/// its node; the host applies it as typed input on the next pass.
+fn edit(key: u32, event: &Event) {
     let Some(target) = event
         .target()
         .and_then(|target| target.dyn_into::<HtmlElement>().ok())
+        .filter(is_text_field)
     else {
         return;
     };
     LAYERS.with(|layers| {
-        let Ok(layers) = layers.try_borrow() else {
+        let Ok(mut layers) = layers.try_borrow_mut() else {
             return;
         };
-        if let Some(element) = layers
-            .get(&key)
-            .and_then(|layer| layer.tree.elements.get(&target.id()))
-            && let Err(error) = set_text(&target, element.text.as_deref())
-        {
-            log_error(&error);
+        let Some(layer) = layers.get_mut(&key) else {
+            return;
+        };
+        let id = target.id();
+        let Some(element) = layer.tree.elements.get(&id) else {
+            return;
+        };
+        layer.requests.push(ActionRequest {
+            action: Action::SetValue,
+            target_node: element.node,
+            target_tree: TreeId::ROOT,
+            data: Some(ActionData::Value(field_value(&target).into())),
+        });
+        if !layer.edited.contains(&id) {
+            layer.edited.push(id);
         }
+        layer.context.request_repaint();
+    });
+}
+
+/// Tab and Escape leave a layer text field: DOM focus returns to the canvas
+/// and egui receives the key, so focus moves or editing ends as in egui.
+fn hand_back(key: u32, event: &Event) {
+    let Some(keyboard) = event.dyn_ref::<KeyboardEvent>() else {
+        return;
+    };
+    let pressed = match keyboard.key().as_str() {
+        "Tab" => egui::Key::Tab,
+        "Escape" => egui::Key::Escape,
+        _ => return,
+    };
+    if keyboard.ctrl_key() || keyboard.alt_key() || keyboard.meta_key() {
+        return;
+    }
+    let in_field = event
+        .target()
+        .and_then(|target| target.dyn_into::<HtmlElement>().ok())
+        .is_some_and(|target| is_text_field(&target));
+    if !in_field {
+        return;
+    }
+    LAYERS.with(|layers| {
+        let Ok(mut layers) = layers.try_borrow_mut() else {
+            return;
+        };
+        let Some(layer) = layers.get_mut(&key) else {
+            return;
+        };
+        event.prevent_default();
+        let modifiers = egui::Modifiers {
+            shift: keyboard.shift_key(),
+            ..egui::Modifiers::NONE
+        };
+        for pressed_state in [true, false] {
+            layer.keys.push(egui::Event::Key {
+                key: pressed,
+                physical_key: None,
+                pressed: pressed_state,
+                repeat: false,
+                modifiers,
+            });
+        }
+        let options = web_sys::FocusOptions::new();
+        options.set_prevent_scroll(true);
+        let _ = layer.canvas.focus_with_options(&options);
+        layer.context.request_repaint();
     });
 }
 

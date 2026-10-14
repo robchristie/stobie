@@ -355,6 +355,7 @@ pub fn navigation_item_semantic_node<A: ActionKey>(
     parent: SemanticUiId,
 ) -> UiNode {
     UiNode {
+        value: None,
         id: identity.semantic_id(),
         parent: Some(parent),
         role: UiRole::NavigationItem,

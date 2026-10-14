@@ -969,3 +969,459 @@ fn native_socket_is_private_read_without_ui_and_owned_cleanup() {
     drop(host);
     assert!(!path.exists());
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Colour {
+    Red,
+    Blue,
+}
+
+impl crate::ChoiceArgument for Colour {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] =
+        &[(Self::Red, "red", "Red"), (Self::Blue, "blue", "Blue")];
+}
+
+/// One application action per argument kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+enum Typed {
+    Rename,
+    Pin,
+    Zoom,
+    Copies,
+    Colour,
+}
+
+impl ActionKey for Typed {
+    fn stable_id(self) -> &'static str {
+        match self {
+            Self::Rename => "rename",
+            Self::Pin => "pin",
+            Self::Zoom => "zoom",
+            Self::Copies => "copies",
+            Self::Colour => "colour",
+        }
+    }
+    fn specification(self) -> crate::ActionSpec<Self> {
+        crate::ActionSpec {
+            id: self,
+            label: self.stable_id(),
+            description: "Typed argument",
+            compact_label: None,
+            shortcut: None,
+            scope: ActionScope::Application,
+        }
+    }
+    fn argument(self) -> ArgumentContract {
+        match self {
+            Self::Rename => ArgumentContract::Text {
+                max_length: Some(5),
+            },
+            Self::Pin => ArgumentContract::Boolean,
+            Self::Zoom => ArgumentContract::Number {
+                minimum: -1.0,
+                maximum: 4.0,
+                integer: false,
+            },
+            Self::Copies => ArgumentContract::Number {
+                minimum: 1.0,
+                maximum: 3.0,
+                integer: true,
+            },
+            Self::Colour => ArgumentContract::Choice {
+                options: <Colour as crate::ChoiceArgument>::options(),
+            },
+        }
+    }
+}
+
+const TYPED: [Typed; 5] = [
+    Typed::Rename,
+    Typed::Pin,
+    Typed::Zoom,
+    Typed::Copies,
+    Typed::Colour,
+];
+
+/// A published snapshot with one rendered button per typed action and one
+/// framework text field, `field`, enabled unless `field_disabled`.
+fn typed_fixture(
+    field_disabled: bool,
+) -> (
+    Inspection,
+    Vec<InspectionBinding<Typed>>,
+    Vec<TextFieldBinding>,
+) {
+    let inspection = Inspection::new("typed");
+    let root = UiNode::container(
+        SemanticUiId::root(),
+        None,
+        UiRole::Application,
+        rect(0., 0., 200., 200.),
+    );
+    let mut nodes = vec![root.clone()];
+    for (index, action) in TYPED.into_iter().enumerate() {
+        let top = index as f32 * 20.;
+        let mut node = UiNode::container(
+            action.stable_id().to_owned().into(),
+            Some(root.id.clone()),
+            UiRole::Button,
+            rect(0., top, 50., top + 10.),
+        );
+        node.actions
+            .push(crate::SemanticActionId::from_action(action));
+        nodes.push(node);
+    }
+    let mut field = UiNode::container(
+        "field".to_owned().into(),
+        Some(root.id.clone()),
+        UiRole::TextInput,
+        rect(100., 0., 150., 10.),
+    );
+    field.name = "Title".into();
+    field.value = Some("Old".into());
+    nodes.push(field);
+    let bindings: Vec<_> = TYPED
+        .into_iter()
+        .map(|action| {
+            InspectionBinding::new(
+                ActionTarget::application(action),
+                Availability::Enabled,
+                true,
+                "stable",
+            )
+            .with_id(action.stable_id().to_owned().into())
+        })
+        .collect();
+    let fields = vec![TextFieldBinding {
+        id: "field".to_owned().into(),
+        widget: egui::Id::new("field"),
+        pane: None,
+        domain: None,
+        availability: if field_disabled {
+            Availability::Disabled {
+                reason: "Locked".into(),
+            }
+        } else {
+            Availability::Enabled
+        },
+    }];
+    let snapshot = UiSnapshot {
+        frame: 1,
+        pixels_per_point: 1.,
+        root: root.id.clone(),
+        nodes,
+        ..UiSnapshot::default()
+    };
+    let publication = prepare_publication(
+        snapshot,
+        &bindings,
+        &fields,
+        CollectionMetadata::default(),
+        BTreeMap::new(),
+    )
+    .unwrap();
+    inspection
+        .state
+        .lock()
+        .expect("inspection mutex")
+        .commit(publication);
+    (inspection, bindings, fields)
+}
+
+fn discover_one(inspection: &Inspection, id: &str) -> CapabilityDescription {
+    let response = inspection.handle(request(
+        inspection,
+        &format!("discover-{id}"),
+        InspectionOperation::Discover {
+            selector: InspectionSelector {
+                id: Some(id.to_owned().into()),
+                ..InspectionSelector::default()
+            },
+            limit: 64,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Discover { capabilities, .. }) = response.result else {
+        panic!("expected discovery, got {:?}", response.error)
+    };
+    assert_eq!(capabilities.len(), 1, "{id} resolves one capability");
+    capabilities[0].clone()
+}
+
+fn invoke_with(
+    inspection: &Inspection,
+    request_id: &str,
+    id: &str,
+    arguments: serde_json::Value,
+) -> InvocationReceipt {
+    let expected = discover_one(inspection, id).target;
+    receipt(inspection.handle(request(
+        inspection,
+        request_id,
+        InspectionOperation::Invoke {
+            selector: InspectionSelector {
+                id: Some(id.to_owned().into()),
+                ..InspectionSelector::default()
+            },
+            expected,
+            arguments,
+        },
+    )))
+}
+
+#[test]
+fn argument_contracts_serialise_none_unchanged_and_kinds_tagged() {
+    assert_eq!(
+        serde_json::to_value(ArgumentContract::None).unwrap(),
+        serde_json::json!("none")
+    );
+    let expected = [
+        serde_json::json!({"kind": "text", "max_length": 5}),
+        serde_json::json!({"kind": "boolean"}),
+        serde_json::json!({"kind": "number", "minimum": -1.0, "maximum": 4.0, "integer": false}),
+        serde_json::json!({"kind": "number", "minimum": 1.0, "maximum": 3.0, "integer": true}),
+        serde_json::json!({"kind": "choice", "options": [
+            {"id": "red", "label": "Red"}, {"id": "blue", "label": "Blue"}
+        ]}),
+    ];
+    for (action, expected) in TYPED.into_iter().zip(expected) {
+        let contract = action.argument();
+        assert_eq!(serde_json::to_value(&contract).unwrap(), expected);
+        assert_eq!(
+            serde_json::from_value::<ArgumentContract>(expected).unwrap(),
+            contract
+        );
+    }
+    assert_eq!(
+        serde_json::from_value::<ArgumentContract>(serde_json::json!("none")).unwrap(),
+        ArgumentContract::None
+    );
+    assert!(
+        serde_json::from_value::<ArgumentContract>(serde_json::json!({"kind": "colour"})).is_err()
+    );
+}
+
+#[test]
+fn each_argument_kind_validates_its_values() {
+    use serde_json::json;
+    let parse = |action: Typed, value: serde_json::Value| {
+        action.argument().parse(&json!({ "value": value }))
+    };
+    assert_eq!(
+        parse(Typed::Rename, json!("héllo")),
+        Ok(ActionArgument::Text("héllo".into()))
+    );
+    assert_eq!(
+        parse(Typed::Pin, json!(true)),
+        Ok(ActionArgument::Boolean(true))
+    );
+    assert_eq!(
+        parse(Typed::Zoom, json!(-0.5)),
+        Ok(ActionArgument::Number(-0.5))
+    );
+    assert_eq!(
+        parse(Typed::Copies, json!(3)),
+        Ok(ActionArgument::Number(3.))
+    );
+    assert_eq!(
+        parse(Typed::Colour, json!("blue")),
+        Ok(ActionArgument::Choice("blue".into()))
+    );
+    let rejections = [
+        (Typed::Rename, json!("toolong"), "exceeds 5 characters"),
+        (Typed::Rename, json!(5), "a string of at most 5 characters"),
+        (Typed::Pin, json!("true"), "true or false"),
+        (Typed::Zoom, json!(4.5), "a number from -1 to 4"),
+        (Typed::Copies, json!(1.5), "an integer from 1 to 3"),
+        (Typed::Copies, json!(0), "an integer from 1 to 3"),
+        (Typed::Colour, json!("green"), r#"one of "red", "blue""#),
+    ];
+    for (action, value, message) in rejections {
+        let error = parse(action, value.clone()).unwrap_err();
+        assert_eq!(error.code, InspectionErrorCode::InvalidArguments);
+        assert!(
+            error.message.contains(message),
+            "{action:?} {value}: {}",
+            error.message
+        );
+    }
+    // The value travels as {"value": …}, alone.
+    for arguments in [
+        json!(null),
+        json!({}),
+        json!("blue"),
+        json!({"value": "blue", "extra": 1}),
+    ] {
+        let error = Typed::Colour.argument().parse(&arguments).unwrap_err();
+        assert!(
+            error.message.contains(r#"{"value": …}"#),
+            "{}",
+            error.message
+        );
+    }
+    // No-argument actions are unchanged: nothing, null or {} only.
+    assert_eq!(
+        ArgumentContract::None.parse(&json!({})),
+        Ok(ActionArgument::None)
+    );
+    assert!(ArgumentContract::None.parse(&json!({"value": 1})).is_err());
+    // A physical trigger's typed argument is checked the same way.
+    assert!(
+        Typed::Colour
+            .argument()
+            .validate(&ActionArgument::choice(Colour::Red))
+            .is_ok()
+    );
+    assert!(
+        Typed::Pin
+            .argument()
+            .validate(&ActionArgument::None)
+            .is_err()
+    );
+}
+
+#[test]
+fn discovery_publishes_contracts_and_drain_delivers_typed_values() {
+    use serde_json::json;
+    let (inspection, bindings, fields) = typed_fixture(false);
+    for action in TYPED {
+        assert_eq!(
+            discover_one(&inspection, action.stable_id()).arguments,
+            action.argument()
+        );
+    }
+    let values = [
+        json!("Brief"),
+        json!(false),
+        json!(2.5),
+        json!(2),
+        json!("red"),
+    ];
+    for (action, value) in TYPED.into_iter().zip(values) {
+        let receipt = invoke_with(
+            &inspection,
+            &format!("valid-{}", action.stable_id()),
+            action.stable_id(),
+            json!({ "value": value }),
+        );
+        assert_eq!(receipt.state, ReceiptState::Queued);
+    }
+    // Invalid values are rejected at admission and never queued.
+    let rejected = invoke_with(&inspection, "invalid", "copies", json!({"value": 7}));
+    assert_eq!(rejected.state, ReceiptState::Rejected);
+    assert_eq!(
+        rejected.error.unwrap().code,
+        InspectionErrorCode::InvalidArguments
+    );
+    let mut delivered = Vec::new();
+    while inspection.drain_invocation(&bindings, &fields, |invocation| {
+        let Invocation::Action { target, argument } = invocation else {
+            panic!("expected an action")
+        };
+        delivered.push((target.action, argument));
+        Ok(())
+    }) {}
+    assert_eq!(
+        delivered,
+        vec![
+            (Typed::Rename, ActionArgument::Text("Brief".into())),
+            (Typed::Pin, ActionArgument::Boolean(false)),
+            (Typed::Zoom, ActionArgument::Number(2.5)),
+            (Typed::Copies, ActionArgument::Number(2.)),
+            (Typed::Colour, ActionArgument::Choice("red".into())),
+        ]
+    );
+    assert_eq!(
+        delivered[4].1.as_choice::<Colour>(),
+        Ok(Colour::Red),
+        "the application reads its own choice type"
+    );
+    let completed = lookup(&inspection, "valid-colour");
+    assert_eq!(completed.state, ReceiptState::Completed);
+    // The next publication is the first to present the effect.
+    assert_eq!(completed.after_observation, Some(2));
+    assert_eq!(lookup(&inspection, "invalid").after_observation, None);
+}
+
+#[test]
+fn text_fields_are_bound_to_set_text_with_a_text_contract() {
+    use serde_json::json;
+    let (inspection, bindings, fields) = typed_fixture(false);
+    let capability = discover_one(&inspection, "field");
+    assert_eq!(capability.capability, SET_TEXT_CAPABILITY);
+    assert_eq!(
+        capability.arguments,
+        ArgumentContract::Text { max_length: None }
+    );
+    assert!(capability.rendered && capability.semantic_invocable);
+    let response = inspection.handle(request(
+        &inspection,
+        "query-field",
+        InspectionOperation::Query {
+            selector: InspectionSelector {
+                id: Some("field".to_owned().into()),
+                ..InspectionSelector::default()
+            },
+            limit: 8,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Query { nodes, .. }) = response.result else {
+        panic!("expected query")
+    };
+    assert_eq!(nodes[0].node.value.as_deref(), Some("Old"));
+    assert_eq!(nodes[0].targets[0].capability, SET_TEXT_CAPABILITY);
+    assert_eq!(
+        invoke_with(&inspection, "set", "field", json!({"value": "New\ntext"})).state,
+        ReceiptState::Queued
+    );
+    assert_eq!(
+        invoke_with(&inspection, "no-text", "field", json!({})).state,
+        ReceiptState::Rejected
+    );
+    let mut edits = Vec::new();
+    inspection.drain_invocation(&bindings, &fields, |invocation| {
+        let Invocation::SetText { field, text } = invocation else {
+            panic!("expected set text")
+        };
+        edits.push((field.id, field.widget, text));
+        Ok(())
+    });
+    assert_eq!(
+        edits,
+        vec![(
+            SemanticUiId::new("field"),
+            egui::Id::new("field"),
+            "New\ntext".to_owned()
+        )]
+    );
+    // A disabled field rejects with its reason.
+    let (disabled, ..) = typed_fixture(true);
+    let receipt = invoke_with(&disabled, "locked", "field", json!({"value": "x"}));
+    assert_eq!(receipt.state, ReceiptState::Rejected);
+    let error = receipt.error.unwrap();
+    assert_eq!(error.code, InspectionErrorCode::Unavailable);
+    assert_eq!(error.message, "Locked");
+}
+
+#[test]
+fn text_fields_must_present_a_text_input_node() {
+    let (_, snapshot, bindings) = fixture();
+    let field = TextFieldBinding {
+        id: "fit-one".to_owned().into(),
+        widget: egui::Id::new("fit-one"),
+        pane: None,
+        domain: None,
+        availability: Availability::Enabled,
+    };
+    let error = prepare_publication(
+        snapshot,
+        &bindings,
+        &[field],
+        CollectionMetadata::default(),
+        BTreeMap::new(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(error.code, InspectionErrorCode::InvalidRequest);
+}

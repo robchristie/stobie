@@ -4,7 +4,8 @@ use std::collections::BTreeSet;
 
 use serde::Serialize;
 use stobie_ui_egui::{
-    Action, ActionInvocation, ActionKey, ActionScope, ActionSet, ActionShortcut, ShortcutKey,
+    Action, ActionArgument, ActionInvocation, ActionKey, ActionScope, ActionSet, ActionShortcut,
+    ArgumentContract, ArgumentOption, ChoiceArgument, ShortcutKey,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -35,9 +36,107 @@ enum Desk {
         label = "Category",
         description = "Choose a category",
         scope = "pane",
-        physical_only = "Chooses a value; actions with arguments are not supported yet"
+        physical_only = "Opens a chooser in a dialog"
     )]
     Category,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Colour {
+    Red,
+    Blue,
+}
+
+impl ChoiceArgument for Colour {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] =
+        &[(Self::Red, "red", "Red"), (Self::Blue, "blue", "Blue")];
+}
+
+#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[action(prefix = "notes")]
+enum Typed {
+    #[action(
+        label = "Rename",
+        description = "Rename the note",
+        argument = "text",
+        max_length = 40
+    )]
+    Rename,
+    #[action(
+        label = "Pin",
+        description = "Pin or unpin the note",
+        argument = "boolean"
+    )]
+    Pin,
+    #[action(
+        label = "Zoom",
+        description = "Zoom the note",
+        argument = "number",
+        minimum = -2,
+        maximum = 8.5
+    )]
+    Zoom,
+    #[action(
+        label = "Copies",
+        description = "Set the number of copies",
+        argument = "number",
+        minimum = 1,
+        maximum = 9,
+        integer = true
+    )]
+    Copies,
+    #[action(label = "Colour", description = "Colour the note", argument = "choice", choices = Colour)]
+    Colour,
+    #[action(label = "Clear", description = "Clear the note", shortcut = "Cmd+K")]
+    Clear,
+}
+
+#[test]
+fn expansion_publishes_each_argument_contract() {
+    assert_eq!(
+        Typed::Rename.argument(),
+        ArgumentContract::Text {
+            max_length: Some(40)
+        }
+    );
+    assert_eq!(Typed::Pin.argument(), ArgumentContract::Boolean);
+    assert_eq!(
+        Typed::Zoom.argument(),
+        ArgumentContract::Number {
+            minimum: -2.0,
+            maximum: 8.5,
+            integer: false
+        }
+    );
+    assert_eq!(
+        Typed::Copies.argument(),
+        ArgumentContract::Number {
+            minimum: 1.0,
+            maximum: 9.0,
+            integer: true
+        }
+    );
+    assert_eq!(
+        Typed::Colour.argument(),
+        ArgumentContract::Choice {
+            options: vec![
+                ArgumentOption {
+                    id: "red".into(),
+                    label: "Red".into()
+                },
+                ArgumentOption {
+                    id: "blue".into(),
+                    label: "Blue".into()
+                },
+            ]
+        }
+    );
+    assert_eq!(Typed::Clear.argument(), ArgumentContract::None);
+    assert!(Typed::Colour.invocation().semantic());
+    assert_eq!(
+        ActionArgument::choice(Colour::Blue).as_choice::<Colour>(),
+        Ok(Colour::Blue)
+    );
 }
 
 #[test]
@@ -90,7 +189,7 @@ fn actions_are_invocable_unless_they_state_why_not() {
     assert_eq!(
         Desk::Category.invocation(),
         ActionInvocation::PhysicalOnly {
-            reason: "Chooses a value; actions with arguments are not supported yet"
+            reason: "Opens a chooser in a dialog"
         }
     );
 }

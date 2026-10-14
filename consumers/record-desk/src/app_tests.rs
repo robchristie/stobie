@@ -273,3 +273,149 @@ fn unsaved_follows_the_history_save_point_and_the_saved_layout() {
     assert!(!host.app().unsaved());
     assert_eq!(host.app().desk.undo_len(), 0);
 }
+
+fn invoke_with(
+    host: &mut RecordDeskApp,
+    selector: InspectionSelector,
+    value: serde_json::Value,
+    id: &str,
+) -> InvocationReceipt {
+    let reply = host.inspection().unwrap().handle(request(
+        host,
+        &format!("{id}-discover"),
+        InspectionOperation::Discover {
+            selector: selector.clone(),
+            limit: 2,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+        panic!("discovery");
+    };
+    assert_eq!(capabilities.len(), 1, "{capabilities:?}");
+    let operation = InspectionOperation::Invoke {
+        selector,
+        expected: capabilities[0].target.clone(),
+        arguments: serde_json::json!({ "value": value }),
+    };
+    let reply = host.dispatch(request(host, id, operation)).unwrap();
+    let Some(InspectionResult::Receipt { receipt }) = reply.result else {
+        panic!("receipt");
+    };
+    receipt
+}
+
+#[test]
+fn category_and_review_choices_are_typed_actions() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = egui::Context::default();
+    let mut host = hosted(&context, &directory);
+    present(&mut host, &context, 1080.0);
+    let reply = host.inspection().unwrap().handle(request(
+        &host,
+        "discover-category",
+        InspectionOperation::Discover {
+            selector: selector(Action::EditCategory),
+            limit: 1,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+        panic!("discovery");
+    };
+    let ArgumentContract::Choice { options } = &capabilities[0].arguments else {
+        panic!("a choice: {:?}", capabilities[0].arguments);
+    };
+    let ids: Vec<_> = options.iter().map(|option| option.id.as_str()).collect();
+    assert_eq!(ids, ["research", "operations", "ideas"]);
+    assert!(capabilities[0].semantic_invocable);
+
+    let receipt = invoke_with(
+        &mut host,
+        selector(Action::EditCategory),
+        serde_json::json!("ideas"),
+        "category",
+    );
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    assert_eq!(host.app().desk.draft().unwrap().category, Category::Ideas);
+    assert!(host.app().desk.is_dirty());
+    present(&mut host, &context, 1080.0);
+
+    let receipt = invoke_with(
+        &mut host,
+        selector(Action::FilterReview),
+        serde_json::json!("unreviewed"),
+        "review",
+    );
+    assert_eq!(receipt.state, ReceiptState::Completed);
+    assert_eq!(host.app().desk.filters().review, ReviewFilter::Unreviewed);
+    present(&mut host, &context, 1080.0);
+    let receipt = invoke_with(
+        &mut host,
+        selector(Action::FilterCategory),
+        serde_json::json!("all"),
+        "all-categories",
+    );
+    assert_eq!(receipt.state, ReceiptState::Completed);
+    assert_eq!(host.app().desk.filters().category, None);
+
+    present(&mut host, &context, 1080.0);
+    let rejected = invoke_with(
+        &mut host,
+        selector(Action::FilterCategory),
+        serde_json::json!("archive"),
+        "unknown-category",
+    );
+    assert_eq!(rejected.state, ReceiptState::Rejected);
+    let error = rejected.error.unwrap();
+    assert_eq!(error.code, InspectionErrorCode::InvalidArguments);
+    assert!(
+        error.message.contains(r#""all", "research""#),
+        "{}",
+        error.message
+    );
+}
+
+#[test]
+fn set_text_edits_notes_as_typing_would() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = egui::Context::default();
+    let mut host = hosted(&context, &directory);
+    present(&mut host, &context, 1080.0);
+    let record = host.app().desk.draft().unwrap().id.0;
+    let notes = format!("record-desk.notes.{record}");
+    let field = host
+        .ui_snapshot()
+        .node(&SemanticUiId::new(notes.clone()))
+        .unwrap();
+    assert_eq!(
+        field.value.as_deref(),
+        Some(host.app().desk.draft().unwrap().notes.as_str())
+    );
+    let receipt = invoke_with(
+        &mut host,
+        InspectionSelector {
+            id: Some(SemanticUiId::new(notes.clone())),
+            ..Default::default()
+        },
+        serde_json::json!("Checked\nagainst the survey"),
+        "notes",
+    );
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    // The edit applies on the next pass, through egui's text editing.
+    present(&mut host, &context, 1080.0);
+    present(&mut host, &context, 1080.0);
+    let draft = host.app().desk.draft().unwrap();
+    assert_eq!(draft.notes, "Checked\nagainst the survey");
+    assert!(host.app().desk.is_dirty());
+    assert_eq!(
+        host.ui_snapshot()
+            .node(&SemanticUiId::new(notes))
+            .unwrap()
+            .value
+            .as_deref(),
+        Some("Checked\nagainst the survey")
+    );
+    perform(&mut host, Action::Apply);
+    assert_eq!(host.app().desk.undo_len(), 1);
+}
