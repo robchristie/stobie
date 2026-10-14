@@ -524,6 +524,7 @@ fn gallery_bar(
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
+                name_control(&combo.response, "Appearance");
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.contrast")
                     .selected_text(format!("{:?}", edited.contrast))
@@ -541,6 +542,7 @@ fn gallery_bar(
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
+                name_control(&combo.response, "Contrast");
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.density")
                     .selected_text(format!("{:?}", edited.density))
@@ -558,6 +560,7 @@ fn gallery_bar(
                         );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
+                name_control(&combo.response, "Density");
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.scale")
                     .selected_text(format!("{}%", (edited.font_scale * 100.0) as u16))
@@ -571,6 +574,7 @@ fn gallery_bar(
                             record_native_text_control(&option, NativeTextControlKind::Selectable);
                         }
                     });
+                name_control(&combo.response, "Text size");
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
                 let combo = egui::ComboBox::from_id_salt("gallery.width")
                     .selected_text(format!("{:?}", edited.width))
@@ -588,10 +592,19 @@ fn gallery_bar(
                             ui.selectable_value(&mut edited.width, GalleryWidth::Wide, "Wide");
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
+                name_control(&combo.response, "Gallery width");
                 record_native_text_control(&combo.response, NativeTextControlKind::ComboBox);
             });
         });
     (edited != configuration).then_some(edited)
+}
+
+/// Name an unlabelled native control for assistive technology without
+/// changing what it shows.
+fn name_control(response: &egui::Response, name: &str) {
+    response
+        .ctx
+        .accesskit_node_builder(response.id, |node| node.set_label(name));
 }
 
 /// Keep the development entry within the catalogue at enlarged text sizes.

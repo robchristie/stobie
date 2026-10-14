@@ -168,146 +168,151 @@ pub(super) fn story(
         ui.add_space(tokens.spacing.section.0);
         publish(p, ui, report);
         let mut chosen = None;
-        for (id, name, label, tone, icon) in TASKS {
-            let icon = if id == 1 && state.completed {
-                IconId::Check
-            } else {
-                icon
-            };
-            let label = if id == 1 && state.completed {
-                "Completed"
-            } else {
-                label
-            };
-            let tone = if id == 1 && state.completed {
-                StatusTone::Success
-            } else {
-                tone
-            };
-            let height = tokens.geometry.minimum_hit_size.0.max(
-                TextRole::Status.style(tokens, scale).line_height + tokens.spacing.block.0 * 4.0,
-            );
-            let (_, rect) = ui.allocate_space(egui::vec2(ui.available_width(), height));
-            let identity = scope.child(id).instance("row");
-            let row = ui.interact(rect, identity.egui_id(), egui::Sense::click());
-            let selected = state.selected_task == id;
-            let fill = if selected {
-                tokens.colours.selection_background
-            } else if row.hovered() {
-                tokens.colours.surface_hover
-            } else {
-                tokens.colours.surface_panel
-            };
-            ui.painter()
-                .rect_filled(rect, tokens.geometry.control_radius.0, fill);
-            if row.has_focus() {
-                ui.painter().rect_stroke(
-                    rect,
-                    tokens.geometry.control_radius.0,
-                    egui::Stroke::new(tokens.spacing.unit.0 * 0.5, tokens.colours.focus_ring),
-                    egui::StrokeKind::Inside,
+        stobie_ui_egui::list_box(ui, "Tasks", |ui| {
+            for (id, name, label, tone, icon) in TASKS {
+                let icon = if id == 1 && state.completed {
+                    IconId::Check
+                } else {
+                    icon
+                };
+                let label = if id == 1 && state.completed {
+                    "Completed"
+                } else {
+                    label
+                };
+                let tone = if id == 1 && state.completed {
+                    StatusTone::Success
+                } else {
+                    tone
+                };
+                let height = tokens.geometry.minimum_hit_size.0.max(
+                    TextRole::Status.style(tokens, scale).line_height
+                        + tokens.spacing.block.0 * 4.0,
                 );
-            }
-            if row.interact_rect.is_positive() {
-                row.widget_info(|| {
-                    egui::WidgetInfo::selected(
-                        egui::WidgetType::SelectableLabel,
-                        true,
-                        selected,
-                        name,
-                    )
-                });
-                ui.ctx().accesskit_node_builder(row.id, |node| {
-                    node.set_role(egui::accesskit::Role::ListBoxOption);
-                    node.set_label(name);
-                    node.clear_toggled();
-                    node.set_selected(selected);
-                    node.set_author_id(identity.semantic_id().0);
-                    let r = row.interact_rect;
-                    node.set_bounds(egui::accesskit::Rect {
-                        x0: r.min.x.into(),
-                        y0: r.min.y.into(),
-                        x1: r.max.x.into(),
-                        y1: r.max.y.into(),
+                let (_, rect) = ui.allocate_space(egui::vec2(ui.available_width(), height));
+                let identity = scope.child(id).instance("row");
+                let row = ui.interact(rect, identity.egui_id(), egui::Sense::click());
+                let selected = state.selected_task == id;
+                let fill = if selected {
+                    tokens.colours.selection_background
+                } else if row.hovered() {
+                    tokens.colours.surface_hover
+                } else {
+                    tokens.colours.surface_panel
+                };
+                ui.painter()
+                    .rect_filled(rect, tokens.geometry.control_radius.0, fill);
+                if row.has_focus() {
+                    ui.painter().rect_stroke(
+                        rect,
+                        tokens.geometry.control_radius.0,
+                        egui::Stroke::new(tokens.spacing.unit.0 * 0.5, tokens.colours.focus_ring),
+                        egui::StrokeKind::Inside,
+                    );
+                }
+                if row.interact_rect.is_positive() {
+                    row.widget_info(|| {
+                        egui::WidgetInfo::selected(
+                            egui::WidgetType::SelectableLabel,
+                            true,
+                            selected,
+                            name,
+                        )
                     });
-                });
-            }
-            let domain = DomainReference::External {
-                namespace: "gallery.task".into(),
-                id: id.to_string(),
-            };
-            if row.interact_rect.is_positive() {
-                let mut node = UiNode::container(
+                    ui.ctx().accesskit_node_builder(row.id, |node| {
+                        node.set_role(egui::accesskit::Role::ListBoxOption);
+                        node.set_label(name);
+                        node.clear_toggled();
+                        node.set_selected(selected);
+                        node.set_author_id(identity.semantic_id().0);
+                        let r = row.interact_rect;
+                        node.set_bounds(egui::accesskit::Rect {
+                            x0: r.min.x.into(),
+                            y0: r.min.y.into(),
+                            x1: r.max.x.into(),
+                            y1: r.max.y.into(),
+                        });
+                    });
+                }
+                let domain = DomainReference::External {
+                    namespace: "gallery.task".into(),
+                    id: id.to_string(),
+                };
+                if row.interact_rect.is_positive() {
+                    let mut node = UiNode::container(
+                        identity.semantic_id(),
+                        Some(root.clone()),
+                        UiRole::ResultRow,
+                        row.interact_rect.into(),
+                    );
+                    node.name = name.into();
+                    node.selected = selected;
+                    node.focused = row.has_focus();
+                    node.actions = vec![stobie_ui_egui::SemanticActionId::from_action(
+                        FixtureAction::OpenTask,
+                    )];
+                    node.domain_reference = Some(domain.clone());
+                    nodes.push(node);
+                }
+                let mut child =
+                    ui.new_child(
+                        egui::UiBuilder::new()
+                            .max_rect(rect.shrink2(egui::vec2(
+                                tokens.spacing.inline.0,
+                                tokens.spacing.block.0,
+                            )))
+                            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                    );
+                let mut p = PresentationContext::new(
+                    &mut child,
+                    *tokens,
+                    scale,
+                    scope.child(id),
                     identity.semantic_id(),
-                    Some(root.clone()),
-                    UiRole::ResultRow,
-                    row.interact_rect.into(),
+                )
+                .with_domain_reference(domain);
+                let name_width = (child.available_width() - 145.0 * scale).max(32.0);
+                let measured = measure_component_text(
+                    child.painter(),
+                    name,
+                    TextSpec::single_line(TextRole::Body, TextOverflow::Ellipsis),
+                    tokens,
+                    scale,
+                    name_width,
                 );
-                node.name = name.into();
-                node.selected = selected;
-                node.focused = row.has_focus();
-                node.actions = vec![stobie_ui_egui::SemanticActionId::from_action(
-                    FixtureAction::OpenTask,
-                )];
-                node.domain_reference = Some(domain.clone());
-                nodes.push(node);
+                let (name_rect, _) = child.allocate_exact_size(
+                    egui::vec2(measured.size().x, measured.size().y),
+                    egui::Sense::hover(),
+                );
+                let observation = paint_measured_text(
+                    child.painter(),
+                    &measured,
+                    name_rect,
+                    TextComponentId::new(TextComponentKind::ContentLabel, identity.text_instance()),
+                    None,
+                );
+                if observation.layout_error.is_some() || fully_visible_text(&observation) {
+                    text.push(observation);
+                }
+                p.status_chip(
+                    &mut child,
+                    "status",
+                    StatusChipSpec {
+                        interaction: TextInteraction::Inert,
+                        icon: Some(icon),
+                        ..StatusChipSpec::new(label, tone)
+                    },
+                );
+                publish(p, &mut child, report);
+                if row.hovered() {
+                    state.hovered_task = Some(id);
+                }
+                if row.clicked() {
+                    row.request_focus();
+                    chosen = Some(id);
+                }
             }
-            let mut child = ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(
-                        rect.shrink2(egui::vec2(tokens.spacing.inline.0, tokens.spacing.block.0)),
-                    )
-                    .layout(egui::Layout::left_to_right(egui::Align::Center)),
-            );
-            let mut p = PresentationContext::new(
-                &mut child,
-                *tokens,
-                scale,
-                scope.child(id),
-                identity.semantic_id(),
-            )
-            .with_domain_reference(domain);
-            let name_width = (child.available_width() - 145.0 * scale).max(32.0);
-            let measured = measure_component_text(
-                child.painter(),
-                name,
-                TextSpec::single_line(TextRole::Body, TextOverflow::Ellipsis),
-                tokens,
-                scale,
-                name_width,
-            );
-            let (name_rect, _) = child.allocate_exact_size(
-                egui::vec2(measured.size().x, measured.size().y),
-                egui::Sense::hover(),
-            );
-            let observation = paint_measured_text(
-                child.painter(),
-                &measured,
-                name_rect,
-                TextComponentId::new(TextComponentKind::ContentLabel, identity.text_instance()),
-                None,
-            );
-            if observation.layout_error.is_some() || fully_visible_text(&observation) {
-                text.push(observation);
-            }
-            p.status_chip(
-                &mut child,
-                "status",
-                StatusChipSpec {
-                    interaction: TextInteraction::Inert,
-                    icon: Some(icon),
-                    ..StatusChipSpec::new(label, tone)
-                },
-            );
-            publish(p, &mut child, report);
-            if row.hovered() {
-                state.hovered_task = Some(id);
-            }
-            if row.clicked() {
-                row.request_focus();
-                chosen = Some(id);
-            }
-        }
+        });
         if let Some(id) = chosen {
             state.selected_task = id;
             state.activations += 1;

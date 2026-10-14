@@ -109,20 +109,24 @@ impl RecordPanes<'_> {
                 content_spec(TextRole::Body, 4),
             );
         }
-        for record in &self.records {
-            let selected = self.selected == Some(record.id);
-            let (response, node, observation) = p.raw(
-                ui,
-                record.id,
-                "Application-owned record row with measured title and stable domain identity",
-                |ui| record_row(ui, record, selected, &self.tokens),
-            );
-            p.observe_node(ui, node);
-            p.observe_text(ui, observation);
-            if response.clicked() {
-                frame.emit(Intent::Select(record.id));
+        let count = self.records.len();
+        list_box(ui, "Records", |ui| {
+            for (index, record) in self.records.iter().enumerate() {
+                let selected = self.selected == Some(record.id);
+                let (response, node, observation) = p.raw(
+                    ui,
+                    record.id,
+                    "Application-owned record row with measured title and stable domain identity",
+                    |ui| record_row(ui, record, selected, &self.tokens),
+                );
+                set_position_semantics(&response, index + 1, Some(count));
+                p.observe_node(ui, node);
+                p.observe_text(ui, observation);
+                if response.clicked() {
+                    frame.emit(Intent::Select(record.id));
+                }
             }
-        }
+        });
     }
 
     fn detail(&mut self, ui: &mut Ui, p: &mut PresentationContext, frame: PaneFrame) {

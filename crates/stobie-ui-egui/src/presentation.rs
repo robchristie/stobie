@@ -672,6 +672,13 @@ impl PresentationContext {
             interaction: TextInteraction::Selectable,
         };
         let response = self.content(ui, key, text, spec);
+        // A polite live region, so assistive technology announces changes.
+        ui.ctx().accesskit_node_builder(response.id, |node| {
+            node.set_role(egui::accesskit::Role::Status);
+            node.set_label(text);
+            node.clear_value();
+            node.set_live(egui::accesskit::Live::Polite);
+        });
         if response.rect.is_positive() {
             let mut node = UiNode::container(
                 identity.semantic_id(),

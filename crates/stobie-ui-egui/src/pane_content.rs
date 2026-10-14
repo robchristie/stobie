@@ -294,6 +294,12 @@ fn heading_impl(
         ui.allocate_exact_size(size, Sense::hover())
     };
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
+    ui.ctx().accesskit_node_builder(response.id, |node| {
+        node.set_role(egui::accesskit::Role::Heading);
+        node.set_level(2);
+        node.set_label(text);
+        node.clear_value();
+    });
     {
         let measured = crate::measure_component_text(
             ui.painter(),

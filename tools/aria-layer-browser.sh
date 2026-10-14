@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Run tools/aria-layer-browser.mjs for one application (--app NAME) in a
+# headful Chromium on a private Xvfb display, as CI does.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ "$(uname)" != Linux ]]; then
+  exec node tools/aria-layer-browser.mjs "$@"
+fi
+bash tools/bootstrap-linux-ui.sh
+EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/aria-layer-evidence}/aria-layer"
+mkdir -p "$EVIDENCE_DIR" .tools/runtime
+EVIDENCE_DIR="$(cd "$EVIDENCE_DIR" && pwd)"
+SYSROOT="$ROOT/.tools/sysroot"
+SMOKE_TMP="$(mktemp -d "$ROOT/.tools/runtime/aria-layer-browser-x11-XXXXXX")"
+mkdir -p "$SMOKE_TMP/.X11-unix"
+chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
+if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" == 1 ]]; then
+  XVFB="$(command -v Xvfb)"
+else
+  export LD_LIBRARY_PATH="$SYSROOT/usr/lib"
+  XVFB="$SYSROOT/usr/bin/Xvfb"
+fi
+source tools/native-smoke-lifecycle.sh
+trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
+export DISPLAY="${STOBIE_ARIA_LAYER_BROWSER_DISPLAY:-:95}" STOBIE_BROWSER_HEADFUL=1
+owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/browser-xvfb.log" 2>&1
+sleep 1
+STOBIE_EVIDENCE_DIR="$EVIDENCE_DIR" ui_sandbox "$(command -v node)" tools/aria-layer-browser.mjs "$@"
