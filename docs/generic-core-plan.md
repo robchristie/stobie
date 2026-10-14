@@ -167,6 +167,47 @@ returns `None` for a change that does nothing.
 Temporary violations (enabling `image-rendering` in the Gallery, defining a
 `Camera` in core) fail the check with a specific message.
 
+## Authoring probe
+
+A fresh-context agent was given only the composition guide, its links, the
+README, the `notes` example and the generated rustdoc. It made Add, Remove last
+and Clear undoable, with Clear removing each note as a separate step in one
+`execute_group` entry. It also added Undo and Redo actions with availability
+and a history-revision `meaning`. It built on the first attempt with no
+compile errors and read no function bodies. The host has no display, so the
+agent could not run the app.
+
+Its `notes` example is adopted as the compiled undo and redo example. Driven
+natively under the repository's Xvfb sysroot with `tools/application-cli.mjs`:
+- Clear removed both notes as one undo step, and Undo restored them.
+- Redo cleared them again.
+- A second Undo was rejected while nothing was left to undo.
+- Remove last undid correctly.
+
+These stumbles were fixed:
+- The guide's sample could panic despite the rule that errors leave the target
+  unchanged. The guide now shows the example's ID-checked `NoteEdit`.
+- Nothing said how commands keep identity. The guide now says to carry whole
+  items with stable IDs and to allocate IDs outside history.
+- The guide gave no import path. It now names `stobie_core::{Command, History}`.
+- The order in which a group is undone was undocumented. `undo` and `redo`
+  rustdoc and the guide now say: reverse order to undo, forward order to redo.
+- Nothing warned that direct changes make recorded commands stale. The guide
+  now says to route every change to history-managed state through history.
+- It was unclear whether text fields still see `Cmd+Z`. The guide now says that
+  an available Undo takes the chord even while a text field has focus, and an
+  unavailable one lets it through.
+- There was no way to see the next redo. `History::last_redo` now pairs with
+  `last_undo`.
+- It was unclear whether undo restores drafts. The guide now says undo
+  restores committed state, not drafts.
+- The `Application` rustdoc pointed to a nonexistent "module guide". It now
+  points to the crate documentation and the guide.
+
+The example's old `Cmd+Z` for Remove last clashed with Undo and moved to
+`Cmd+Backspace`. The derive rejects duplicate chords at compile time, so the
+clash could not have shipped.
+
 ## Effects on later work
 
 - The ARIA mirror and the MCP server are unaffected: the semantic snapshot and

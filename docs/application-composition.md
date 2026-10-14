@@ -7,7 +7,7 @@ inspection and invocation, and repaint decisions. The same code runs natively
 and in the browser.
 
 The complete example is [`notes.rs`](../crates/stobie-ui-egui/examples/notes.rs),
-about 200 lines with no inspection code. Run it from the repository root with
+about 350 lines with no inspection code. Run it from the repository root with
 the native [prerequisites](../README.md#prerequisites):
 
 ```sh
@@ -177,61 +177,63 @@ pane or domain; that observation replaces the recipe's.
 
 ## Add undo and redo
 
-Core's `History<C>` records completed changes as reversible commands.
-Implement `Command<T>` for a small command type, where `T` is what it changes:
-your model, or a struct of mutable borrows when one change spans several
-owners. A command carries the values it needs in both directions, so validate
-the intent first and build the command from current state.
+Core's `History<C>` (`use stobie_core::{Command, History};`) records completed
+changes as reversible commands. The `notes` example makes Add, Remove last and
+Clear undoable; read its `NoteEdit`. Implement `Command<T>` for a small command
+type, where `T` is what it changes: your model, or a struct of mutable borrows
+when one change spans several owners. A command carries the values it needs in
+both directions, so validate the intent first and build the command from
+current state. Carry whole items with their stable IDs, so redo restores the
+same item, and allocate IDs outside history so they are never reused.
 
 ```text
 enum NoteEdit {
-    Add(String),
-    Remove { index: usize, text: String },
+    Insert { index: usize, note: Note },
+    Remove { index: usize, note: Note },
 }
 
-impl Command<Vec<String>> for NoteEdit {
-    fn apply(&self, notes: &mut Vec<String>) -> Result<bool, String> {
-        match self {
-            NoteEdit::Add(text) => notes.push(text.clone()),
-            NoteEdit::Remove { index, .. } => { notes.remove(*index); }
-        }
-        Ok(true) // Ok(false) means "changed nothing": no entry is recorded
-    }
-    fn revert(&self, notes: &mut Vec<String>) -> Result<(), String> {
-        match self {
-            NoteEdit::Add(_) => { notes.pop(); }
-            NoteEdit::Remove { index, text } => notes.insert(*index, text.clone()),
-        }
-        Ok(())
-    }
+impl Command<Vec<Note>> for NoteEdit {
+    // Ok(false) means "changed nothing": no entry is recorded. An error must
+    // leave the list unchanged, so check the note is where it was first.
+    fn apply(&self, notes: &mut Vec<Note>) -> Result<bool, String> { ... }
+    fn revert(&self, notes: &mut Vec<Note>) -> Result<(), String> { ... }
 }
 ```
 
 Keep a `History<NoteEdit>` beside the state it changes and call it from
 `perform` or `apply`; `History::default()` keeps 100 entries and
-`History::new(capacity)` sets another bound.
+`History::new(capacity)` sets another bound. Route every change to that state
+through history: a direct change makes the values recorded in earlier
+commands, such as indices, stale.
 
 - `execute(command, &mut self.notes)` applies one command as one entry and
   clears redo.
-- `execute_group(commands, &mut self.notes)` applies several commands as one
-  entry, such as removing every note for Clear. If one fails, the others are
+- `execute_group(commands, &mut self.notes)` makes several changes one undo
+  step now, such as removing every note for Clear. Undo reverts them in
+  reverse order and redo reapplies them in order. If one fails, the others are
   reverted and nothing is recorded.
-- `execute_merging(command, ...)` folds the command into the newest entry when
+- `execute_merging(command, ...)` extends the newest entry later instead, when
   your `Command::merge` accepts it, so a run of small steps undoes at once.
   `seal` ends the run; undo, redo and `mark_saved` also end it. Implement
   `Command::is_noop` so a run that returns to its start leaves no entry.
 - `undo` and `redo` return `Ok(false)` when there is nothing to do. A command
   that returns an error must leave its target unchanged; the entry then stays.
+- `last_undo` and `last_redo` show the commands the next undo or redo would
+  reverse or reapply, for a status message.
 - `mark_saved` records a save point and `is_saved` reports whether undo and
   redo have returned to it, for an "unsaved changes" indicator.
 
 Make Undo and Redo unavailable when `can_undo` or `can_redo` is false, and
 include `revision()` in their `meaning` so an agent's stale target is rejected.
 Keep drafts and other in-progress edits out of history: one completed edit is
-one entry. When a command spans several owners, borrow them for the call:
+one entry, and undo restores committed state, not the draft that produced it.
+Give Undo and Redo `Cmd+Z` and `Cmd+Shift+Z`. While they are available, the
+host takes those chords even when a text field has focus, so the field's own
+undo does not run; when they are unavailable, the key reaches the field. When
+a command spans several owners, borrow them for the call:
 
 ```text
-struct Model<'a> { notes: &'a mut Vec<String>, workspace: &'a mut Workspace }
+struct Model<'a> { notes: &'a mut Vec<Note>, workspace: &'a mut Workspace }
 // impl Command<Model<'_>> for Edit { ... }
 self.history.undo(&mut Model { notes: &mut self.notes, workspace: &mut self.workspace })?;
 ```
@@ -240,8 +242,8 @@ To make layout undoable, resolve each dock change with
 `WorkspaceCommand::from_change(change, &self.workspace)` and execute the
 command in a `History<WorkspaceCommand>`, or wrap it in your own command type.
 Execute each resize separately: a pointer drag is one completed resize, and so
-is each keyboard nudge. Record Desk's `model.rs` applies each validated draft as one `Edit`
-command and keeps layout changes out of history.
+is each keyboard nudge. Record Desk's `model.rs` applies each validated draft
+as one `Edit` command and keeps layout changes out of history.
 
 ## Grow to several panes
 
