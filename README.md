@@ -277,9 +277,8 @@ versioned result is not evidence of screen-reader support on Windows, macOS,
 other Linux configurations or browsers.
 In the browser, hosted applications mirror the same AccessKit tree into a
 hidden [ARIA layer](docs/ui-guides/accessibility.md#browser-aria-layer).
-Automated Chromium checks cover its tree and rule conformance. The layer is
-read-only for now, and no browser and screen-reader combination is
-qualified. The exact qualification and remaining platform boundaries are in the
+Automated Chromium checks cover its tree, rule conformance, activation and
+focus reporting. No browser and screen-reader combination is qualified. The exact qualification and remaining platform boundaries are in the
 [accessibility integration evidence](docs/accessibility-integration-report.md).
 
 The synthetic source and decoder demonstrate the architecture; they are not

@@ -43,7 +43,49 @@
         { "role": "button", "name": "Reviewed", "properties": { "pressed": "true" } }
       ]
     },
-    "status": { "press": "Control+s", "then": "^Saved committed records and layout" }
+    "status": { "press": "Control+s", "then": "^Saved committed records and layout" },
+    "facts": true,
+    "handle": "__RECORD_DESK",
+    "activate": [
+      {
+        "route": "event", "target": { "role": "button", "name": "Reviewed" },
+        "then": [
+          { "role": "button", "name": "Reviewed", "properties": { "pressed": "false" } },
+          { "role": "button", "name": "Apply", "properties": { "disabled": null } }
+        ],
+        "facts": { "draft_dirty": true, "undo_entries": 0 }
+      },
+      {
+        "route": "element", "target": { "role": "button", "name": "Apply" },
+        "then": [
+          { "role": "button", "name": "Apply", "properties": { "disabled": true } },
+          { "role": "option", "name": "Prepare review agenda · Operations · Unreviewed", "properties": { "selected": true } }
+        ],
+        "facts": { "draft_dirty": false, "undo_entries": 1 }
+      },
+      {
+        "route": "pointer", "target": { "role": "button", "name": "Undo" },
+        "then": [
+          { "role": "button", "name": "Undo", "properties": { "disabled": true } },
+          { "role": "button", "name": "Reviewed", "properties": { "pressed": "true" } }
+        ],
+        "facts": { "undo_entries": 0, "redo_entries": 1 }
+      },
+      {
+        "route": "element", "target": { "role": "button", "name": "Undo" },
+        "then": [{ "role": "button", "name": "Undo", "properties": { "disabled": true } }],
+        "facts": { "undo_entries": 0, "redo_entries": 1 },
+        "writes": 0
+      }
+    ],
+    "focus": {
+      "tabs": 3,
+      "edit": {
+        "target": { "role": "textbox", "name": "Record title" },
+        "text": " (checked)",
+        "fact": "draft_title"
+      }
+    }
   },
   "gallery": {
     "application": "Stobie Component Gallery",
@@ -66,7 +108,18 @@
         { "role": "tab", "name": "Overview", "properties": { "selected": true } },
         { "role": "region", "name": "Overview" }
       ]
-    }
+    },
+    "activate": [
+      {
+        "route": "event", "target": { "role": "tab", "name": "Primary image — Antarctic reconstruction sector 04" },
+        "then": [{ "role": "tab", "name": "Primary image — Antarctic reconstruction sector 04", "properties": { "selected": true } }]
+      },
+      {
+        "route": "element", "target": { "role": "button", "name": "button/default" },
+        "then": [{ "role": "button", "name": "button/default", "properties": { "pressed": "true" } }]
+      }
+    ],
+    "focus": { "tabs": 3 }
   },
   "lab": {
     "application": "Analytical Workspace Lab",
@@ -95,6 +148,27 @@
       "then": [
         { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge", "properties": { "selected": true } }
       ]
-    }
+    },
+    "activate": [
+      {
+        "route": "event", "target": { "role": "button", "name": "Polygon" },
+        "then": [{ "role": "button", "name": "Polygon", "properties": { "pressed": "true" } }]
+      },
+      {
+        "route": "element", "target": { "role": "button", "name": "Undo" },
+        "then": [
+          { "role": "option", "name": "#0000002; 30941, 85890; 72.5%; Edge", "properties": { "selected": false } },
+          { "role": "button", "name": "Undo", "properties": { "disabled": true } },
+          { "role": "button", "name": "Redo", "properties": { "disabled": null } }
+        ]
+      },
+      {
+        "route": "element", "target": { "role": "button", "name": "Undo" },
+        "then": [{ "role": "button", "name": "Redo", "properties": { "disabled": null } }],
+        "writes": 0
+      }
+    ],
+    "hidden": [{ "role": "button", "name": "Polygon", "region": "Overview", "shownIn": "Primary View" }],
+    "focus": { "tabs": 3 }
   }
 }

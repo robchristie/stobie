@@ -2,6 +2,14 @@
 //! completed pass's AccessKit update before eframe's web runner discards it,
 //! and applies the projected difference to DOM elements over the canvas.
 //!
+//! A `click` on a layer element, such as a screen reader's default action or
+//! `element.click()`, becomes an AccessKit click request for its node, and DOM
+//! focus moving onto a layer element becomes a focus request. Both reach egui
+//! as input, the same route native assistive technology uses, so a widget acts
+//! only if it is enabled and senses clicks, and an action still rechecks its
+//! availability. DOM focus returns to the canvas, which keeps keyboard and IME
+//! input working; the canvas's `aria-activedescendant` names egui's focus.
+//!
 //! DOM objects are not `Send`, but egui plugins must be. The plugin therefore
 //! holds only a key into a thread-local registry; WASM runs the UI on one
 //! thread.
@@ -9,8 +17,10 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
 
+use egui::accesskit::{Action, ActionRequest, TreeId};
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, HtmlCanvasElement, HtmlElement};
+use web_sys::{Document, Element, Event, HtmlCanvasElement, HtmlElement};
 
 use crate::aria::{self, AriaTree, DomOp};
 
@@ -19,6 +29,9 @@ use crate::aria::{self, AriaTree, DomOp};
 /// `aria-hidden`.
 const CONTAINER_STYLE: &str = "position:fixed;margin:0;padding:0;border:0;overflow:hidden;opacity:0;pointer-events:none;contain:strict;";
 const ELEMENT_STYLE: &str = "position:absolute;margin:0;padding:0;";
+
+/// A DOM event listener the layer owns.
+type Listener = Closure<dyn FnMut(Event)>;
 
 thread_local! {
     static LAYERS: RefCell<BTreeMap<u32, Layer>> = const { RefCell::new(BTreeMap::new()) };
@@ -38,7 +51,7 @@ pub(super) fn install(
         next.set(key + 1);
         key
     });
-    match Layer::new(key, canvas, name) {
+    match Layer::new(key, context, canvas, name) {
         Ok(layer) => {
             LAYERS.with(|layers| layers.borrow_mut().insert(key, layer));
             context.enable_accesskit();
@@ -68,6 +81,19 @@ impl egui::Plugin for AriaPlugin {
         "stobie.aria"
     }
 
+    fn input_hook(&mut self, _context: &egui::Context, input: &mut egui::RawInput) {
+        LAYERS.with(|layers| {
+            if let Some(layer) = layers.borrow_mut().get_mut(&self.key) {
+                input.events.extend(
+                    layer
+                        .requests
+                        .drain(..)
+                        .map(egui::Event::AccessKitActionRequest),
+                );
+            }
+        });
+    }
+
     fn output_hook(&mut self, context: &egui::Context, output: &mut egui::FullOutput) {
         let platform = &mut output.platform_output;
         // egui runs another pass after this one and discards this pass's
@@ -92,16 +118,32 @@ impl egui::Plugin for AriaPlugin {
 }
 
 struct Layer {
+    context: egui::Context,
     document: Document,
     canvas: HtmlCanvasElement,
+    /// The canvas's role before the layer, and whether the layer named it.
+    canvas_role: Option<String>,
+    canvas_named: bool,
     container: HtmlElement,
     container_geometry: String,
+    /// eframe's text agent and the name last given to it.
+    text_agent: Option<Element>,
+    text_agent_name: String,
     elements: HashMap<String, HtmlElement>,
     tree: AriaTree,
+    /// Action requests from the layer, for egui's next input.
+    requests: Vec<ActionRequest>,
+    /// The layer's event listeners, kept alive while it is installed.
+    listeners: Vec<(&'static str, Listener)>,
 }
 
 impl Layer {
-    fn new(key: u32, canvas: &HtmlCanvasElement, name: &str) -> Result<Self, JsValue> {
+    fn new(
+        key: u32,
+        context: &egui::Context,
+        canvas: &HtmlCanvasElement,
+        name: &str,
+    ) -> Result<Self, JsValue> {
         let document = canvas
             .owner_document()
             .ok_or_else(|| JsValue::from_str("the canvas has no document"))?;
@@ -110,33 +152,89 @@ impl Layer {
         container.set_id(&container_id);
         container.set_attribute("style", CONTAINER_STYLE)?;
         canvas.after_with_node_1(&container)?;
+        let canvas_role = canvas.get_attribute("role");
         canvas.set_attribute("role", "application")?;
-        if !canvas.has_attribute("aria-label") {
+        let canvas_named = !canvas.has_attribute("aria-label");
+        if canvas_named {
             canvas.set_attribute("aria-label", name)?;
         }
         canvas.set_attribute("aria-owns", &container_id)?;
         // eframe's text agent is a hidden input beside the canvas that holds
-        // keyboard focus while egui edits text. Name it for assistive technology.
-        if let Some(parent) = canvas.parent_element()
-            && let Some(agent) = parent.query_selector(":scope > input")?
-            && !agent.has_attribute("aria-label")
-        {
-            agent.set_attribute("aria-label", "Text entry")?;
+        // keyboard focus while egui edits text. It is named after the focused
+        // text field, so assistive technology announces what is being edited.
+        let text_agent = canvas
+            .parent_element()
+            .map(|parent| parent.query_selector(":scope > input"))
+            .transpose()?
+            .flatten()
+            .filter(|agent| !agent.has_attribute("aria-label"));
+        let mut listeners = Vec::new();
+        for (event, action) in [("click", Action::Click), ("focusin", Action::Focus)] {
+            let listener = Listener::new(move |event: Event| {
+                request(key, &event, action);
+            });
+            container.add_event_listener_with_callback(event, listener.as_ref().unchecked_ref())?;
+            listeners.push((event, listener));
         }
-        Ok(Self {
+        let mut layer = Self {
+            context: context.clone(),
             document,
             canvas: canvas.clone(),
+            canvas_role,
+            canvas_named,
             container,
             container_geometry: String::new(),
+            text_agent,
+            text_agent_name: String::new(),
             elements: HashMap::new(),
             tree: AriaTree::default(),
-        })
+            requests: Vec::new(),
+            listeners,
+        };
+        layer.name_text_agent()?;
+        Ok(layer)
     }
 
     fn remove(self) {
+        for (event, listener) in &self.listeners {
+            let _ = self
+                .container
+                .remove_event_listener_with_callback(event, listener.as_ref().unchecked_ref());
+        }
         self.container.remove();
+        // Restore what the layer changed outside its container.
         let _ = self.canvas.remove_attribute("aria-owns");
         let _ = self.canvas.remove_attribute("aria-activedescendant");
+        let _ = match &self.canvas_role {
+            Some(role) => self.canvas.set_attribute("role", role),
+            None => self.canvas.remove_attribute("role"),
+        };
+        if self.canvas_named {
+            let _ = self.canvas.remove_attribute("aria-label");
+        }
+        if let Some(agent) = &self.text_agent {
+            let _ = agent.remove_attribute("aria-label");
+        }
+    }
+
+    /// Name eframe's text agent after the focused text field, or generically.
+    fn name_text_agent(&mut self) -> Result<(), JsValue> {
+        let Some(agent) = &self.text_agent else {
+            return Ok(());
+        };
+        let name = self
+            .tree
+            .active
+            .as_ref()
+            .and_then(|id| self.tree.elements.get(id))
+            .filter(|element| element.attributes.get("role").map(String::as_str) == Some("textbox"))
+            .and_then(|element| element.attributes.get("aria-label"))
+            .map_or("Text entry", String::as_str);
+        if name != self.text_agent_name {
+            agent.set_attribute("aria-label", name)?;
+            self.text_agent_name = name.to_owned();
+        }
+        Ok(())
     }
 
     fn apply(&mut self, update: &egui::accesskit::TreeUpdate, scale: f32) -> Result<(), JsValue> {
@@ -159,7 +257,7 @@ impl Layer {
             self.perform(operation)?;
         }
         self.tree = next;
-        Ok(())
+        self.name_text_agent()
     }
 
     fn element(&self, id: &str) -> Result<&HtmlElement, JsValue> {
@@ -209,6 +307,43 @@ impl Layer {
         }
         Ok(())
     }
+}
+
+/// Turn a click or focus on a layer element into an AccessKit request for its
+/// node, handled on egui's next pass. Focus returns to the canvas, which owns
+/// keyboard input; egui's own focus is then reported through
+/// `aria-activedescendant`.
+fn request(key: u32, event: &Event, action: Action) {
+    let target = event
+        .target()
+        .and_then(|target| target.dyn_into::<Element>().ok());
+    LAYERS.with(|layers| {
+        let Ok(mut layers) = layers.try_borrow_mut() else {
+            return;
+        };
+        let Some(layer) = layers.get_mut(&key) else {
+            return;
+        };
+        let node = std::iter::successors(target, |element| element.parent_element())
+            .take_while(|element| element != layer.container.unchecked_ref::<Element>())
+            .find_map(|element| layer.tree.elements.get(&element.id()))
+            .map(|element| element.node);
+        let Some(node) = node else {
+            return;
+        };
+        layer.requests.push(ActionRequest {
+            action,
+            target_node: node,
+            target_tree: TreeId::ROOT,
+            data: None,
+        });
+        if action == Action::Focus {
+            let options = web_sys::FocusOptions::new();
+            options.set_prevent_scroll(true);
+            let _ = layer.canvas.focus_with_options(&options);
+        }
+        layer.context.request_repaint();
+    });
 }
 
 fn log_error(error: &JsValue) {

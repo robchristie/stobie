@@ -55,11 +55,32 @@ snapshot, is the source.
   whose tree is unchanged writes nothing. Hover repaints, for example, write
   nothing.
 - **Root.** The canvas becomes `role="application"`, named by the application
-  identity, and owns the layer through `aria-owns`. eframe's hidden text agent
-  is named "Text entry".
-
-The layer is read-only in this increment. Activation through the layer, focus
-synchronisation and the values of text inputs and splitters are planned work.
+  identity, and owns the layer through `aria-owns`. The application role makes
+  screen readers pass keys to egui, which handles Tab, arrows and shortcuts.
+  The layer can still be read in browse mode. Destroying the host removes the
+  layer and restores the canvas.
+- **Activation.** A `click` event on a layer element becomes an AccessKit click
+  request for its node on egui's next pass. That covers a screen reader's
+  default action, `element.click()` and Playwright's `dispatchEvent('click')`.
+  Native assistive technology uses the same route. egui clicks only an enabled
+  widget that senses clicks, and a triggered action still rechecks its
+  availability before `perform`. A disabled control therefore does nothing; it
+  carries `aria-disabled` and its reason in `aria-description`. A hidden
+  capability renders no widget, so it has no element.
+- **Focus.** DOM focus stays on the canvas, which owns keyboard and IME input
+  together with eframe's text agent. The canvas's `aria-activedescendant` names
+  egui's focused element, so a Tab move is announced. Focusable controls carry
+  `tabindex="-1"`. When assistive technology moves DOM focus onto one, the
+  layer requests egui focus for its node and returns DOM focus to the canvas.
+  While egui edits text, eframe's text agent holds DOM focus. It is named after
+  the focused field, so typing after focusing "Record title" edits that field.
+- **Values.** Combo boxes and focusable text fields expose their current text
+  as their value. Sliders and splitters expose `aria-valuenow`, minimum and
+  maximum.
+- **Limits.** The layer is positioned from the canvas's client rectangle on
+  each pass. A page that scrolls, or transforms an ancestor, without a pass
+  leaves it misaligned until the next pass. It is not a substitute for a text
+  editor's selection and caret semantics.
 
 | `UiRole` | AccessKit role | ARIA in the layer |
 | --- | --- | --- |
@@ -69,10 +90,10 @@ synchronisation and the values of text inputs and splitters are planned work.
 | `NavigationItem` | `Button` with current state | `button` with `aria-current` |
 | `RadioButton` | `RadioButton` | `radio` with `aria-checked` |
 | `ComboBox` | `ComboBox` | `combobox` with its value as text and `aria-expanded` (`false` when unset) |
-| `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | `textbox`; multiline adds `aria-multiline` |
+| `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | Focusable `textbox` whose text is its current value; multiline adds `aria-multiline` |
 | `Slider` | `Slider` | `slider` with `aria-valuenow`, `aria-valuemin` and `aria-valuemax` |
 | `Tab` | `Tab` in the dock's `TabList` | `tab` with `aria-selected`, inside `tablist` |
-| `Splitter` | `Splitter` | `separator` with orientation and value attributes |
+| `Splitter` | `Splitter` | Focusable `separator` with orientation, `aria-valuenow`, `aria-valuemin` and `aria-valuemax` |
 | `Pane` | `Region` named by the tab title | `region` landmark |
 | `Viewport` | `Canvas` | `group` with `aria-roledescription="viewport"` |
 | `ScrollArea` | egui container | Flattened |
@@ -94,8 +115,15 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 - an idle application presents no frame and writes nothing;
 - hover frames write nothing;
 - a coordinate click at an element's centre changes the same control and
-  writes only what changed;
-- in Record Desk, a status change reaches its polite live region.
+  writes fewer changes than the layer has elements;
+- activation through a click event, `element.click()` and Playwright's forced
+  coordinate click gives the same outcome as a physical click. In Record Desk
+  this is confirmed through application-interface facts. A disabled control
+  writes nothing, and a capability hidden in a pane has no element there;
+- Tab keeps DOM focus on the canvas and moves `aria-activedescendant`;
+- in Record Desk, focusing a text field through the layer then typing edits
+  it, a status change reaches its polite live region, and destroying the host
+  restores the canvas.
 
 This proves the browser accessibility tree only. It is not screen-reader
 qualification.

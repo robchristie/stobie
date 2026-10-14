@@ -820,4 +820,122 @@ mod tests {
                 .any(|finding| matches!(finding, SemanticAuditFinding::InvalidRect { .. }))
         );
     }
+
+    /// A status, a status chip and a result row with their AccessKit nodes.
+    fn live_and_list_fixture(
+        status_live: Option<egui::accesskit::Live>,
+        chip_live: Option<egui::accesskit::Live>,
+        list_box: bool,
+    ) -> (UiSnapshot, egui::accesskit::TreeUpdate) {
+        use egui::accesskit::{Action, Node, NodeId, Rect, Role, Tree, TreeId, TreeUpdate};
+        let rect = UiRect {
+            min_x: 0.0,
+            min_y: 0.0,
+            max_x: 100.0,
+            max_y: 20.0,
+        };
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 100.0,
+            y1: 20.0,
+        };
+        let root = SemanticUiId::root();
+        let mut root_node = UiNode::container(root.clone(), None, UiRole::Application, rect);
+        root_node.rect.max_y = 100.0;
+        let mut status = UiNode::container(
+            SemanticUiId::new("status"),
+            Some(root.clone()),
+            UiRole::Status,
+            rect,
+        );
+        status.name = "Saved".into();
+        let mut chip = UiNode::container(
+            SemanticUiId::new("chip"),
+            Some(root.clone()),
+            UiRole::StatusChip,
+            rect,
+        );
+        chip.name = "Active".into();
+        let mut row = UiNode::container(
+            SemanticUiId::new("row"),
+            Some(root.clone()),
+            UiRole::ResultRow,
+            rect,
+        );
+        row.name = "Row".into();
+        let snapshot = UiSnapshot {
+            frame: 1,
+            pixels_per_point: 1.0,
+            root,
+            nodes: vec![root_node, status, chip, row],
+            ..Default::default()
+        };
+        let mut status = Node::new(Role::Status);
+        status.set_author_id("status");
+        status.set_label("Saved");
+        status.set_bounds(bounds);
+        if let Some(live) = status_live {
+            status.set_live(live);
+        }
+        let mut chip = Node::new(Role::Label);
+        chip.set_author_id("chip");
+        chip.set_value("Active");
+        chip.set_bounds(bounds);
+        if let Some(live) = chip_live {
+            chip.set_live(live);
+        }
+        let mut row = Node::new(Role::ListBoxOption);
+        row.set_author_id("row");
+        row.set_label("Row");
+        row.set_selected(false);
+        row.add_action(Action::Click);
+        row.set_bounds(bounds);
+        let mut list = Node::new(if list_box {
+            Role::ListBox
+        } else {
+            Role::GenericContainer
+        });
+        list.set_children(vec![NodeId(4)]);
+        let mut window = Node::new(Role::Window);
+        window.set_children(vec![NodeId(2), NodeId(3), NodeId(5)]);
+        let update = TreeUpdate {
+            nodes: vec![
+                (NodeId(1), window),
+                (NodeId(2), status),
+                (NodeId(3), chip),
+                (NodeId(4), row),
+                (NodeId(5), list),
+            ],
+            tree: Some(Tree::new(NodeId(1))),
+            tree_id: TreeId::ROOT,
+            focus: NodeId(1),
+        };
+        (snapshot, update)
+    }
+
+    #[test]
+    fn accesskit_audit_requires_live_statuses_silent_chips_and_list_boxes() {
+        use egui::accesskit::Live;
+        let (snapshot, update) = live_and_list_fixture(Some(Live::Polite), None, true);
+        assert_eq!(audit_accesskit(&snapshot, &update), []);
+        let (snapshot, update) = live_and_list_fixture(Some(Live::Off), None, true);
+        assert_eq!(
+            audit_accesskit(&snapshot, &update),
+            [],
+            "a readout may opt out"
+        );
+
+        let (snapshot, update) = live_and_list_fixture(None, Some(Live::Polite), false);
+        let findings = audit_accesskit(&snapshot, &update);
+        assert!(findings.contains(&AccessKitMismatch::Live {
+            id: SemanticUiId::new("status")
+        }));
+        assert!(findings.contains(&AccessKitMismatch::Live {
+            id: SemanticUiId::new("chip")
+        }));
+        assert!(findings.contains(&AccessKitMismatch::Container {
+            id: SemanticUiId::new("row")
+        }));
+    }
 }

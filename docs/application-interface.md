@@ -287,5 +287,28 @@ invocations and 256 non-evicting mutation IDs per instance. Native request
 reading has a two-second deadline. These are engineering limits, not evidence
 that a whole domain collection was inspected. Unknown versions, stale
 instances/cursors/targets, unsupported arguments and unavailable actions fail
-explicitly. This interface provides no remote service, browser accessibility
-adapter, arbitrary evaluation or unrestricted state setter.
+explicitly. This interface provides no remote service, arbitrary evaluation or
+unrestricted state setter.
+
+## Use the browser accessibility tree
+
+Without `?automation=1`, a hosted browser application still exposes a hidden
+[ARIA layer](ui-guides/accessibility.md#browser-aria-layer). A general browser
+agent can use it with Playwright role locators or an accessibility-tree
+snapshot. It offers nothing that a pointer or keyboard user cannot do.
+
+- Find controls with `page.getByRole(role, { name, exact: true })`. Names are
+  the controls' accessible names, and states such as `pressed`, `selected` and
+  `disabled` are ARIA states.
+- Activate a control with `locator.dispatchEvent('click')` or
+  `locator.evaluate(element => element.click())`. Either becomes an AccessKit
+  click, which egui handles as a click on that control. For a physical click
+  at the control's centre, use `locator.click({ force: true })`.
+- A plain `locator.click()` waits and then fails, reporting that the canvas
+  intercepts pointer events. Layer elements pass the pointer through to the
+  canvas, so they are never hit targets.
+- Edit text with `locator.focus()`, then `page.keyboard.type(text)`.
+  `locator.fill()` is not supported, because layer elements are not form
+  inputs.
+- Read results from the tree again after a pass. A disabled control's
+  `aria-description` gives its reason.
