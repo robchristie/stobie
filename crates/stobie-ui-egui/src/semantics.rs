@@ -564,6 +564,52 @@ mod tests {
     use super::*;
     use crate::test_actions::TestAction;
 
+    /// Version 1 of the inspection protocol publishes these exact shapes.
+    #[test]
+    fn domain_reference_wire_format_is_stable() {
+        let cases = [
+            (
+                DomainReference::Pane(PaneId(3)),
+                r#"{"kind":"pane","value":3}"#,
+            ),
+            (
+                DomainReference::DockNode(DockNodeId(9)),
+                r#"{"kind":"dock_node","value":9}"#,
+            ),
+            (
+                DomainReference::Result(ResultId(734_219)),
+                r#"{"kind":"result","value":734219}"#,
+            ),
+            (
+                DomainReference::Annotation(AnnotationId(4)),
+                r#"{"kind":"annotation","value":4}"#,
+            ),
+            (
+                DomainReference::Thumbnail(TileKey {
+                    source: stobie_core::SourceId(2),
+                    level: 0,
+                    x: 7,
+                    y: 11,
+                }),
+                r#"{"kind":"thumbnail","value":{"source":2,"level":0,"x":7,"y":11}}"#,
+            ),
+            (
+                DomainReference::External {
+                    namespace: "records".into(),
+                    id: "1001".into(),
+                },
+                r#"{"kind":"external","value":{"namespace":"records","id":"1001"}}"#,
+            ),
+        ];
+        for (reference, json) in cases {
+            assert_eq!(serde_json::to_string(&reference).unwrap(), json);
+            assert_eq!(
+                serde_json::from_str::<DomainReference>(json).unwrap(),
+                reference
+            );
+        }
+    }
+
     fn sample() -> UiSnapshot {
         let root = SemanticUiId::root();
         UiSnapshot {

@@ -1599,6 +1599,65 @@ mod tests {
         assert!(load_persisted(&storage).is_none());
     }
 
+    fn rich_persisted() -> PersistedState {
+        let mut workspace = Workspace::analytical_default();
+        workspace.root.set_split_fraction(DockNodeId(1), 0.6);
+        assert!(toggle_diagnostics(&mut workspace));
+        let mut state = persisted(workspace);
+        state.preferences.font_scale = 1.25;
+        state.document.annotations.push(Polygon {
+            id: AnnotationId(0),
+            layer: LayerId(1),
+            vertices: vec![
+                WorldPoint::new(10.0, 20.0),
+                WorldPoint::new(30.5, 20.0),
+                WorldPoint::new(10.0, 40.25),
+            ],
+        });
+        state.document.next_annotation_id = 1;
+        state.session.selected_result = Some(ResultId(734_219));
+        state.session.selected_annotation = Some(AnnotationId(0));
+        state.session.cameras[2].link = Some(LinkGroupId(1));
+        state.session.cameras[3].camera = Camera {
+            centre: ImagePoint::new(8_192.0, 4_096.5),
+            pixels_per_screen_point: 3.0,
+        };
+        state
+            .session
+            .active_tools
+            .insert(PaneId(2), ActiveTool::Polygon);
+        state.display.insert(
+            PaneId(4),
+            DisplaySettingsDto {
+                low: 0.1,
+                high: 0.9,
+                map: 2,
+            },
+        );
+        state
+    }
+
+    /// The saved state as stored before the image domain left core. Moving
+    /// types between crates must not change this format.
+    const SAVED_STATE_V2: &str = include_str!("../tests/fixtures/saved-state-v2.ron");
+
+    #[test]
+    fn saved_state_fixture_loads_and_reencodes_unchanged() {
+        let fixture = SAVED_STATE_V2.trim_end();
+        let mut storage = MemoryStorage::default();
+        storage.0.insert(STORAGE_KEY.into(), fixture.into());
+        let restored = load_persisted(&storage).expect("the fixture is a valid saved state");
+        let expected = rich_persisted();
+        assert_eq!(restored.workspace, expected.workspace);
+        assert_eq!(restored.document, expected.document);
+        assert_eq!(restored.session, expected.session);
+        assert_eq!(restored.preferences, expected.preferences);
+        eframe::set_value(&mut storage, STORAGE_KEY, &restored);
+        assert_eq!(storage.0[STORAGE_KEY], fixture);
+        eframe::set_value(&mut storage, STORAGE_KEY, &expected);
+        assert_eq!(storage.0[STORAGE_KEY], fixture);
+    }
+
     fn persisted(workspace: Workspace) -> PersistedState {
         PersistedState {
             schema_version: LAYOUT_SCHEMA_VERSION,
