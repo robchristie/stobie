@@ -1,7 +1,7 @@
 # Compose an image application
 
-This guide covers the analytical image path: the image-specific core types,
-the asynchronous tile runtime and the GPU scalar renderer. Most applications
+This guide covers the analytical image path: the `stobie-imaging` domain
+crate, the asynchronous tile runtime and the GPU scalar renderer. Most applications
 need none of it; start with the [composition guide](application-composition.md),
 whose hosted path owns the per-pass plumbing. The Analytical Workspace Lab runs
 these types on that path; [Host an image application](#host-an-image-application)
@@ -12,19 +12,20 @@ shows how. The triangle example below still wires its pass by hand with
 
 | Owner | Application-facing entry points | Responsibility |
 |---|---|---|
-| `stobie-core` | `Document`, `Session`, `Workspace`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, one canonical dock tree, validated transitions and renderer-independent desired work |
+| `stobie-core` | `Workspace`, `PaneId`, `History` | One canonical dock tree, stable pane identity and generic undo history |
+| `stobie-imaging` | `Document`, `Session`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, validated image transitions and renderer-independent desired work |
 | `stobie-runtime` | `Runtime`, `RuntimeConfig`, `DecodeRequest`, `DecodeEvent`, `RequestToken` | Reconcile complete desired sets, bound CPU work and validate completion identity; independent of egui/wgpu |
 | `stobie-render-wgpu` | `RenderBridge`, `ScalarRenderer`, `ImageRenderRequest`, `RenderPlan` | Persistent GPU resources, bounded uploads, residency and typed image presentation |
-| `stobie-ui-egui` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey` | egui layout/interaction, narrow pane views and output sinks, typed capabilities and current-pass observations |
+| `stobie-ui-egui` with `image-rendering` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey`, `stage_render_callback` | egui layout/interaction, narrow pane views and output sinks, typed capabilities, current-pass observations and GPU image callbacks |
 
 Keep focus and hover in UI state. Durable annotations belong in `Document`;
 selection, cameras, tools and gesture preview belong in `Session`. Although
 session/workspace serialisation is supported, those owners remain distinct.
-The defaults are the analytical demo's starting state. A vector-only pane can
-use an empty camera/tool mapping; `Session::validate_image_cameras` specifically
-checks the Lab's image panes 1–4 and is not a generic pane-registry validator.
-Record Desk avoids these image-specific types entirely; compatibility defaults
-and the image camera contract remain unchanged.
+A new `Session` has no image panes: add a camera and a tool for each image
+pane, and check a restored session with `Session::validate_cameras`, passing
+your image panes. A vector-only pane needs neither. The Lab's starting layout,
+session and synthetic results live in the Lab. Record Desk avoids the imaging
+crate entirely.
 
 Use the core `Workspace` as the sole dock tree. `DockBehaviour` retains only
 drag/split previews, not a second layout. The host owns its GPU device/queue;

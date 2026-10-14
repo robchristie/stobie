@@ -2,6 +2,8 @@
 
 mod actions;
 mod app;
+mod demo;
+mod metrics;
 mod panes;
 mod thumbnail_cache;
 mod ui_geometry;

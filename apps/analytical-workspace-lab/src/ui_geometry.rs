@@ -1,6 +1,7 @@
 use eframe::egui;
 use serde::Serialize;
-use stobie_core::{DockNodeId, PaneId, ResultId};
+use stobie_core::{DockNodeId, PaneId};
+use stobie_imaging::ResultId;
 pub use stobie_ui_egui::UiRect;
 use stobie_ui_egui::{
     ActionButtonState, ActionTarget, Availability, SemanticUiId, TextAuditCoverage,

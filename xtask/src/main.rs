@@ -244,7 +244,14 @@ fn architecture() -> Result<()> {
     if !app_source.contains("if let Err(error) = submit_render_plan(&outputs.render_plan") {
         bail!("application shell must submit the complete typed frame render plan");
     }
-    let egui_integration = fs::read_to_string("crates/stobie-ui-egui/src/lib.rs")?;
+    let egui_integration = [
+        "crates/stobie-ui-egui/src/lib.rs",
+        "crates/stobie-ui-egui/src/image_rendering.rs",
+    ]
+    .iter()
+    .map(fs::read_to_string)
+    .collect::<std::io::Result<Vec<_>>>()?
+    .join("\n");
     if egui_integration.contains("request_repaint") {
         bail!("egui integration must report interaction activity through FrameOutput");
     }

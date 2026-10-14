@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 use stobie_core::*;
+use stobie_imaging::*;
 use stobie_render_wgpu::{
     DisplayMap, DisplaySettings, RenderBridge, ScalarRenderer, UploadAdmission,
 };
@@ -22,6 +23,8 @@ use web_time::Instant;
 use crate::{
     APPLICATION_NAME,
     actions::{ActionContext, LabAction, availability},
+    demo::{RESULT_COUNT, analytical_workspace, default_session, image_panes, result_at},
+    metrics::{DiagnosticsSnapshot, VirtualisationMetrics},
     panes::{
         AnnotationUiState, FrameOutput, PaneFeatureState, PaneIntent, PaneReadModel, PaneSurface,
         UiBehaviour, should_cancel_camera_drag,
@@ -156,7 +159,7 @@ impl From<DisplaySettingsDto> for DisplaySettings {
 fn persisted_state_is_valid(state: &PersistedState) -> bool {
     if state.schema_version != LAYOUT_SCHEMA_VERSION
         || state.workspace.validate().is_err()
-        || state.session.validate_image_cameras().is_err()
+        || state.session.validate_cameras(&image_panes()).is_err()
     {
         return false;
     }
@@ -301,9 +304,9 @@ impl Lab {
             )
         } else {
             (
-                Workspace::analytical_default(),
+                analytical_workspace(),
                 Document::default(),
-                Session::default(),
+                default_session(),
                 default_display(),
             )
         };
@@ -493,7 +496,7 @@ impl Lab {
                 return Ok(());
             }
             TestAction::RestoreDefaultWorkspace => {
-                self.workspace = Workspace::analytical_default();
+                self.workspace = analytical_workspace();
                 self.record_repaint(RepaintReason::Command);
                 return Ok(());
             }
@@ -1277,8 +1280,8 @@ impl Application for Lab {
                 true
             }
             LabAction::ResetWorkspace => {
-                self.workspace = Workspace::analytical_default();
-                self.session = Session::default();
+                self.workspace = analytical_workspace();
+                self.session = default_session();
                 self.status = "Default workspace restored".into();
                 true
             }
@@ -1365,9 +1368,9 @@ impl Application for Lab {
                     .session
                     .selected_result
                     .ok_or("No result is selected")?;
-                self.execute_image_intent(ImageIntent::RecenterOnResult {
-                    result,
+                self.execute_image_intent(ImageIntent::Recentre {
                     pane: PaneId(1),
+                    centre: result_at(result.0).position,
                 })?;
                 true
             }
@@ -1568,7 +1571,7 @@ mod tests {
     #[test]
     fn former_saved_workspace_survives_load_save_and_restart() {
         let mut storage = MemoryStorage::default();
-        let mut state = persisted(Workspace::analytical_default());
+        let mut state = persisted(analytical_workspace());
         state.preferences.font_scale = 1.25;
         eframe::set_value(&mut storage, LEGACY_STORAGE_KEY, &state);
         let legacy = storage.0[LEGACY_STORAGE_KEY].clone();
@@ -1600,7 +1603,7 @@ mod tests {
     }
 
     fn rich_persisted() -> PersistedState {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical_workspace();
         workspace.root.set_split_fraction(DockNodeId(1), 0.6);
         assert!(toggle_diagnostics(&mut workspace));
         let mut state = persisted(workspace);
@@ -1664,7 +1667,7 @@ mod tests {
             preferences: UiPreferences::default(),
             workspace,
             document: Document::default(),
-            session: Session::default(),
+            session: default_session(),
             display: default_display()
                 .into_iter()
                 .map(|(pane, settings)| (pane, settings.into()))
@@ -1674,7 +1677,7 @@ mod tests {
 
     #[test]
     fn restoration_rejects_a_structurally_valid_unknown_pane() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical_workspace();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(1),
             tabs: vec![PaneId(99)],
@@ -1688,7 +1691,7 @@ mod tests {
 
     #[test]
     fn restoration_rejects_missing_registered_panes() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical_workspace();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(1),
             tabs: vec![PaneId(1)],
@@ -1702,7 +1705,7 @@ mod tests {
 
     #[test]
     fn restoration_rejects_dangling_selection_and_invalid_display() {
-        let mut state = persisted(Workspace::analytical_default());
+        let mut state = persisted(analytical_workspace());
         state.session.selected_annotation = Some(AnnotationId(42));
         assert!(!persisted_state_is_valid(&state));
         state.session.selected_annotation = None;
@@ -1712,7 +1715,7 @@ mod tests {
 
     #[test]
     fn persisted_state_without_preferences_migrates_to_safe_defaults() {
-        let mut value = serde_json::to_value(persisted(Workspace::analytical_default())).unwrap();
+        let mut value = serde_json::to_value(persisted(analytical_workspace())).unwrap();
         value.as_object_mut().unwrap().remove("preferences");
         let restored: PersistedState = serde_json::from_value(value).unwrap();
         assert_eq!(restored.preferences, UiPreferences::default());
@@ -1721,7 +1724,7 @@ mod tests {
 
     #[test]
     fn closed_diagnostics_restores_without_losing_analytical_state() {
-        let mut state = persisted(Workspace::analytical_default());
+        let mut state = persisted(analytical_workspace());
         state.document.annotations.push(Polygon {
             id: AnnotationId(7),
             layer: LayerId(1),
@@ -1769,7 +1772,7 @@ mod tests {
 
     #[test]
     fn restoration_rejects_unknown_closed_panes() {
-        let mut state = persisted(Workspace::analytical_default());
+        let mut state = persisted(analytical_workspace());
         state.workspace.closed_optional_panes.insert(PaneId(99));
         assert!(!persisted_state_is_valid(&state));
     }
@@ -1786,7 +1789,7 @@ mod tests {
                 WorldPoint::new(0.0, 1.0),
             ],
         });
-        let mut session = Session::default();
+        let mut session = default_session();
         let mut display = default_display();
         let settings = DisplaySettings {
             window_low: 0.2,
@@ -1833,7 +1836,7 @@ mod tests {
     #[test]
     fn invalid_pane_intents_do_not_mutate_authoritative_state() {
         let document = Document::default();
-        let mut session = Session::default();
+        let mut session = default_session();
         let original_session = session.clone();
         let mut display = default_display();
         let original_display = display.clone();

@@ -1,12 +1,12 @@
 use eframe::egui;
-use stobie_core::{
-    DemandPriority, ImageIntent, PaneId, ResultId, SourceId, THUMBNAIL_COUNT, TileDemand, TileKey,
-    VirtualisationMetrics,
-};
+use stobie_core::PaneId;
+use stobie_imaging::{DemandPriority, ImageIntent, ResultId, SourceId, TileDemand, TileKey};
+
+use crate::{demo::THUMBNAIL_COUNT, metrics::VirtualisationMetrics};
 use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, TextOverflow, TextRole, ThumbnailCellSpec,
-    ThumbnailState, UiNode, UiRole, VirtualGridPresenter, measured_content_label, thumbnail_cell,
-    thumbnail_cell_side,
+    ThumbnailState, TileReference, UiNode, UiRole, VirtualGridPresenter, measured_content_label,
+    thumbnail_cell, thumbnail_cell_side,
 };
 
 use crate::thumbnail_cache::ThumbnailCache;
@@ -128,7 +128,12 @@ pub fn show(
                         checked: None,
                         expanded: None,
                         pane: Some(PaneId(6)),
-                        domain_reference: Some(DomainReference::Thumbnail(key)),
+                        domain_reference: Some(DomainReference::Thumbnail(TileReference {
+                            source: key.source.0,
+                            level: key.level,
+                            x: key.x,
+                            y: key.y,
+                        })),
                         actions: Vec::new(),
                         text_selectable: false,
                         disabled_reason: None,

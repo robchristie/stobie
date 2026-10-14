@@ -1,6 +1,9 @@
 #![cfg(test)]
 
+use std::collections::BTreeSet;
+
 use serde::Serialize;
+use stobie_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, SplitAxis, Workspace};
 
 use crate::{ActionKey, ActionScope, ActionShortcut, ActionSpec, ShortcutKey};
 
@@ -81,5 +84,51 @@ impl ActionKey for TestAction {
             shortcut,
             scope,
         }
+    }
+}
+
+/// The Lab's eight-pane layout, as a dock fixture.
+pub(crate) fn analytical_workspace() -> Workspace {
+    let tabs = |id, ids: &[u32]| DockNode::Tabs {
+        id: DockNodeId(id),
+        tabs: ids.iter().copied().map(PaneId).collect(),
+        active: 0,
+    };
+    Workspace {
+        schema_version: LAYOUT_SCHEMA_VERSION,
+        active_pane: PaneId(1),
+        closed_optional_panes: BTreeSet::new(),
+        next_node_id: 12,
+        root: DockNode::Split {
+            id: DockNodeId(1),
+            axis: SplitAxis::Horizontal,
+            fraction: 0.72,
+            first: Box::new(DockNode::Split {
+                id: DockNodeId(2),
+                axis: SplitAxis::Vertical,
+                fraction: 0.68,
+                first: Box::new(DockNode::Split {
+                    id: DockNodeId(3),
+                    axis: SplitAxis::Horizontal,
+                    fraction: 0.5,
+                    first: Box::new(tabs(4, &[1])),
+                    second: Box::new(tabs(5, &[2])),
+                }),
+                second: Box::new(DockNode::Split {
+                    id: DockNodeId(6),
+                    axis: SplitAxis::Horizontal,
+                    fraction: 0.5,
+                    first: Box::new(tabs(7, &[3])),
+                    second: Box::new(tabs(8, &[4])),
+                }),
+            }),
+            second: Box::new(DockNode::Split {
+                id: DockNodeId(9),
+                axis: SplitAxis::Vertical,
+                fraction: 0.52,
+                first: Box::new(tabs(10, &[5, 6])),
+                second: Box::new(tabs(11, &[7, 8])),
+            }),
+        },
     }
 }

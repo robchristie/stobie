@@ -13,7 +13,7 @@ use web_sys::{ErrorEvent, MessageEvent, Worker, WorkerOptions, WorkerType};
 struct TransferPixels {
     width: u32,
     height: u32,
-    layout: stobie_core::SampleLayout,
+    layout: stobie_imaging::SampleLayout,
     precision: u8,
     #[serde(with = "serde_wasm_bindgen::preserve")]
     samples: js_sys::Uint16Array,
@@ -44,9 +44,9 @@ fn decode_event(value: JsValue) -> Result<Event, JsValue> {
         });
     }
     // Typed transfer plus one exact-sized WASM copy stays within the reserved pair.
-    let pixels = stobie_core::RegionalFrame {
+    let pixels = stobie_imaging::RegionalFrame {
         validity: (c.pixels.validity.length() > 0).then(|| c.pixels.validity.to_vec()),
-        pixels: stobie_core::RegionalPixels {
+        pixels: stobie_imaging::RegionalPixels {
             width: c.pixels.width,
             height: c.pixels.height,
             layout: c.pixels.layout,

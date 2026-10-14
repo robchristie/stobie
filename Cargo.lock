@@ -167,6 +167,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "stobie-core",
+ "stobie-imaging",
  "stobie-render-wgpu",
  "stobie-runtime",
  "stobie-ui-egui",
@@ -1091,6 +1092,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "stobie-core",
+ "stobie-imaging",
  "stobie-render-wgpu",
  "stobie-runtime",
  "stobie-ui-egui",
@@ -3610,12 +3612,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "stobie-imaging"
+version = "0.1.6"
+dependencies = [
+ "serde",
+ "serde_json",
+ "stobie-core",
+]
+
+[[package]]
 name = "stobie-render-wgpu"
 version = "0.1.6"
 dependencies = [
  "bytemuck",
  "parking_lot",
  "stobie-core",
+ "stobie-imaging",
  "stobie-runtime",
  "tracing",
  "web-time",
@@ -3630,7 +3642,7 @@ dependencies = [
  "lz4_flex",
  "parking_lot",
  "serde",
- "stobie-core",
+ "stobie-imaging",
  "tracing",
  "web-time",
 ]

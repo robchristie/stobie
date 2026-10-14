@@ -2,7 +2,7 @@
 use anyhow::{Result, ensure};
 use emuella_viewer_source::{ClientLimits, Manifest, Region, SharedClient};
 use serde::{Deserialize, Serialize};
-use stobie_core::{RegionalFrame, RegionalPixels, RepresentationId, SampleLayout};
+use stobie_imaging::{RegionalFrame, RegionalPixels, RepresentationId, SampleLayout};
 use stobie_runtime::RegionalRequest;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -371,7 +371,7 @@ impl Engine {
 #[cfg(test)]
 pub(crate) mod diagnostic_tests {
     use super::*;
-    use stobie_core::{ImageRegion, RegionKey, SourceStage};
+    use stobie_imaging::{ImageRegion, RegionKey, SourceStage};
     use stobie_runtime::RequestToken;
     pub(crate) fn job() -> Job {
         let manifest: Manifest = serde_json::from_value(serde_json::json!({

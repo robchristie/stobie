@@ -593,51 +593,6 @@ impl Workspace {
         }
     }
 
-    pub fn analytical_default() -> Self {
-        let tabs = |id, ids: &[u32]| DockNode::Tabs {
-            id: DockNodeId(id),
-            tabs: ids.iter().copied().map(PaneId).collect(),
-            active: 0,
-        };
-        Self {
-            schema_version: LAYOUT_SCHEMA_VERSION,
-            active_pane: PaneId(1),
-            closed_optional_panes: BTreeSet::new(),
-            next_node_id: 12,
-            root: DockNode::Split {
-                id: DockNodeId(1),
-                axis: SplitAxis::Horizontal,
-                fraction: 0.72,
-                first: Box::new(DockNode::Split {
-                    id: DockNodeId(2),
-                    axis: SplitAxis::Vertical,
-                    fraction: 0.68,
-                    first: Box::new(DockNode::Split {
-                        id: DockNodeId(3),
-                        axis: SplitAxis::Horizontal,
-                        fraction: 0.5,
-                        first: Box::new(tabs(4, &[1])),
-                        second: Box::new(tabs(5, &[2])),
-                    }),
-                    second: Box::new(DockNode::Split {
-                        id: DockNodeId(6),
-                        axis: SplitAxis::Horizontal,
-                        fraction: 0.5,
-                        first: Box::new(tabs(7, &[3])),
-                        second: Box::new(tabs(8, &[4])),
-                    }),
-                }),
-                second: Box::new(DockNode::Split {
-                    id: DockNodeId(9),
-                    axis: SplitAxis::Vertical,
-                    fraction: 0.52,
-                    first: Box::new(tabs(10, &[5, 6])),
-                    second: Box::new(tabs(11, &[7, 8])),
-                }),
-            },
-        }
-    }
-
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != LAYOUT_SCHEMA_VERSION {
             return Err(format!("unsupported layout schema {}", self.schema_version));
@@ -779,10 +734,55 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
+    /// Eight panes: four in a 2×2 grid beside two tab groups of two.
+    fn analytical() -> Workspace {
+        let tabs = |id, ids: &[u32]| DockNode::Tabs {
+            id: DockNodeId(id),
+            tabs: ids.iter().copied().map(PaneId).collect(),
+            active: 0,
+        };
+        Workspace {
+            schema_version: LAYOUT_SCHEMA_VERSION,
+            active_pane: PaneId(1),
+            closed_optional_panes: BTreeSet::new(),
+            next_node_id: 12,
+            root: DockNode::Split {
+                id: DockNodeId(1),
+                axis: SplitAxis::Horizontal,
+                fraction: 0.72,
+                first: Box::new(DockNode::Split {
+                    id: DockNodeId(2),
+                    axis: SplitAxis::Vertical,
+                    fraction: 0.68,
+                    first: Box::new(DockNode::Split {
+                        id: DockNodeId(3),
+                        axis: SplitAxis::Horizontal,
+                        fraction: 0.5,
+                        first: Box::new(tabs(4, &[1])),
+                        second: Box::new(tabs(5, &[2])),
+                    }),
+                    second: Box::new(DockNode::Split {
+                        id: DockNodeId(6),
+                        axis: SplitAxis::Horizontal,
+                        fraction: 0.5,
+                        first: Box::new(tabs(7, &[3])),
+                        second: Box::new(tabs(8, &[4])),
+                    }),
+                }),
+                second: Box::new(DockNode::Split {
+                    id: DockNodeId(9),
+                    axis: SplitAxis::Vertical,
+                    fraction: 0.52,
+                    first: Box::new(tabs(10, &[5, 6])),
+                    second: Box::new(tabs(11, &[7, 8])),
+                }),
+            },
+        }
+    }
 
     #[test]
     fn workspace_changes_report_whether_they_changed_the_tree() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let mut panes = Vec::new();
         workspace.root.pane_ids(&mut panes);
         let (first, second) = (panes[0], panes[1]);
@@ -824,7 +824,7 @@ mod tests {
     }
     #[test]
     fn layout_only_resize_rejects_stale_invalid_and_missing_outputs_without_mutation() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let before = workspace.clone();
         for output in [
             WorkspaceResize {
@@ -876,7 +876,7 @@ mod tests {
     #[test]
     fn restored_layout_rejects_invalid_split_and_tab_structure() {
         for fraction in [f32::NAN, f32::INFINITY, -0.1, 1.1] {
-            let mut workspace = Workspace::analytical_default();
+            let mut workspace = analytical();
             if let DockNode::Split {
                 fraction: value, ..
             } = &mut workspace.root
@@ -894,7 +894,7 @@ mod tests {
                 },
                 active_pane: PaneId(1),
                 next_node_id: 2,
-                ..Workspace::analytical_default()
+                ..analytical()
             };
             assert!(workspace.validate().is_err());
         }
@@ -903,7 +903,7 @@ mod tests {
 
     #[test]
     fn workspace_commands_undo_resizes_activations_and_moves() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let original = workspace.clone();
         let mut history = crate::History::default();
         let execute = |change, workspace: &mut Workspace, history: &mut crate::History<_>| {
@@ -944,7 +944,7 @@ mod tests {
 
     #[test]
     fn workspace_commands_skip_unchanged_changes_and_reject_stale_ones() {
-        let workspace = Workspace::analytical_default();
+        let workspace = analytical();
         let unchanged = [
             WorkspaceChange::Activate(PaneId(1)),
             WorkspaceChange::Activate(PaneId(99)),
@@ -988,7 +988,7 @@ mod tests {
 
     #[test]
     fn consecutive_resizes_of_one_split_merge_into_one_entry() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let mut history = crate::History::default();
         for (node, before, after) in [(1, 0.72, 0.77), (1, 0.77, 0.82), (2, 0.68, 0.6)] {
             let resize = WorkspaceResize {
@@ -1005,7 +1005,7 @@ mod tests {
         assert_eq!(history.undo_len(), 2);
         history.undo(&mut workspace).unwrap();
         history.undo(&mut workspace).unwrap();
-        assert_eq!(workspace, Workspace::analytical_default());
+        assert_eq!(workspace, analytical());
 
         // Nudging back to the start leaves no undo step.
         let mut history = crate::History::default();
@@ -1022,13 +1022,13 @@ mod tests {
                 .unwrap();
         }
         assert_eq!(history.undo_len(), 0);
-        assert_eq!(workspace, Workspace::analytical_default());
+        assert_eq!(workspace, analytical());
     }
 
     #[test]
     fn undoing_an_activation_restores_a_hidden_active_pane_without_showing_it() {
         // Panes 5 and 6 share a group that shows 5, while 6 is the active pane.
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         workspace.active_pane = PaneId(6);
         workspace.validate().unwrap();
         let original = workspace.clone();
@@ -1045,7 +1045,7 @@ mod tests {
 
     #[test]
     fn resize_commands_reject_fractions_outside_the_split_range() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let resize = |before, after| {
             WorkspaceCommand::Resize(WorkspaceResize {
                 node: DockNodeId(1),
@@ -1055,12 +1055,12 @@ mod tests {
         };
         assert!(resize(0.72, 0.99).apply(&mut workspace).is_err());
         assert!(resize(0.05, 0.6).revert(&mut workspace).is_err());
-        assert_eq!(workspace, Workspace::analytical_default());
+        assert_eq!(workspace, analytical());
     }
 
     #[test]
     fn canonical_tree_has_stable_unique_panes() {
-        let workspace = Workspace::analytical_default();
+        let workspace = analytical();
         workspace.validate().unwrap();
         let mut panes = Vec::new();
         workspace.root.pane_ids(&mut panes);
@@ -1069,7 +1069,7 @@ mod tests {
 
     #[test]
     fn layout_serialisation_round_trip_is_exact() {
-        let workspace = Workspace::analytical_default();
+        let workspace = analytical();
         let encoded = serde_json::to_string(&workspace).unwrap();
         let restored: Workspace = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, workspace);
@@ -1078,7 +1078,7 @@ mod tests {
 
     #[test]
     fn rejects_duplicate_pane_ids() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(1),
             tabs: vec![PaneId(1), PaneId(1)],
@@ -1089,7 +1089,7 @@ mod tests {
 
     #[test]
     fn rejects_unknown_persistence_schema() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         workspace.schema_version = LAYOUT_SCHEMA_VERSION + 1;
         assert_eq!(
             workspace.validate(),
@@ -1102,7 +1102,7 @@ mod tests {
 
     #[test]
     fn rearrangement_mutates_only_the_canonical_tree() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         assert!(workspace.move_pane(PaneId(2), PaneId(1), DockDrop::Tab));
         workspace.validate().unwrap();
         assert_eq!(workspace.active_pane, PaneId(2));
@@ -1115,7 +1115,7 @@ mod tests {
 
     #[test]
     fn node_ids_remain_unique_after_side_drop() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         assert!(workspace.move_pane(PaneId(2), PaneId(4), DockDrop::Left));
         workspace.validate().unwrap();
         let mut node_ids = Vec::new();
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[test]
     fn invalid_move_target_preserves_the_workspace() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         let before = workspace.clone();
         assert!(!workspace.move_pane(PaneId(2), PaneId(99), DockDrop::Tab));
         assert_eq!(workspace, before);
@@ -1136,7 +1136,7 @@ mod tests {
 
     #[test]
     fn close_and_reopen_preserve_a_valid_unique_dock() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         workspace.activate(PaneId(8));
         assert!(workspace.close_pane(PaneId(8)));
         workspace.validate().unwrap();
@@ -1155,7 +1155,7 @@ mod tests {
 
     #[test]
     fn close_prunes_an_empty_branch_and_round_trips() {
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical();
         assert!(workspace.move_pane(PaneId(8), PaneId(7), DockDrop::Bottom));
         let nodes_before = workspace.root.node_count();
         assert!(workspace.close_pane(PaneId(8)));
@@ -1170,7 +1170,7 @@ mod tests {
 
     #[test]
     fn closing_an_inactive_earlier_tab_keeps_the_selected_pane_visible() {
-        let mut arranged = Workspace::analytical_default();
+        let mut arranged = analytical();
         assert!(arranged.move_pane(PaneId(7), PaneId(8), DockDrop::Tab));
         assert!(arranged.move_pane(PaneId(1), PaneId(7), DockDrop::Tab));
         arranged.activate(PaneId(7));
@@ -1198,7 +1198,7 @@ mod tests {
             },
             active_pane: PaneId(1),
             next_node_id: 2,
-            ..Workspace::analytical_default()
+            ..analytical()
         };
         let before = workspace.clone();
         assert!(!workspace.close_pane(PaneId(1)));

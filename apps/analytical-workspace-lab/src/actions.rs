@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
-use stobie_core::{AnnotationId, PaneId, ResultId};
+use stobie_core::PaneId;
+use stobie_imaging::{AnnotationId, ResultId};
 use stobie_ui_egui::{Action, Availability};
 
-pub(crate) fn polygon_vertex_count(gesture: Option<&stobie_core::GesturePreview>) -> usize {
+pub(crate) fn polygon_vertex_count(gesture: Option<&stobie_imaging::GesturePreview>) -> usize {
     match gesture {
-        Some(stobie_core::GesturePreview::Polygon { vertices, .. }) => vertices.len(),
+        Some(stobie_imaging::GesturePreview::Polygon { vertices, .. }) => vertices.len(),
         _ => 0,
     }
 }
@@ -13,10 +14,10 @@ pub(crate) fn polygon_vertex_count(gesture: Option<&stobie_core::GesturePreview>
 pub(crate) fn fit_view_intent(
     pane: PaneId,
     rect: stobie_ui_egui::UiRect,
-) -> stobie_core::ImageIntent {
-    stobie_core::ImageIntent::SetCamera {
+) -> stobie_imaging::ImageIntent {
+    stobie_imaging::ImageIntent::SetCamera {
         pane,
-        camera: stobie_core::Camera::fit(
+        camera: stobie_imaging::Camera::fit(
             f64::from(rect.max_x - rect.min_x),
             f64::from(rect.max_y - rect.min_y),
         ),

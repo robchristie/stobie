@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
-use stobie_core::{AnnotationId, DockNodeId, PaneId, ResultId, TileKey};
+use stobie_core::{DockNodeId, PaneId};
 
 use crate::{ActionKey, TextAuditCoverage, TextAuditFinding, TextLayoutObservation};
 
@@ -139,19 +139,39 @@ pub enum UiRole {
     Section,
 }
 
+/// The domain identity a semantic node presents, published to agents as
+/// `{"kind": ..., "value": ...}`.
+///
+/// `Result`, `Annotation` and `Thumbnail` are image-application kinds that
+/// version 1 of the inspection protocol already publishes; they carry the
+/// image IDs' plain values, so the framework needs no image types. Other
+/// applications use [`DomainReference::External`].
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum DomainReference {
     Pane(PaneId),
     DockNode(DockNodeId),
-    Result(ResultId),
-    Annotation(AnnotationId),
-    Thumbnail(TileKey),
+    /// An analysis result's ID.
+    Result(u64),
+    /// A durable annotation's ID.
+    Annotation(u64),
+    /// A thumbnail's tile.
+    Thumbnail(TileReference),
     /// An application-owned domain identity, independent of labels and row positions.
     External {
         namespace: String,
         id: String,
     },
+}
+
+/// A tile's identity in a [`DomainReference::Thumbnail`]: its source, pyramid
+/// level and column and row at that level.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct TileReference {
+    pub source: u32,
+    pub level: u8,
+    pub x: u32,
+    pub y: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -577,16 +597,16 @@ mod tests {
                 r#"{"kind":"dock_node","value":9}"#,
             ),
             (
-                DomainReference::Result(ResultId(734_219)),
+                DomainReference::Result(734_219),
                 r#"{"kind":"result","value":734219}"#,
             ),
             (
-                DomainReference::Annotation(AnnotationId(4)),
+                DomainReference::Annotation(4),
                 r#"{"kind":"annotation","value":4}"#,
             ),
             (
-                DomainReference::Thumbnail(TileKey {
-                    source: stobie_core::SourceId(2),
+                DomainReference::Thumbnail(TileReference {
+                    source: 2,
                     level: 0,
                     x: 7,
                     y: 11,

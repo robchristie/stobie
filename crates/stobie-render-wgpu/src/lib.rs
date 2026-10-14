@@ -9,7 +9,8 @@
 //! of decoded tile identity.
 //!
 //! ```
-//! use stobie_core::{Camera, PaneId, PhysicalPoint, SourceId};
+//! use stobie_core::{PaneId, PhysicalPoint};
+//! use stobie_imaging::{Camera, SourceId};
 //! use stobie_render_wgpu::{DisplaySettings, ImageRenderRequest,
 //!     PhysicalViewport, RenderPlan};
 //! let mut plan = RenderPlan::default();
@@ -48,7 +49,8 @@ use std::{
 
 use bytemuck::{Pod, Zeroable};
 use parking_lot::Mutex;
-use stobie_core::{Camera, PaneId, PhysicalPoint, RenderMetrics, SourceId, TileKey};
+use stobie_core::{PaneId, PhysicalPoint};
+use stobie_imaging::{Camera, RenderMetrics, SourceId, TileKey};
 use stobie_runtime::{
     DEFAULT_CACHE_BUDGET, DEFAULT_UPLOAD_BUDGET, DecodeEvent, RequestToken, TileCache,
 };
@@ -546,8 +548,8 @@ impl ScalarRenderer {
                 let texture = device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("stobie R16Uint scalar tile"),
                     size: wgpu::Extent3d {
-                        width: stobie_core::TILE_SIZE,
-                        height: stobie_core::TILE_SIZE,
+                        width: stobie_imaging::TILE_SIZE,
+                        height: stobie_imaging::TILE_SIZE,
                         depth_or_array_layers: 1,
                     },
                     mip_level_count: 1,
@@ -567,12 +569,12 @@ impl ScalarRenderer {
                     &scalar_u16_le,
                     wgpu::TexelCopyBufferLayout {
                         offset: 0,
-                        bytes_per_row: Some(stobie_core::TILE_SIZE * 2),
-                        rows_per_image: Some(stobie_core::TILE_SIZE),
+                        bytes_per_row: Some(stobie_imaging::TILE_SIZE * 2),
+                        rows_per_image: Some(stobie_imaging::TILE_SIZE),
                     },
                     wgpu::Extent3d {
-                        width: stobie_core::TILE_SIZE,
-                        height: stobie_core::TILE_SIZE,
+                        width: stobie_imaging::TILE_SIZE,
+                        height: stobie_imaging::TILE_SIZE,
                         depth_or_array_layers: 1,
                     },
                 );
@@ -654,7 +656,7 @@ fn tile_ndc_rect(request: &ImageRenderRequest, key: TileKey) -> [f32; 4] {
     let scale = request.viewport.scale_factor.max(f32::EPSILON) as f64;
     let viewport_width = request.viewport.size.x / scale;
     let viewport_height = request.viewport.size.y / scale;
-    let tile_extent = stobie_core::TILE_SIZE as f64 * 2_f64.powi(key.level as i32);
+    let tile_extent = stobie_imaging::TILE_SIZE as f64 * 2_f64.powi(key.level as i32);
     let left = viewport_width * 0.5
         + (key.x as f64 * tile_extent - request.camera.centre.x)
             / request.camera.pixels_per_screen_point;
@@ -709,7 +711,7 @@ fn viridis(t: f32) -> vec3<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stobie_core::{ImagePoint, SourceId};
+    use stobie_imaging::{ImagePoint, SourceId};
 
     fn key(x: u32) -> TileKey {
         TileKey {
