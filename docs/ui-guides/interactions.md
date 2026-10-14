@@ -26,12 +26,14 @@ not silently consume an unavailable action.
 Use the registered shortcut only in its valid scope. Pane shortcuts require an
 active pane and non-command shortcuts yield to a focused text field (an egui
 `TextEdit` or an observed, focused text input), not to a focused button or
-viewport. A hosted application's shortcuts dispatch through `AppHost`:
-modifiers must match exactly, and an unavailable shortcut leaves its key press
-unconsumed, so a Shift chord never falls through to its plain counterpart. Tabs
-support roving Left/Right/Home/End plus Enter/Space activation. Splitters
-expose the same 0.05 adjustment through keyboard and semantic
-increment/decrement paths as they do through the gesture command path.
+viewport. Plain Enter and Space also yield to a focused control they activate,
+but reach a focused observed viewport. A hosted application's shortcuts
+dispatch through `AppHost`: modifiers must match exactly, and an unavailable
+shortcut leaves its key press unconsumed, so a Shift chord never falls through
+to its plain counterpart. Tabs support roving Left/Right/Home/End plus
+Enter/Space activation. Splitters expose the same 0.05 adjustment through
+keyboard and semantic increment/decrement paths as they do through the gesture
+command path.
 
 Use stable IDs and current semantic geometry for physical automation. During a
 drag, preserve the original press position when delayed drag recognition is

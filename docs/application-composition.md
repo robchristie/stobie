@@ -125,17 +125,19 @@ shortcuts, then your `ui`. Shortcuts need exact modifiers and an available
 action. A shortcut without `Cmd` does not fire while a text field has keyboard
 focus, so typing reaches the field; give text-adjacent actions a `Cmd` chord. A
 text field is an egui `TextEdit`, or a custom control you observe with the
-`TextInput` or `MultilineTextInput` role and `focused` set. Focus on a button
-or a clicked viewport does not block shortcuts. It publishes the completed
-observation and calls `completed`. Then it applies this pass's data intents in
-emission order (`order_intents` can rearrange them), followed by its actions,
-rechecking each action's availability first. It repaints only when state
-changed, an error was shown, a dock drag is active or you call
-`Frame::request_repaint(reason)`; `Frame::request_repaint_after(reason, delay)`
-schedules a later pass. To persist to eframe storage, implement
-`Application::save`; return true from `take_save_request` after an action such
-as "Save layout" to save at once. The `AppHost` rustdoc gives the exact
-contract.
+`TextInput` or `MultilineTextInput` role and `focused` set. Other focus, such
+as a clicked viewport, does not block shortcuts, except that plain `Enter` and
+`Space` yield to a focused button, tab or other control that they activate. A
+viewport observed with the `Viewport` role and `focused` set still receives
+them. It publishes the completed observation and calls `completed`. Then it
+applies this pass's data intents in emission order (`order_intents` can
+rearrange them), followed by its actions, rechecking each action's availability
+first. It repaints only when state changed, an error was shown, a dock drag is
+active or you call `Frame::request_repaint(reason)`;
+`Frame::request_repaint_after(reason, delay)` schedules a later pass. To
+persist to eframe storage, implement `Application::save`; return true from
+`take_save_request` after an action such as "Save layout" to save at once. The
+`AppHost` rustdoc gives the exact contract.
 
 Presentation contexts, choice and range recipes, and the dock register their
 semantic nodes and measured text automatically, and a discarded layout pass is

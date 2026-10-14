@@ -107,8 +107,10 @@ pub use semantics::*;
 /// A shortcut without `Cmd` does not fire while a text field has keyboard
 /// focus, so typing is never captured; give text-adjacent actions a `Cmd` chord.
 /// A text field is an egui `TextEdit` or a node observed as a focused
-/// `TextInput` or `MultilineTextInput`. Focus on a button or viewport does not
-/// block shortcuts.
+/// `TextInput` or `MultilineTextInput`. Other focus does not block shortcuts,
+/// except that plain `Enter` and `Space` yield to a focused control they
+/// activate, such as a button or tab; a focused viewport observed with the
+/// `Viewport` role still receives them.
 ///
 /// Every action is semantically invocable by default. Declare `physical_only`
 /// with a reason when physical input is required, for example because the

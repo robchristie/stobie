@@ -40,6 +40,12 @@ enum Act {
     #[action(label = "Recenter", description = "Recentre the view", shortcut = "R")]
     Recenter,
     #[action(
+        label = "Confirm",
+        description = "Confirm the edit",
+        shortcut = "Enter"
+    )]
+    Confirm,
+    #[action(
         label = "Level",
         description = "Choose a level",
         physical_only = "Chooses a value"
@@ -90,6 +96,7 @@ struct Counter {
     active_pane: Option<PaneId>,
     fitted: Vec<PaneId>,
     recentred: u64,
+    confirmed: u64,
     focus_probe: Option<FocusProbe>,
     errors: Vec<String>,
     discard_first_pass: bool,
@@ -319,6 +326,7 @@ impl Application for Counter {
             Act::Explode => return Err("Exploded".into()),
             Act::Fit => self.fitted.push(target.pane.expect("pane-scoped")),
             Act::Recenter => self.recentred += 1,
+            Act::Confirm => self.confirmed += 1,
             Act::Level => return Ok(false),
         }
         Ok(true)
@@ -769,6 +777,30 @@ fn plain_shortcuts_run_while_a_viewport_or_button_has_focus() {
     assert!(harness.ctx.egui_wants_keyboard_input());
     type_r(&mut harness);
     assert_eq!(host(&harness).app().recentred, 2);
+}
+
+#[test]
+fn enter_reaches_a_focused_viewport_but_activates_a_focused_button() {
+    let mut harness = harness(Counter {
+        focus_probe: Some(FocusProbe::Viewport),
+        ..Default::default()
+    });
+    focus_probe(&mut harness);
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(host(&harness).app().confirmed, 1);
+
+    // A focused button activates with Enter, so the plain shortcut yields.
+    harness.get_by_label("Increment").click();
+    harness.run();
+    assert_eq!(host(&harness).app().count, 1);
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(host(&harness).app().count, 2);
+    assert_eq!(host(&harness).app().confirmed, 1);
+    // Other plain keys still reach the shortcut.
+    type_r(&mut harness);
+    assert_eq!(host(&harness).app().recentred, 1);
 }
 
 #[test]

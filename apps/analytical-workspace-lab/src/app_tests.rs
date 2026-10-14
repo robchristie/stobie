@@ -218,6 +218,24 @@ fn plain_key_shortcuts_reach_a_clicked_viewport() {
     harness.run_steps(2);
     assert_eq!(tool(&harness), Some(ActiveTool::Navigate));
     assert!(harness.ctx.egui_wants_keyboard_input());
+
+    // Enter commits a polygon drawn in the focused image: the viewport is not
+    // a control that Enter activates.
+    harness.key_press(egui::Key::Num2);
+    harness.run_steps(2);
+    let undo_before = host(&harness).app().history.undo_len();
+    for offset in [0.0, 40.0, 80.0] {
+        click(
+            &mut harness,
+            rect.center() + egui::vec2(offset, offset * 0.5),
+        );
+    }
+    harness.key_press(egui::Key::Enter);
+    harness.run_steps(2);
+    let app = host(&harness).app();
+    assert_eq!(app.document.annotations.len(), 1);
+    assert_eq!(app.history.undo_len(), undo_before + 1);
+    assert!(app.session.gesture.is_none());
 }
 
 #[test]

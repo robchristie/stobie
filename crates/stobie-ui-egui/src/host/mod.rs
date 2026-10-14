@@ -36,7 +36,7 @@ use crate::{
     CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour, DockTextContext,
     DomainReference, IconId, Inspection, InspectionBinding, InspectionError, InspectionReply,
     InspectionRequest, IntoActionTarget, ObservationValue, PanePresenter, PresentationContext,
-    PresentationScope, SemanticAuditFinding, SemanticUiId, TextLayoutObservation,
+    PresentationScope, SemanticAuditFinding, SemanticUiId, ShortcutKey, TextLayoutObservation,
     TypographyProfile, UiNode, UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme,
     audit_text_layouts, text_audit_coverage,
 };
@@ -869,29 +869,36 @@ impl<A: Application> AppHost<A> {
         });
     }
 
-    /// Whether a text-entry control has keyboard focus: an egui text edit, or a
-    /// node the latest pass observed as a focused text input. Focus on a
-    /// button or viewport is not text entry.
-    fn text_entry_focused(&self, context: &egui::Context) -> bool {
-        context.text_edit_focused()
-            || self.snapshot.nodes.iter().any(|node| {
-                node.focused && matches!(node.role, UiRole::TextInput | UiRole::MultilineTextInput)
-            })
+    /// Whether the latest pass observed a focused node with one of `roles`.
+    fn observed_focus(&self, roles: &[UiRole]) -> bool {
+        self.snapshot
+            .nodes
+            .iter()
+            .any(|node| node.focused && roles.contains(&node.role))
     }
 
     /// Consume available shortcut presses whose modifiers match exactly. egui's
     /// logical matcher accepts extra Shift/Alt, so an unavailable Shift chord
     /// must not fall through to its plain counterpart; it stays in the input.
-    /// Shortcuts without Cmd yield while text entry has focus.
+    ///
+    /// Shortcuts without Cmd yield every key to focused text entry: an egui text
+    /// edit, or a node the latest pass observed as a focused text input. They
+    /// yield Enter and Space to any other focused control except an observed
+    /// viewport, because egui activates a focused control with those keys.
     fn consume_shortcuts(&self, root: &mut Ui) -> Vec<ActionTarget<A::Action>> {
-        let text_focus = self.text_entry_focused(root.ctx());
+        let context = root.ctx();
+        let text_focus = context.text_edit_focused()
+            || self.observed_focus(&[UiRole::TextInput, UiRole::MultilineTextInput]);
+        let control_focus = context.memory(|memory| memory.focused().is_some())
+            && !self.observed_focus(&[UiRole::Viewport]);
         let active_pane = self.app.active_pane();
         let shortcuts: Vec<_> = A::Action::ALL
             .iter()
             .filter_map(|&action| {
                 let spec = action.specification();
                 let shortcut = spec.shortcut?;
-                if !shortcut.command && text_focus {
+                let activation = matches!(shortcut.key, ShortcutKey::Enter | ShortcutKey::Space);
+                if !shortcut.command && (text_focus || control_focus && activation) {
                     return None;
                 }
                 let target = match spec.scope {
