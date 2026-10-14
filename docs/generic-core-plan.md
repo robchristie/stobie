@@ -1,7 +1,7 @@
 # Generic core and undo history, with imaging as its own layer
 
-Status: active
-Next action: Run the Lab's image commands through the generic history and remove `ImageCommand::ResizeSplit` and `CommandHistory` (increment 3).
+Status: complete
+Delivery: [PR #73](https://github.com/robchristie/stobie/pull/73) completes the plan; increments 1 and 2 are [PR #71](https://github.com/robchristie/stobie/pull/71) and [PR #72](https://github.com/robchristie/stobie/pull/72).
 
 ## Outcome and boundaries
 
@@ -133,9 +133,9 @@ returns `None` for a change that does nothing.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| 1. Generic history and workspace commands in core; Record Desk migration | In review ([PR #71](https://github.com/robchristie/stobie/pull/71)) | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
-| 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
-| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | In review | Workspace tests; architecture-rule regression tests and temporary-violation checks; probe below |
+| 1. Generic history and workspace commands in core; Record Desk migration | Complete | [PR #71](https://github.com/robchristie/stobie/pull/71): History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
+| 2. `stobie-imaging` crate; image types and Lab demo state move | Complete | [PR #72](https://github.com/robchristie/stobie/pull/72): Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
+| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Complete | [PR #73](https://github.com/robchristie/stobie/pull/73): Workspace tests; architecture-rule regression tests and temporary-violation checks; probe below |
 
 ## Lab on the generic history
 
