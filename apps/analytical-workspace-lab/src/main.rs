@@ -1,6 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    use analytical_workspace_lab::{APPLICATION_NAME, AnalyticalWorkspaceApp};
+    use analytical_workspace_lab::{APPLICATION_NAME, Lab};
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
@@ -12,11 +12,7 @@ fn main() -> eframe::Result {
             .with_min_inner_size([960.0, 640.0]),
         ..Default::default()
     };
-    eframe::run_native(
-        APPLICATION_NAME,
-        options,
-        Box::new(|cc| Ok(Box::new(AnalyticalWorkspaceApp::new(cc)))),
-    )
+    stobie_ui_egui::run_native(APPLICATION_NAME, options, Lab::new)
 }
 
 #[cfg(target_arch = "wasm32")]

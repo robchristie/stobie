@@ -8,20 +8,21 @@ mod ui_geometry;
 #[cfg(target_arch = "wasm32")]
 mod web_worker;
 
-pub use app::AnalyticalWorkspaceApp;
 #[cfg(target_arch = "wasm32")]
 use app::TestAction;
+pub use app::{AnalyticalWorkspaceApp, Intent, Lab, LabView};
 
 pub const APPLICATION_NAME: &str = "Analytical Workspace Lab";
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// The browser handle: the framework host plus the Lab's test fixtures.
+/// Automation is enabled explicitly by the page.
 #[cfg(target_arch = "wasm32")]
-#[derive(Clone)]
 #[wasm_bindgen]
 pub struct WebHandle {
-    runner: eframe::WebRunner,
+    host: stobie_ui_egui::WebHost<Lab>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -29,68 +30,51 @@ pub struct WebHandle {
 impl WebHandle {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        console_error_panic_hook::set_once();
         let _ = eframe::WebLogger::init(log::LevelFilter::Info);
         Self {
-            runner: eframe::WebRunner::new(),
+            host: Default::default(),
         }
     }
 
-    pub async fn start(&self, canvas: web_sys::HtmlCanvasElement) -> Result<(), JsValue> {
-        self.runner
-            .start(
-                canvas,
-                eframe::WebOptions::default(),
-                Box::new(|cc| {
-                    startup_mark("application_construct_begin");
-                    let app = AnalyticalWorkspaceApp::new(cc);
-                    startup_mark("application_construct_end");
-                    Ok(Box::new(app))
-                }),
-            )
-            .await
+    pub fn start(&self, canvas: web_sys::HtmlCanvasElement) -> js_sys::Promise {
+        self.host.start(canvas, |creation| {
+            startup_mark("application_construct_begin");
+            let app = Lab::new(creation);
+            startup_mark("application_construct_end");
+            app
+        })
     }
 
     pub fn destroy(&self) {
-        self.runner.destroy();
+        self.host.destroy();
     }
 
+    /// Apply a test fixture and return the resulting snapshot.
     pub fn test_action(&self, value: JsValue) -> Result<JsValue, JsValue> {
         let action: TestAction = serde_wasm_bindgen::from_value(value)?;
-        let mut app = self
-            .runner
-            .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
-        let snapshot = app
-            .test_action(action)
-            .map_err(|error| JsValue::from_str(&error))?;
+        let snapshot = self.host.with_host_mut(|host| {
+            host.app_mut().test_action(action)?;
+            host.request_repaint("test fixture");
+            Ok::<_, String>(host.app().test_snapshot(host.ui_state()))
+        })?;
+        let snapshot = snapshot.map_err(|error| JsValue::from_str(&error))?;
         serde_wasm_bindgen::to_value(&snapshot).map_err(Into::into)
     }
 
     pub fn test_snapshot(&self) -> Result<JsValue, JsValue> {
-        let app = self
-            .runner
-            .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
-        serde_wasm_bindgen::to_value(&app.test_snapshot()).map_err(Into::into)
+        let snapshot = self
+            .host
+            .with_host(|host| host.app().test_snapshot(host.ui_state()))?;
+        serde_wasm_bindgen::to_value(&snapshot).map_err(Into::into)
     }
+
     pub fn enable_automation(&self, instance: &str) -> Result<(), JsValue> {
-        let mut app = self
-            .runner
-            .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
-        app.enable_inspection(instance)
-            .map_err(|error| JsValue::from_str(&error))?;
-        Ok(())
+        self.host.enable_automation(instance)
     }
+
     /// Fixed, versioned automation dispatcher. Test fixtures remain separate.
     pub fn automation_request(&self, request: &str) -> Result<String, JsValue> {
-        let mut app = self
-            .runner
-            .app_mut::<AnalyticalWorkspaceApp>()
-            .ok_or_else(|| JsValue::from_str("Stobie application is unavailable"))?;
-        app.inspection_request(request)
-            .map_err(|error| JsValue::from_str(&error))
+        self.host.automation_request(request)
     }
 }
 

@@ -174,18 +174,15 @@ impl PaneSurface<'_> {
             .iter()
             .position(|state| state.pane == pane)
             .expect("validated session has one camera per image pane");
-        let mut fit = false;
-        let mut toggle_link = false;
-        let mut commit_polygon = false;
-        let mut delete_annotation = false;
+        // Clicked actions run through the host after this pass's intents.
+        let mut triggered = Vec::new();
         let before_display = self.display.get(&pane).copied().unwrap_or_default();
         let mut display = before_display;
-        let before_tool = self
+        let active_tool = self
             .active_tools
             .get(&pane)
             .copied()
             .unwrap_or(ActiveTool::Navigate);
-        let mut active_tool = before_tool;
         let toolbar_id = SemanticUiId::new(format!("pane.{}.toolbar", pane.0));
         let polygon_vertices = crate::actions::polygon_vertex_count(self.annotation_ui.get());
         let action_context = ActionContext {
@@ -230,11 +227,11 @@ impl PaneSurface<'_> {
                         self.active_pane == pane,
                         control,
                     ) {
-                        active_tool = tool;
+                        triggered.push(action);
                     }
                 }
             }
-            fit = present_action(
+            if present_action(
                 ui,
                 self.outputs,
                 &self.tokens,
@@ -246,9 +243,11 @@ impl PaneSurface<'_> {
                 true,
                 self.active_pane == pane,
                 "fit",
-            );
+            ) {
+                triggered.push(LabAction::FitView);
+            }
             let linked = self.cameras[camera_index].link.is_some();
-            toggle_link = present_action(
+            if present_action(
                 ui,
                 self.outputs,
                 &self.tokens,
@@ -260,7 +259,9 @@ impl PaneSurface<'_> {
                 true,
                 self.active_pane == pane,
                 "link_a",
-            );
+            ) {
+                triggered.push(LabAction::LinkViews);
+            }
             if !compact_toolbar {
                 present_display_controls(
                     ui,
@@ -325,8 +326,8 @@ impl PaneSurface<'_> {
                         });
                     });
             }
-            if self.annotation_ui.get().is_some() {
-                commit_polygon = present_action(
+            if self.annotation_ui.get().is_some()
+                && present_action(
                     ui,
                     self.outputs,
                     &self.tokens,
@@ -338,10 +339,12 @@ impl PaneSurface<'_> {
                     true,
                     self.active_pane == pane,
                     "commit_polygon",
-                );
+                )
+            {
+                triggered.push(LabAction::CommitPolygon);
             }
-            if self.selected_annotation.is_some() {
-                delete_annotation = present_action(
+            if self.selected_annotation.is_some()
+                && present_action(
                     ui,
                     self.outputs,
                     &self.tokens,
@@ -353,7 +356,9 @@ impl PaneSurface<'_> {
                     true,
                     self.active_pane == pane,
                     "delete_annotation",
-                );
+                )
+            {
+                triggered.push(LabAction::DeleteAnnotation);
             }
         });
         // A hidden pane must not restore a popup whose anchor disappeared.
@@ -396,48 +401,17 @@ impl PaneSurface<'_> {
         let linked = self.cameras[camera_index].link.is_some();
         let available_actions =
             viewport_actions(action_context, self.annotation_ui.get().is_some());
-        for action in requested_viewport_actions(ui, &response, &available_actions) {
-            match action {
-                LabAction::FitView => fit = true,
-                LabAction::LinkViews => toggle_link = true,
-                LabAction::NavigateTool => active_tool = ActiveTool::Navigate,
-                LabAction::PolygonTool => active_tool = ActiveTool::Polygon,
-                LabAction::EditVerticesTool => active_tool = ActiveTool::EditVertex,
-                LabAction::CommitPolygon => commit_polygon = true,
-                LabAction::DeleteAnnotation => delete_annotation = true,
-                _ => {}
-            }
-        }
-        if active_tool != before_tool {
-            self.active_tools.insert(pane, active_tool);
-            self.outputs.pane_intents.push(PaneIntent::SetActiveTool {
-                pane,
-                tool: active_tool,
-            });
-        }
-        if fit {
-            self.outputs
-                .intents
-                .push(crate::actions::fit_view_intent(pane, rect.into()));
-        }
-        if toggle_link {
-            self.outputs.intents.push(ImageIntent::SetCameraLink {
-                pane,
-                link: (!linked).then_some(LinkGroupId(1)),
-            });
-        }
-        if commit_polygon
-            && let Some(GesturePreview::Polygon { layer, vertices }) = self.annotation_ui.take()
-        {
-            self.outputs
-                .intents
-                .push(ImageIntent::CommitPolygon { layer, vertices });
-        }
-        if delete_annotation && let Some(annotation) = self.selected_annotation {
-            self.outputs
-                .intents
-                .push(ImageIntent::DeleteAnnotation { annotation });
-        }
+        // Assistive-technology custom actions take the same route as clicks.
+        triggered.extend(requested_viewport_actions(
+            ui,
+            &response,
+            &available_actions,
+        ));
+        self.outputs.triggers.extend(
+            triggered
+                .into_iter()
+                .map(|action| ActionTarget::pane(action, pane)),
+        );
         self.outputs
             .ui_geometry
             .image_viewports
@@ -795,7 +769,7 @@ mod tests {
                             outputs: &mut state.output,
                         },
                     );
-                    surface.pane_ui(ui, PaneId(1), root);
+                    stobie_ui_egui::PanePresenter::pane_ui(&mut surface, ui, PaneId(1), root);
                     for intent in &state.output.pane_intents {
                         if let PaneIntent::SetDisplay { pane, settings } = intent {
                             state.display.insert(*pane, *settings);
@@ -810,60 +784,6 @@ mod tests {
                 },
                 ImagePaneFixture::default(),
             )
-    }
-
-    #[test]
-    fn polygon_discovery_matches_rendered_availability_after_the_third_vertex() {
-        use stobie_ui_egui::{
-            CollectionMetadata, Inspection, InspectionOperation, InspectionRequest,
-            InspectionResult, InspectionSelector,
-        };
-        let mut harness = image_pane_harness(1_000.0);
-        for count in [2, 3] {
-            harness.state_mut().session.gesture = Some(GesturePreview::Polygon {
-                layer: LayerId(1),
-                vertices: (0..count).map(|i| WorldPoint::new(i as f64, 0.0)).collect(),
-            });
-            harness.run_steps(2);
-            let state = harness.state();
-            let snapshot = state.output.ui_geometry.snapshot(count as u64);
-            let rendered = snapshot
-                .node(&SemanticUiId::new("action.commit_polygon.pane.1"))
-                .unwrap();
-            let bindings = crate::app::inspection::inspection_bindings_for_state(
-                &state.session,
-                &CommandHistory::default(),
-                &Workspace::analytical_default(),
-            );
-            let service = Inspection::new("polygon-availability-test");
-            service
-                .publish(
-                    snapshot.clone(),
-                    &bindings,
-                    CollectionMetadata::default(),
-                    Default::default(),
-                )
-                .unwrap();
-            let reply = service.handle(InspectionRequest {
-                version: 1,
-                request_id: "discover".into(),
-                instance: Some(service.instance()),
-                operation: InspectionOperation::Discover {
-                    selector: InspectionSelector {
-                        capability: Some("commit_polygon".into()),
-                        pane: Some(PaneId(1)),
-                        ..Default::default()
-                    },
-                    limit: 1,
-                    cursor: None,
-                },
-            });
-            let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
-                panic!("discovery");
-            };
-            assert_eq!(capabilities[0].availability.enabled(), rendered.enabled);
-            assert_eq!(rendered.enabled, count == 3);
-        }
     }
 
     fn request_viewport_action(harness: &Harness<'_, ImagePaneFixture>, action: LabAction) {
@@ -1005,45 +925,8 @@ mod tests {
     }
 
     #[test]
-    fn viewport_custom_actions_route_through_existing_typed_intents() {
+    fn viewport_custom_actions_take_the_click_route() {
         let mut harness = image_pane_harness(1_000.0);
-
-        request_viewport_action(&harness, LabAction::FitView);
-        harness.step();
-        assert!(harness.state().output.intents.iter().any(|intent| {
-            matches!(
-                intent,
-                ImageIntent::SetCamera {
-                    pane: PaneId(1),
-                    ..
-                }
-            )
-        }));
-
-        request_viewport_action(&harness, LabAction::PolygonTool);
-        harness.step();
-        assert!(harness.state().output.pane_intents.iter().any(|intent| {
-            matches!(
-                intent,
-                PaneIntent::SetActiveTool {
-                    pane: PaneId(1),
-                    tool: ActiveTool::Polygon
-                }
-            )
-        }));
-
-        request_viewport_action(&harness, LabAction::LinkViews);
-        harness.step();
-        assert!(harness.state().output.intents.iter().any(|intent| {
-            matches!(
-                intent,
-                ImageIntent::SetCameraLink {
-                    pane: PaneId(1),
-                    link: None
-                }
-            )
-        }));
-
         harness.state_mut().session.gesture = Some(GesturePreview::Polygon {
             layer: LayerId(1),
             vertices: vec![
@@ -1053,14 +936,23 @@ mod tests {
             ],
         });
         harness.run();
-        request_viewport_action(&harness, LabAction::CommitPolygon);
-        harness.step();
-        assert!(harness.state().output.intents.iter().any(|intent| {
-            matches!(
-                intent,
-                ImageIntent::CommitPolygon { vertices, .. } if vertices.len() == 3
-            )
-        }));
+        for action in [
+            LabAction::FitView,
+            LabAction::PolygonTool,
+            LabAction::LinkViews,
+            LabAction::CommitPolygon,
+        ] {
+            request_viewport_action(&harness, action);
+            harness.step();
+            // Custom actions trigger the action, which the host performs after
+            // rechecking availability, exactly as for a toolbar click.
+            assert_eq!(
+                harness.state().output.triggers,
+                [ActionTarget::pane(action, PaneId(1))],
+                "{action:?}"
+            );
+            assert!(harness.state().output.intents.is_empty());
+        }
     }
 
     #[test]

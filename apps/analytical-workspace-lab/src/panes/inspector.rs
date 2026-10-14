@@ -1,5 +1,5 @@
 use eframe::egui;
-use stobie_core::{AnnotationId, ImageIntent, PaneId, ResultId, result_at};
+use stobie_core::{AnnotationId, PaneId, ResultId, result_at};
 use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, UiNode, UiRole, property_row, section_heading,
 };
@@ -68,10 +68,9 @@ pub fn show(
                 active_pane == PaneId(7),
                 "recenter_primary",
             ) {
-                outputs.intents.push(ImageIntent::RecenterOnResult {
-                    result: selected,
-                    pane: PaneId(1),
-                });
+                outputs
+                    .triggers
+                    .push(ActionTarget::pane(LabAction::RecenterPrimary, PaneId(7)));
             }
         } else {
             property_row(

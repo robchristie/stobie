@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use stobie_core::{AnnotationId, PaneId, ResultId};
-use stobie_ui_egui::{
-    ActionKey, ActionScope, ActionShortcut, ActionSpec, Availability, ShortcutKey,
-};
+use stobie_ui_egui::{Action, Availability};
 
 pub(crate) fn polygon_vertex_count(gesture: Option<&stobie_core::GesturePreview>) -> usize {
     match gesture {
@@ -26,205 +24,153 @@ pub(crate) fn fit_view_intent(
 }
 
 /// Stable identities and presentation metadata owned by Analytical Workspace
-/// Lab rather than by the egui framework crate.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+/// Lab rather than by the egui framework crate. The IDs predate the derive's
+/// prefixed default, so each variant keeps its published ID.
+#[derive(
+    Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
+#[action(prefix = "lab")]
 pub enum LabAction {
+    #[action(
+        id = "undo",
+        label = "Undo",
+        description = "Undo the most recent change",
+        shortcut = "Cmd+Z"
+    )]
     Undo,
+    #[action(
+        id = "redo",
+        label = "Redo",
+        description = "Redo the most recently undone change",
+        shortcut = "Cmd+Shift+Z"
+    )]
     Redo,
+    #[action(
+        id = "save_layout",
+        label = "Save layout",
+        description = "Persist the current workspace layout",
+        compact = "Save",
+        shortcut = "Cmd+S"
+    )]
     SaveLayout,
+    #[action(
+        id = "reset_workspace",
+        label = "Reset workspace",
+        description = "Restore the default workspace, cameras and tools",
+        compact = "Reset"
+    )]
     ResetWorkspace,
+    #[action(
+        id = "view_panels",
+        label = "View/Panels",
+        description = "Show or hide workspace panes",
+        compact = "Panels",
+        physical_only = "Opens a menu; invoke toggle_diagnostics instead"
+    )]
     ViewPanels,
+    #[action(
+        id = "toggle_diagnostics",
+        label = "Diagnostics",
+        description = "Show or hide the Diagnostics pane",
+        shortcut = "Cmd+Shift+D"
+    )]
     ToggleDiagnostics,
-    FitView,
-    LinkViews,
-    NavigateTool,
-    PolygonTool,
-    EditVerticesTool,
-    CommitPolygon,
-    DeleteAnnotation,
-    RecenterPrimary,
+    #[action(
+        id = "appearance_settings",
+        label = "Appearance",
+        description = "Adjust theme, contrast, density, text scale and motion",
+        compact = "Display",
+        physical_only = "Opens the appearance preferences menu"
+    )]
     AppearanceSettings,
-    CopyDiagnostics,
+    #[action(
+        id = "display_settings",
+        label = "Display",
+        description = "Adjust the image colour map and scalar window",
+        scope = "pane",
+        physical_only = "Opens the display settings menu"
+    )]
     DisplaySettings,
-}
-
-impl LabAction {
-    pub const ALL: [Self; 17] = [
-        Self::Undo,
-        Self::Redo,
-        Self::SaveLayout,
-        Self::ResetWorkspace,
-        Self::ViewPanels,
-        Self::ToggleDiagnostics,
-        Self::AppearanceSettings,
-        Self::DisplaySettings,
-        Self::CopyDiagnostics,
-        Self::FitView,
-        Self::LinkViews,
-        Self::NavigateTool,
-        Self::PolygonTool,
-        Self::EditVerticesTool,
-        Self::CommitPolygon,
-        Self::DeleteAnnotation,
-        Self::RecenterPrimary,
-    ];
-}
-
-impl ActionKey for LabAction {
-    fn stable_id(self) -> &'static str {
-        match self {
-            Self::Undo => "undo",
-            Self::Redo => "redo",
-            Self::SaveLayout => "save_layout",
-            Self::ResetWorkspace => "reset_workspace",
-            Self::ViewPanels => "view_panels",
-            Self::ToggleDiagnostics => "toggle_diagnostics",
-            Self::AppearanceSettings => "appearance_settings",
-            Self::DisplaySettings => "display_settings",
-            Self::CopyDiagnostics => "copy_diagnostics",
-            Self::FitView => "fit_view",
-            Self::LinkViews => "link_views",
-            Self::NavigateTool => "navigate_tool",
-            Self::PolygonTool => "polygon_tool",
-            Self::EditVerticesTool => "edit_vertices_tool",
-            Self::CommitPolygon => "commit_polygon",
-            Self::DeleteAnnotation => "delete_annotation",
-            Self::RecenterPrimary => "recenter_primary",
-        }
-    }
-
-    fn specification(self) -> ActionSpec<Self> {
-        let (label, description, compact_label, shortcut, scope) = match self {
-            Self::Undo => (
-                "Undo",
-                "Undo the most recent change",
-                None,
-                Some(ActionShortcut::command(ShortcutKey::Z)),
-                ActionScope::Application,
-            ),
-            Self::Redo => (
-                "Redo",
-                "Redo the most recently undone change",
-                None,
-                Some(ActionShortcut::command_shift(ShortcutKey::Z)),
-                ActionScope::Application,
-            ),
-            Self::SaveLayout => (
-                "Save layout",
-                "Persist the current workspace layout",
-                Some("Save"),
-                Some(ActionShortcut::command(ShortcutKey::S)),
-                ActionScope::Application,
-            ),
-            Self::ResetWorkspace => (
-                "Reset workspace",
-                "Restore the default workspace, cameras and tools",
-                Some("Reset"),
-                None,
-                ActionScope::Application,
-            ),
-            Self::ViewPanels => (
-                "View/Panels",
-                "Show or hide workspace panes",
-                Some("Panels"),
-                None,
-                ActionScope::Application,
-            ),
-            Self::ToggleDiagnostics => (
-                "Diagnostics",
-                "Show or hide the Diagnostics pane",
-                None,
-                Some(ActionShortcut::command_shift(ShortcutKey::D)),
-                ActionScope::Application,
-            ),
-            Self::AppearanceSettings => (
-                "Appearance",
-                "Adjust theme, contrast, density, text scale and motion",
-                Some("Display"),
-                None,
-                ActionScope::Application,
-            ),
-            Self::DisplaySettings => (
-                "Display",
-                "Adjust the image colour map and scalar window",
-                None,
-                None,
-                ActionScope::Pane,
-            ),
-            Self::CopyDiagnostics => (
-                "Copy diagnostics",
-                "Copy the current diagnostic snapshot as JSON",
-                Some("Copy JSON"),
-                None,
-                ActionScope::Pane,
-            ),
-            Self::FitView => (
-                "Fit view",
-                "Fit the complete image into the active viewport",
-                Some("Fit"),
-                Some(ActionShortcut::new(ShortcutKey::F)),
-                ActionScope::Pane,
-            ),
-            Self::LinkViews => (
-                "Link views",
-                "Link or unlink this camera with camera group A",
-                Some("Link A"),
-                Some(ActionShortcut::new(ShortcutKey::L)),
-                ActionScope::Pane,
-            ),
-            Self::NavigateTool => (
-                "Navigate",
-                "Pan and zoom the active viewport",
-                None,
-                Some(ActionShortcut::new(ShortcutKey::One)),
-                ActionScope::Pane,
-            ),
-            Self::PolygonTool => (
-                "Polygon",
-                "Create a polygon annotation",
-                None,
-                Some(ActionShortcut::new(ShortcutKey::Two)),
-                ActionScope::Pane,
-            ),
-            Self::EditVerticesTool => (
-                "Edit vertices",
-                "Move vertices of the selected polygon",
-                Some("Edit"),
-                Some(ActionShortcut::new(ShortcutKey::Three)),
-                ActionScope::Pane,
-            ),
-            Self::CommitPolygon => (
-                "Commit polygon",
-                "Commit the current polygon annotation",
-                Some("Commit"),
-                Some(ActionShortcut::new(ShortcutKey::Enter)),
-                ActionScope::ActivePane,
-            ),
-            Self::DeleteAnnotation => (
-                "Delete annotation",
-                "Delete the selected polygon annotation",
-                Some("Delete"),
-                Some(ActionShortcut::new(ShortcutKey::Delete)),
-                ActionScope::ActivePane,
-            ),
-            Self::RecenterPrimary => (
-                "Recenter primary view",
-                "Centre the primary viewport on the selected result",
-                Some("Recenter"),
-                Some(ActionShortcut::new(ShortcutKey::R)),
-                ActionScope::Pane,
-            ),
-        };
-        ActionSpec {
-            id: self,
-            label,
-            description,
-            compact_label,
-            shortcut,
-            scope,
-        }
-    }
+    #[action(
+        id = "copy_diagnostics",
+        label = "Copy diagnostics",
+        description = "Copy the current diagnostic snapshot as JSON",
+        compact = "Copy JSON",
+        scope = "pane",
+        physical_only = "Writes the system clipboard"
+    )]
+    CopyDiagnostics,
+    #[action(
+        id = "fit_view",
+        label = "Fit view",
+        description = "Fit the complete image into the active viewport",
+        compact = "Fit",
+        shortcut = "F",
+        scope = "pane"
+    )]
+    FitView,
+    #[action(
+        id = "link_views",
+        label = "Link views",
+        description = "Link or unlink this camera with camera group A",
+        compact = "Link A",
+        shortcut = "L",
+        scope = "pane"
+    )]
+    LinkViews,
+    #[action(
+        id = "navigate_tool",
+        label = "Navigate",
+        description = "Pan and zoom the active viewport",
+        shortcut = "1",
+        scope = "pane"
+    )]
+    NavigateTool,
+    #[action(
+        id = "polygon_tool",
+        label = "Polygon",
+        description = "Create a polygon annotation",
+        shortcut = "2",
+        scope = "pane"
+    )]
+    PolygonTool,
+    #[action(
+        id = "edit_vertices_tool",
+        label = "Edit vertices",
+        description = "Move vertices of the selected polygon",
+        compact = "Edit",
+        shortcut = "3",
+        scope = "pane"
+    )]
+    EditVerticesTool,
+    #[action(
+        id = "commit_polygon",
+        label = "Commit polygon",
+        description = "Commit the current polygon annotation",
+        compact = "Commit",
+        shortcut = "Enter",
+        scope = "active_pane"
+    )]
+    CommitPolygon,
+    #[action(
+        id = "delete_annotation",
+        label = "Delete annotation",
+        description = "Delete the selected polygon annotation",
+        compact = "Delete",
+        shortcut = "Delete",
+        scope = "active_pane"
+    )]
+    DeleteAnnotation,
+    #[action(
+        id = "recenter_primary",
+        label = "Recenter primary view",
+        description = "Centre the primary viewport on the selected result",
+        compact = "Recenter",
+        shortcut = "R",
+        scope = "pane"
+    )]
+    RecenterPrimary,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -238,7 +184,25 @@ pub struct ActionContext {
     pub polygon_vertices: usize,
 }
 
+/// Whether `pane` presents controls for a pane-scoped action. Shortcuts and
+/// semantic invocations reach only panes that offer the action, as clicks do.
+fn offered_in(action: LabAction, pane: PaneId) -> bool {
+    match action {
+        LabAction::NavigateTool | LabAction::PolygonTool | LabAction::EditVerticesTool => {
+            (1..=2).contains(&pane.0)
+        }
+        LabAction::CommitPolygon | LabAction::DeleteAnnotation => (1..=4).contains(&pane.0),
+        LabAction::RecenterPrimary => matches!(pane.0, 5 | 7),
+        _ => true,
+    }
+}
+
 pub fn availability(id: LabAction, context: ActionContext) -> Availability {
+    if let Some(pane) = context.target_pane
+        && !offered_in(id, pane)
+    {
+        return Availability::Hidden;
+    }
     match id {
         LabAction::Undo if context.undo_depth == 0 => Availability::Disabled {
             reason: "History is empty".into(),
@@ -268,9 +232,7 @@ pub fn availability(id: LabAction, context: ActionContext) -> Availability {
             }
         }
         LabAction::NavigateTool | LabAction::PolygonTool | LabAction::EditVerticesTool
-            if !context
-                .target_pane
-                .is_some_and(|pane| (1..=2).contains(&pane.0)) =>
+            if context.target_pane.is_none() =>
         {
             Availability::Hidden
         }
@@ -302,18 +264,21 @@ pub fn availability(id: LabAction, context: ActionContext) -> Availability {
 mod tests {
     use std::collections::BTreeSet;
 
+    use stobie_ui_egui::{ActionKey, ActionSet};
+
     use super::*;
 
     #[test]
     fn registry_is_complete_unique_and_stable() {
-        let ids: BTreeSet<_> = LabAction::ALL.into_iter().collect();
+        let ids: BTreeSet<_> = LabAction::ALL.iter().copied().collect();
         let stable_ids: BTreeSet<_> = LabAction::ALL
-            .into_iter()
+            .iter()
+            .copied()
             .map(ActionKey::stable_id)
             .collect();
         assert_eq!(ids.len(), LabAction::ALL.len());
         assert_eq!(stable_ids.len(), LabAction::ALL.len());
-        for action in LabAction::ALL {
+        for &action in LabAction::ALL {
             let spec = action.specification();
             assert_eq!(spec.id, action);
             assert!(!action.stable_id().is_empty());
@@ -323,9 +288,75 @@ mod tests {
     }
 
     #[test]
+    fn derived_registry_keeps_published_ids_order_and_invocation() {
+        let ids: Vec<_> = LabAction::ALL
+            .iter()
+            .map(|action| action.stable_id())
+            .collect();
+        assert_eq!(
+            ids,
+            [
+                "undo",
+                "redo",
+                "save_layout",
+                "reset_workspace",
+                "view_panels",
+                "toggle_diagnostics",
+                "appearance_settings",
+                "display_settings",
+                "copy_diagnostics",
+                "fit_view",
+                "link_views",
+                "navigate_tool",
+                "polygon_tool",
+                "edit_vertices_tool",
+                "commit_polygon",
+                "delete_annotation",
+                "recenter_primary",
+            ]
+        );
+        let physical_only: Vec<_> = LabAction::ALL
+            .iter()
+            .filter(|action| !action.invocation().semantic())
+            .map(|action| action.stable_id())
+            .collect();
+        assert_eq!(
+            physical_only,
+            [
+                "view_panels",
+                "appearance_settings",
+                "display_settings",
+                "copy_diagnostics"
+            ]
+        );
+    }
+
+    #[test]
+    fn pane_actions_are_offered_only_where_they_are_presented() {
+        let context = |pane| ActionContext {
+            target_pane: Some(PaneId(pane)),
+            selected_annotation: Some(AnnotationId(1)),
+            selected_result: Some(ResultId(1)),
+            polygon_vertices: 3,
+            ..Default::default()
+        };
+        assert_eq!(
+            availability(LabAction::RecenterPrimary, context(1)),
+            Availability::Hidden
+        );
+        for pane in [5, 7] {
+            assert!(availability(LabAction::RecenterPrimary, context(pane)).enabled());
+        }
+        for action in [LabAction::CommitPolygon, LabAction::DeleteAnnotation] {
+            assert!(availability(action, context(4)).enabled());
+            assert_eq!(availability(action, context(5)), Availability::Hidden);
+        }
+    }
+
+    #[test]
     fn shortcuts_are_unique_within_overlapping_scopes() {
         let mut seen = BTreeSet::new();
-        for action in LabAction::ALL {
+        for &action in LabAction::ALL {
             let spec = action.specification();
             if let Some(shortcut) = spec.shortcut {
                 assert!(

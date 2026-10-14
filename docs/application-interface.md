@@ -258,10 +258,12 @@ Host the application with `AppHost` (see the
 `Inspection`, installs its completion hook, and starts the native socket when
 `STOBIE_AUTOMATION_SOCKET` is set. In the browser, `web_handle!` exposes
 `enable_automation` and `automation_request`. Each completed, non-discarded pass
-is published with one binding per rendered control for each action. An
-application-scoped action with no rendered control keeps its default identity.
-A pane-scoped action is discoverable where its control is rendered with a pane,
-and in the panes `Application::action_panes` lists. Facts come from
+is published with one binding per action target. Its identity is the first
+rendered control that presents the target, and its domain is that control's
+domain reference or, for a pane-scoped target, the pane. An application-scoped
+action with no rendered control keeps its default identity. A pane-scoped
+action is discoverable where its control is rendered with a pane, and in the
+panes `Application::action_panes` lists. Facts come from
 `Application::observe`. Queued invocations drain on the application thread
 before the UI runs. Bindings are recalculated before each one, and availability
 is rechecked immediately before `perform`. Reads never request a repaint.
@@ -272,8 +274,7 @@ editing revision. Leave unrelated repaint and focus counters out of it. An
 action declared `physical_only` stays discoverable with `semantic_invocable`
 false.
 
-The Lab still wires `Inspection` directly in its `inspection.rs`, a temporary
-path until it moves to the host. That path uses the same public API. Stage each
+An application that wires its own pass uses the same public API. Stage each
 pass with `stage_completed`, drain with current bindings through the validated
 route, and construct browser services with `Inspection::with_instance(application,
 build, nonce)?`. The nonce must be an opaque value that changes on each startup:

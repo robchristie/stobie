@@ -106,6 +106,52 @@ impl UiGeometry {
         ));
     }
 
+    /// Register this pass's recorded semantics and measured text with the
+    /// host, as presented. The root and the dock's nodes are the host's own.
+    pub fn observe(&self, ui: &egui::Ui) {
+        for node in &self.semantic_nodes {
+            if node.id != SemanticUiId::root() {
+                stobie_ui_egui::observe_node(ui, node.clone());
+            }
+        }
+        for text in &self.text_layouts {
+            stobie_ui_egui::observe_text(ui, text.clone());
+        }
+    }
+
+    /// This pass's physical-test geometry completed from the host's published
+    /// observation: dock tabs, splitters and pane bodies, every semantic node
+    /// and measured text, and the audits.
+    pub fn with_observation(&self, snapshot: &UiSnapshot) -> Self {
+        let mut geometry = self.clone();
+        geometry.tabs = snapshot
+            .by_role(UiRole::Tab)
+            .filter_map(|node| {
+                Some(PaneUiRect {
+                    pane: node.pane?,
+                    rect: node.rect,
+                })
+            })
+            .collect();
+        geometry.splitters = snapshot
+            .by_role(UiRole::Splitter)
+            .filter_map(|node| match node.domain_reference {
+                Some(stobie_ui_egui::DomainReference::DockNode(node_id)) => Some(SplitterUiRect {
+                    node: node_id,
+                    rect: node.rect,
+                }),
+                _ => None,
+            })
+            .collect();
+        geometry.semantic_nodes = snapshot.nodes.clone();
+        geometry.text_layouts = snapshot.text.clone();
+        geometry.text_audit = snapshot.text_audit.clone();
+        geometry.text_audit_coverage = snapshot.text_audit_coverage.clone();
+        geometry
+    }
+
+    /// The recorded semantics as a snapshot, for pane tests without a host.
+    #[cfg(test)]
     pub fn snapshot(&self, frame: u64) -> UiSnapshot {
         let mut snapshot = UiSnapshot {
             frame,
