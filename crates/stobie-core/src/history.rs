@@ -223,10 +223,10 @@ impl<C> History<C> {
         Ok(true)
     }
 
-    /// Revert the newest entry and make it redoable. Returns `Ok(false)` when
-    /// there is nothing to undo. If a command fails, the entry's commands
-    /// already reverted are reapplied, the entry stays, and the error is
-    /// returned.
+    /// Revert the newest entry, a group's commands in reverse order, and make
+    /// it redoable. Returns `Ok(false)` when there is nothing to undo. If a
+    /// command fails, the entry's commands already reverted are reapplied,
+    /// the entry stays, and the error is returned.
     pub fn undo<T: ?Sized>(&mut self, target: &mut T) -> Result<bool, String>
     where
         C: Command<T>,
@@ -249,10 +249,10 @@ impl<C> History<C> {
         Ok(true)
     }
 
-    /// Reapply the newest undone entry. Returns `Ok(false)` when there is
-    /// nothing to redo. If a command fails, the entry's commands already
-    /// reapplied are reverted, the entry stays redoable, and the error is
-    /// returned.
+    /// Reapply the newest undone entry, a group's commands in order. Returns
+    /// `Ok(false)` when there is nothing to redo. If a command fails, the
+    /// entry's commands already reapplied are reverted, the entry stays
+    /// redoable, and the error is returned.
     pub fn redo<T: ?Sized>(&mut self, target: &mut T) -> Result<bool, String>
     where
         C: Command<T>,
@@ -330,9 +330,14 @@ impl<C> History<C> {
         self.capacity
     }
 
-    /// The commands of the newest undo entry, in application order.
+    /// The commands the next undo would revert, in application order.
     pub fn last_undo(&self) -> Option<&[C]> {
         self.undo.back().map(|entry| entry.commands.as_slice())
+    }
+
+    /// The commands the next redo would reapply, in application order.
+    pub fn last_redo(&self) -> Option<&[C]> {
+        self.redo.last().map(|entry| entry.commands.as_slice())
     }
 
     fn current_state(&self) -> u64 {
@@ -464,6 +469,7 @@ mod tests {
         assert_eq!(history.last_undo().map(<[Set]>::len), Some(2));
         history.undo(&mut values).unwrap();
         assert_eq!(values, [0, 0, 0]);
+        assert_eq!(history.last_redo().map(<[Set]>::len), Some(2));
         history.redo(&mut values).unwrap();
         assert_eq!(values, [1, 0, 3]);
 

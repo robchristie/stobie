@@ -1,7 +1,7 @@
 # Generic core and undo history, with imaging as its own layer
 
-Status: active
-Next action: Run the Lab's image commands through the generic history and remove `ImageCommand::ResizeSplit` and `CommandHistory` (increment 3).
+Status: complete
+Delivery: [PR #73](https://github.com/robchristie/stobie/pull/73) completes the plan; increments 1 and 2 are [PR #71](https://github.com/robchristie/stobie/pull/71) and [PR #72](https://github.com/robchristie/stobie/pull/72).
 
 ## Outcome and boundaries
 
@@ -133,9 +133,94 @@ returns `None` for a change that does nothing.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| 1. Generic history and workspace commands in core; Record Desk migration | In review ([PR #71](https://github.com/robchristie/stobie/pull/71)) | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
-| 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
-| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Planned | |
+| 1. Generic history and workspace commands in core; Record Desk migration | Complete | [PR #71](https://github.com/robchristie/stobie/pull/71): History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
+| 2. `stobie-imaging` crate; image types and Lab demo state move | Complete | [PR #72](https://github.com/robchristie/stobie/pull/72): Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
+| 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Complete | [PR #73](https://github.com/robchristie/stobie/pull/73): Workspace tests; architecture-rule regression tests and temporary-violation checks; probe below |
+
+## Lab on the generic history
+
+- `ImageCommand` implements `Command<ImageTarget<'_>>`, where `ImageTarget`
+  borrows the image document and session. Empty or unchanged camera commands
+  return `Ok(false)`, so they are not recorded, as before. Reverts stay
+  lenient. `ImageCommand::ResizeSplit`, `UndoScope` and `CommandHistory` are
+  removed.
+- The Lab's `LabCommand` wraps `ImageCommand` and core's `WorkspaceCommand`
+  over a `LabTarget` of mutable borrows of its document, session and
+  workspace. A changing resize becomes a lenient `WorkspaceCommand::Resize`
+  in the image history, as `ResizeSplit` was, so a drag released after an
+  undo or reset still applies; tab activation and moves still apply
+  directly. The browser fixture's `resize_split` action keeps its wire name
+  and clamps its fraction, as before.
+- The Lab's history keeps 1,000 entries. It was unbounded; camera moves are
+  undoable, so the bound is generous, and no test or smoke comes near it.
+- The minimal example records image commands in a `History<ImageCommand>` and
+  applies resizes directly, because it has no undo action.
+
+## Architecture rules
+
+`cargo xtask architecture` now also checks that:
+- `stobie-core`'s dependency tree has no `stobie-imaging`, runtime or
+  renderer on any target, and its sources define none of the listed image or
+  Lab-demo item names (a single-line definition scan with its own regression
+  test, a tripwire rather than a proof); core cannot re-export image types it
+  cannot reach;
+- the Gallery and Record Desk resolve no image-layer crate on any target, and
+  reach `wgpu` only through eframe and its `egui-wgpu` backend.
+
+Temporary violations (enabling `image-rendering` in the Gallery, defining a
+`Camera` in core) fail the check with a specific message.
+
+## Authoring probe
+
+A fresh-context agent was given only the composition guide, its links, the
+README, the `notes` example and the generated rustdoc. It made Add, Remove last
+and Clear undoable, with Clear removing each note as a separate step in one
+`execute_group` entry. It also added Undo and Redo actions with availability
+and a history-revision `meaning`. It built on the first attempt with no
+compile errors and read no function bodies. The host has no display, so the
+agent could not run the app.
+
+Its `notes` example is adopted as the compiled undo and redo example, with
+unit tests of Clear, Add and Remove last through undo and redo. Driven
+natively under the repository's Xvfb sysroot with `tools/application-cli.mjs`:
+- Clear removed both notes as one undo step, and Undo restored them.
+- Redo cleared them again.
+- A second Undo was rejected while nothing was left to undo.
+- Remove last undid correctly.
+
+These stumbles were fixed:
+- The guide's sample could panic despite the rule that errors leave the target
+  unchanged. The guide now shows the example's ID-checked `NoteEdit`.
+- Nothing said how commands keep identity. The guide now says to carry whole
+  items with stable IDs and to allocate IDs outside history.
+- The guide gave no import path. It now names `stobie_core::{Command, History}`.
+- The order in which a group is undone was undocumented. `undo` and `redo`
+  rustdoc and the guide now say: reverse order to undo, forward order to redo.
+- Nothing warned that direct changes make recorded commands stale. The guide
+  now says to route every change to history-managed state through history.
+- It was unclear whether text fields still see `Cmd+Z`. The guide now says that
+  an available Undo takes the chord even while a text field has focus, and an
+  unavailable one lets it through.
+- There was no way to see the next redo. `History::last_redo` now pairs with
+  `last_undo`.
+- It was unclear whether undo restores drafts. The guide now says undo
+  restores committed state, not drafts.
+- The `Application` rustdoc pointed to a nonexistent "module guide". It now
+  points to the crate documentation and the guide.
+
+The example's old `Cmd+Z` for Remove last clashed with Undo and moved to
+`Cmd+Backspace`. The derive rejects duplicate chords at compile time, so the
+clash could not have shipped.
+
+## Effects on later work
+
+- The ARIA mirror and the MCP server are unaffected: the semantic snapshot and
+  inspection protocol are unchanged. `History::revision` gives applications a
+  ready input for action meanings that agents rely on.
+- WebGL2 becomes easier to scope: applications without images no longer
+  resolve the image renderer, so a WebGL2 path needs only an eframe backend
+  change for them. The image renderer stays wgpu-only.
+- Action arguments and availability that reads UI state are unaffected.
 
 ## Record Desk migration
 

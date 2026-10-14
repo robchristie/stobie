@@ -46,7 +46,8 @@ mod entry;
 #[cfg(feature = "eframe")]
 pub use entry::*;
 
-/// An application whose per-pass plumbing Stobie owns. See the module guide.
+/// An application whose per-pass plumbing Stobie owns. See the crate documentation
+/// and the application composition guide.
 ///
 /// The UI borrows the application immutably, so panes cannot mutate the model:
 /// they read state and emit intents. UI-only state such as focus requests lives

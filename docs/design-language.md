@@ -191,7 +191,7 @@ five-point visual divider with a centred token minimum hit rectangle, semantic
 `Splitter` role and current fraction, and token focus ring. Focused arrow keys
 and AccessKit increment/decrement actions use the same exact 0.05 fraction
 step, lock their adjustment axis against spatial focus navigation, and retain
-the single completed `ResizeSplit` command path. Splitters use
+the single completed `WorkspaceResize` output. Splitters use
 stable `DockNodeId`-derived widget IDs and egui's click-and-drag arbitration so
 nearby pane surfaces cannot steal the boundary gesture. Delayed drag
 recognition reconstructs the press origin from total drag delta, keeping the

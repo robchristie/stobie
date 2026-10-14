@@ -13,7 +13,7 @@ shows how. The triangle example below still wires its pass by hand with
 | Owner | Application-facing entry points | Responsibility |
 |---|---|---|
 | `stobie-core` | `Workspace`, `PaneId`, `History` | One canonical dock tree, stable pane identity and generic undo history |
-| `stobie-imaging` | `Document`, `Session`, `ImageIntent`, `validate_intent`, `CommandHistory`, `TileDemand` | Durable annotations, transient view/selection/gesture state, validated image transitions and renderer-independent desired work |
+| `stobie-imaging` | `Document`, `Session`, `ImageIntent`, `validate_intent`, `ImageCommand`, `ImageTarget`, `TileDemand` | Durable annotations, transient view/selection/gesture state, validated image transitions and renderer-independent desired work |
 | `stobie-runtime` | `Runtime`, `RuntimeConfig`, `DecodeRequest`, `DecodeEvent`, `RequestToken` | Reconcile complete desired sets, bound CPU work and validate completion identity; independent of egui/wgpu |
 | `stobie-render-wgpu` | `RenderBridge`, `ScalarRenderer`, `ImageRenderRequest`, `RenderPlan` | Persistent GPU resources, bounded uploads, residency and typed image presentation |
 | `stobie-ui-egui` with `image-rendering` | `PanePresenter`, `dock_workspace`, `PresentationContext`, `ActionKey`, `stage_render_callback` | egui layout/interaction, narrow pane views and output sinks, typed capabilities, current-pass observations and GPU image callbacks |
@@ -53,8 +53,8 @@ Closing the window ends the app. This small example does not save its document.
 
 Read the source in this order:
 
-1. `MinimalApp::new` constructs `Document`, a camera-free `Session`,
-   `CommandHistory` and a validated single-tab `Workspace`.
+1. `MinimalApp::new` constructs `Document`, a camera-free `Session`, a
+   `History<ImageCommand>` and a validated single-tab `Workspace`.
 2. `Action` implements `ActionKey`; its stable ID and `ActionSpec` describe one
    pane-scoped capability. `ActionTarget::pane` binds that capability to the
    stable `PaneId`. The button emits `ImageIntent::CommitPolygon` into a sink.
@@ -62,20 +62,24 @@ Read the source in this order:
    intent sink, presentation output and resolved appearance. It paints committed
    geometry and never receives the whole mutable model/runtime.
 4. `MinimalApp::ui` calls `dock_workspace`, resolves intents against current
-   state with `validate_intent`, executes resulting commands through history,
+   state with `validate_intent`, executes each resulting command through
+   history with an `ImageTarget` borrowing the document and session,
    then requests repaint because a command changed state after presentation.
    The next frame displays the committed polygon. The example has no unfinished
    gesture; applications with gestures also display session previews that frame.
 
 `validate_intent` is variant-specific validation. Polygon validation requires
 at least three vertices and reserves an annotation ID before execution; it is
-not a general geometry/layer validator. `CommandHistory::execute` applies a
-trusted command without revalidation, so deliver it before unrelated mutations
+not a general geometry/layer validator. `History::execute` applies a trusted
+`ImageCommand` without revalidation, so deliver it before unrelated mutations
 can invalidate its snapshots. In a larger app, show validation failures as
 observable status instead of relying on the example's fixed-input `expect`.
 Tab activation/movement update the canonical workspace inside `dock_workspace`;
-a completed split resize returns a `WorkspaceResize`, which the example records
-as an image `ResizeSplit` command.
+a completed split resize returns a `WorkspaceResize`, which the example
+applies directly because its layout is not undoable. To make layout undoable
+beside image commands, wrap `ImageCommand` and core's `WorkspaceCommand` in one
+command type over a target that borrows the document, session and workspace,
+as the Lab does.
 
 The portable example source also has an explicit compile check:
 
@@ -188,8 +192,9 @@ application keeps these image obligations:
 - **Submit the render plan at the end of `ui`**, after camera previews are
   final, and emit the pass's tile demands as an intent that reconciles the
   runtime without requesting a repaint.
-- **Keep layout undoable where it was.** The host dock emits `WorkspaceChange`;
-  the Lab applies a resize as a `ResizeSplit` command and other changes
-  directly.
+- **Keep layout undoable where it was.** The host dock emits `WorkspaceChange`.
+  The Lab's `LabCommand` wraps `ImageCommand` and `WorkspaceCommand` over a
+  `LabTarget` of mutable borrows, so a resize shares the image history, while
+  tab activation and moves apply directly.
 - **Request delayed repaints for idle gestures** with
   `Frame::request_repaint_after`, and persist through `Application::save`.

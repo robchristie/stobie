@@ -12,27 +12,29 @@
 //! [`WorldPoint`].
 //!
 //! Collect feature [`ImageIntent`]s from a narrow pane view, call
-//! [`validate_intent`] against the current state and execute successful commands
-//! through [`CommandHistory`]. History applies and reverses commands; it does not
-//! validate arbitrary constructed commands. One completed gesture should produce
-//! one history entry; render its [`GesturePreview`] in the current frame.
+//! [`validate_intent`] against the current state and execute the resulting
+//! [`ImageCommand`] in core's generic `History`, with an [`ImageTarget`]
+//! borrowing the document and session. History applies and reverses commands;
+//! it does not validate arbitrary constructed commands. One completed gesture
+//! should produce one history entry; render its [`GesturePreview`] in the
+//! current frame. An application whose commands also change other state, such
+//! as its layout, wraps `ImageCommand` in its own command type, as the Lab does.
 //!
 //! ```
-//! use stobie_core::{PaneId, Workspace};
-//! use stobie_imaging::{CommandHistory, Document, ImageIntent, LayerId, Session,
+//! use stobie_core::History;
+//! use stobie_imaging::{Document, ImageIntent, ImageTarget, LayerId, Session,
 //!     WorldPoint, validate_intent};
 //! let mut document = Document::default();
 //! let mut session = Session::default();
-//! let mut workspace = Workspace::with_tabs(&[PaneId(1)]);
 //! let command = validate_intent(ImageIntent::CommitPolygon {
 //!     layer: LayerId(1),
 //!     vertices: vec![WorldPoint::new(0.0, 0.0), WorldPoint::new(1.0, 0.0),
 //!                    WorldPoint::new(0.0, 1.0)],
 //! }, &mut document, &session)?;
-//! let mut history = CommandHistory::default();
-//! history.execute(command, &mut document, &mut session, &mut workspace);
+//! let mut history = History::default();
+//! history.execute(command, &mut ImageTarget::new(&mut document, &mut session))?;
 //! assert_eq!(document.annotations.len(), 1);
-//! assert!(history.undo(&mut document, &mut session, &mut workspace));
+//! assert!(history.undo(&mut ImageTarget::new(&mut document, &mut session))?);
 //! assert!(document.annotations.is_empty());
 //! # Ok::<(), String>(())
 //! ```

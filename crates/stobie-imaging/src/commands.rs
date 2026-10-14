@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use stobie_core::{DockNodeId, PaneId, Workspace};
+use stobie_core::{Command, PaneId};
 
 use crate::{
     AnnotationId, Camera, CameraChange, Document, GesturePreview, ImagePoint, LayerId, LinkGroupId,
@@ -70,102 +70,40 @@ pub enum ImageCommand {
         before: Option<ResultId>,
         after: Option<ResultId>,
     },
-    ResizeSplit {
-        node: DockNodeId,
-        before: f32,
-        after: f32,
-    },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UndoScope {
-    Document,
-    View,
-    Selection,
-    Workspace,
+/// The image state an [`ImageCommand`] changes: a borrow of the document and
+/// the session, built where the command is executed.
+pub struct ImageTarget<'a> {
+    pub document: &'a mut Document,
+    pub session: &'a mut Session,
 }
 
-impl ImageCommand {
-    pub fn undo_scope(&self) -> UndoScope {
-        match self {
-            Self::AddPolygon { .. } | Self::MoveVertex { .. } | Self::DeletePolygon { .. } => {
-                UndoScope::Document
-            }
-            Self::SetCameras { .. } | Self::SetCameraLink { .. } => UndoScope::View,
-            Self::SelectResult { .. } => UndoScope::Selection,
-            Self::ResizeSplit { .. } => UndoScope::Workspace,
+impl<'a> ImageTarget<'a> {
+    pub fn new(document: &'a mut Document, session: &'a mut Session) -> Self {
+        Self { document, session }
+    }
+}
+
+/// Image commands apply already validated snapshots without revalidating them;
+/// do not execute fabricated or stale commands that violate current annotation
+/// or camera mappings. Empty or unchanged camera commands change nothing, so a
+/// [`History`](stobie_core::History) records no entry for them. Reverting a
+/// change to a camera or annotation that no longer exists does nothing.
+impl Command<ImageTarget<'_>> for ImageCommand {
+    fn apply(&self, target: &mut ImageTarget<'_>) -> Result<bool, String> {
+        if let Self::SetCameras { changes } = self
+            && changes.iter().all(|change| change.before == change.after)
+        {
+            return Ok(false);
         }
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-/// Application-owned undo/redo history for already validated commands.
-/// History applies snapshots without revalidating them; do not execute fabricated
-/// or stale commands that violate current annotation, camera or dock mappings.
-pub struct CommandHistory {
-    undo: Vec<ImageCommand>,
-    redo: Vec<ImageCommand>,
-}
-
-impl CommandHistory {
-    /// Apply a validated command, append one undo entry and clear redo history.
-    /// Empty/unchanged camera commands and unchanged split resizes are skipped.
-    pub fn execute(
-        &mut self,
-        command: ImageCommand,
-        document: &mut Document,
-        session: &mut Session,
-        workspace: &mut Workspace,
-    ) {
-        if matches!(
-            &command,
-            ImageCommand::SetCameras { changes }
-                if changes.is_empty() || changes.iter().all(|change| change.before == change.after)
-        ) || matches!(
-            &command,
-            ImageCommand::ResizeSplit { before, after, .. } if before == after
-        ) {
-            return;
-        }
-        apply(&command, document, session, workspace);
-        self.undo.push(command);
-        self.redo.clear();
+        apply(self, target.document, target.session);
+        Ok(true)
     }
 
-    pub fn undo(
-        &mut self,
-        document: &mut Document,
-        session: &mut Session,
-        workspace: &mut Workspace,
-    ) -> bool {
-        let Some(command) = self.undo.pop() else {
-            return false;
-        };
-        revert(&command, document, session, workspace);
-        self.redo.push(command);
-        true
-    }
-
-    pub fn redo(
-        &mut self,
-        document: &mut Document,
-        session: &mut Session,
-        workspace: &mut Workspace,
-    ) -> bool {
-        let Some(command) = self.redo.pop() else {
-            return false;
-        };
-        apply(&command, document, session, workspace);
-        self.undo.push(command);
-        true
-    }
-
-    pub fn undo_len(&self) -> usize {
-        self.undo.len()
-    }
-
-    pub fn redo_len(&self) -> usize {
-        self.redo.len()
+    fn revert(&self, target: &mut ImageTarget<'_>) -> Result<(), String> {
+        revert(self, target.document, target.session);
+        Ok(())
     }
 }
 
@@ -300,12 +238,7 @@ pub fn commit_gesture(
     }
 }
 
-fn apply(
-    command: &ImageCommand,
-    document: &mut Document,
-    session: &mut Session,
-    workspace: &mut Workspace,
-) {
+fn apply(command: &ImageCommand, document: &mut Document, session: &mut Session) {
     match command {
         ImageCommand::SetCameras { changes } => {
             apply_camera_changes(&mut session.cameras, changes, true)
@@ -346,18 +279,10 @@ fn apply(
             }
         }
         ImageCommand::SelectResult { after, .. } => session.selected_result = *after,
-        ImageCommand::ResizeSplit { node, after, .. } => {
-            workspace.root.set_split_fraction(*node, *after);
-        }
     }
 }
 
-fn revert(
-    command: &ImageCommand,
-    document: &mut Document,
-    session: &mut Session,
-    workspace: &mut Workspace,
-) {
+fn revert(command: &ImageCommand, document: &mut Document, session: &mut Session) {
     match command {
         ImageCommand::SetCameras { changes } => {
             apply_camera_changes(&mut session.cameras, changes, false)
@@ -398,9 +323,6 @@ fn revert(
             session.selected_annotation = Some(polygon.id);
         }
         ImageCommand::SelectResult { before, .. } => session.selected_result = *before,
-        ImageCommand::ResizeSplit { node, before, .. } => {
-            workspace.root.set_split_fraction(*node, *before);
-        }
     }
 }
 
@@ -408,7 +330,7 @@ fn revert(
 mod tests {
     use super::*;
     use crate::{CameraState, GesturePreview, LayerId};
-    use stobie_core::{DockNode, LAYOUT_SCHEMA_VERSION, SplitAxis};
+    use stobie_core::History;
 
     /// Four image panes; the first two share a camera link.
     fn session() -> Session {
@@ -424,33 +346,10 @@ mod tests {
         }
     }
 
-    /// Two panes side by side, split at 0.72.
-    fn workspace() -> Workspace {
-        let tabs = |id, pane| DockNode::Tabs {
-            id: DockNodeId(id),
-            tabs: vec![PaneId(pane)],
-            active: 0,
-        };
-        Workspace {
-            schema_version: LAYOUT_SCHEMA_VERSION,
-            root: DockNode::Split {
-                id: DockNodeId(1),
-                axis: SplitAxis::Horizontal,
-                fraction: 0.72,
-                first: Box::new(tabs(2, 1)),
-                second: Box::new(tabs(3, 2)),
-            },
-            active_pane: PaneId(1),
-            closed_optional_panes: Default::default(),
-            next_node_id: 4,
-        }
-    }
-
     #[test]
     fn command_application_undo_and_redo() {
         let mut document = Document::default();
         let mut session = session();
-        let mut workspace = workspace();
         let command = validate_intent(
             ImageIntent::CommitPolygon {
                 layer: LayerId(1),
@@ -464,12 +363,22 @@ mod tests {
             &session,
         )
         .unwrap();
-        let mut history = CommandHistory::default();
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        let mut history = History::default();
+        history
+            .execute(command, &mut ImageTarget::new(&mut document, &mut session))
+            .unwrap();
         assert_eq!(document.annotations.len(), 1);
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert!(
+            history
+                .undo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
         assert!(document.annotations.is_empty());
-        assert!(history.redo(&mut document, &mut session, &mut workspace));
+        assert!(
+            history
+                .redo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
         assert_eq!(document.annotations.len(), 1);
     }
 
@@ -487,10 +396,11 @@ mod tests {
             }),
             ..session()
         };
-        let mut workspace = workspace();
         let command = commit_gesture(&mut document, &mut session).unwrap();
-        let mut history = CommandHistory::default();
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        let mut history = History::default();
+        history
+            .execute(command, &mut ImageTarget::new(&mut document, &mut session))
+            .unwrap();
         assert_eq!(history.undo_len(), 1);
     }
 
@@ -517,8 +427,7 @@ mod tests {
     fn result_selection_is_stable_across_virtual_ranges_and_undoable() {
         let mut document = Document::default();
         let mut session = session();
-        let mut workspace = workspace();
-        let mut history = CommandHistory::default();
+        let mut history = History::default();
         let command = validate_intent(
             ImageIntent::SelectResult {
                 result: ResultId(734_219),
@@ -528,51 +437,32 @@ mod tests {
         )
         .unwrap();
 
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        history
+            .execute(command, &mut ImageTarget::new(&mut document, &mut session))
+            .unwrap();
         assert_eq!(session.selected_result, Some(ResultId(734_219)));
         let range = stobie_core::virtual_rows(700_000.0, 480.0, 20.0, 1_000_000, 8);
         assert_eq!(range.visible.start, 35_000);
         assert_eq!(range.materialised.start, 34_992);
         assert_eq!(session.selected_result, Some(ResultId(734_219)));
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
-        assert_eq!(session.selected_result, None);
-        assert!(history.redo(&mut document, &mut session, &mut workspace));
-        assert_eq!(session.selected_result, Some(ResultId(734_219)));
-    }
-
-    #[test]
-    fn splitter_gesture_is_one_undoable_workspace_command() {
-        let mut document = Document::default();
-        let mut session = session();
-        let mut workspace = workspace();
-        let node = DockNodeId(1);
-        let before = workspace.root.split_fraction(node).unwrap();
-        let mut history = CommandHistory::default();
-
-        history.execute(
-            ImageCommand::ResizeSplit {
-                node,
-                before,
-                after: 0.61,
-            },
-            &mut document,
-            &mut session,
-            &mut workspace,
+        assert!(
+            history
+                .undo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
         );
-
-        assert_eq!(history.undo_len(), 1);
-        assert_eq!(workspace.root.split_fraction(node), Some(0.61));
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
-        assert_eq!(workspace.root.split_fraction(node), Some(before));
-        assert!(history.redo(&mut document, &mut session, &mut workspace));
-        assert_eq!(workspace.root.split_fraction(node), Some(0.61));
+        assert_eq!(session.selected_result, None);
+        assert!(
+            history
+                .redo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
+        assert_eq!(session.selected_result, Some(ResultId(734_219)));
     }
 
     #[test]
     fn linked_camera_undo_restores_exact_snapshot_after_topology_changes() {
         let mut document = Document::default();
         let mut session = session();
-        let mut workspace = workspace();
         session.cameras[1].camera.centre.x = 17.0;
         let original = session.cameras.clone();
         let mut updated = session.cameras[0].camera;
@@ -586,18 +476,28 @@ mod tests {
             &session,
         )
         .unwrap();
-        let mut history = CommandHistory::default();
+        let mut history = History::default();
 
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        history
+            .execute(command, &mut ImageTarget::new(&mut document, &mut session))
+            .unwrap();
         assert_eq!(session.cameras[0].camera, updated);
         assert_eq!(session.cameras[1].camera, updated);
         session.cameras[1].link = None;
 
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert!(
+            history
+                .undo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
         assert_eq!(session.cameras[0].camera, original[0].camera);
         assert_eq!(session.cameras[1].camera, original[1].camera);
         assert_eq!(session.cameras[1].link, None);
-        assert!(history.redo(&mut document, &mut session, &mut workspace));
+        assert!(
+            history
+                .redo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
         assert_eq!(session.cameras[0].camera, updated);
         assert_eq!(session.cameras[1].camera, updated);
         assert_eq!(session.cameras[1].link, None);
@@ -608,56 +508,34 @@ mod tests {
         let mut document = Document::default();
         let mut session = session();
         let original = session.cameras.clone();
-        let mut workspace = workspace();
-        let mut history = CommandHistory::default();
+        let mut history = History::default();
 
-        history.execute(
-            ImageCommand::SetCameras {
-                changes: vec![CameraChange {
-                    pane: PaneId(1),
-                    before: original[0].camera,
-                    after: original[0].camera,
-                }],
-            },
-            &mut document,
-            &mut session,
-            &mut workspace,
-        );
+        history
+            .execute(
+                ImageCommand::SetCameras {
+                    changes: vec![CameraChange {
+                        pane: PaneId(1),
+                        before: original[0].camera,
+                        after: original[0].camera,
+                    }],
+                },
+                &mut ImageTarget::new(&mut document, &mut session),
+            )
+            .unwrap();
 
         assert_eq!(session.cameras, original);
         assert_eq!(history.undo_len(), 0);
-        assert!(!history.undo(&mut document, &mut session, &mut workspace));
-    }
-
-    #[test]
-    fn no_op_split_resize_is_not_recorded() {
-        let mut document = Document::default();
-        let mut session = session();
-        let mut workspace = workspace();
-        let original = workspace.clone();
-        let mut history = CommandHistory::default();
-
-        history.execute(
-            ImageCommand::ResizeSplit {
-                node: DockNodeId(1),
-                before: 0.72,
-                after: 0.72,
-            },
-            &mut document,
-            &mut session,
-            &mut workspace,
+        assert!(
+            !history
+                .undo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
         );
-
-        assert_eq!(workspace, original);
-        assert_eq!(history.undo_len(), 0);
-        assert!(!history.undo(&mut document, &mut session, &mut workspace));
     }
 
     #[test]
     fn joining_camera_link_synchronises_and_undo_restores_camera() {
         let mut document = Document::default();
         let mut session = session();
-        let mut workspace = workspace();
         session.cameras[2].camera.centre.x = 8_192.0;
         let before = session.cameras[2].camera;
         let linked = session.cameras[0].camera;
@@ -670,34 +548,19 @@ mod tests {
             &session,
         )
         .unwrap();
-        let mut history = CommandHistory::default();
+        let mut history = History::default();
 
-        history.execute(command, &mut document, &mut session, &mut workspace);
+        history
+            .execute(command, &mut ImageTarget::new(&mut document, &mut session))
+            .unwrap();
         assert_eq!(session.cameras[2].link, Some(LinkGroupId(1)));
         assert_eq!(session.cameras[2].camera, linked);
-        assert!(history.undo(&mut document, &mut session, &mut workspace));
+        assert!(
+            history
+                .undo(&mut ImageTarget::new(&mut document, &mut session))
+                .unwrap()
+        );
         assert_eq!(session.cameras[2].link, None);
         assert_eq!(session.cameras[2].camera, before);
-    }
-
-    #[test]
-    fn command_undo_scope_is_explicit() {
-        assert_eq!(
-            ImageCommand::SelectResult {
-                before: None,
-                after: Some(ResultId(1)),
-            }
-            .undo_scope(),
-            UndoScope::Selection
-        );
-        assert_eq!(
-            ImageCommand::ResizeSplit {
-                node: DockNodeId(1),
-                before: 0.5,
-                after: 0.6,
-            }
-            .undo_scope(),
-            UndoScope::Workspace
-        );
     }
 }
