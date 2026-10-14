@@ -11,6 +11,8 @@ assert(!baseline.failure && !finalist.failure, 'cannot qualify a failed benchmar
 assert.deepEqual(baseline.browser.launch, finalist.browser.launch, 'browser flags differ');
 assert.equal(baseline.browser.version, finalist.browser.version, 'browser versions differ');
 assert.deepEqual(baseline.browser.viewport, finalist.browser.viewport, 'viewports differ');
+// Reports before UI library recording carry no source to compare.
+if (baseline.browser.libraries && finalist.browser.libraries) assert.equal(baseline.browser.libraries, finalist.browser.libraries, 'UI library sources differ');
 assert.equal(baseline.host.cpu, finalist.host.cpu, 'hardware differs');
 const comparisons = [];
 for (const [group, metrics] of Object.entries(finalist.summary)) {

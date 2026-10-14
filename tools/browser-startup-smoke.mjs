@@ -1,7 +1,7 @@
 // Deterministic startup contracts against the exact packaged bytes, without timing gates.
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment } from './browser-launch.mjs';
 import { createProductionServer } from './browser-serve.mjs';
 
 async function restoredNonImageLayout(browser, url) {
@@ -42,7 +42,7 @@ async function restoredNonImageLayout(browser, url) {
 }
 
 const directory = process.argv[2] || 'target/browser-production';
-const browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
+const browser = await chromium.launch({ ...hostedLinuxWebGpuLaunchOptions(), env: uiLibraryEnvironment() });
 try {
   const session = await browser.newBrowserCDPSession();
   assertGpuCompositing((await session.send('SystemInfo.getInfo')).gpu);

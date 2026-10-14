@@ -333,7 +333,14 @@ pub fn consume_action_shortcut<A: ActionKey>(ui: &mut Ui, id: A, active_pane: bo
     if spec.scope != ActionScope::Application && !active_pane {
         return false;
     }
-    if !shortcut.command && ui.ctx().egui_wants_keyboard_input() {
+    // Plain keys yield to text entry. Enter and Space also yield to any other
+    // focused control, which they activate; without the host's observation a
+    // focused viewport cannot be told apart.
+    let activation = matches!(shortcut.key, ShortcutKey::Enter | ShortcutKey::Space);
+    let context = ui.ctx();
+    if !shortcut.command
+        && (context.text_edit_focused() || activation && context.egui_wants_keyboard_input())
+    {
         return false;
     }
     ui.input_mut(|input| input.consume_shortcut(&shortcut.egui()))
@@ -464,5 +471,54 @@ mod tests {
         assert!(pressed(TestAction::Undo, true, Modifiers::COMMAND));
         assert!(!pressed(TestAction::FitView, false, Modifiers::NONE));
         assert!(pressed(TestAction::FitView, true, Modifiers::NONE));
+    }
+
+    #[test]
+    fn plain_shortcuts_yield_to_text_entry_and_activation_keys_to_controls() {
+        fn pressed_with_focus(action: TestAction, text_entry: bool) -> bool {
+            let shortcut = action.specification().shortcut.expect("has a shortcut");
+            let context = egui::Context::default();
+            crate::install_typography_fonts(&context);
+            let focus = egui::Id::new("focus");
+            let mut draft = String::new();
+            let mut consumed = false;
+            for events in [
+                Vec::new(),
+                Vec::new(),
+                vec![egui::Event::Key {
+                    key: shortcut.key.egui(),
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Modifiers::NONE,
+                }],
+            ] {
+                let mut output = context.run_ui(
+                    egui::RawInput {
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        consumed = consume_action_shortcut(ui, action, true);
+                        if text_entry {
+                            ui.add(egui::TextEdit::singleline(&mut draft).id(focus));
+                        } else {
+                            // A focusable non-text widget, such as a button.
+                            let rect = ui.allocate_space(egui::vec2(40.0, 40.0)).1;
+                            ui.interact(rect, focus, egui::Sense::click());
+                        }
+                        ui.memory_mut(|memory| memory.request_focus(focus));
+                    },
+                );
+                output.textures_delta.clear();
+            }
+            assert!(context.egui_wants_keyboard_input());
+            consumed
+        }
+
+        assert!(pressed_with_focus(TestAction::FitView, false));
+        assert!(!pressed_with_focus(TestAction::FitView, true));
+        // The focused control activates with Enter, so Enter stays in the input.
+        assert!(!pressed_with_focus(TestAction::CommitPolygon, false));
     }
 }

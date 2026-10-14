@@ -8,7 +8,7 @@ import { cpus, totalmem, platform, release, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment, uiLibrarySource } from './browser-launch.mjs';
 import { createProductionServer } from './browser-serve.mjs';
 
 export function spread(values) {
@@ -41,7 +41,7 @@ const report = {
   sourceDiffSha256: hash(command('git', ['diff', 'HEAD']) ?? ''), manifestSha256: hash(manifestBytes), manifest,
   host: { platform: platform(), release: release(), cpu: cpus()[0]?.model, logicalCpus: cpus().length, memoryBytes: totalmem() },
   tools: { rustc: command('rustc', ['--version']), wasmBindgen: command('wasm-bindgen', ['--version']), node: process.version, playwright: JSON.parse(await readFile('node_modules/playwright/package.json')).version },
-  browser: { launch, viewport, version: null },
+  browser: { launch, libraries: uiLibrarySource(), viewport, version: null },
   cacheProcedure: 'Each pair starts a fresh Chromium process and temporary profile. Repeat is an ordinary same-URL navigation in that process/profile/origin; localStorage/sessionStorage reset before app code on each navigation. HTTP cache is never cleared/disabled; no interception or cache-busting. OS/GPU and compiled-code cache state uncontrolled.',
   timings: 'Navigation-relative milestones, CPU queue submission and subsequent RAF opportunity; no physical presentation or isolated compilation claim. Input/screenshots follow startup timing capture.',
   encoding, basePath, viewerUpstream: option('--viewer-upstream', null), samples: [], summary: {},
@@ -121,7 +121,7 @@ try {
     try {
       for (const app of apps) for (let pair = 0; pair < pairs; pair++) {
         const userDataDir = await mkdtemp(join(tmpdir(), 'stobie-startup-'));
-        const context = await chromium.launchPersistentContext(userDataDir, { ...launch, viewport });
+        const context = await chromium.launchPersistentContext(userDataDir, { ...launch, env: uiLibraryEnvironment(), viewport });
         try {
           const browserSession = await context.browser().newBrowserCDPSession();
           report.browser.version = (await browserSession.send('Browser.getVersion')).product;
