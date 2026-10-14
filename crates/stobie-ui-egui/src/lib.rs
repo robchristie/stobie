@@ -4,16 +4,18 @@
 //! application declares state, actions, UI and intent handling, and the host
 //! owns observation, shortcuts, agent inspection and repaint. Present panes
 //! with [`Frame::dock`] and [`Panes`]; `run_native` and `web_handle!` are the
-//! entry points. The core `Workspace` remains the only dock tree. See the
+//! entry points. They leave GPU backends to the application, which depends on
+//! eframe with its `wgpu` feature. The core `Workspace` remains the only dock
+//! tree. See the
 //! [application composition guide](https://github.com/robchristie/stobie/blob/main/docs/application-composition.md)
 //! and its compiled `notes` example.
 //!
 //! The lower-level path ([`dock_workspace`], [`PanePresenter`] and manually
 //! merged [`PresentationObservations`]) serves compositions that wire their
 //! own pass, such as the Lab's `minimal-workspace` example. Keep hover, focus and
-//! [`DockBehaviour`] here; durable data and transient session state remain in
-//! core. Panes own content/layout and local scrolling, not GPU devices or the
-//! complete mutable application/runtime.
+//! [`DockBehaviour`] here; durable data and transient session state belong to
+//! the application. Panes own content/layout and local scrolling, not GPU
+//! devices or the complete mutable application/runtime.
 //!
 //! [`PresentationContext`] adds stable identity, measured recipes and observations
 //! to application-owned egui layout. Construct it inside each UI pass, use
@@ -32,10 +34,10 @@
 //! assert_ne!(title, scope.instance("add-triangle"));
 //! ```
 //!
-//! For scalar GPU images, allocate with [`allocate_viewport`], stage
-//! [`stage_renderer_maintenance`] before panes, collect targets with
-//! [`stage_render_callback`] and publish the complete ordered plan using
-//! [`submit_render_plan`] before callback preparation. Repaint after applied
+//! For scalar GPU images, enable the `image-rendering` feature. Allocate with
+//! [`allocate_viewport`], stage `stage_renderer_maintenance` before panes,
+//! collect targets with `stage_render_callback` and publish the complete
+//! ordered plan using `submit_render_plan` before callback preparation. Repaint after applied
 //! commands, active interactions, worker completion or pending uploads; avoid an
 //! unconditional frame loop. See the
 //! [image application guide](https://github.com/robchristie/stobie/blob/main/docs/image-application-composition.md)
@@ -58,6 +60,8 @@ mod virtual_grid;
 mod components;
 mod generated_tokens;
 mod host;
+#[cfg(feature = "image-rendering")]
+mod image_rendering;
 pub mod inspection;
 mod observation;
 mod pane_content;
@@ -78,6 +82,8 @@ pub use application_theme::*;
 pub use components::*;
 pub use generated_tokens::*;
 pub use host::*;
+#[cfg(feature = "image-rendering")]
+pub use image_rendering::*;
 pub use inspection::*;
 pub use observation::{observe_node, observe_text, observe_visible_only};
 pub use pane_content::*;
@@ -152,14 +158,10 @@ pub use typography::*;
 pub use virtual_grid::*;
 
 use egui::{Pos2, Rect, Ui};
-#[cfg(feature = "image-rendering")]
-use std::sync::{Arc, RwLock};
 use stobie_core::{
     DockDrop, DockNode, DockNodeId, LogicalPoint, PaneId, PhysicalPoint, SplitAxis, ViewportPoint,
     Workspace, WorkspaceChange, WorkspaceResize,
 };
-#[cfg(feature = "image-rendering")]
-use stobie_render_wgpu::{ImageRenderRequest, PixelRect, RenderPlan, ScalarRenderer};
 
 const TAB_VISUAL_HEIGHT: f32 = 24.0;
 const SPLITTER_KEY_STEP: f32 = 0.05;
@@ -868,248 +870,6 @@ pub fn logical(point: Pos2) -> LogicalPoint {
     LogicalPoint::new(point.x as f64, point.y as f64)
 }
 
-#[derive(Clone)]
-#[cfg(feature = "image-rendering")]
-pub struct ScalarPaintCallback {
-    pub frame_number: u64,
-    request: Arc<RwLock<Option<ImageRenderRequest>>>,
-}
-
-#[cfg(feature = "image-rendering")]
-impl egui_wgpu::CallbackTrait for ScalarPaintCallback {
-    fn prepare(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        _screen: &egui_wgpu::ScreenDescriptor,
-        _encoder: &mut wgpu::CommandEncoder,
-        resources: &mut egui_wgpu::CallbackResources,
-    ) -> Vec<wgpu::CommandBuffer> {
-        if let Some(renderer) = resources.get_mut::<ScalarRenderer>() {
-            let request = self.request.read().expect("render request lock poisoned");
-            if let Some(request) = request.as_ref() {
-                renderer.prepare(device, queue, self.frame_number, request);
-            }
-        }
-        Vec::new()
-    }
-
-    fn paint(
-        &self,
-        info: egui::PaintCallbackInfo,
-        render_pass: &mut wgpu::RenderPass<'static>,
-        resources: &egui_wgpu::CallbackResources,
-    ) {
-        let Some(renderer) = resources.get::<ScalarRenderer>() else {
-            return;
-        };
-        let Some(pane) = self
-            .request
-            .read()
-            .expect("render request lock poisoned")
-            .as_ref()
-            .map(|request| request.pane)
-        else {
-            return;
-        };
-        let viewport = info.viewport_in_pixels();
-        let clip = info.clip_rect_in_pixels();
-        renderer.paint(
-            pane,
-            PixelRect {
-                x: viewport.left_px.max(0) as u32,
-                y: viewport.top_px.max(0) as u32,
-                width: viewport.width_px.max(0) as u32,
-                height: viewport.height_px.max(0) as u32,
-            },
-            PixelRect {
-                x: clip.left_px.max(0) as u32,
-                y: clip.top_px.max(0) as u32,
-                width: clip.width_px.max(0) as u32,
-                height: clip.height_px.max(0) as u32,
-            },
-            render_pass,
-        );
-    }
-}
-
-#[derive(Clone)]
-/// Opaque staged callback target. Collect one per image request, in identical
-/// pane order, and publish with [`submit_render_plan`] before callback preparation.
-#[cfg(feature = "image-rendering")]
-pub struct ImagePlanTarget {
-    pane: PaneId,
-    request: Arc<RwLock<Option<ImageRenderRequest>>>,
-}
-
-/// Stage an opaque callback in egui's correct paint list; its request is finalised later.
-#[cfg(feature = "image-rendering")]
-pub fn stage_render_callback(
-    ui: &Ui,
-    rect: Rect,
-    frame_number: u64,
-    request: ImageRenderRequest,
-) -> ImagePlanTarget {
-    let pane = request.pane;
-    let request = Arc::new(RwLock::new(Some(request)));
-    ui.painter().add(egui_wgpu::Callback::new_paint_callback(
-        rect,
-        ScalarPaintCallback {
-            frame_number,
-            request: request.clone(),
-        },
-    ));
-    ImagePlanTarget { pane, request }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-/// Structural publication failure. Every staged image target is disabled on
-/// failure; repair the complete plan/target pairing before rendering again.
-#[cfg(feature = "image-rendering")]
-pub enum RenderPlanSubmissionError {
-    /// The complete plan and staged-target lists have different lengths.
-    CountMismatch { requests: usize, targets: usize },
-    /// The request and target at this position name different panes.
-    PaneMismatch {
-        index: usize,
-        request: PaneId,
-        target: PaneId,
-    },
-    /// A pane occurs more than once in the complete plan/target pairing.
-    DuplicatePane(PaneId),
-}
-
-#[cfg(feature = "image-rendering")]
-impl std::fmt::Display for RenderPlanSubmissionError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::CountMismatch { requests, targets } => write!(
-                formatter,
-                "render plan has {requests} requests but {targets} staged targets"
-            ),
-            Self::PaneMismatch {
-                index,
-                request,
-                target,
-            } => write!(
-                formatter,
-                "render plan request {index} is pane {} but its staged target is pane {}",
-                request.0, target.0
-            ),
-            Self::DuplicatePane(pane) => {
-                write!(
-                    formatter,
-                    "render plan contains pane {} more than once",
-                    pane.0
-                )
-            }
-        }
-    }
-}
-
-#[cfg(feature = "image-rendering")]
-impl std::error::Error for RenderPlanSubmissionError {}
-
-#[cfg(feature = "image-rendering")]
-fn validate_plan_target_panes(
-    requests: &[PaneId],
-    targets: &[PaneId],
-) -> Result<(), RenderPlanSubmissionError> {
-    if requests.len() != targets.len() {
-        return Err(RenderPlanSubmissionError::CountMismatch {
-            requests: requests.len(),
-            targets: targets.len(),
-        });
-    }
-    let mut unique = std::collections::BTreeSet::new();
-    for (index, (request, target)) in requests.iter().zip(targets).enumerate() {
-        if !unique.insert(*request) {
-            return Err(RenderPlanSubmissionError::DuplicatePane(*request));
-        }
-        if request != target {
-            return Err(RenderPlanSubmissionError::PaneMismatch {
-                index,
-                request: *request,
-                target: *target,
-            });
-        }
-    }
-    Ok(())
-}
-
-/// Publish the complete typed frame plan before callback preparation begins.
-/// Validation occurs before any target is changed. On failure, every staged image callback is
-/// disabled so a release build cannot silently paint stale or mismatched data.
-#[cfg(feature = "image-rendering")]
-pub fn submit_render_plan(
-    plan: &RenderPlan,
-    targets: &[ImagePlanTarget],
-) -> Result<(), RenderPlanSubmissionError> {
-    let request_panes: Vec<_> = plan.images.iter().map(|request| request.pane).collect();
-    let target_panes: Vec<_> = targets.iter().map(|target| target.pane).collect();
-    if let Err(error) = validate_plan_target_panes(&request_panes, &target_panes) {
-        for target in targets {
-            *target
-                .request
-                .write()
-                .expect("render request lock poisoned") = None;
-        }
-        return Err(error);
-    }
-    for (request, target) in plan.images.iter().cloned().zip(targets) {
-        *target
-            .request
-            .write()
-            .expect("render request lock poisoned") = Some(request);
-    }
-    Ok(())
-}
-
-#[derive(Clone, Copy)]
-#[cfg(feature = "image-rendering")]
-struct RendererMaintenanceCallback {
-    frame_number: u64,
-    source_generation: u64,
-}
-
-#[cfg(feature = "image-rendering")]
-impl egui_wgpu::CallbackTrait for RendererMaintenanceCallback {
-    fn prepare(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        _screen: &egui_wgpu::ScreenDescriptor,
-        _encoder: &mut wgpu::CommandEncoder,
-        resources: &mut egui_wgpu::CallbackResources,
-    ) -> Vec<wgpu::CommandBuffer> {
-        if let Some(renderer) = resources.get_mut::<ScalarRenderer>() {
-            renderer.maintain_frame(device, queue, self.frame_number, self.source_generation);
-        }
-        Vec::new()
-    }
-
-    fn paint(
-        &self,
-        _info: egui::PaintCallbackInfo,
-        _render_pass: &mut wgpu::RenderPass<'static>,
-        _resources: &egui_wgpu::CallbackResources,
-    ) {
-    }
-}
-
-/// Stage renderer maintenance before pane presentation so uploads and per-frame metrics progress
-/// even when the canonical workspace currently exposes no image callback.
-#[cfg(feature = "image-rendering")]
-pub fn stage_renderer_maintenance(ui: &Ui, rect: Rect, frame_number: u64, source_generation: u64) {
-    ui.painter().add(egui_wgpu::Callback::new_paint_callback(
-        rect,
-        RendererMaintenanceCallback {
-            frame_number,
-            source_generation,
-        },
-    ));
-}
-
 #[cfg(test)]
 mod tests {
     use stobie_core::{History, WorkspaceChange, WorkspaceCommand};
@@ -1347,29 +1107,6 @@ mod tests {
             .collect()
     }
 
-    #[cfg(feature = "image-rendering")]
-    #[test]
-    fn render_plan_correspondence_rejects_count_order_and_duplicates() {
-        assert_eq!(
-            validate_plan_target_panes(&[PaneId(1)], &[]),
-            Err(RenderPlanSubmissionError::CountMismatch {
-                requests: 1,
-                targets: 0,
-            })
-        );
-        assert!(matches!(
-            validate_plan_target_panes(&[PaneId(1), PaneId(2)], &[PaneId(2), PaneId(1)]),
-            Err(RenderPlanSubmissionError::PaneMismatch { index: 0, .. })
-        ));
-        assert_eq!(
-            validate_plan_target_panes(&[PaneId(1), PaneId(1)], &[PaneId(1), PaneId(1)]),
-            Err(RenderPlanSubmissionError::DuplicatePane(PaneId(1)))
-        );
-        assert!(
-            validate_plan_target_panes(&[PaneId(1), PaneId(2)], &[PaneId(1), PaneId(2)]).is_ok()
-        );
-    }
-
     #[test]
     fn aborted_dock_gestures_stop_interaction_when_the_pointer_is_released() {
         let mut behaviour = DockBehaviour {
@@ -1410,7 +1147,7 @@ mod tests {
         crate::install_typography_fonts(&context);
         let mut output = context.run_ui(Default::default(), |ui| {
             let root = Rect::from_min_size(ui.min_rect().min, egui::vec2(800.0, 600.0));
-            let mut workspace = Workspace::analytical_default();
+            let mut workspace = crate::test_actions::analytical_workspace();
             let mut expected_bodies = Vec::new();
             workspace.root.active_panes(&mut expected_bodies);
             let mut behaviour = DockBehaviour::default();
@@ -1460,7 +1197,7 @@ mod tests {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let mut presenter = GeometryPresenter::default();
         let root = Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0));
@@ -1596,7 +1333,7 @@ mod tests {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let (_, _, mut before_output) =
             dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
@@ -1634,7 +1371,7 @@ mod tests {
         for activation_key in [egui::Key::Enter, egui::Key::Space] {
             let context = egui::Context::default();
             crate::install_typography_fonts(&context);
-            let mut workspace = Workspace::analytical_default();
+            let mut workspace = crate::test_actions::analytical_workspace();
             workspace.root = DockNode::Tabs {
                 id: DockNodeId(41),
                 tabs: vec![PaneId(1), PaneId(2)],
@@ -1686,7 +1423,7 @@ mod tests {
             let context = egui::Context::default();
             crate::install_typography_fonts(&context);
             context.enable_accesskit();
-            let mut workspace = Workspace::analytical_default();
+            let mut workspace = crate::test_actions::analytical_workspace();
             let mut behaviour = DockBehaviour::default();
             let (_, _, mut output) =
                 dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
@@ -1730,7 +1467,7 @@ mod tests {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let (_, _, mut output) =
             dock_accesskit_frame(&context, &mut workspace, &mut behaviour, Vec::new());
@@ -1802,7 +1539,7 @@ mod tests {
     fn pointer_click_focuses_splitter_before_keyboard_adjustment() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let (_, geometry) = dock_frame(&context, &mut workspace, &mut behaviour, vec![]);
         let point = geometry.splitter(DockNodeId(1)).center();
@@ -1841,7 +1578,7 @@ mod tests {
     fn focused_tab_keys_activate_and_move_focus_across_frames() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(41),
             tabs: vec![PaneId(1), PaneId(2), PaneId(3)],
@@ -1883,7 +1620,7 @@ mod tests {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(41),
             tabs: vec![PaneId(1), PaneId(2)],
@@ -1950,7 +1687,7 @@ mod tests {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         workspace.root = DockNode::Tabs {
             id: DockNodeId(41),
             tabs: (1_u32..=30).map(PaneId).collect(),
@@ -2042,7 +1779,7 @@ mod tests {
                             focused: true,
                             ..Default::default()
                         };
-                        let mut workspace = Workspace::analytical_default();
+                        let mut workspace = crate::test_actions::analytical_workspace();
                         workspace.root = DockNode::Tabs {
                             id: DockNodeId(41),
                             tabs: vec![PaneId(1), PaneId(2), PaneId(3)],
@@ -2096,7 +1833,7 @@ mod tests {
     fn splitter_preview_tracks_total_drag_and_release_commits_the_final_sample() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
         let before_fraction = workspace.root.split_fraction(node).unwrap();
@@ -2161,7 +1898,7 @@ mod tests {
     fn splitter_identity_survives_a_changing_parent_ui_id() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
         let (_, initial) = dock_frame_with_parent_id(
@@ -2212,7 +1949,7 @@ mod tests {
     fn splitter_drag_returning_to_origin_emits_no_command() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);
         let (_, initial) = dock_frame(&context, &mut workspace, &mut behaviour, Vec::new());
@@ -2255,7 +1992,7 @@ mod tests {
     fn pane_interactions_are_clipped_before_they_can_steal_an_adjacent_splitter() {
         let context = egui::Context::default();
         crate::install_typography_fonts(&context);
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = crate::test_actions::analytical_workspace();
         workspace.activate(PaneId(6));
         let mut behaviour = DockBehaviour::default();
         let node = DockNodeId(1);

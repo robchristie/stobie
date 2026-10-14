@@ -3,9 +3,10 @@
 
 use egui::{Color32, Pos2, Rect, Stroke, Ui};
 use serde::Serialize;
-use stobie_core::{
-    CommandHistory, DockNode, DockNodeId, Document, ImageCommand, ImageIntent,
-    LAYOUT_SCHEMA_VERSION, LayerId, PaneId, Session, Workspace, WorldPoint, validate_intent,
+use stobie_core::{DockNode, DockNodeId, LAYOUT_SCHEMA_VERSION, PaneId, Workspace};
+use stobie_imaging::{
+    CommandHistory, Document, ImageCommand, ImageIntent, LayerId, Session, WorldPoint,
+    validate_intent,
 };
 use stobie_ui_egui::{
     ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope, ActionSpec,
@@ -151,11 +152,7 @@ impl MinimalApp {
         Self {
             document: Document::default(),
             // This vector pane has no image camera or tool mapping.
-            session: Session {
-                cameras: vec![],
-                active_tools: Default::default(),
-                ..Session::default()
-            },
+            session: Session::default(),
             workspace,
             history: CommandHistory::default(),
             dock: DockBehaviour::default(),

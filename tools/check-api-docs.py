@@ -13,19 +13,21 @@ ROOT = Path(__file__).resolve().parents[1]
 # This is a bounded coverage policy, not every export or Markdown file.
 CRATES = (
     "stobie-core",
+    "stobie-imaging",
     "stobie-runtime",
     "stobie-render-wgpu",
     "stobie-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
 EXPECTED_EXAMPLES["stobie-ui-egui"] = 5  # Composition, derived actions, icon toolbar, navigation and status-chip consumers.
-EXPECTED_EXAMPLES["stobie-core"] = 4  # Image command history, generic undo history, workspace commands and a small layout.
+EXPECTED_EXAMPLES["stobie-core"] = 3  # Generic undo history, workspace commands and a small layout.
+EXPECTED_EXAMPLES["stobie-imaging"] = 1  # Image command history.
 SOURCE_CONSUMERS = (
-    "crates/stobie-core/src/lib.rs",
-    "crates/stobie-core/src/data.rs",
-    "crates/stobie-core/src/commands.rs",
     "crates/stobie-core/src/dock.rs",
     "crates/stobie-core/src/history.rs",
+    "crates/stobie-imaging/src/lib.rs",
+    "crates/stobie-imaging/src/data.rs",
+    "crates/stobie-imaging/src/commands.rs",
     "crates/stobie-runtime/src/lib.rs",
     "crates/stobie-render-wgpu/src/lib.rs",
     "crates/stobie-ui-egui/src/lib.rs",

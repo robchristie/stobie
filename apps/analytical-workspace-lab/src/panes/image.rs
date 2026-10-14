@@ -782,7 +782,10 @@ mod tests {
                         1,
                     );
                 },
-                ImagePaneFixture::default(),
+                ImagePaneFixture {
+                    session: default_session(),
+                    ..ImagePaneFixture::default()
+                },
             )
     }
 

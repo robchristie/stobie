@@ -2,15 +2,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    AnnotationId, Camera, CameraState, ImagePoint, LayerId, LinkGroupId, PaneId, ResultId,
-    SourceId, WorldPoint,
-};
+use stobie_core::PaneId;
+
+use crate::{AnnotationId, Camera, CameraState, LayerId, ResultId, SourceId, WorldPoint};
 
 pub const TILE_SIZE: u32 = 256;
 pub const PYRAMID_LEVELS: u8 = 10;
-pub const RESULT_COUNT: u64 = 1_000_000;
-pub const THUMBNAIL_COUNT: u64 = 100_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TileKey {
@@ -91,10 +88,10 @@ pub enum GesturePreview {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 /// Transient selection, per-pane view/tool state and in-progress gesture preview.
 /// Serialisation is supported, but this is distinct from durable [`Document`] data.
-/// The default camera/tool mappings are the Lab's panes 1–4, not a generic registry.
+/// The default has no image panes; the application adds a camera and a tool for each.
 pub struct Session {
     /// Selection persists across virtualised visible ranges without materialising rows.
     pub selected_result: Option<ResultId>,
@@ -109,34 +106,13 @@ pub struct Session {
     pub gesture: Option<GesturePreview>,
 }
 
-impl Default for Session {
-    fn default() -> Self {
-        let linked = Some(LinkGroupId(1));
-        Self {
-            selected_result: None,
-            selected_annotation: None,
-            cameras: (1..=4)
-                .map(|id| CameraState {
-                    pane: PaneId(id),
-                    camera: Camera::default(),
-                    link: if id <= 2 { linked } else { None },
-                })
-                .collect(),
-            active_tools: (1..=4)
-                .map(|id| (PaneId(id), ActiveTool::Navigate))
-                .collect(),
-            gesture: None,
-        }
-    }
-}
-
 impl Session {
-    /// Restored application sessions must contain one valid camera for every image pane.
-    pub fn validate_image_cameras(&self) -> Result<(), String> {
-        let expected: BTreeSet<_> = (1..=4).map(PaneId).collect();
+    /// Check a restored session: exactly one finite, positive-scale camera for
+    /// each of the application's `image_panes`, and no others.
+    pub fn validate_cameras(&self, image_panes: &BTreeSet<PaneId>) -> Result<(), String> {
         let actual: BTreeSet<_> = self.cameras.iter().map(|state| state.pane).collect();
-        if actual != expected || actual.len() != self.cameras.len() {
-            return Err("session camera mappings must contain image panes 1–4 exactly once".into());
+        if &actual != image_panes || actual.len() != self.cameras.len() {
+            return Err("session camera mappings must contain each image pane exactly once".into());
         }
         if self.cameras.iter().any(|state| {
             !state.camera.centre.x.is_finite()
@@ -147,24 +123,6 @@ impl Session {
             return Err("session contains an invalid camera".into());
         }
         Ok(())
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ResultRecord {
-    pub id: ResultId,
-    pub position: ImagePoint,
-    pub confidence: f32,
-    pub category: u8,
-}
-
-pub fn result_at(index: u64) -> ResultRecord {
-    let mixed = index.wrapping_mul(0x9E37_79B9_7F4A_7C15).rotate_left(17);
-    ResultRecord {
-        id: ResultId(index),
-        position: ImagePoint::new((mixed & 0x1_FFFF) as f64, ((mixed >> 21) & 0x1_FFFF) as f64),
-        confidence: ((mixed >> 42) & 0xffff) as f32 / 65535.0,
-        category: ((mixed >> 58) & 0x3) as u8,
     }
 }
 
@@ -261,20 +219,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn logical_collections_are_generated_on_demand() {
-        assert_eq!(RESULT_COUNT, 1_000_000);
-        assert_eq!(THUMBNAIL_COUNT, 100_000);
-        assert_eq!(result_at(7), result_at(7));
-    }
-
-    #[test]
     fn restored_camera_mapping_must_be_complete_and_unambiguous() {
-        let mut session = Session::default();
-        assert!(session.validate_image_cameras().is_ok());
+        let panes: BTreeSet<_> = [PaneId(1), PaneId(2)].into();
+        let camera = |pane| CameraState {
+            pane,
+            camera: Camera::default(),
+            link: None,
+        };
+        let mut session = Session {
+            cameras: vec![camera(PaneId(1)), camera(PaneId(2))],
+            ..Session::default()
+        };
+        assert!(session.validate_cameras(&panes).is_ok());
         session.cameras.pop();
-        assert!(session.validate_image_cameras().is_err());
+        assert!(session.validate_cameras(&panes).is_err());
         session.cameras.push(session.cameras[0]);
-        assert!(session.validate_image_cameras().is_err());
+        assert!(session.validate_cameras(&panes).is_err());
+        session.cameras[1] = camera(PaneId(2));
+        session.cameras[1].camera.pixels_per_screen_point = 0.0;
+        assert!(session.validate_cameras(&panes).is_err());
     }
 
     #[test]

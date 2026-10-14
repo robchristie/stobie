@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{ImagePoint, LinkGroupId, PaneId, ViewportPoint};
+use stobie_core::{PaneId, ViewportPoint};
+
+use crate::{ImagePoint, LinkGroupId};
 
 pub const RASTER_SIZE: f64 = 131_072.0;
 

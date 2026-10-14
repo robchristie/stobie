@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+use stobie_core::{DockNodeId, PaneId, Workspace};
+
 use crate::{
-    AnnotationId, Camera, CameraChange, DockNodeId, Document, GesturePreview, LayerId, LinkGroupId,
-    PaneId, Polygon, ResultId, Session, Workspace, WorldPoint, apply_camera_changes,
-    linked_camera_changes, result_at,
+    AnnotationId, Camera, CameraChange, Document, GesturePreview, ImagePoint, LayerId, LinkGroupId,
+    Polygon, ResultId, Session, WorldPoint, apply_camera_changes, linked_camera_changes,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -33,9 +34,10 @@ pub enum ImageIntent {
     SelectResult {
         result: ResultId,
     },
-    RecenterOnResult {
-        result: ResultId,
+    /// Centre a pane's camera, and the cameras linked to it, on an image point.
+    Recentre {
         pane: PaneId,
+        centre: ImagePoint,
     },
 }
 
@@ -259,14 +261,14 @@ pub fn validate_intent(
             before: session.selected_result,
             after: Some(result),
         }),
-        ImageIntent::RecenterOnResult { result, pane } => {
+        ImageIntent::Recentre { pane, centre } => {
             let mut after = session
                 .cameras
                 .iter()
                 .find(|state| state.pane == pane)
                 .ok_or("unknown camera pane")?
                 .camera;
-            after.centre = result_at(result.0).position;
+            after.centre = centre;
             Ok(ImageCommand::SetCameras {
                 changes: linked_camera_changes(&session.cameras, pane, after),
             })
@@ -405,13 +407,50 @@ fn revert(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GesturePreview, LayerId};
+    use crate::{CameraState, GesturePreview, LayerId};
+    use stobie_core::{DockNode, LAYOUT_SCHEMA_VERSION, SplitAxis};
+
+    /// Four image panes; the first two share a camera link.
+    fn session() -> Session {
+        Session {
+            cameras: (1..=4)
+                .map(|id| CameraState {
+                    pane: PaneId(id),
+                    camera: Camera::default(),
+                    link: (id <= 2).then_some(LinkGroupId(1)),
+                })
+                .collect(),
+            ..Session::default()
+        }
+    }
+
+    /// Two panes side by side, split at 0.72.
+    fn workspace() -> Workspace {
+        let tabs = |id, pane| DockNode::Tabs {
+            id: DockNodeId(id),
+            tabs: vec![PaneId(pane)],
+            active: 0,
+        };
+        Workspace {
+            schema_version: LAYOUT_SCHEMA_VERSION,
+            root: DockNode::Split {
+                id: DockNodeId(1),
+                axis: SplitAxis::Horizontal,
+                fraction: 0.72,
+                first: Box::new(tabs(2, 1)),
+                second: Box::new(tabs(3, 2)),
+            },
+            active_pane: PaneId(1),
+            closed_optional_panes: Default::default(),
+            next_node_id: 4,
+        }
+    }
 
     #[test]
     fn command_application_undo_and_redo() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         let command = validate_intent(
             ImageIntent::CommitPolygon {
                 layer: LayerId(1),
@@ -446,9 +485,9 @@ mod tests {
                     WorldPoint::new(0.0, 1.0),
                 ],
             }),
-            ..Session::default()
+            ..session()
         };
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = workspace();
         let command = commit_gesture(&mut document, &mut session).unwrap();
         let mut history = CommandHistory::default();
         history.execute(command, &mut document, &mut session, &mut workspace);
@@ -458,7 +497,7 @@ mod tests {
     #[test]
     fn invalid_polygon_intent_does_not_become_a_command() {
         let mut document = Document::default();
-        let session = Session::default();
+        let session = session();
         let result = validate_intent(
             ImageIntent::CommitPolygon {
                 layer: LayerId(1),
@@ -477,8 +516,8 @@ mod tests {
     #[test]
     fn result_selection_is_stable_across_virtual_ranges_and_undoable() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         let mut history = CommandHistory::default();
         let command = validate_intent(
             ImageIntent::SelectResult {
@@ -491,7 +530,7 @@ mod tests {
 
         history.execute(command, &mut document, &mut session, &mut workspace);
         assert_eq!(session.selected_result, Some(ResultId(734_219)));
-        let range = crate::virtual_rows(700_000.0, 480.0, 20.0, 1_000_000, 8);
+        let range = stobie_core::virtual_rows(700_000.0, 480.0, 20.0, 1_000_000, 8);
         assert_eq!(range.visible.start, 35_000);
         assert_eq!(range.materialised.start, 34_992);
         assert_eq!(session.selected_result, Some(ResultId(734_219)));
@@ -504,8 +543,8 @@ mod tests {
     #[test]
     fn splitter_gesture_is_one_undoable_workspace_command() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         let node = DockNodeId(1);
         let before = workspace.root.split_fraction(node).unwrap();
         let mut history = CommandHistory::default();
@@ -532,8 +571,8 @@ mod tests {
     #[test]
     fn linked_camera_undo_restores_exact_snapshot_after_topology_changes() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         session.cameras[1].camera.centre.x = 17.0;
         let original = session.cameras.clone();
         let mut updated = session.cameras[0].camera;
@@ -567,9 +606,9 @@ mod tests {
     #[test]
     fn no_op_camera_command_is_not_recorded() {
         let mut document = Document::default();
-        let mut session = Session::default();
+        let mut session = session();
         let original = session.cameras.clone();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = workspace();
         let mut history = CommandHistory::default();
 
         history.execute(
@@ -593,8 +632,8 @@ mod tests {
     #[test]
     fn no_op_split_resize_is_not_recorded() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         let original = workspace.clone();
         let mut history = CommandHistory::default();
 
@@ -617,8 +656,8 @@ mod tests {
     #[test]
     fn joining_camera_link_synchronises_and_undo_restores_camera() {
         let mut document = Document::default();
-        let mut session = Session::default();
-        let mut workspace = Workspace::analytical_default();
+        let mut session = session();
+        let mut workspace = workspace();
         session.cameras[2].camera.centre.x = 8_192.0;
         let before = session.cameras[2].camera;
         let linked = session.cameras[0].camera;

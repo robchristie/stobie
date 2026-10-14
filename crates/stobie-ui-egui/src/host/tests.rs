@@ -1046,7 +1046,7 @@ fn repaints_only_for_recorded_reasons() {
 #[test]
 fn the_dock_observes_panes_and_emits_layout_intents() {
     let mut harness = harness(Counter {
-        workspace: Some(Workspace::analytical_default()),
+        workspace: Some(crate::test_actions::analytical_workspace()),
         ..Default::default()
     });
     let snapshot = host(&harness).ui_snapshot();

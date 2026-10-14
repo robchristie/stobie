@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "id": 1001,
+      "title": "Compare the coastal notes",
+      "category": "Ideas",
+      "notes": "Review the observations from the synthetic coastal survey.",
+      "reviewed": true
+    },
+    {
+      "id": 1013,
+      "title": "Prepare review agenda",
+      "category": "Operations",
+      "notes": "Collect the open questions before the next team review.",
+      "reviewed": true
+    },
+    {
+      "id": 1027,
+      "title": "Try a compact summary",
+      "category": "Ideas",
+      "notes": "Explore a one-page summary for a small collection.",
+      "reviewed": false
+    },
+    {
+      "id": 1049,
+      "title": "Check sampling assumptions",
+      "category": "Research",
+      "notes": "Document the assumptions behind the example measurements.",
+      "reviewed": true
+    },
+    {
+      "id": 1061,
+      "title": "Refresh the handover checklist",
+      "category": "Operations",
+      "notes": "Keep the checklist short and give each item a clear owner.",
+      "reviewed": false
+    },
+    {
+      "id": 1087,
+      "title": "Explore colour groupings",
+      "category": "Ideas",
+      "notes": "Test whether category colours help people scan the list.",
+      "reviewed": true
+    },
+    {
+      "id": 1103,
+      "title": "Review interview themes",
+      "category": "Research",
+      "notes": "Compare the fictional interview themes with the working questions.",
+      "reviewed": false
+    },
+    {
+      "id": 1129,
+      "title": "Schedule a maintenance window",
+      "category": "Operations",
+      "notes": "Choose a quiet period for the example workflow review.",
+      "reviewed": false
+    },
+    {
+      "id": 1151,
+      "title": "Sketch a reading queue",
+      "category": "Ideas",
+      "notes": "Make a small queue that preserves the current reading position.",
+      "reviewed": false
+    },
+    {
+      "id": 1171,
+      "title": "Summarise a pilot result",
+      "category": "Research",
+      "notes": "Describe the synthetic pilot result and its limitations.",
+      "reviewed": true
+    },
+    {
+      "id": 1193,
+      "title": "Reconcile review actions",
+      "category": "Operations",
+      "notes": "Mark completed actions and clarify the remaining next steps.",
+      "reviewed": true
+    },
+    {
+      "id": 1217,
+      "title": "Prototype a shared glossary",
+      "category": "Ideas",
+      "notes": "Start with a few terms and a simple review process.",
+      "reviewed": false
+    }
+  ],
+  "workspace": {
+    "schema_version": 2,
+    "root": {
+      "Split": {
+        "id": 1,
+        "axis": "Vertical",
+        "fraction": 0.41,
+        "first": {
+          "Tabs": {
+            "id": 2,
+            "tabs": [
+              101
+            ],
+            "active": 0
+          }
+        },
+        "second": {
+          "Tabs": {
+            "id": 3,
+            "tabs": [
+              102
+            ],
+            "active": 0
+          }
+        }
+      }
+    },
+    "active_pane": 101,
+    "closed_optional_panes": [],
+    "next_node_id": 4
+  }
+}

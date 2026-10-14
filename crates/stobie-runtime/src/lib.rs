@@ -7,7 +7,7 @@
 //! dispatch, completion, upload and residency acknowledgement.
 //!
 //! ```
-//! use stobie_core::{DemandPriority, SourceId, TileDemand, TileKey};
+//! use stobie_imaging::{DemandPriority, SourceId, TileDemand, TileKey};
 //! use stobie_runtime::{Runtime, RuntimeConfig};
 //! let mut runtime = Runtime::try_new(RuntimeConfig::default())
 //!     .expect("native worker must start in this example");
@@ -44,7 +44,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
-use stobie_core::{
+use stobie_imaging::{
     DemandPriority, PYRAMID_LEVELS, ResourceState, RuntimeMetrics, TILE_SIZE, TileDemand, TileKey,
     WorkerHealth, reconcile_demands,
 };
@@ -1083,7 +1083,7 @@ pub fn take_upload_budget(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stobie_core::SourceId;
+    use stobie_imaging::SourceId;
     fn key(x: u32) -> TileKey {
         TileKey {
             source: SourceId(1),
@@ -1332,7 +1332,7 @@ mod tests {
     }
     #[test]
     fn actual_percentiles_use_bounded_samples() {
-        let mut summary = stobie_core::LatencySummary::default();
+        let mut summary = stobie_imaging::LatencySummary::default();
         for value in 1..=200 {
             summary.record(value as f64);
         }

@@ -1,6 +1,6 @@
 # Regional source adapter contract
 
-The additive `regional` modules in core, runtime and renderer provide independent
+The additive `regional` modules in the imaging crate, runtime and renderer provide independent
 parent-image demands, bounded external worker scheduling and integer GPU display.
 The Analytical Workspace Lab continues to use its existing synthetic tile path.
 These contracts are a foundation; they do not qualify a real codec, transport,
@@ -90,9 +90,9 @@ draw bindings cannot keep evicted textures outside ownership accounting.
 ## Focused verification
 
 ```sh
-cargo test -p stobie-core -p stobie-runtime -p stobie-render-wgpu
-cargo clippy -p stobie-core -p stobie-runtime -p stobie-render-wgpu --all-targets -- -D warnings
-cargo check -p stobie-core -p stobie-runtime -p stobie-render-wgpu --target wasm32-unknown-unknown
+cargo test -p stobie-imaging -p stobie-runtime -p stobie-render-wgpu
+cargo clippy -p stobie-imaging -p stobie-runtime -p stobie-render-wgpu --all-targets -- -D warnings
+cargo check -p stobie-imaging -p stobie-runtime -p stobie-render-wgpu --target wasm32-unknown-unknown
 cargo test -p stobie-render-wgpu regional_gpu_readback -- --ignored --nocapture
 ```
 

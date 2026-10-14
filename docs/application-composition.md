@@ -279,10 +279,13 @@ The component Gallery's `lib.rs` is an example. The
 
 ## Choose dependencies
 
-Copy Record Desk's [`Cargo.toml`](../consumers/record-desk/Cargo.toml): it
-depends on `stobie-core` and on `stobie-ui-egui` with
-`default-features = false, features = ["eframe"]`. Enable the default
-`image-rendering` feature only for the GPU image path described in
+Depend on `stobie-core`, `stobie-ui-egui` and `eframe` with its `wgpu`
+feature. The UI crate's default `eframe` feature provides the native and
+browser entry points but leaves GPU backends to the application, which gets
+them from eframe's `wgpu` feature. Record Desk's
+[`Cargo.toml`](../consumers/record-desk/Cargo.toml) is a working example.
+Image applications add `stobie-imaging`, the tile runtime and renderer, and
+the UI crate's `image-rendering` feature, as described in
 [Compose an image application](image-application-composition.md).
 
 ## Generate and check the API documentation

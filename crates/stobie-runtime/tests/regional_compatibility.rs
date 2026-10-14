@@ -1,5 +1,5 @@
 //! Authored downstream use of the original public struct literals and methods.
-use stobie_core::{
+use stobie_imaging::{
     DemandPriority, ImageRegion, RegionConsumerId, RegionDemand, RegionKey, RegionalFrame,
     RegionalPixels, RepresentationId, SampleLayout, SourceStage,
 };

@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn drag_returning_to_origin_emits_no_command() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let origin = ViewportPoint::new(10.0, 20.0);
         let mut behaviour = UiBehaviour::default();
         behaviour.start_camera_drag(PaneId(1), committed, Some(origin));
@@ -399,7 +399,7 @@ mod tests {
             ..Default::default()
         }));
 
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         behaviour.start_camera_drag(
             PaneId(1),
