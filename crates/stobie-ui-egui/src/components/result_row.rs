@@ -14,6 +14,44 @@ pub struct ResultRowSpec<'a> {
     pub selected: bool,
 }
 
+/// Present `add` as a list box named `name`: the result rows, thumbnails and
+/// other selectable options it presents become the list's items for assistive
+/// technology. Present only the options inside it.
+pub fn list_box<R>(
+    ui: &mut egui::Ui,
+    name: &str,
+    add: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<R> {
+    let scope = ui.scope(add);
+    // A virtualised list's content is far larger than what is shown.
+    let bounds = scope.response.rect.intersect(ui.clip_rect());
+    ui.ctx().accesskit_node_builder(scope.response.id, |node| {
+        node.set_role(egui::accesskit::Role::ListBox);
+        node.set_label(name);
+        if bounds.is_positive() {
+            node.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(bounds.min.x),
+                y0: f64::from(bounds.min.y),
+                x1: f64::from(bounds.max.x),
+                y1: f64::from(bounds.max.y),
+            });
+        }
+    });
+    scope
+}
+
+/// Expose an option's 1-based `position` in its collection and the
+/// collection's `size` when known, so a virtualised list that presents only
+/// some items still reports where each one is.
+pub fn set_position_semantics(option: &Response, position: usize, size: Option<usize>) {
+    option.ctx.accesskit_node_builder(option.id, |node| {
+        node.set_position_in_set(position);
+        if let Some(size) = size {
+            node.set_size_of_set(size);
+        }
+    });
+}
+
 pub fn result_row_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
     tokens.geometry.control_height.0.max(
         tokens.typography.body_size.0

@@ -275,11 +275,12 @@ Debian 13/GNOME 48/RDP/Orca 48.1 environment. Its tests cover roles, names,
 states, bounds, actions, semantic parity and keyboard operation, but that one
 versioned result is not evidence of screen-reader support on Windows, macOS,
 other Linux configurations or browsers.
-Stock eframe 0.36.1 discards browser AccessKit updates and provides no web
-accessibility-tree adapter; the retained upstream reproduction and exact
-qualification state are in the
+In the browser, hosted applications mirror the same AccessKit tree into a
+hidden [ARIA layer](docs/ui-guides/accessibility.md#browser-aria-layer).
+Automated Chromium checks cover its tree and rule conformance. The layer is
+read-only for now, and no browser and screen-reader combination is
+qualified. The exact qualification and remaining platform boundaries are in the
 [accessibility integration evidence](docs/accessibility-integration-report.md).
-The exact qualification and remaining platform boundaries are recorded there.
 
 The synthetic source and decoder demonstrate the architecture; they are not
 production image codecs or remote data integrations. Production geospatial

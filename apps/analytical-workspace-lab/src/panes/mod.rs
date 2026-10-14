@@ -271,6 +271,23 @@ impl FrameOutput {
                     .max_rect(status.rect),
             );
             status_ui.set_clip_rect(status.rect);
+            // The readout follows the pointer, so it is a status that assistive
+            // technology reads on request rather than announcing every move.
+            status_ui
+                .ctx()
+                .accesskit_node_builder(status_ui.unique_id(), |node| {
+                    node.set_role(egui::accesskit::Role::Status);
+                    node.set_live(egui::accesskit::Live::Off);
+                    node.set_label("Image coordinates and tile level");
+                    node.set_description(format!("{coordinates}; {detail}"));
+                    node.set_author_id(status_id.clone());
+                    node.set_bounds(egui::accesskit::Rect {
+                        x0: f64::from(status.rect.min.x),
+                        y0: f64::from(status.rect.min.y),
+                        x1: f64::from(status.rect.max.x),
+                        y1: f64::from(status.rect.max.y),
+                    });
+                });
             self.ui_geometry.text_layouts.extend(paint_image_status(
                 &mut status_ui,
                 ImageStatusSpec {
@@ -712,6 +729,9 @@ mod tests {
                     command.is_none(),
                     "the fixture does not issue dock commands"
                 );
+                drop(surface);
+                // Image status strips paint after the panes, as in the Lab.
+                output.finalise_camera_previews(ui, &behaviour, &session.cameras, 1);
             },
         );
         let accesskit = full_output
@@ -1099,6 +1119,21 @@ mod tests {
         );
     }
 
+    /// The pane region the dock gives each pane body, for pane fixtures.
+    fn pane_region(ui: &egui::Ui, pane: PaneId, rect: egui::Rect) {
+        ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+            node.set_role(egui::accesskit::Role::Region);
+            node.set_label(pane_title(pane));
+            node.set_author_id(SemanticUiId::pane(pane).0);
+            node.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(rect.min.x),
+                y0: f64::from(rect.min.y),
+                x1: f64::from(rect.max.x),
+                y1: f64::from(rect.max.y),
+            });
+        });
+    }
+
     #[test]
     fn materialised_workspace_semantics_are_bounded_and_match_accesskit() {
         let context = egui::Context::default();
@@ -1138,6 +1173,7 @@ mod tests {
             |ui| {
                 ui.scope_builder(egui::UiBuilder::new().max_rect(results_rect), |ui| {
                     ui.set_clip_rect(results_rect);
+                    pane_region(ui, PaneId(5), results_rect);
                     results::show(
                         ui,
                         Some(ResultId(0)),
@@ -1150,6 +1186,7 @@ mod tests {
                 });
                 ui.scope_builder(egui::UiBuilder::new().max_rect(thumbnails_rect), |ui| {
                     ui.set_clip_rect(thumbnails_rect);
+                    pane_region(ui, PaneId(6), thumbnails_rect);
                     thumbnails::show(
                         ui,
                         thumbnails::ThumbnailPaneView {

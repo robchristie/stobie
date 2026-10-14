@@ -7,8 +7,8 @@ use crate::{
     metrics::VirtualisationMetrics,
 };
 use stobie_ui_egui::{
-    DomainReference, ResultRowSpec, SemanticUiId, TextOverflow, TextRole, UiNode, UiRole,
-    measured_content_label, result_row, result_row_height,
+    DomainReference, ResultRowSpec, SemanticUiId, TextOverflow, TextRole, UiNode, UiRole, list_box,
+    measured_content_label, result_row, result_row_height, set_position_semantics,
 };
 
 use crate::actions::{ActionContext, availability};
@@ -90,84 +90,87 @@ pub fn show(
             virtualisation.row_overscan = rows.overscan;
             let origin = ui.min_rect().min;
             ui.set_min_height(RESULT_COUNT as f32 * row_height);
-            for index in rows.materialised {
-                let result = result_at(index as u64);
-                let selected = selected_result == Some(result.id);
-                let row_rect = egui::Rect::from_min_size(
-                    origin + egui::vec2(0.0, index as f32 * row_height),
-                    egui::vec2(ui.available_width(), row_height),
-                );
-                ui.scope_builder(egui::UiBuilder::new().max_rect(row_rect), |ui| {
-                    let identifier = format!("#{:07}", result.id.0);
-                    let position = format!("{:.0}, {:.0}", result.position.x, result.position.y);
-                    let confidence = format!("{:.1}%", result.confidence * 100.0);
-                    let category =
-                        ["Target", "Edge", "Cluster", "Review"][result.category as usize];
-                    let semantic_name =
-                        format!("{identifier}; {position}; {confidence}; {category}");
-                    let mut row_observations = Vec::new();
-                    let selection = result_row(
-                        ui,
-                        ResultRowSpec {
-                            instance: result.id.0,
-                            identifier: &identifier,
-                            position: &position,
-                            confidence: &confidence,
-                            category,
-                            selected,
-                        },
-                        tokens,
-                        font_scale,
-                        &mut row_observations,
+            list_box(ui, "Results", |ui| {
+                for index in rows.materialised {
+                    let result = result_at(index as u64);
+                    let selected = selected_result == Some(result.id);
+                    let row_rect = egui::Rect::from_min_size(
+                        origin + egui::vec2(0.0, index as f32 * row_height),
+                        egui::vec2(ui.available_width(), row_height),
                     );
-                    let inside_root = outputs
-                        .ui_geometry
-                        .root
-                        .is_some_and(|root| root.contains(selection.rect.into(), 1.0));
-                    let completely_clipped = selection.rect.is_finite()
-                        && selection.rect.is_positive()
-                        && selection.interact_rect.is_finite()
-                        && !selection.interact_rect.is_positive();
-                    if selection.rect.intersects(ui.clip_rect())
-                        && inside_root
-                        && !completely_clipped
-                    {
-                        outputs.ui_geometry.text_layouts.extend(row_observations);
-                        outputs
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(row_rect), |ui| {
+                        let identifier = format!("#{:07}", result.id.0);
+                        let position =
+                            format!("{:.0}, {:.0}", result.position.x, result.position.y);
+                        let confidence = format!("{:.1}%", result.confidence * 100.0);
+                        let category =
+                            ["Target", "Edge", "Cluster", "Review"][result.category as usize];
+                        let semantic_name =
+                            format!("{identifier}; {position}; {confidence}; {category}");
+                        let mut row_observations = Vec::new();
+                        let selection = result_row(
+                            ui,
+                            ResultRowSpec {
+                                instance: result.id.0,
+                                identifier: &identifier,
+                                position: &position,
+                                confidence: &confidence,
+                                category,
+                                selected,
+                            },
+                            tokens,
+                            font_scale,
+                            &mut row_observations,
+                        );
+                        set_position_semantics(&selection, index + 1, Some(RESULT_COUNT as usize));
+                        let inside_root = outputs
                             .ui_geometry
-                            .result_rows
-                            .push(crate::ui_geometry::ResultUiRect {
-                                result: result.id,
+                            .root
+                            .is_some_and(|root| root.contains(selection.rect.into(), 1.0));
+                        let completely_clipped = selection.rect.is_finite()
+                            && selection.rect.is_positive()
+                            && selection.interact_rect.is_finite()
+                            && !selection.interact_rect.is_positive();
+                        if selection.rect.intersects(ui.clip_rect())
+                            && inside_root
+                            && !completely_clipped
+                        {
+                            outputs.ui_geometry.text_layouts.extend(row_observations);
+                            outputs.ui_geometry.result_rows.push(
+                                crate::ui_geometry::ResultUiRect {
+                                    result: result.id,
+                                    rect: selection.interact_rect.into(),
+                                },
+                            );
+                            outputs.ui_geometry.record_node(UiNode {
+                                id: SemanticUiId::new(format!("stobie.result-row.{}", result.id.0)),
+                                parent: Some(SemanticUiId::pane(PaneId(5))),
+                                role: UiRole::ResultRow,
+                                name: semantic_name,
+                                description: None,
                                 rect: selection.interact_rect.into(),
+                                enabled: true,
+                                focused: selection.has_focus(),
+                                selected,
+                                checked: None,
+                                expanded: None,
+                                pane: Some(PaneId(5)),
+                                domain_reference: Some(DomainReference::Result(result.id.0)),
+                                // Selection is the ListBoxOption's click behaviour, not a
+                                // globally registered application action.
+                                actions: Vec::new(),
+                                text_selectable: false,
+                                disabled_reason: None,
                             });
-                        outputs.ui_geometry.record_node(UiNode {
-                            id: SemanticUiId::new(format!("stobie.result-row.{}", result.id.0)),
-                            parent: Some(SemanticUiId::pane(PaneId(5))),
-                            role: UiRole::ResultRow,
-                            name: semantic_name,
-                            description: None,
-                            rect: selection.interact_rect.into(),
-                            enabled: true,
-                            focused: selection.has_focus(),
-                            selected,
-                            checked: None,
-                            expanded: None,
-                            pane: Some(PaneId(5)),
-                            domain_reference: Some(DomainReference::Result(result.id.0)),
-                            // Selection is the ListBoxOption's click behaviour, not a
-                            // globally registered application action.
-                            actions: Vec::new(),
-                            text_selectable: false,
-                            disabled_reason: None,
-                        });
-                    }
-                    if selection.clicked() {
-                        outputs
-                            .intents
-                            .push(ImageIntent::SelectResult { result: result.id });
-                    }
-                });
-            }
+                        }
+                        if selection.clicked() {
+                            outputs
+                                .intents
+                                .push(ImageIntent::SelectResult { result: result.id });
+                        }
+                    });
+                }
+            });
         });
     outputs.ui_geometry.results_scroll = Some(output.inner_rect.into());
     let mut scroll = UiNode::container(

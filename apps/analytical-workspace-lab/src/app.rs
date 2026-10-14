@@ -931,16 +931,23 @@ impl Lab {
                         let status_width = (ui.available_width()
                             - tokens.geometry.minimum_hit_size.0 * 4.0)
                             .min(tokens.geometry.minimum_hit_size.0 * 7.0);
-                        let status = measured_inline_label(
+                        let status = status_region(
                             ui,
-                            2,
-                            &self.status,
-                            stobie_ui_egui::TextRole::Status,
-                            status_width,
-                            stobie_ui_egui::TextInteraction::Selectable,
-                            &tokens,
-                            font_scale,
-                            &mut ui_geometry.text_layouts,
+                            "application.status",
+                            egui::accesskit::Live::Polite,
+                            |ui| {
+                                measured_inline_label(
+                                    ui,
+                                    2,
+                                    &self.status,
+                                    stobie_ui_egui::TextRole::Status,
+                                    status_width,
+                                    stobie_ui_egui::TextInteraction::Selectable,
+                                    &tokens,
+                                    font_scale,
+                                    &mut ui_geometry.text_layouts,
+                                )
+                            },
                         );
                         let mut node = UiNode::container(
                             SemanticUiId::new("application.status"),
@@ -959,16 +966,24 @@ impl Lab {
                             self.runtime.metrics.in_flight
                         );
                         let worker_width = ui.available_width();
-                        let response = measured_inline_label(
+                        // Decoding progress changes continually; read it on request.
+                        let response = status_region(
                             ui,
-                            3,
-                            &worker_status,
-                            stobie_ui_egui::TextRole::Secondary,
-                            worker_width,
-                            stobie_ui_egui::TextInteraction::Selectable,
-                            &tokens,
-                            font_scale,
-                            &mut ui_geometry.text_layouts,
+                            "application.worker_status",
+                            egui::accesskit::Live::Off,
+                            |ui| {
+                                measured_inline_label(
+                                    ui,
+                                    3,
+                                    &worker_status,
+                                    stobie_ui_egui::TextRole::Secondary,
+                                    worker_width,
+                                    stobie_ui_egui::TextInteraction::Selectable,
+                                    &tokens,
+                                    font_scale,
+                                    &mut ui_geometry.text_layouts,
+                                )
+                            },
                         );
                         let mut node = UiNode::container(
                             SemanticUiId::new("application.worker_status"),
@@ -995,6 +1010,30 @@ impl Lab {
         application_bar.name = "Application actions".into();
         ui_geometry.record_node(application_bar);
     }
+}
+
+/// Present a status label inside a container with the AccessKit status role
+/// its semantic node has; the label keeps sole ownership of the text.
+fn status_region(
+    ui: &mut egui::Ui,
+    id: &str,
+    live: egui::accesskit::Live,
+    add: impl FnOnce(&mut egui::Ui) -> egui::Response,
+) -> egui::Response {
+    let scope = ui.scope(add);
+    let rect = scope.inner.rect;
+    ui.ctx().accesskit_node_builder(scope.response.id, |node| {
+        node.set_role(egui::accesskit::Role::Status);
+        node.set_live(live);
+        node.set_author_id(id);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(rect.min.x),
+            y0: f64::from(rect.min.y),
+            x1: f64::from(rect.max.x),
+            y1: f64::from(rect.max.y),
+        });
+    });
+    scope.inner
 }
 
 /// Present one application-bar action and record its semantics. Returns

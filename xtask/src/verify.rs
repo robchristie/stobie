@@ -201,6 +201,11 @@ pub fn run_stage(name: &str) -> Result<()> {
             build_web()?;
             prepare_browser()?;
             run_with_environment("npm", &["run", "browser-smoke"], &evidence_environment)?;
+            run_with_environment(
+                "bash",
+                &["tools/aria-layer-browser.sh", "--app", "lab"],
+                &evidence_environment,
+            )?;
             if cfg!(target_os = "linux") {
                 run_with_environment(
                     "bash",
@@ -236,6 +241,11 @@ pub fn run_stage(name: &str) -> Result<()> {
             run_with_environment(
                 "bash",
                 &["tools/status-chip-browser-smoke.sh"],
+                &evidence_environment,
+            )?;
+            run_with_environment(
+                "bash",
+                &["tools/aria-layer-browser.sh", "--app", "gallery"],
                 &evidence_environment,
             )?;
         }
@@ -277,6 +287,11 @@ pub fn run_stage(name: &str) -> Result<()> {
             run_with_environment(
                 "bash",
                 &["tools/record-desk-browser-smoke.sh"],
+                &evidence_environment,
+            )?;
+            run_with_environment(
+                "bash",
+                &["tools/aria-layer-browser.sh", "--app", "record-desk"],
                 &evidence_environment,
             )?;
             if cfg!(target_os = "linux") {
