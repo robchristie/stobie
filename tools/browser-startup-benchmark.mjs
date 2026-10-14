@@ -122,27 +122,27 @@ try {
       for (const app of apps) for (let pair = 0; pair < pairs; pair++) {
         const userDataDir = await mkdtemp(join(tmpdir(), 'stobie-startup-'));
         const context = await chromium.launchPersistentContext(userDataDir, { ...launch, viewport });
-        const browserSession = await context.browser().newBrowserCDPSession();
-        report.browser.version = (await browserSession.send('Browser.getVersion')).product;
-        const gpu = await browserSession.send('SystemInfo.getInfo');
-        report.browser.graphics = gpu.gpu;
-        assertGpuCompositing(gpu.gpu);
-        await browserSession.detach();
-        const page = context.pages()[0] ?? await context.newPage();
-        await page.addInitScript(() => {
-          if (location.protocol === 'http:' || location.protocol === 'https:') { localStorage.clear(); sessionStorage.clear(); }
-          window.__startupAdapters = [];
-          if (globalThis.GPUAdapter) {
-            const original = GPUAdapter.prototype.requestDevice;
-            GPUAdapter.prototype.requestDevice = async function (...args) {
-              const device = await original.apply(this, args);
-              const info = this.info;
-              window.__startupAdapters.push({ vendor: info.vendor, architecture: info.architecture, device: info.device, description: info.description });
-              return device;
-            };
-          }
-        });
         try {
+          const browserSession = await context.browser().newBrowserCDPSession();
+          report.browser.version = (await browserSession.send('Browser.getVersion')).product;
+          const gpu = await browserSession.send('SystemInfo.getInfo');
+          report.browser.graphics = gpu.gpu;
+          assertGpuCompositing(gpu.gpu);
+          await browserSession.detach();
+          const page = context.pages()[0] ?? await context.newPage();
+          await page.addInitScript(() => {
+            if (location.protocol === 'http:' || location.protocol === 'https:') { localStorage.clear(); sessionStorage.clear(); }
+            window.__startupAdapters = [];
+            if (globalThis.GPUAdapter) {
+              const original = GPUAdapter.prototype.requestDevice;
+              GPUAdapter.prototype.requestDevice = async function (...args) {
+                const device = await original.apply(this, args);
+                const info = this.info;
+                window.__startupAdapters.push({ vendor: info.vendor, architecture: info.architecture, device: info.device, description: info.description });
+                return device;
+              };
+            }
+          });
           for (const visit of ['cold', 'repeat']) {
             const errors = [], responses = [];
             const onError = e => errors.push(String(e));

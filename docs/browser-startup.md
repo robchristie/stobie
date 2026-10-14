@@ -145,8 +145,10 @@ node tools/browser-startup-compare.mjs BASELINE/results.json FINAL/results.json
 cargo xtask verify
 ```
 
-Headless runs pass `--use-gl=angle --use-angle=swiftshader`. Without an
-explicit GL choice, `chrome-headless-shell` falls back to software compositing
+On Linux, headless launches through `hostedLinuxWebGpuLaunchOptions()` in
+`tools/browser-launch.mjs` pass `--use-gl=angle --use-angle=swiftshader`. This
+covers every headless caller of that helper, not only the startup tools. Without
+an explicit GL choice, `chrome-headless-shell` falls back to software compositing
 (`--use-angle=swiftshader-webgl`). A WebGPU canvas cannot allocate its
 swap-chain image there, so nothing presents and the device is lost. The smoke
 and benchmark check Chromium's reported GPU compositing status at launch and

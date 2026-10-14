@@ -23,10 +23,11 @@ export function headlessGpuCompositingFlags() {
   return ['--use-gl=angle', '--use-angle=swiftshader'];
 }
 
-export function hostedLinuxWebGpuLaunchOptions() {
+export function hostedLinuxWebGpuLaunchOptions(platform = process.platform) {
   const headless = process.env.STOBIE_BROWSER_HEADFUL !== '1';
   const args = ['--no-sandbox', ...swiftShaderWebGpuFlags()];
-  args.push(...(headless ? headlessGpuCompositingFlags() : ['--ozone-platform=x11']));
+  if (!headless) args.push('--ozone-platform=x11');
+  else if (platform === 'linux') args.push(...headlessGpuCompositingFlags());
   return { headless, args };
 }
 
@@ -34,6 +35,7 @@ export function hostedLinuxWebGpuLaunchOptions() {
 export function assertGpuCompositing(gpu) {
   const status = gpu?.featureStatus?.gpu_compositing ?? 'unreported';
   if (status === 'enabled') return;
-  const implementation = gpu?.auxAttributes?.glImplementationParts ?? 'unreported GL implementation';
-  throw new Error(`Chromium GPU compositing is ${status} (${implementation}); WebGPU canvases cannot present`);
+  const vulkan = gpu?.featureStatus?.vulkan ?? 'unreported';
+  const skia = gpu?.auxAttributes?.skiaBackendType ?? 'unreported';
+  throw new Error(`Chromium GPU compositing is ${status} (Vulkan ${vulkan}, Skia backend ${skia}); WebGPU canvases cannot present`);
 }
