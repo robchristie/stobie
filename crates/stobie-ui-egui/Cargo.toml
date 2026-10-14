@@ -35,6 +35,8 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 [[example]]
 name = "notes"
 required-features = ["eframe"]
+# Run the example's undo and redo tests with the crate's tests.
+test = true
 
 [dev-dependencies]
 # Examples are applications: they choose eframe's GPU backends, as Record Desk does.
