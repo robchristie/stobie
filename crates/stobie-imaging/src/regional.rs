@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DemandPriority, VirtualGrid};
+use stobie_core::VirtualGrid;
+
+use crate::DemandPriority;
 
 /// Immutable source representation identity, supplied by the source adapter.
 ///
@@ -188,7 +190,7 @@ impl RegionalFrame {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::layout_virtual_grid;
+    use stobie_core::layout_virtual_grid;
 
     #[test]
     fn scattered_gallery_constructs_only_visible_and_overscan_parent_regions() {

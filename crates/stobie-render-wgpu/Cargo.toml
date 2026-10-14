@@ -12,4 +12,5 @@ tracing.workspace = true
 web-time.workspace = true
 wgpu.workspace = true
 stobie-core = { path = "../stobie-core" }
+stobie-imaging = { path = "../stobie-imaging" }
 stobie-runtime = { path = "../stobie-runtime" }

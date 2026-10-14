@@ -6,9 +6,11 @@ rust-version.workspace = true
 license.workspace = true
 
 [features]
-default = ["image-rendering", "eframe"]
+default = ["eframe"]
+# GPU scalar-image presentation for image applications; see docs/image-application-composition.md.
 image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
-# Native and browser entry points for hosted applications.
+# Native and browser entry points for hosted applications. They leave GPU backends to the
+# application: depend on eframe with its `wgpu` feature, or the browser build has no wgpu backend.
 eframe = ["dep:eframe", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:console_error_panic_hook"]
 
 [dependencies]
@@ -35,5 +37,7 @@ name = "notes"
 required-features = ["eframe"]
 
 [dev-dependencies]
+# Examples are applications: they choose eframe's GPU backends, as Record Desk does.
+eframe.workspace = true
 egui_kittest.workspace = true
 trybuild = "1.0.122"

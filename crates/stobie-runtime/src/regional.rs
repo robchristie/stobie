@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use stobie_core::{RegionDemand, RegionKey, RegionalFrame, RegionalPixels};
+use stobie_imaging::{RegionDemand, RegionKey, RegionalFrame, RegionalPixels};
 
 use crate::RequestToken;
 
@@ -644,7 +644,7 @@ impl<T> RegionalCache<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stobie_core::{
+    use stobie_imaging::{
         DemandPriority, ImageRegion, RegionConsumerId, RepresentationId, SampleLayout, SourceStage,
     };
 

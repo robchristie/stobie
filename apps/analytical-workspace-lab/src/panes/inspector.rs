@@ -1,5 +1,8 @@
 use eframe::egui;
-use stobie_core::{AnnotationId, PaneId, ResultId, result_at};
+use stobie_core::PaneId;
+use stobie_imaging::{AnnotationId, ResultId};
+
+use crate::demo::result_at;
 use stobie_ui_egui::{
     DesignTokens, DomainReference, SemanticUiId, UiNode, UiRole, property_row, section_heading,
 };
@@ -90,7 +93,7 @@ pub fn show(
         "Selection",
         selection.response.rect,
         ui.clip_rect(),
-        selected_result.map(DomainReference::Result),
+        selected_result.map(|result| DomainReference::Result(result.0)),
     );
 
     ui.separator();
@@ -124,7 +127,7 @@ pub fn show(
         "Annotation",
         annotation.response.rect,
         ui.clip_rect(),
-        selected_annotation.map(DomainReference::Annotation),
+        selected_annotation.map(|annotation| DomainReference::Annotation(annotation.0)),
     );
 }
 
@@ -188,7 +191,7 @@ mod tests {
             "Selection",
             egui::Rect::from_min_max(egui::pos2(-20.0, 24.0), egui::pos2(180.0, 220.0)),
             egui::Rect::EVERYTHING,
-            Some(DomainReference::Result(ResultId(42))),
+            Some(DomainReference::Result(42)),
         );
 
         let snapshot = outputs.ui_geometry.snapshot(1);
@@ -196,10 +199,7 @@ mod tests {
             .node(&SemanticUiId::new("pane.7.selection"))
             .expect("selection section");
         assert_eq!(section.role, UiRole::Section);
-        assert_eq!(
-            section.domain_reference,
-            Some(DomainReference::Result(ResultId(42)))
-        );
+        assert_eq!(section.domain_reference, Some(DomainReference::Result(42)));
         assert!(
             snapshot
                 .node(&snapshot.root)

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use eframe::egui;
-use stobie_core::TileKey;
+use stobie_imaging::TileKey;
 use stobie_runtime::RequestToken;
 
 pub const THUMBNAIL_CACHE_BUDGET: usize = 4 * 1024 * 1024;
@@ -125,7 +125,7 @@ impl ThumbnailCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stobie_core::SourceId;
+    use stobie_imaging::SourceId;
 
     fn key(x: u32) -> TileKey {
         TileKey {

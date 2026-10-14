@@ -1,0 +1,13 @@
+[package]
+name = "stobie-imaging"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+stobie-core = { path = "../stobie-core" }
+
+[dev-dependencies]
+serde_json.workspace = true

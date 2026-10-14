@@ -2,9 +2,13 @@
 
 ## Boundaries
 
-- `stobie-core` owns document, session, canonical dock-tree, commands and
-  renderer-independent demand types. It must not depend on egui, eframe, wgpu or
-  browser crates.
+- `stobie-core` owns what every application needs: the canonical dock tree,
+  stable pane IDs, generic coordinates, virtualisation, repaint reasons and the
+  generic undo history. It must not depend on egui, eframe, wgpu, browser
+  crates or the image domain.
+- `stobie-imaging` owns the image domain: document, session, cameras, image
+  intents and commands, and renderer-independent tile and regional demands.
+  Applications without images do not depend on it.
 - `stobie-runtime` owns demand reconciliation, workers and completion state;
   it must not depend on egui or wgpu.
 - `stobie-render-wgpu` owns all persistent GPU resources and typed render
@@ -17,8 +21,9 @@
 
 ## State and interaction
 
-- Durable annotations belong to the document; selection, camera links, tools
-  and gesture previews belong to the session; focus and hover stay in the UI.
+- Durable annotations belong to the image document; selection, camera links,
+  tools and gesture previews belong to the image session; focus and hover stay
+  in the UI. Application demo state belongs to its application.
 - Route changes through feature intents and validated commands. One completed
   gesture creates one command and one undo record; render its session preview in
   the same frame.

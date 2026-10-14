@@ -3,7 +3,8 @@
 use std::collections::BTreeMap;
 
 use bytemuck::{Pod, Zeroable};
-use stobie_core::{PaneId, RegionKey, RegionalFrame, SampleLayout};
+use stobie_core::PaneId;
+use stobie_imaging::{RegionKey, RegionalFrame, SampleLayout};
 use stobie_runtime::{RegionalCache, RegionalFrameUpload, RegionalUpload, RequestToken};
 use wgpu::util::DeviceExt;
 
@@ -539,7 +540,7 @@ struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stobie_core::RegionalPixels;
+    use stobie_imaging::RegionalPixels;
 
     #[test]
     fn native_scalar_and_rgb_precision_survive_texture_packing() {
@@ -643,7 +644,7 @@ mod tests {
     #[test]
     #[ignore = "requires a native GPU adapter; run explicitly during regional renderer qualification"]
     fn regional_gpu_readback_preserves_orientation_precision_and_residency_budget() {
-        use stobie_core::{ImageRegion, RepresentationId, SourceStage};
+        use stobie_imaging::{ImageRegion, RepresentationId, SourceStage};
         let instance =
             wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
         let adapter = block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))

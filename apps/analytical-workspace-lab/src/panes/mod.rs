@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 use eframe::egui;
 use stobie_core::*;
+use stobie_imaging::*;
 use stobie_render_wgpu::{
     DisplayMap, DisplaySettings, ImageRenderRequest, PhysicalViewport, RenderPlan,
 };
@@ -17,6 +18,8 @@ use stobie_ui_egui::{
 use web_time::Instant;
 
 use crate::actions::LabAction;
+use crate::demo::*;
+use crate::metrics::*;
 use crate::thumbnail_cache::ThumbnailCache;
 #[cfg(test)]
 use crate::ui_geometry::SplitterUiRect;
@@ -594,7 +597,7 @@ mod tests {
         let mut fixture = workspace.clone();
         let root = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1_800.0, 1_300.0));
         let document = Document::default();
-        let session = Session::default();
+        let session = default_session();
         let diagnostics = DiagnosticsSnapshot::default();
         let tokens = DesignTokens::resolve(
             stobie_ui_egui::ThemeVariant::Dark,
@@ -922,7 +925,7 @@ mod tests {
 
     #[test]
     fn hidden_wheel_origin_is_finalised_by_the_frame_global_lifecycle() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let started = Instant::now();
         let expected = camera_with_centre(12_000.0, 14_000.0);
@@ -942,7 +945,7 @@ mod tests {
 
     #[test]
     fn wheel_input_crossing_linked_panes_is_one_group_command() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let started = Instant::now();
         behaviour.update_wheel_gesture(
@@ -976,7 +979,7 @@ mod tests {
 
     #[test]
     fn unlinked_wheel_gestures_finalise_independently() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let started = Instant::now();
         behaviour.update_wheel_gesture(
@@ -1003,7 +1006,7 @@ mod tests {
 
     #[test]
     fn wheel_to_drag_handoff_commits_and_reuses_the_preview() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let expected = camera_with_centre(50_000.0, 51_000.0);
         behaviour.update_wheel_gesture(PaneId(1), &committed, expected, Instant::now());
@@ -1025,7 +1028,7 @@ mod tests {
 
     #[test]
     fn gesture_preview_is_the_single_camera_for_frame_demand_and_presentation() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let mut preview = committed.clone();
         let expected = Camera {
@@ -1044,7 +1047,7 @@ mod tests {
 
     #[test]
     fn final_frame_plan_reconciles_an_interaction_from_a_later_linked_pane() {
-        let committed = Session::default().cameras;
+        let committed = default_session().cameras;
         let mut behaviour = UiBehaviour::default();
         let expected = Camera {
             centre: ImagePoint::new(12_000.0, 24_000.0),
@@ -1190,9 +1193,9 @@ mod tests {
     #[test]
     fn representative_workspace_exposes_one_bounded_coherent_semantic_tree() {
         let rendered = render_representative_workspace(
-            Workspace::analytical_default(),
+            analytical_workspace(),
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         let snapshot = &rendered.snapshot;
 
@@ -1253,7 +1256,7 @@ mod tests {
         assert!(selected_result.selected);
         assert_eq!(
             selected_result.domain_reference,
-            Some(DomainReference::Result(ResultId(0)))
+            Some(DomainReference::Result(0))
         );
 
         let viewport = snapshot
@@ -1308,17 +1311,14 @@ mod tests {
     #[test]
     fn semantic_state_updates_selection_tool_and_viewport_context() {
         let initial = render_representative_workspace(
-            Workspace::analytical_default(),
+            analytical_workspace(),
             None,
-            Session::default().active_tools,
+            default_session().active_tools,
         );
-        let mut tools = Session::default().active_tools;
+        let mut tools = default_session().active_tools;
         tools.insert(PaneId(1), ActiveTool::Polygon);
-        let updated = render_representative_workspace(
-            Workspace::analytical_default(),
-            Some(ResultId(0)),
-            tools,
-        );
+        let updated =
+            render_representative_workspace(analytical_workspace(), Some(ResultId(0)), tools);
 
         let initial_result = initial
             .snapshot
@@ -1378,7 +1378,7 @@ mod tests {
 
     #[test]
     fn semantic_identity_survives_canonical_dock_rearrangement_and_restoration() {
-        let mut rearranged = Workspace::analytical_default();
+        let mut rearranged = analytical_workspace();
         assert!(rearranged.move_pane(PaneId(1), PaneId(2), DockDrop::Tab));
         rearranged
             .validate()
@@ -1392,7 +1392,7 @@ mod tests {
         let rendered = render_representative_workspace(
             restored,
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         let tab = rendered
             .snapshot
@@ -1447,7 +1447,7 @@ mod tests {
     fn representative_workspace_tab_traversal_reaches_actions_dock_and_viewport() {
         let context = egui::Context::default();
         context.enable_accesskit();
-        let workspace = Workspace::analytical_default();
+        let workspace = analytical_workspace();
         let save_focus = egui::Id::new(("stobie.action-button", "save_layout", None::<PaneId>));
         context.memory_mut(|memory| memory.request_focus(save_focus));
 
@@ -1456,7 +1456,7 @@ mod tests {
             &workspace,
             Vec::new(),
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         assert_eq!(
             focused_semantic_id(&initial.snapshot),
@@ -1470,14 +1470,14 @@ mod tests {
                 &workspace,
                 vec![tab_event(egui::Modifiers::NONE)],
                 Some(ResultId(0)),
-                Session::default().active_tools,
+                default_session().active_tools,
             );
             let settled = render_representative_workspace_frame(
                 &context,
                 &workspace,
                 Vec::new(),
                 Some(ResultId(0)),
-                Session::default().active_tools,
+                default_session().active_tools,
             );
             if let Some(id) = focused_semantic_id(&settled.snapshot)
                 && sequence.last() != Some(&id)
@@ -1529,14 +1529,14 @@ mod tests {
             &workspace,
             vec![tab_event(egui::Modifiers::SHIFT)],
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         let reverse = render_representative_workspace_frame(
             &context,
             &workspace,
             Vec::new(),
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         assert_eq!(
             focused_semantic_id(&reverse.snapshot),
@@ -1548,7 +1548,7 @@ mod tests {
     fn dock_tab_focus_identity_survives_a_canonical_pane_move() {
         let context = egui::Context::default();
         context.enable_accesskit();
-        let mut workspace = Workspace::analytical_default();
+        let mut workspace = analytical_workspace();
         let tab_focus = egui::Id::new(("stobie.dock.tab", 1_u32));
         context.memory_mut(|memory| memory.request_focus(tab_focus));
 
@@ -1557,7 +1557,7 @@ mod tests {
             &workspace,
             Vec::new(),
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         assert_eq!(
             focused_semantic_id(&before.snapshot),
@@ -1569,7 +1569,7 @@ mod tests {
             &workspace,
             Vec::new(),
             Some(ResultId(0)),
-            Session::default().active_tools,
+            default_session().active_tools,
         );
         assert_eq!(context.memory(|memory| memory.focused()), Some(tab_focus));
         assert_eq!(

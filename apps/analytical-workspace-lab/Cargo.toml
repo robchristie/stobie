@@ -23,9 +23,10 @@ serde_json.workspace = true
 tracing.workspace = true
 web-time.workspace = true
 stobie-core = { path = "../../crates/stobie-core" }
+stobie-imaging = { path = "../../crates/stobie-imaging" }
 stobie-render-wgpu = { path = "../../crates/stobie-render-wgpu" }
 stobie-runtime = { path = "../../crates/stobie-runtime" }
-stobie-ui-egui = { path = "../../crates/stobie-ui-egui" }
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui", features = ["image-rendering"] }
 
 [dev-dependencies]
 egui_kittest.workspace = true

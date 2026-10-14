@@ -166,10 +166,11 @@ presentation so each has a clear owner.
 
 | Package | Responsibility |
 | --- | --- |
-| [`stobie-core`](crates/stobie-core) | Documents, session state, the serialisable dock tree, validated commands, typed coordinates and renderer-independent demands. No egui, wgpu or browser dependencies. |
-| [`stobie-runtime`](crates/stobie-runtime) | Demand reconciliation, bounded worker scheduling and completion state. Independent of egui and wgpu. |
+| [`stobie-core`](crates/stobie-core) | What every application needs: the serialisable dock tree, stable pane IDs, generic coordinates, virtualisation, repaint reasons and a generic undo history. No egui, wgpu, browser or image dependencies. |
+| [`stobie-imaging`](crates/stobie-imaging) | The image domain that image applications opt into: documents, sessions, cameras, image intents and commands, and renderer-independent tile and regional demands. |
+| [`stobie-runtime`](crates/stobie-runtime) | Demand reconciliation, bounded worker scheduling and completion state for image tiles and regions. Independent of egui and wgpu. |
 | [`stobie-render-wgpu`](crates/stobie-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
-| [`stobie-ui-egui`](crates/stobie-ui-egui) | The framework's egui integration: dock presentation, measured components, typed design tokens and semantic UI observations. |
+| [`stobie-ui-egui`](crates/stobie-ui-egui) | The framework's egui integration: the application host, dock presentation, measured components, typed design tokens and semantic UI observations. Its optional `image-rendering` feature adds GPU image presentation. |
 | [`record-desk`](consumers/record-desk) | Independent native/browser record workflow with its own manifest, dependencies and lockfile; no image renderer/runtime or application-package dependency. |
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
 | [`minimal-workspace` example](apps/analytical-workspace-lab/examples/minimal-workspace.rs) | A small native consumer using public framework APIs and existing package dependencies, independent of Lab implementation. |
@@ -179,8 +180,9 @@ presentation so each has a clear owner.
 
 The serialisable `stobie_core::Workspace` is the sole authoritative dock
 tree. Pane presenters receive narrow state views and emit intents; validated
-commands apply changes. Durable annotations live in the document, while
-selection, cameras, tools and gesture previews live in the session.
+commands apply changes, and core's generic history makes them undoable. In
+image applications, durable annotations live in the image document, while
+selection, cameras, tools and gesture previews live in the image session.
 
 Data requests describe desired state. The runtime reconciles and deduplicates
 them before scheduling work and rejects stale completions. The renderer owns

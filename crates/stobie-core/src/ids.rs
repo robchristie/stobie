@@ -22,8 +22,3 @@ macro_rules! id_type {
 
 id_type!(PaneId, u32);
 id_type!(DockNodeId, u64);
-id_type!(LayerId, u32);
-id_type!(AnnotationId, u64);
-id_type!(ResultId, u64);
-id_type!(SourceId, u32);
-id_type!(LinkGroupId, u32);

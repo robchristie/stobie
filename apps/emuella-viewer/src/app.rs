@@ -4,9 +4,9 @@ use crate::{
 };
 use emuella_viewer_source::Manifest;
 use serde::{Deserialize, Serialize};
-use stobie_core::{
-    DemandPriority, ImageRegion, PaneId, RegionConsumerId, RegionDemand, RegionKey, SourceStage,
-    layout_virtual_grid,
+use stobie_core::{PaneId, layout_virtual_grid};
+use stobie_imaging::{
+    DemandPriority, ImageRegion, RegionConsumerId, RegionDemand, RegionKey, SourceStage,
 };
 use stobie_render_wgpu::{
     PixelRect, RegionalDisplaySettings, RegionalDraw, RegionalGpuLimits, RegionalRenderer,

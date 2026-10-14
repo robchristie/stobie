@@ -1,7 +1,7 @@
 # Generic core and undo history, with imaging as its own layer
 
 Status: active
-Next action: Move the image domain and the Lab's demo state out of `stobie-core` (increment 2), with saved-state fixture tests first.
+Next action: Run the Lab's image commands through the generic history and remove `ImageCommand::ResizeSplit` and `CommandHistory` (increment 3).
 
 ## Outcome and boundaries
 
@@ -85,12 +85,56 @@ returns `None` for a change that does nothing.
   crate must stop returning an image command before increment 2 can move image
   types out of core.
 
+## Imaging layer
+
+- **One new crate, no renames.** `stobie-imaging` holds the image domain that
+  was in core: cameras, regional types, image intents and commands, tile
+  demands, documents, sessions, gesture previews, image coordinates
+  (`ImagePoint`, `WorldPoint`, `ImageToWorld`), the layer, annotation, result,
+  source and link-group IDs, and the render and runtime metrics. It depends
+  on core for pane IDs, screen coordinates and virtual grids. `ImagePoint`
+  moves too: only cameras, regions and the renderer use it.
+- **`stobie-runtime` and `stobie-render-wgpu` keep their names and depend on
+  `stobie-imaging` instead of core**, rather than merging into it. Merging
+  would turn crate-level boundaries (the runtime has no egui or wgpu) into
+  feature-level ones. An image application adds `stobie-imaging`, the runtime
+  and the renderer it uses, and the UI crate's `image-rendering` feature.
+  Renaming the runtime and renderer to `stobie-imaging-*` is deferred until a
+  second renderer, such as the WebGL2 path, makes the names ambiguous.
+- **The egui image code stays behind `image-rendering`**, moved from the UI
+  crate's `lib.rs` into its own module. The feature is no longer a default, so
+  the Gallery and Record Desk get the general framework without asking for it,
+  and image applications opt in. The UI crate's `eframe` feature still leaves
+  GPU backends to the application: `notes` gains an `eframe` dev-dependency
+  with its `wgpu` feature, as Record Desk and the Gallery already declare.
+- **Same wire, neutral payloads.** The protocol's `DomainReference` kinds
+  `result`, `annotation` and `thumbnail` stay, but carry plain values
+  (`u64`, and a `TileReference` with the tile key's fields) instead of image
+  types, so the UI crate needs no imaging dependency. A test pins every
+  kind's JSON before and after the change.
+- **Demo state is the Lab's.** `apps/analytical-workspace-lab/src/demo.rs`
+  holds the eight-pane layout (was `Workspace::analytical_default`), the
+  starting session with cameras for panes 1–4, `ResultRecord`, `result_at` and
+  the collection sizes; `metrics.rs` holds `DiagnosticsSnapshot` and
+  `VirtualisationMetrics`. `Session::default` in the imaging crate has no image
+  panes, and `Session::validate_cameras` takes the application's image panes
+  instead of hard-coding 1–4.
+- **`ImageIntent::RecenterOnResult` becomes `Recentre { pane, centre }`**,
+  because synthetic results are Lab data. The Lab looks up the result's
+  position; validation still reads the pane's camera when the intent applies.
+- **The synthetic raster's constants stay in imaging.** `RASTER_SIZE`,
+  `TILE_SIZE` and `PYRAMID_LEVELS` size the runtime's synthetic tiles and the
+  default camera; parameterising the runtime by source is later work.
+- **Saved state is unchanged.** Serde names do not depend on crate paths. RON
+  and JSON fixtures, added before the move, pin the Lab's eframe value and
+  Record Desk's version 1 file; both decode and re-encode byte for byte.
+
 ## Increments
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| 1. Generic history and workspace commands in core; Record Desk migration | In review | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
-| 2. `stobie-imaging` crate; image types and Lab demo state move | Planned | Saved-state fixture tests added first |
+| 1. Generic history and workspace commands in core; Record Desk migration | In review ([PR #71](https://github.com/robchristie/stobie/pull/71)) | History and workspace-command unit tests and doctests; UI dock tests undo through the generic history; Record Desk model and hosted save-point tests; Record Desk stage (tests, native, browser and interface smokes) unchanged |
+| 2. `stobie-imaging` crate; image types and Lab demo state move | In review | Saved-state fixtures and a domain-reference wire test added first and unchanged after the move; workspace tests; `cargo tree` shows the Gallery and Record Desk exclude imaging, runtime and renderer (increment 3 enforces it) |
 | 3. Lab on the generic history; old types removed; docs, architecture rules and authoring probe | Planned | |
 
 ## Record Desk migration

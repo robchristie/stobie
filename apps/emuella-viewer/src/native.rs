@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn immediate_worker_uses_real_receipt_reservations_and_upload_handoff() {
         use std::{io::Write, net::TcpListener};
-        use stobie_core::{DemandPriority, RegionConsumerId, RegionDemand};
+        use stobie_imaging::{DemandPriority, RegionConsumerId, RegionDemand};
         use stobie_runtime::{RegionalCompletion, RegionalRuntime, RegionalRuntimeLimits};
         let job = crate::engine::diagnostic_tests::job();
         job.manifest.validate().unwrap();

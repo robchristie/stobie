@@ -804,6 +804,34 @@ mod tests {
         assert!(validate_record(&record).is_err());
     }
 
+    /// A saved desk with one committed edit and a resized, stacked layout.
+    fn fixture_state() -> SavedState {
+        let mut desk = Desk::default();
+        edit_title(&mut desk, "Compare the coastal notes");
+        let mut draft = desk.draft().unwrap().clone();
+        draft.reviewed = true;
+        draft.category = Category::Ideas;
+        desk.edit_draft(draft).unwrap();
+        desk.apply().unwrap();
+        let mut workspace = default_workspace();
+        let DockNode::Split { axis, fraction, .. } = &mut workspace.root else {
+            unreachable!()
+        };
+        *axis = SplitAxis::Vertical;
+        *fraction = 0.41;
+        SavedState::from_desk(&desk, &workspace)
+    }
+
+    /// Saved state as version 1 stores it. Framework changes must not alter it.
+    const SAVED_STATE_V1: &str = include_str!("../tests/fixtures/saved-state-v1.json");
+
+    #[test]
+    fn saved_state_fixture_decodes_and_reencodes_unchanged() {
+        let decoded = decode(SAVED_STATE_V1).unwrap();
+        assert_eq!(decoded, fixture_state());
+        assert_eq!(encode(&decoded).unwrap(), SAVED_STATE_V1.trim_end());
+    }
+
     #[test]
     fn saved_roundtrip_excludes_drafts_filters_and_history() {
         let mut desk = Desk::default();

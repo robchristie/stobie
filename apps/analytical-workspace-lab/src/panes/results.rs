@@ -1,6 +1,10 @@
 use eframe::egui;
-use stobie_core::{
-    ImageIntent, PaneId, RESULT_COUNT, ResultId, VirtualisationMetrics, result_at, virtual_rows,
+use stobie_core::{PaneId, virtual_rows};
+use stobie_imaging::{ImageIntent, ResultId};
+
+use crate::{
+    demo::{RESULT_COUNT, result_at},
+    metrics::VirtualisationMetrics,
 };
 use stobie_ui_egui::{
     DomainReference, ResultRowSpec, SemanticUiId, TextOverflow, TextRole, UiNode, UiRole,
@@ -149,7 +153,7 @@ pub fn show(
                             checked: None,
                             expanded: None,
                             pane: Some(PaneId(5)),
-                            domain_reference: Some(DomainReference::Result(result.id)),
+                            domain_reference: Some(DomainReference::Result(result.id.0)),
                             // Selection is the ListBoxOption's click behaviour, not a
                             // globally registered application action.
                             actions: Vec::new(),
