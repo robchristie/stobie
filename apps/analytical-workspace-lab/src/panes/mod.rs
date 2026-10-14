@@ -40,7 +40,7 @@ use camera_gestures::{derive_image_frame, image_demands};
 pub struct FrameOutput {
     pub intents: Vec<ImageIntent>,
     pub pane_intents: Vec<PaneIntent>,
-    pub commands: Vec<Command>,
+    pub commands: Vec<ImageCommand>,
     pub demands: Vec<TileDemand>,
     pub render_plan: RenderPlan,
     pub render_targets: Vec<ImagePlanTarget>,
@@ -292,7 +292,7 @@ impl FrameOutput {
         else {
             return;
         };
-        self.commands.push(Command::MoveVertex {
+        self.commands.push(ImageCommand::MoveVertex {
             annotation: *annotation,
             vertex: *vertex,
             before: *original,
@@ -911,7 +911,7 @@ mod tests {
         );
         assert_eq!(
             output.commands,
-            vec![Command::MoveVertex {
+            vec![ImageCommand::MoveVertex {
                 annotation,
                 vertex: 0,
                 before: original,
@@ -935,7 +935,7 @@ mod tests {
         assert_eq!(output.commands.len(), 1);
         assert!(matches!(
             &output.commands[0],
-            Command::SetCameras { changes }
+            ImageCommand::SetCameras { changes }
                 if changes.len() == 2 && changes.iter().all(|change| change.after == expected)
         ));
     }
@@ -969,7 +969,7 @@ mod tests {
         assert_eq!(output.commands.len(), 1);
         assert!(matches!(
             &output.commands[0],
-            Command::SetCameras { changes }
+            ImageCommand::SetCameras { changes }
                 if changes.len() == 2 && changes.iter().all(|change| change.after == final_camera)
         ));
     }
@@ -997,7 +997,7 @@ mod tests {
 
         assert_eq!(output.commands.len(), 2);
         assert!(output.commands.iter().all(
-            |command| matches!(command, Command::SetCameras { changes } if changes.len() == 1)
+            |command| matches!(command, ImageCommand::SetCameras { changes } if changes.len() == 1)
         ));
     }
 

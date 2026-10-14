@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DockNodeId, PaneId};
+use crate::{Command, DockNodeId, PaneId};
 
 pub const LAYOUT_SCHEMA_VERSION: u32 = 2;
 
@@ -20,21 +20,22 @@ impl WorkspaceResize {
     /// Validate the current split and apply one change. An unchanged output
     /// returns `Ok(false)`; errors never mutate the workspace.
     pub fn apply(self, workspace: &mut Workspace) -> Result<bool, String> {
-        if !self.before.is_finite()
-            || !self.after.is_finite()
-            || !(0.1..=0.9).contains(&self.before)
-            || !(0.1..=0.9).contains(&self.after)
-        {
+        if !self.check(workspace)? {
+            return Ok(false);
+        }
+        workspace.root.set_split_fraction(self.node, self.after);
+        Ok(true)
+    }
+
+    /// Whether this resize is valid for `workspace` and changes it.
+    fn check(self, workspace: &Workspace) -> Result<bool, String> {
+        if !valid_fraction(self.before) || !valid_fraction(self.after) {
             return Err("invalid split resize fraction".into());
         }
         if workspace.root.split_fraction(self.node) != Some(self.before) {
             return Err("split resize no longer matches the current layout".into());
         }
-        if self.before == self.after {
-            return Ok(false);
-        }
-        workspace.root.set_split_fraction(self.node, self.after);
-        Ok(true)
+        Ok(self.before != self.after)
     }
 }
 
@@ -69,6 +70,186 @@ impl WorkspaceChange {
             }
         }
     }
+}
+
+/// A dock change recorded in a [`History`](crate::History), so an
+/// application can make layout undoable. Resolve the dock's
+/// [`WorkspaceChange`] with [`WorkspaceCommand::from_change`] before applying
+/// anything, then execute the command. To keep only resizes undoable, apply
+/// other changes directly, as the Lab does.
+///
+/// ```
+/// use stobie_core::{DockNodeId, History, PaneId, Workspace, WorkspaceChange,
+///     WorkspaceCommand, WorkspaceResize};
+/// let mut workspace = Workspace::with_tabs(&[PaneId(1), PaneId(2)]);
+/// let mut history = History::default();
+/// let change = WorkspaceChange::Activate(PaneId(2));
+/// if let Some(command) = WorkspaceCommand::from_change(change, &workspace)? {
+///     history.execute(command, &mut workspace)?;
+/// }
+/// assert_eq!(workspace.active_pane, PaneId(2));
+/// assert!(history.undo(&mut workspace)?);
+/// assert_eq!(workspace.active_pane, PaneId(1));
+/// # Ok::<(), String>(())
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub enum WorkspaceCommand {
+    /// One split fraction. Applying and reverting set the fraction while the
+    /// split exists and otherwise do nothing; a fraction outside 0.1–0.9 is an
+    /// error. Consecutive resizes of one split merge under
+    /// [`History::execute_merging`](crate::History::execute_merging), and a
+    /// run that returns to its start leaves no entry.
+    Resize(WorkspaceResize),
+    /// Show `pane` in its tab group and make it the active pane. Reverting
+    /// shows `previous_tab` in that group again and makes `previous_active`
+    /// the active pane without changing the tab its group shows; absent panes
+    /// are skipped.
+    Activate {
+        pane: PaneId,
+        previous_tab: PaneId,
+        previous_active: PaneId,
+    },
+    /// A structural change such as a pane move, as complete layouts. Applying
+    /// and reverting require the workspace to equal the other layout and
+    /// otherwise fail, so once moves are undoable, route every layout change
+    /// through history.
+    Rearrange {
+        before: Box<Workspace>,
+        after: Box<Workspace>,
+    },
+}
+
+impl WorkspaceCommand {
+    /// Resolve a completed dock interaction against the current workspace
+    /// without changing it. Returns `Ok(None)` when the change would do
+    /// nothing, including a move or activation of an absent pane; an invalid
+    /// or stale resize is an error.
+    pub fn from_change(
+        change: WorkspaceChange,
+        workspace: &Workspace,
+    ) -> Result<Option<Self>, String> {
+        Ok(match change {
+            WorkspaceChange::Resize(resize) => {
+                resize.check(workspace)?.then_some(Self::Resize(resize))
+            }
+            WorkspaceChange::Activate(pane) => {
+                let previous_tab = workspace.root.active_tab_beside(pane);
+                let previous_active = workspace.active_pane;
+                previous_tab
+                    .filter(|tab| *tab != pane || previous_active != pane)
+                    .map(|previous_tab| Self::Activate {
+                        pane,
+                        previous_tab,
+                        previous_active,
+                    })
+            }
+            WorkspaceChange::Move { pane, target, drop } => {
+                let mut after = workspace.clone();
+                after
+                    .move_pane(pane, target, drop)
+                    .then(|| Self::Rearrange {
+                        before: Box::new(workspace.clone()),
+                        after: Box::new(after),
+                    })
+            }
+        })
+    }
+}
+
+impl Command<Workspace> for WorkspaceCommand {
+    fn apply(&self, workspace: &mut Workspace) -> Result<bool, String> {
+        match self {
+            Self::Resize(resize) => {
+                if !valid_fraction(resize.after) {
+                    return Err("invalid split resize fraction".into());
+                }
+                let current = workspace.root.split_fraction(resize.node);
+                if current.is_none_or(|current| current == resize.after) {
+                    return Ok(false);
+                }
+                workspace.root.set_split_fraction(resize.node, resize.after);
+                Ok(true)
+            }
+            Self::Activate { pane, .. } => {
+                let before = (
+                    workspace.root.active_tab_beside(*pane),
+                    workspace.active_pane,
+                );
+                workspace.activate(*pane);
+                Ok((
+                    workspace.root.active_tab_beside(*pane),
+                    workspace.active_pane,
+                ) != before)
+            }
+            Self::Rearrange { before, after } => {
+                if workspace != before.as_ref() {
+                    return Err("the layout changed after this arrangement was recorded".into());
+                }
+                *workspace = after.as_ref().clone();
+                Ok(true)
+            }
+        }
+    }
+
+    fn revert(&self, workspace: &mut Workspace) -> Result<(), String> {
+        match self {
+            Self::Resize(resize) => {
+                if !valid_fraction(resize.before) {
+                    return Err("invalid split resize fraction".into());
+                }
+                if workspace.root.split_fraction(resize.node).is_some() {
+                    workspace
+                        .root
+                        .set_split_fraction(resize.node, resize.before);
+                }
+            }
+            Self::Activate {
+                previous_tab,
+                previous_active,
+                ..
+            } => {
+                // Restore the displayed tab, then the active pane without
+                // changing which tab its group displays.
+                workspace.activate(*previous_tab);
+                if workspace.root.contains_pane(*previous_active) {
+                    workspace.active_pane = *previous_active;
+                }
+            }
+            Self::Rearrange { before, after } => {
+                if workspace != after.as_ref() {
+                    return Err("the layout changed after this arrangement was applied".into());
+                }
+                *workspace = before.as_ref().clone();
+            }
+        }
+        Ok(())
+    }
+
+    fn merge(&mut self, next: &Self) -> bool {
+        match (self, next) {
+            (Self::Resize(resize), Self::Resize(next)) if resize.node == next.node => {
+                resize.after = next.after;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn is_noop(&self) -> bool {
+        match self {
+            Self::Resize(resize) => resize.before == resize.after,
+            Self::Activate {
+                pane,
+                previous_tab,
+                previous_active,
+            } => pane == previous_tab && pane == previous_active,
+            Self::Rearrange { before, after } => before == after,
+        }
+    }
+}
+
+fn valid_fraction(fraction: f32) -> bool {
+    fraction.is_finite() && (0.1..=0.9).contains(&fraction)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -332,6 +513,18 @@ impl DockNode {
                 first.contains_pane(pane) || second.contains_pane(pane)
             }
             Self::Tabs { tabs, .. } => tabs.contains(&pane),
+        }
+    }
+
+    /// The active tab of the group that holds `pane`.
+    fn active_tab_beside(&self, pane: PaneId) -> Option<PaneId> {
+        match self {
+            Self::Split { first, second, .. } => first
+                .active_tab_beside(pane)
+                .or_else(|| second.active_tab_beside(pane)),
+            Self::Tabs { tabs, active, .. } => {
+                tabs.contains(&pane).then(|| tabs.get(*active).copied())?
+            }
         }
     }
 
@@ -707,6 +900,163 @@ mod tests {
         }
     }
     use super::*;
+
+    #[test]
+    fn workspace_commands_undo_resizes_activations_and_moves() {
+        let mut workspace = Workspace::analytical_default();
+        let original = workspace.clone();
+        let mut history = crate::History::default();
+        let execute = |change, workspace: &mut Workspace, history: &mut crate::History<_>| {
+            let command = WorkspaceCommand::from_change(change, workspace).unwrap();
+            history
+                .execute(command.expect("a changing command"), workspace)
+                .unwrap()
+        };
+        let resize = WorkspaceResize {
+            node: DockNodeId(1),
+            before: 0.72,
+            after: 0.6,
+        };
+        assert!(execute(
+            WorkspaceChange::Resize(resize),
+            &mut workspace,
+            &mut history
+        ));
+        assert!(execute(
+            WorkspaceChange::Activate(PaneId(6)),
+            &mut workspace,
+            &mut history
+        ));
+        let moved = WorkspaceChange::Move {
+            pane: PaneId(2),
+            target: PaneId(4),
+            drop: DockDrop::Left,
+        };
+        assert!(execute(moved, &mut workspace, &mut history));
+        let arranged = workspace.clone();
+        assert_eq!((history.undo_len(), workspace.active_pane), (3, PaneId(2)));
+        while history.undo(&mut workspace).unwrap() {}
+        assert_eq!(workspace, original);
+        while history.redo(&mut workspace).unwrap() {}
+        assert_eq!(workspace, arranged);
+        workspace.validate().unwrap();
+    }
+
+    #[test]
+    fn workspace_commands_skip_unchanged_changes_and_reject_stale_ones() {
+        let workspace = Workspace::analytical_default();
+        let unchanged = [
+            WorkspaceChange::Activate(PaneId(1)),
+            WorkspaceChange::Activate(PaneId(99)),
+            WorkspaceChange::Move {
+                pane: PaneId(99),
+                target: PaneId(1),
+                drop: DockDrop::Tab,
+            },
+            WorkspaceChange::Resize(WorkspaceResize {
+                node: DockNodeId(1),
+                before: 0.72,
+                after: 0.72,
+            }),
+        ];
+        for change in unchanged {
+            assert_eq!(WorkspaceCommand::from_change(change, &workspace), Ok(None));
+        }
+        let stale = WorkspaceResize {
+            node: DockNodeId(1),
+            before: 0.5,
+            after: 0.6,
+        };
+        assert!(WorkspaceCommand::from_change(WorkspaceChange::Resize(stale), &workspace).is_err());
+
+        let mut changed = workspace.clone();
+        let mut history = crate::History::default();
+        let moved = WorkspaceChange::Move {
+            pane: PaneId(2),
+            target: PaneId(1),
+            drop: DockDrop::Tab,
+        };
+        let command = WorkspaceCommand::from_change(moved, &changed)
+            .unwrap()
+            .unwrap();
+        history.execute(command, &mut changed).unwrap();
+        changed.activate(PaneId(5));
+        let direct = changed.clone();
+        assert!(history.undo(&mut changed).is_err());
+        assert_eq!((changed, history.undo_len()), (direct, 1));
+    }
+
+    #[test]
+    fn consecutive_resizes_of_one_split_merge_into_one_entry() {
+        let mut workspace = Workspace::analytical_default();
+        let mut history = crate::History::default();
+        for (node, before, after) in [(1, 0.72, 0.77), (1, 0.77, 0.82), (2, 0.68, 0.6)] {
+            let resize = WorkspaceResize {
+                node: DockNodeId(node),
+                before,
+                after,
+            };
+            let command =
+                WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &workspace);
+            history
+                .execute_merging(command.unwrap().unwrap(), &mut workspace)
+                .unwrap();
+        }
+        assert_eq!(history.undo_len(), 2);
+        history.undo(&mut workspace).unwrap();
+        history.undo(&mut workspace).unwrap();
+        assert_eq!(workspace, Workspace::analytical_default());
+
+        // Nudging back to the start leaves no undo step.
+        let mut history = crate::History::default();
+        for (before, after) in [(0.72, 0.77), (0.77, 0.72)] {
+            let resize = WorkspaceResize {
+                node: DockNodeId(1),
+                before,
+                after,
+            };
+            let command =
+                WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &workspace);
+            history
+                .execute_merging(command.unwrap().unwrap(), &mut workspace)
+                .unwrap();
+        }
+        assert_eq!(history.undo_len(), 0);
+        assert_eq!(workspace, Workspace::analytical_default());
+    }
+
+    #[test]
+    fn undoing_an_activation_restores_a_hidden_active_pane_without_showing_it() {
+        // Panes 5 and 6 share a group that shows 5, while 6 is the active pane.
+        let mut workspace = Workspace::analytical_default();
+        workspace.active_pane = PaneId(6);
+        workspace.validate().unwrap();
+        let original = workspace.clone();
+        let mut history = crate::History::default();
+        let change = WorkspaceChange::Activate(PaneId(1));
+        let command = WorkspaceCommand::from_change(change, &workspace);
+        history
+            .execute(command.unwrap().unwrap(), &mut workspace)
+            .unwrap();
+        assert_eq!(workspace.active_pane, PaneId(1));
+        history.undo(&mut workspace).unwrap();
+        assert_eq!(workspace, original);
+    }
+
+    #[test]
+    fn resize_commands_reject_fractions_outside_the_split_range() {
+        let mut workspace = Workspace::analytical_default();
+        let resize = |before, after| {
+            WorkspaceCommand::Resize(WorkspaceResize {
+                node: DockNodeId(1),
+                before,
+                after,
+            })
+        };
+        assert!(resize(0.72, 0.99).apply(&mut workspace).is_err());
+        assert!(resize(0.05, 0.6).revert(&mut workspace).is_err());
+        assert_eq!(workspace, Workspace::analytical_default());
+    }
 
     #[test]
     fn canonical_tree_has_stable_unique_panes() {

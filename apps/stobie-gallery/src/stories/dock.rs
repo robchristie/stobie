@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use eframe::egui;
 use stobie_core::{
-    CommandHistory, DockNode, DockNodeId, Document, PaneId, Session, SplitAxis, Workspace,
+    DockNode, DockNodeId, History, PaneId, SplitAxis, Workspace, WorkspaceChange, WorkspaceCommand,
 };
 use stobie_ui_egui::{
     DesignTokens, DockBehaviour, DockTextContext, DomainReference, PanePresenter, SemanticUiId,
@@ -15,9 +15,7 @@ use crate::catalogue::StoryId;
 pub(crate) struct DockSceneState {
     workspace: Workspace,
     behaviour: DockBehaviour,
-    history: CommandHistory,
-    document: Document,
-    session: Session,
+    history: History<WorkspaceCommand>,
 }
 
 impl DockSceneState {
@@ -65,9 +63,7 @@ impl DockSceneState {
                 next_node_id: 704,
             },
             behaviour: DockBehaviour::default(),
-            history: CommandHistory::default(),
-            document: Document::default(),
-            session: Session::default(),
+            history: History::default(),
         }
     }
 
@@ -83,7 +79,7 @@ impl DockSceneState {
             observations,
             semantic_nodes,
         };
-        if let Some(command) = dock_workspace(
+        if let Some(resize) = dock_workspace(
             ui,
             &mut self.workspace,
             &mut self.behaviour,
@@ -92,13 +88,10 @@ impl DockSceneState {
                 tokens: *tokens,
                 font_scale,
             },
-        ) {
-            self.history.execute(
-                command,
-                &mut self.document,
-                &mut self.session,
-                &mut self.workspace,
-            );
+        ) && let Ok(Some(command)) =
+            WorkspaceCommand::from_change(WorkspaceChange::Resize(resize), &self.workspace)
+        {
+            let _ = self.history.execute(command, &mut self.workspace);
         }
     }
 }

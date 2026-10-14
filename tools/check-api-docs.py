@@ -19,12 +19,13 @@ CRATES = (
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
 EXPECTED_EXAMPLES["stobie-ui-egui"] = 5  # Composition, derived actions, icon toolbar, navigation and status-chip consumers.
-EXPECTED_EXAMPLES["stobie-core"] = 2  # Command history and a small workspace layout.
+EXPECTED_EXAMPLES["stobie-core"] = 4  # Image command history, generic undo history, workspace commands and a small layout.
 SOURCE_CONSUMERS = (
     "crates/stobie-core/src/lib.rs",
     "crates/stobie-core/src/data.rs",
     "crates/stobie-core/src/commands.rs",
     "crates/stobie-core/src/dock.rs",
+    "crates/stobie-core/src/history.rs",
     "crates/stobie-runtime/src/lib.rs",
     "crates/stobie-render-wgpu/src/lib.rs",
     "crates/stobie-ui-egui/src/lib.rs",
