@@ -540,7 +540,7 @@ impl PaneSurface<'_> {
                         .unwrap_or_default();
                     let mut after = source;
                     after.centre = image;
-                    self.outputs.commands.push(Command::SetCameras {
+                    self.outputs.commands.push(ImageCommand::SetCameras {
                         changes: linked_camera_changes(self.cameras, PaneId(1), after),
                     });
                 } else {

@@ -307,7 +307,7 @@ impl PaneSurface<'_> {
 fn push_camera_changes(outputs: &mut FrameOutput, mut changes: Vec<CameraChange>) {
     changes.retain(|change| change.before != change.after);
     if !changes.is_empty() {
-        outputs.commands.push(Command::SetCameras { changes });
+        outputs.commands.push(ImageCommand::SetCameras { changes });
     }
 }
 

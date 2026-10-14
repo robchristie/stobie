@@ -241,3 +241,35 @@ fn queued_arrange_rechecks_the_current_narrow_window_policy() {
         }
     ));
 }
+
+#[test]
+fn unsaved_follows_the_history_save_point_and_the_saved_layout() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = egui::Context::default();
+    let mut host = hosted(&context, &directory);
+    assert!(host.app().unsaved(), "nothing has been saved yet");
+    perform(&mut host, Action::Save);
+    assert!(!host.app().unsaved());
+    let mut draft = host.app().desk.draft().unwrap().clone();
+    draft.title = "Committed after saving".into();
+    host.app_mut().desk.edit_draft(draft).unwrap();
+    assert!(!host.app().unsaved(), "a draft is not committed state");
+    perform(&mut host, Action::Apply);
+    assert!(host.app().unsaved());
+    perform(&mut host, Action::Undo);
+    assert!(!host.app().unsaved(), "undo returned to the save point");
+    perform(&mut host, Action::Redo);
+    assert!(host.app().unsaved());
+    perform(&mut host, Action::Save);
+    assert!(!host.app().unsaved());
+    resize(&mut host, 0.36, 0.5);
+    assert!(
+        host.app().unsaved(),
+        "layout is saved state outside history"
+    );
+    resize(&mut host, 0.5, 0.36);
+    assert!(!host.app().unsaved());
+    perform(&mut host, Action::Restore);
+    assert!(!host.app().unsaved());
+    assert_eq!(host.app().desk.undo_len(), 0);
+}

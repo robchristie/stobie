@@ -32,6 +32,10 @@
 //! # Ok::<(), String>(())
 //! ```
 //!
+//! Any application can make its changes undoable with the generic [`History`]
+//! of [`Command`]s: execute, undo and redo with a capacity bound, grouped and
+//! merged entries, and a save point.
+//!
 //! [`TileDemand`] describes renderer-independent desired work, not a work queue.
 //! Use `stobie-runtime` to reconcile complete desired sets and reject stale
 //! completions. See the
@@ -46,6 +50,7 @@ pub mod coords;
 pub mod data;
 pub mod diagnostics;
 pub mod dock;
+pub mod history;
 pub mod ids;
 pub mod regional;
 pub mod virtualise;
@@ -56,6 +61,7 @@ pub use coords::*;
 pub use data::*;
 pub use diagnostics::*;
 pub use dock::*;
+pub use history::*;
 pub use ids::*;
 pub use regional::*;
 pub use virtualise::*;
