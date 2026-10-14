@@ -339,6 +339,16 @@ fn layout_resizes_are_undoable_and_activation_is_not() {
     assert_eq!(app.history.undo_len(), 1);
     assert_eq!(app.undo(), Ok(true));
     assert_eq!(app.workspace.root.split_fraction(node), Some(before));
+
+    // A drag that started before that undo still applies when released.
+    let stale = WorkspaceChange::Resize(stobie_core::WorkspaceResize {
+        node,
+        before: 0.4,
+        after: 0.55,
+    });
+    assert_eq!(app.apply(Intent::Layout(stale), &mut view), Ok(true));
+    assert_eq!(app.workspace.root.split_fraction(node), Some(0.55));
+    assert_eq!(app.history.undo_len(), 1);
 }
 
 #[test]

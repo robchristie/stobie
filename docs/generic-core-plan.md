@@ -146,9 +146,11 @@ returns `None` for a change that does nothing.
   removed.
 - The Lab's `LabCommand` wraps `ImageCommand` and core's `WorkspaceCommand`
   over a `LabTarget` of mutable borrows of its document, session and
-  workspace. A resize resolves through `WorkspaceCommand::from_change` and
-  shares the image history; tab activation and moves still apply directly.
-  The browser fixture's `resize_split` action keeps its wire name.
+  workspace. A changing resize becomes a lenient `WorkspaceCommand::Resize`
+  in the image history, as `ResizeSplit` was, so a drag released after an
+  undo or reset still applies; tab activation and moves still apply
+  directly. The browser fixture's `resize_split` action keeps its wire name
+  and clamps its fraction, as before.
 - The Lab's history keeps 1,000 entries. It was unbounded; camera moves are
   undoable, so the bound is generous, and no test or smoke comes near it.
 - The minimal example records image commands in a `History<ImageCommand>` and
@@ -158,11 +160,12 @@ returns `None` for a change that does nothing.
 
 `cargo xtask architecture` now also checks that:
 - `stobie-core`'s dependency tree has no `stobie-imaging`, runtime or
-  renderer, and its sources define none of the image or Lab-demo items (a
-  definition scan with its own regression test); core cannot re-export image
-  types it cannot reach;
-- the Gallery and Record Desk resolve no image-layer crate, and reach `wgpu`
-  only through eframe's `egui-wgpu` backend.
+  renderer on any target, and its sources define none of the listed image or
+  Lab-demo item names (a single-line definition scan with its own regression
+  test, a tripwire rather than a proof); core cannot re-export image types it
+  cannot reach;
+- the Gallery and Record Desk resolve no image-layer crate on any target, and
+  reach `wgpu` only through eframe and its `egui-wgpu` backend.
 
 Temporary violations (enabling `image-rendering` in the Gallery, defining a
 `Camera` in core) fail the check with a specific message.
@@ -177,7 +180,8 @@ and a history-revision `meaning`. It built on the first attempt with no
 compile errors and read no function bodies. The host has no display, so the
 agent could not run the app.
 
-Its `notes` example is adopted as the compiled undo and redo example. Driven
+Its `notes` example is adopted as the compiled undo and redo example, with
+unit tests of Clear, Add and Remove last through undo and redo. Driven
 natively under the repository's Xvfb sysroot with `tools/application-cli.mjs`:
 - Clear removed both notes as one undo step, and Undo restored them.
 - Redo cleared them again.

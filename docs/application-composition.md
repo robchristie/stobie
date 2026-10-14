@@ -7,8 +7,9 @@ inspection and invocation, and repaint decisions. The same code runs natively
 and in the browser.
 
 The complete example is [`notes.rs`](../crates/stobie-ui-egui/examples/notes.rs),
-about 350 lines with no inspection code. Run it from the repository root with
-the native [prerequisites](../README.md#prerequisites):
+about 350 lines plus tests of its undo and redo, with no inspection code.
+Run it from the repository root with the native
+[prerequisites](../README.md#prerequisites):
 
 ```sh
 cargo run -p stobie-ui-egui --example notes

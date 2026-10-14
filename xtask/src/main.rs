@@ -500,7 +500,7 @@ fn assert_tree_excludes_with(label: &str, arguments: &[&str], forbidden: &[&str]
     let output = Command::new("cargo")
         .arg("tree")
         .args(arguments)
-        .args(["--prefix", "none"])
+        .args(["--target", "all", "--prefix", "none"])
         .output()
         .with_context(|| format!("run cargo tree for {label}"))?;
     if !output.status.success() {
@@ -518,14 +518,19 @@ fn assert_tree_excludes_with(label: &str, arguments: &[&str], forbidden: &[&str]
     Ok(())
 }
 
-/// Reach wgpu only through eframe's egui-wgpu backend.
+/// Reach wgpu only through eframe and its egui-wgpu backend, on every target
+/// (eframe depends on wgpu directly for the browser).
 fn assert_gpu_only_through_eframe(label: &str, arguments: &[&str]) -> Result<()> {
-    for (package, allowed) in [("wgpu", &["egui-wgpu"][..]), ("egui-wgpu", &["eframe"][..])] {
+    for (package, allowed) in [
+        ("wgpu", &["egui-wgpu", "eframe"][..]),
+        ("egui-wgpu", &["eframe"][..]),
+    ] {
         let output = Command::new("cargo")
             .arg("tree")
             .args(arguments)
             .args([
-                "-e", "normal", "--prefix", "none", "--depth", "1", "-i", package,
+                "-e", "normal", "--target", "all", "--prefix", "none", "--depth", "1", "-i",
+                package,
             ])
             .output()
             .with_context(|| format!("run cargo tree -i {package} for {label}"))?;
@@ -670,8 +675,12 @@ mod architecture_tests {
 
     #[test]
     fn gpu_guard_reads_only_direct_dependents() {
-        let tree = "wgpu v30.0.1\negui-wgpu v0.36.1\nstobie-render-wgpu v0.1.6 (/repo)\n";
-        assert_eq!(direct_dependents(tree), ["egui-wgpu", "stobie-render-wgpu"]);
+        let tree =
+            "wgpu v30.0.1\neframe v0.36.1\negui-wgpu v0.36.1\nstobie-render-wgpu v0.1.6 (/repo)\n";
+        assert_eq!(
+            direct_dependents(tree),
+            ["eframe", "egui-wgpu", "stobie-render-wgpu"]
+        );
         assert!(direct_dependents("wgpu v30.0.1\n").is_empty());
     }
 

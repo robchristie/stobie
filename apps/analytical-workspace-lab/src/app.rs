@@ -488,7 +488,7 @@ impl Lab {
                 LabCommand::Layout(WorkspaceCommand::Resize(WorkspaceResize {
                     node,
                     before,
-                    after: fraction,
+                    after: fraction.clamp(0.1, 0.9),
                 }))
             }
             TestAction::QueueZeroViewportUpload => {
@@ -1261,10 +1261,12 @@ impl Application for Lab {
                 self.execute_image_intent(intent)?;
                 RepaintReason::Command
             }
-            Intent::Layout(change @ WorkspaceChange::Resize(_)) => {
+            Intent::Layout(WorkspaceChange::Resize(resize)) => {
                 // A completed resize is one undo entry beside image commands.
-                if let Some(command) = WorkspaceCommand::from_change(change, &self.workspace)? {
-                    self.execute(LabCommand::Layout(command))?;
+                // As before, a resize that started before an undo or reset
+                // during the drag still applies its final fraction.
+                if resize.before != resize.after {
+                    self.execute(LabCommand::Layout(WorkspaceCommand::Resize(resize)))?;
                 }
                 RepaintReason::Command
             }

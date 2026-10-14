@@ -224,9 +224,9 @@ impl<C> History<C> {
     }
 
     /// Revert the newest entry, a group's commands in reverse order, and make
-    /// it redoable. Returns `Ok(false)` when there is nothing to undo. If a command fails, the entry's commands
-    /// already reverted are reapplied, the entry stays, and the error is
-    /// returned.
+    /// it redoable. Returns `Ok(false)` when there is nothing to undo. If a
+    /// command fails, the entry's commands already reverted are reapplied,
+    /// the entry stays, and the error is returned.
     pub fn undo<T: ?Sized>(&mut self, target: &mut T) -> Result<bool, String>
     where
         C: Command<T>,
@@ -250,9 +250,9 @@ impl<C> History<C> {
     }
 
     /// Reapply the newest undone entry, a group's commands in order. Returns
-    /// `Ok(false)` when there is nothing to redo. If a command fails, the entry's commands already
-    /// reapplied are reverted, the entry stays redoable, and the error is
-    /// returned.
+    /// `Ok(false)` when there is nothing to redo. If a command fails, the
+    /// entry's commands already reapplied are reverted, the entry stays
+    /// redoable, and the error is returned.
     pub fn redo<T: ?Sized>(&mut self, target: &mut T) -> Result<bool, String>
     where
         C: Command<T>,

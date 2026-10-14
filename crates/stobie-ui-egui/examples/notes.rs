@@ -353,3 +353,64 @@ fn main() -> eframe::Result {
 fn main() {
     let _ = (Notes::new, stobie_ui_egui::AppHost::<Notes>::new);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ids(notes: &Notes) -> Vec<u64> {
+        notes.notes.iter().map(|note| note.id).collect()
+    }
+
+    fn run(notes: &mut Notes, action: NoteAction) {
+        notes
+            .perform(ActionTarget::application(action), &mut ())
+            .unwrap();
+    }
+
+    #[test]
+    fn clear_undoes_as_one_step_and_redo_keeps_note_identity() {
+        let mut notes = Notes::new();
+        let original = ids(&notes);
+        run(&mut notes, NoteAction::Clear);
+        assert!(notes.notes.is_empty());
+        assert_eq!(notes.history.undo_len(), 1);
+        run(&mut notes, NoteAction::Undo);
+        assert_eq!(ids(&notes), original);
+        run(&mut notes, NoteAction::Redo);
+        assert!(notes.notes.is_empty());
+        run(&mut notes, NoteAction::Undo);
+        assert_eq!(ids(&notes), original);
+        assert!(
+            !notes
+                .availability(ActionTarget::application(NoteAction::Undo))
+                .enabled()
+        );
+    }
+
+    #[test]
+    fn add_and_remove_undo_without_restoring_the_draft() {
+        let mut notes = Notes::new();
+        let original = ids(&notes);
+        notes.draft = "Buy stamps".into();
+        run(&mut notes, NoteAction::Add);
+        assert_eq!((notes.notes.len(), notes.draft.as_str()), (3, ""));
+        run(&mut notes, NoteAction::RemoveLast);
+        run(&mut notes, NoteAction::RemoveLast);
+        assert_eq!(notes.notes.len(), 1);
+        run(&mut notes, NoteAction::Undo);
+        run(&mut notes, NoteAction::Undo);
+        assert_eq!(
+            notes.notes.last().map(|note| note.text.as_str()),
+            Some("Buy stamps")
+        );
+        run(&mut notes, NoteAction::Undo);
+        assert_eq!((ids(&notes), notes.draft.as_str()), (original, ""));
+        let before = notes.meaning(ActionTarget::application(NoteAction::Redo));
+        run(&mut notes, NoteAction::Redo);
+        assert_ne!(
+            notes.meaning(ActionTarget::application(NoteAction::Redo)),
+            before
+        );
+    }
+}
