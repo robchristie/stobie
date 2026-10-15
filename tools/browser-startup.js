@@ -21,12 +21,12 @@ function observeStreaming(scope) {
   return { report, restore() { if (api?.instantiateStreaming === observed) api.instantiateStreaming = original; } };
 }
 
-export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs = 60000, onFailure = () => {} }) {
+export function installStartup({ app, workerUrl, canvasId, scope = globalThis, timeoutMs = 60000, onFailure = () => {} }) {
   const streaming = observeStreaming(scope);
   const report = scope.__STOBIE_STARTUP = {
     instantiateStreaming: streaming.report,
     schema: 1, app, timeOrigin: scope.performance.timeOrigin, phase: 'bootstrap', status: 'starting',
-    milestones: {}, failure: null, submissionObservation: 'unavailable',
+    milestones: {}, failure: null, submissionObservation: 'unavailable', renderer: null,
     memory: { main: {}, worker: {} }, worker: null,
   };
   let memory, timer, raf, foregroundStarted, foregroundRemaining = timeoutMs, restoreSubmit = () => {};
@@ -57,6 +57,20 @@ export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs =
     onFailure();
     return true;
   }
+  // The host names its backend on the canvas before constructing the
+  // application. WebGL2 has no GPUQueue, so it takes the CPU handoff path.
+  function observeRenderer() {
+    const data = canvasId === undefined ? undefined : scope.document?.getElementById(canvasId)?.dataset;
+    if (report.renderer || !data?.stobieRenderer) return;
+    report.renderer = {
+      backend: data.stobieRenderer, adapter: data.stobieRendererAdapter ?? '',
+      selection: data.stobieRendererSelection ?? '', reason: data.stobieRendererReason ?? null,
+    };
+    if (report.renderer.backend !== 'webgpu') {
+      restoreSubmit(); restoreSubmit = () => {};
+      report.submissionObservation = `unavailable: ${report.renderer.backend} has no GPUQueue.submit`;
+    }
+  }
   function opportunity() {
     if (raf !== undefined || report.status !== 'starting') return;
     // One callback, requested only after UI handoff/submission. RAF is a proxy,
@@ -69,12 +83,13 @@ export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs =
     if (report.status === 'failed' || report.milestones[name] || (report.status === 'ready' && name !== 'first_useful_content')) return false;
     report.milestones[name] = stamp(scope);
     scope.performance.mark?.(`stobie:${name}`);
+    if (['application_construct_begin', 'framework_start_end', 'workspace_ui_complete'].includes(name)) observeRenderer();
     if (name === 'application_construct_begin') { report.phase = 'application_construct'; shell('Constructing workspace…'); }
     if (name === 'application_construct_end') report.phase = 'framework_start';
     if (name === 'workspace_ui_complete') {
       // This is CPU UI construction only; the submit hook records the GPU API call.
       scope.document?.body.classList.add('ready');
-      if (report.submissionObservation === 'unavailable') opportunity();
+      if (report.submissionObservation.startsWith('unavailable')) opportunity();
     }
     if (name === 'workspace_frame_submitted') { restoreSubmit(); opportunity(); }
     if (name === 'first_useful_content') sample('first_useful_content');
@@ -147,9 +162,11 @@ export function installStartup({ app, workerUrl, scope = globalThis, timeoutMs =
   };
 }
 
-export async function startApplication({ app, workerUrl, load, canvasId, handleName, start, afterStart, scope = globalThis }) {
+// The framework host chooses WebGPU or WebGL2 itself. Only an application
+// whose renderer needs WebGPU, such as the viewer, sets `requireWebGpu`.
+export async function startApplication({ app, workerUrl, load, canvasId, handleName, start, afterStart, requireWebGpu = false, scope = globalThis }) {
   let handle;
-  const startup = installStartup({ app, workerUrl, scope, onFailure: () => {
+  const startup = installStartup({ app, workerUrl, canvasId, scope, onFailure: () => {
     // Leave the Rust callback/constructor before releasing partially started resources.
     scope.queueMicrotask?.(() => {
       try { handle?.destroy(); startup.report.cleanup = handle ? 'destroyed' : 'not_constructed'; }
@@ -165,8 +182,8 @@ export async function startApplication({ app, workerUrl, load, canvasId, handleN
     if (startup.report.status === 'failed') return startup;
     startup.setMemory(wasm.memory);
     startup.mark('wasm_init_end');
-    startup.phase('framework_start', 'Initialising WebGPU…');
-    if (!scope.navigator?.gpu) throw new Error('WebGPU is unavailable in this browser or context');
+    startup.phase('framework_start', 'Initialising renderer…');
+    if (requireWebGpu && !scope.navigator?.gpu) throw new Error('WebGPU is unavailable in this browser or context');
     startup.mark('framework_start_begin');
     handle = new module.WebHandle();
     await start(handle, scope.document.getElementById(canvasId));

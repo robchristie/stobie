@@ -34,7 +34,15 @@ pub fn run_native<A: Application>(
     eframe::run_native(
         app_name,
         options,
-        Box::new(move |creation| Ok(Box::new(AppHost::new(&creation.egui_ctx, create(creation))))),
+        Box::new(move |creation| {
+            if let Some(render_state) = &creation.wgpu_render_state {
+                super::renderer::record_renderer(
+                    &creation.egui_ctx,
+                    super::renderer::native_identity(&render_state.adapter.get_info()),
+                );
+            }
+            Ok(Box::new(AppHost::new(&creation.egui_ctx, create(creation))))
+        }),
     )
 }
 
@@ -47,13 +55,15 @@ mod aria_dom;
 
 #[cfg(target_arch = "wasm32")]
 mod web {
-    use std::cell::Cell;
+    use std::cell::{Cell, RefCell};
     use std::marker::PhantomData;
     use std::rc::Rc;
 
-    use wasm_bindgen::JsValue;
+    use eframe::egui_wgpu::wgpu::{self, Backends};
+    use wasm_bindgen::{JsCast, JsValue};
 
-    use crate::{AppHost, Application, Inspection};
+    use super::super::renderer::{self, RendererRequest, WebGpuUnavailable};
+    use crate::{AppHost, Application, Inspection, RendererIdentity};
 
     /// A browser runner for a hosted application. [`web_handle!`](crate::web_handle)
     /// exports it to JavaScript; applications rarely use it directly.
@@ -79,6 +89,13 @@ mod web {
         /// Start the application in `canvas`; the promise settles once it runs.
         /// Unless [`Application::web_accessibility_layer`] opts out, the host
         /// mirrors the accessibility tree into a hidden ARIA layer beside it.
+        ///
+        /// The host prefers WebGPU and falls back to WebGL2 when WebGPU is
+        /// missing, has no adapter or fails to start; `?renderer=webgpu` or
+        /// `?renderer=webgl2` in the page URL forces one. A WebGL2 retry after
+        /// a WebGPU failure replaces `canvas` with a fresh copy, because a
+        /// canvas keeps its first context. The canvas carries the outcome in
+        /// `data-stobie-renderer`, `-adapter`, `-selection` and `-reason`.
         pub fn start(
             &self,
             canvas: web_sys::HtmlCanvasElement,
@@ -87,12 +104,50 @@ mod web {
             let runner = self.runner.clone();
             let layer = self.layer.clone();
             wasm_bindgen_futures::future_to_promise(async move {
-                let layer_canvas = canvas.clone();
-                runner
-                    .start(
+                let request = RendererRequest::from_query(&page_query())
+                    .map_err(|error| JsValue::from_str(&error))?;
+                let webgpu_present = navigator_has_gpu();
+                // eframe consumes a creator only once its painter starts, so
+                // every attempt takes the one application creator from here.
+                let create = Rc::new(RefCell::new(Some(create)));
+                let attempt = |canvas: web_sys::HtmlCanvasElement,
+                               options: eframe::WebOptions,
+                               webgpu: Option<WebGpuUnavailable>| {
+                    let create = create.clone();
+                    let layer = layer.clone();
+                    let layer_canvas = canvas.clone();
+                    runner.start(
                         canvas,
-                        eframe::WebOptions::default(),
+                        options,
                         Box::new(move |creation| {
+                            if let Some(render_state) = &creation.wgpu_render_state {
+                                let info = render_state.adapter.get_info();
+                                let backend = renderer::backend_name(info.backend);
+                                let webgpu = match webgpu {
+                                    // The default attempt ran on WebGL2 because
+                                    // eframe's detection found no adapter.
+                                    None if backend != "webgpu" => Some(if webgpu_present {
+                                        WebGpuUnavailable::NoAdapter
+                                    } else {
+                                        WebGpuUnavailable::Missing
+                                    }),
+                                    other => other,
+                                };
+                                let (selection, reason) =
+                                    renderer::browser_selection(request, backend, webgpu.as_ref());
+                                let identity = RendererIdentity {
+                                    backend: backend.into(),
+                                    adapter: info.name,
+                                    selection,
+                                    reason,
+                                };
+                                mark_canvas(&layer_canvas, &identity);
+                                renderer::record_renderer(&creation.egui_ctx, identity);
+                            }
+                            let create = create
+                                .borrow_mut()
+                                .take()
+                                .expect("the application is created once");
                             let app = create(creation);
                             // A restarted host replaces its previous layer.
                             if let Some(previous) = layer.take() {
@@ -108,8 +163,66 @@ mod web {
                             Ok(Box::new(AppHost::new(&creation.egui_ctx, app)))
                         }),
                     )
-                    .await?;
-                Ok(JsValue::UNDEFINED)
+                };
+                let failed = |webgpu: Option<WebGpuUnavailable>, webgl2: Option<String>| {
+                    JsValue::from_str(&renderer::startup_failure(
+                        request,
+                        webgpu.as_ref(),
+                        webgl2.as_deref(),
+                    ))
+                };
+                match request {
+                    RendererRequest::WebGpu if !webgpu_present => {
+                        return Err(failed(Some(WebGpuUnavailable::Missing), None));
+                    }
+                    RendererRequest::WebGpu => {
+                        let options = with_backends(Backends::BROWSER_WEBGPU);
+                        let error = match attempt(canvas, options, None).await {
+                            Ok(()) => return Ok(JsValue::UNDEFINED),
+                            Err(error) => describe(&error),
+                        };
+                        let webgpu = if wgpu::util::is_browser_webgpu_supported().await {
+                            WebGpuUnavailable::Failed(error)
+                        } else {
+                            WebGpuUnavailable::NoAdapter
+                        };
+                        return Err(failed(Some(webgpu), None));
+                    }
+                    RendererRequest::WebGl2 => {
+                        let options = with_backends(Backends::GL);
+                        return match attempt(canvas, options, None).await {
+                            Ok(()) => Ok(JsValue::UNDEFINED),
+                            Err(error) => Err(failed(None, Some(describe(&error)))),
+                        };
+                    }
+                    RendererRequest::Auto => {}
+                }
+                // Unchanged eframe defaults: WebGPU when it has an adapter,
+                // otherwise WebGL2.
+                let error = match attempt(canvas.clone(), eframe::WebOptions::default(), None).await
+                {
+                    Ok(()) => return Ok(JsValue::UNDEFINED),
+                    Err(error) => describe(&error),
+                };
+                // The application was already created, so the renderer
+                // started and something later failed; a retry cannot help.
+                if create.borrow().is_none() {
+                    return Err(JsValue::from_str(&error));
+                }
+                if !webgpu_present {
+                    return Err(failed(Some(WebGpuUnavailable::Missing), Some(error)));
+                }
+                if !wgpu::util::is_browser_webgpu_supported().await {
+                    return Err(failed(Some(WebGpuUnavailable::NoAdapter), Some(error)));
+                }
+                // WebGPU had an adapter but did not start. Retry on WebGL2 in
+                // a fresh canvas, because this one holds a WebGPU context.
+                let webgpu = WebGpuUnavailable::Failed(error);
+                let fresh = replace_canvas(&canvas)?;
+                match attempt(fresh, with_backends(Backends::GL), Some(webgpu.clone())).await {
+                    Ok(()) => Ok(JsValue::UNDEFINED),
+                    Err(error) => Err(failed(Some(webgpu), Some(describe(&error)))),
+                }
             })
         }
 
@@ -165,6 +278,68 @@ mod web {
             self.runner.destroy();
             if let Some(key) = self.layer.take() {
                 super::aria_dom::remove(key);
+            }
+        }
+    }
+
+    /// eframe's default browser options restricted to `backends`.
+    fn with_backends(backends: Backends) -> eframe::WebOptions {
+        let mut options = eframe::WebOptions::default();
+        if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup
+        {
+            setup.instance_descriptor.backends = backends;
+        }
+        options
+    }
+
+    fn page_query() -> String {
+        web_sys::window()
+            .and_then(|window| window.location().search().ok())
+            .unwrap_or_default()
+    }
+
+    fn navigator_has_gpu() -> bool {
+        web_sys::window().is_some_and(|window| {
+            js_sys::Reflect::get(&window.navigator(), &JsValue::from_str("gpu"))
+                .is_ok_and(|gpu| !gpu.is_undefined() && !gpu.is_null())
+        })
+    }
+
+    /// A startup error's message, as `renderer::error_line` trims it.
+    fn describe(error: &JsValue) -> String {
+        let text = error
+            .as_string()
+            .or_else(|| {
+                error
+                    .dyn_ref::<js_sys::Error>()
+                    .map(|error| error.message().into())
+            })
+            .unwrap_or_else(|| format!("{error:?}"));
+        renderer::error_line(&text)
+    }
+
+    /// Put a context-free copy of `canvas` in its place and return it.
+    fn replace_canvas(
+        canvas: &web_sys::HtmlCanvasElement,
+    ) -> Result<web_sys::HtmlCanvasElement, JsValue> {
+        let fresh: web_sys::HtmlCanvasElement = canvas.clone_node()?.dyn_into()?;
+        canvas.replace_with_with_node_1(&fresh)?;
+        Ok(fresh)
+    }
+
+    fn mark_canvas(canvas: &web_sys::HtmlCanvasElement, identity: &RendererIdentity) {
+        let _ = canvas.set_attribute("data-stobie-renderer", &identity.backend);
+        let _ = canvas.set_attribute("data-stobie-renderer-adapter", &identity.adapter);
+        let _ = canvas.set_attribute(
+            "data-stobie-renderer-selection",
+            identity.selection.as_str(),
+        );
+        match &identity.reason {
+            Some(reason) => {
+                let _ = canvas.set_attribute("data-stobie-renderer-reason", reason);
+            }
+            None => {
+                let _ = canvas.remove_attribute("data-stobie-renderer-reason");
             }
         }
     }

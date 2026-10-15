@@ -30,8 +30,8 @@ eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_de
 wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
 js-sys = { version = "0.3.104", optional = true }
-# eframe already enables these features, so the ARIA layer adds no web-sys code.
-web-sys = { workspace = true, features = ["AddEventListenerOptions", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Node"], optional = true }
+# eframe already enables these features, so the ARIA layer and renderer policy add no web-sys code.
+web-sys = { workspace = true, features = ["AddEventListenerOptions", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "Navigator", "Node", "Window"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [[example]]

@@ -44,9 +44,11 @@ use crate::{
 
 #[cfg(feature = "eframe")]
 mod entry;
+mod renderer;
 use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
 pub use entry::*;
+pub use renderer::renderer_identity;
 
 /// An application whose per-pass plumbing Stobie owns. See the crate documentation
 /// and the application composition guide.
@@ -737,6 +739,9 @@ impl<A: Application> AppHost<A> {
             self.identity.build.clone(),
         );
         let wake = self.context.clone();
+        if let Some(renderer) = renderer::renderer_identity(&self.context) {
+            inspection.set_renderer(Some(renderer));
+        }
         match inspection.start_native(move || wake.request_repaint()) {
             Ok(Some(host)) => {
                 // Text field values and set text read the AccessKit tree.
@@ -758,6 +763,9 @@ impl<A: Application> AppHost<A> {
     /// Enable inspection with an explicitly constructed service, for example a
     /// browser instance or a test. The host publishes from the next pass.
     pub fn enable_inspection(&mut self, inspection: Inspection) {
+        if let Some(renderer) = renderer::renderer_identity(&self.context) {
+            inspection.set_renderer(Some(renderer));
+        }
         self.context.enable_accesskit();
         inspection.install_completion_hook(&self.context);
         self.inspection = Some(inspection);

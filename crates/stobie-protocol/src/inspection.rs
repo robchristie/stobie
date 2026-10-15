@@ -34,6 +34,41 @@ pub struct ApplicationIdentity {
     pub build: BuildIdentity,
 }
 
+/// The GPU backend and adapter the application's renderer is running on.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RendererIdentity {
+    /// `webgpu` or `webgl2` in a browser; natively, the wgpu backend, such as
+    /// `vulkan`, `metal`, `dx12` or `gl`.
+    pub backend: String,
+    /// The adapter name the backend reports; may be empty.
+    pub adapter: String,
+    pub selection: RendererSelection,
+    /// Why this backend was chosen when it was not the preferred one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RendererSelection {
+    /// The preferred backend: WebGPU in a browser, wgpu's default natively.
+    Preferred,
+    /// The preferred backend was unavailable or failed to start.
+    Fallback,
+    /// A test override chose the backend.
+    Forced,
+}
+
+impl RendererSelection {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Preferred => "preferred",
+            Self::Fallback => "fallback",
+            Self::Forced => "forced",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ObservationBoundary {
@@ -781,6 +816,9 @@ pub enum InspectionResult {
         application: ApplicationIdentity,
         limits: InspectionLimits,
         operations: Vec<InspectionOperationKind>,
+        /// Absent when the host does not know its renderer, as in tests.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        renderer: Option<RendererIdentity>,
     },
     Observe {
         observation: CompletedObservation,

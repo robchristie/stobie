@@ -4,7 +4,7 @@ Previously named Polyorama. See the [rename and saved-state migration guide](doc
 for current development names and the attribution of historical evidence.
 
 Stobie is an experimental Rust framework layer for building GPU-driven
-analytical workspaces on native desktop and WebGPU-capable browsers. It brings
+analytical workspaces on native desktop and in browsers with WebGPU or WebGL2. It brings
 together dockable panes, large tiled images, linked views, annotations and
 virtualised collections above **egui**, **eframe** and **wgpu**.
 
@@ -101,7 +101,8 @@ Run these commands from the repository root.
 - For native applications, a graphical session and a working graphics backend
   supported by wgpu. Linux builds enable X11 and Wayland support.
 - For browser builds, the `wasm32-unknown-unknown` target,
-  **wasm-bindgen-cli 0.2.127**, and a browser with WebGPU available.
+  **wasm-bindgen-cli 0.2.127**, and a browser with WebGPU or WebGL2 (the
+  Emuella viewer needs WebGPU).
 - Python 3 for the optional local HTTP server shown below.
 - Node.js and npm for automated browser/UI verification. CI currently uses
   Node.js **25.8.2**; Playwright is pinned in `package-lock.json`.
@@ -151,8 +152,12 @@ python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/stobie-gallery/web
 ```
 
 Open [Stobie Gallery](http://localhost:8081). Serve the files over HTTP rather
-than opening `index.html` directly. Browser rendering requires WebGPU; there is
-no WebGL fallback. Re-run `cargo xtask build-web` after changing Rust code.
+than opening `index.html` directly. Applications on the framework host prefer
+WebGPU and fall back to WebGL2 when WebGPU is missing, has no adapter or fails
+to start; add `?renderer=webgl2` or `?renderer=webgpu` to the URL to force one.
+The [browser startup guide](docs/browser-startup.md#renderer-backends) describes
+the policy and how the running backend is reported. The Emuella viewer still
+requires WebGPU. Re-run `cargo xtask build-web` after changing Rust code.
 
 For measured production packaging, compression, immutable asset URLs and consumer
 workspace setup, use the [browser build and startup guide](docs/browser-startup.md).
@@ -219,7 +224,7 @@ pinned x86_64 UI packages into `.tools/`; that path also relies on tools such as
 `STOBIE_USE_SYSTEM_UI_LIBS=1` and provision the dependencies and display as
 shown in the [Ubuntu CI setup action](.github/actions/setup-verification/action.yml).
 
-Hosted verification runs eight stages in parallel and requires all of them under
+Hosted verification runs nine stages in parallel and requires all of them under
 the final `verify` check. The local command runs the same stages sequentially.
 See [CI verification and cache ownership](docs/ci-cache.md) for the stage
 inventory, focused reproduction commands and timing limits.

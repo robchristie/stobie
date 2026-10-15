@@ -3,7 +3,7 @@ use super::*;
 use std::time::Instant;
 
 const STAGES: &str = include_str!("../../tools/verification-stages.json");
-const NAMES: [&str; 8] = [
+const NAMES: [&str; 9] = [
     "checks",
     "native-lab",
     "native-other",
@@ -12,6 +12,7 @@ const NAMES: [&str; 8] = [
     "production",
     "ui",
     "record-desk",
+    "webgl2",
 ];
 
 fn configured_names(configuration: &serde_json::Value) -> Result<Vec<&str>> {
@@ -338,6 +339,53 @@ pub fn run_stage(name: &str) -> Result<()> {
                 )?;
             }
         }
+        "webgl2" => {
+            // Record Desk and the Gallery repeat their browser checks with
+            // WebGPU withheld, so the host falls back to WebGL2; each smoke
+            // checks that the canvas reports the WebGL2 renderer.
+            let webgl2 = evidence.join("webgl2");
+            let environment = [
+                ("STOBIE_EVIDENCE_DIR", webgl2.as_path()),
+                ("STOBIE_BROWSER_RENDERER", Path::new("webgl2")),
+            ];
+            let icons = webgl2.join("typed-icons");
+            let icon_environment = [
+                ("STOBIE_EVIDENCE_DIR", icons.as_path()),
+                ("STOBIE_BROWSER_RENDERER", Path::new("webgl2")),
+            ];
+            fs::create_dir_all(&icons)?;
+            build_gallery_web()?;
+            run("bash", &["consumers/record-desk/build-web.sh"])?;
+            prepare_browser()?;
+            run_with_environment("npm", &["run", "gallery-browser-smoke"], &environment)?;
+            run_with_environment(
+                "bash",
+                &["tools/icon-actions-browser-smoke.sh"],
+                &icon_environment,
+            )?;
+            for smoke in [
+                "tools/navigation-browser-smoke.sh",
+                "tools/status-chip-browser-smoke.sh",
+                "tools/record-desk-browser-smoke.sh",
+            ] {
+                run_with_environment("bash", &[smoke], &environment)?;
+            }
+            for app in ["gallery", "record-desk"] {
+                run_with_environment(
+                    "bash",
+                    &["tools/aria-layer-browser.sh", "--app", app],
+                    &environment,
+                )?;
+            }
+            if cfg!(target_os = "linux") {
+                run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
+                run_with_environment(
+                    "bash",
+                    &["tools/stobie-cli-smoke.sh", "record-desk-browser"],
+                    &environment,
+                )?;
+            }
+        }
         _ => bail!("unknown verification stage {name:?}"),
     }
     println!(
@@ -410,7 +458,8 @@ mod tests {
                 "gallery-browser",
                 "production",
                 "ui",
-                "record-desk"
+                "record-desk",
+                "webgl2"
             ])
         );
     }

@@ -110,7 +110,7 @@ try {
     // Serve the web build and open it with ?automation=1 in Chromium with a
     // DevTools endpoint, as a Lantern-managed browser provides one.
     const { chromium } = await import('playwright');
-    const { hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment } = await import('./browser-launch.mjs');
+    const { assertBrowserRenderer, expectedBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl, uiLibraryEnvironment } = await import('./browser-launch.mjs');
     const root = resolve(binary);
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm' };
     server = createServer(async (request, response) => {
@@ -126,13 +126,17 @@ try {
     const port = 9400 + (process.pid % 500);
     browser = await chromium.launch({ ...options, args: [...options.args, `--remote-debugging-port=${port}`], env: uiLibraryEnvironment() });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-    const url = `http://127.0.0.1:${server.address().port}/?automation=1`;
+    const url = rendererUrl(`http://127.0.0.1:${server.address().port}/?automation=1`);
     const fresh = async () => {
       await page.goto(url);
       await page.waitForFunction(() => window.__STOBIE_AUTOMATION, null, { timeout: 30000 });
     };
     const endpoint = `http://127.0.0.1:${port}`;
     await fresh();
+    // The page and the application interface both name the running backend.
+    await assertBrowserRenderer(page);
+    report.renderer = (await new ApplicationClient(new BrowserTransport(page)).hello()).renderer;
+    assert.equal(report.renderer?.backend, expectedBrowserRenderer(), 'hello reports the running backend');
     const viaCli = args => cli([...args, '--session', 'parity-browser']);
     assert.equal(cli(['attach', 'parity-browser', '--cdp', endpoint, '--page', url]).status, 0, 'attach');
     report.budgets.observe = { bytes: Buffer.byteLength(cli(['observe', '--session', 'parity-browser'], { json: false }).stdout), budget: 8192 };

@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { resolve, extname } from 'node:path';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { waitForClickTarget } from './record-desk-target.mjs';
 import { focusByTab } from './browser-keyboard-focus.mjs';
 
@@ -13,7 +13,8 @@ const root = resolve('consumers/record-desk/web');
 const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/record-desk-evidence/record-desk');
 await mkdir(evidence, { recursive: true });
 const server = createServer(async (req, res) => {
-  const path = resolve(root, req.url === '/' ? 'index.html' : `.${new URL(req.url, 'http://local').pathname}`);
+  const pathname = new URL(req.url, 'http://local').pathname;
+  const path = resolve(root, pathname === '/' ? 'index.html' : `.${pathname}`);
   try {
     if (!path.startsWith(`${root}/`)) throw new Error('outside root');
     const body = await readFile(path);
@@ -77,7 +78,7 @@ async function field(id, value) {
 }
 try {
   await new Promise(r => server.listen(0, '127.0.0.1', r));
-  const url = process.env.RECORD_DESK_URL ?? `http://127.0.0.1:${server.address().port}`;
+  const url = rendererUrl(process.env.RECORD_DESK_URL ?? `http://127.0.0.1:${server.address().port}/`);
   browser = await chromium.launch(hostedLinuxWebGpuLaunchOptions());
   page = await browser.newPage({ viewport: { width: 1080, height: 760 } });
   page.on('pageerror', e => errors.push(e.toString()));
@@ -96,6 +97,7 @@ try {
     }
   });
   await ready();
+  await assertBrowserRenderer(page);
   await wait('s => s.records.length === 12 && s.ui.nodes.length > 10');
   await record('ordinary');
   await page.screenshot({ path: resolve(evidence, 'browser-ordinary.png') });
@@ -241,10 +243,11 @@ try {
   await clickNode('record-desk.save');
   await wait('s => !s.error && !s.unsaved');
   assert.deepEqual(errors, [], 'browser runtime errors');
-  const adapter = await page.evaluate(async () => {
-    const info = (await navigator.gpu.requestAdapter())?.info;
-    return info && { vendor: info.vendor, architecture: info.architecture, device: info.device, description: info.description };
-  });
+  // The adapter the host actually started on, as it reports it on the canvas.
+  const adapter = await page.locator('canvas').evaluate(canvas => ({
+    backend: canvas.dataset.stobieRenderer, adapter: canvas.dataset.stobieRendererAdapter,
+    selection: canvas.dataset.stobieRendererSelection, reason: canvas.dataset.stobieRendererReason ?? null,
+  }));
   const report = { source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '', wasm_sha256: createHash('sha256').update(await readFile(resolve(root, 'pkg/record_desk_bg.wasm'))).digest('hex'), url, browser: browser.version(), launch: hostedLinuxWebGpuLaunchOptions(), adapter, errors, steps, pointer_targets: pointerTargets, input_route: 'Playwright mouse/keyboard; snapshot read only', fault_setup: 'localStorage malformed bytes and Storage.setItem quota fixture' };
   await writeFile(resolve(evidence, 'browser-workflow.json'), JSON.stringify(report, null, 2));
   console.log('Record Desk browser passed: search/filter/select, invalid Apply, transaction, undo/redo, save/reload, draft exclusion, layout restore, narrow, errors and idle');

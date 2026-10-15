@@ -8,7 +8,7 @@ import { cpus, totalmem, platform, release, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment, uiLibrarySource } from './browser-launch.mjs';
+import { assertGpuCompositing, expectedBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl, uiLibraryEnvironment, uiLibrarySource } from './browser-launch.mjs';
 import { createProductionServer } from './browser-serve.mjs';
 
 export function spread(values) {
@@ -41,7 +41,7 @@ const report = {
   sourceDiffSha256: hash(command('git', ['diff', 'HEAD']) ?? ''), manifestSha256: hash(manifestBytes), manifest,
   host: { platform: platform(), release: release(), cpu: cpus()[0]?.model, logicalCpus: cpus().length, memoryBytes: totalmem() },
   tools: { rustc: command('rustc', ['--version']), wasmBindgen: command('wasm-bindgen', ['--version']), node: process.version, playwright: JSON.parse(await readFile('node_modules/playwright/package.json')).version },
-  browser: { launch, libraries: uiLibrarySource(), viewport, version: null },
+  browser: { launch, libraries: uiLibrarySource(), viewport, version: null, renderer: expectedBrowserRenderer() },
   cacheProcedure: 'Each pair starts a fresh Chromium process and temporary profile. Repeat is an ordinary same-URL navigation in that process/profile/origin; localStorage/sessionStorage reset before app code on each navigation. HTTP cache is never cleared/disabled; no interception or cache-busting. OS/GPU and compiled-code cache state uncontrolled.',
   timings: 'Navigation-relative milestones, CPU queue submission and subsequent RAF opportunity; no physical presentation or isolated compilation claim. Input/screenshots follow startup timing capture.',
   encoding, basePath, viewerUpstream: option('--viewer-upstream', null), samples: [], summary: {},
@@ -153,14 +153,16 @@ try {
             const requestStart = server.requests?.length ?? 0;
             const sample = { app, profile, network, pair, visit, url: `${origin}${basePath.endsWith('/') ? basePath : `${basePath}/`}${app}/` };
             report.samples.push(sample);
-            await page.goto(sample.url, { waitUntil: 'domcontentloaded' });
+            await page.goto(rendererUrl(sample.url), { waitUntil: 'domcontentloaded' });
             await page.waitForFunction(() => {
               const s = window.__STOBIE_STARTUP;
               return s?.failure || (s?.milestones.rendering_opportunity_proxy && s?.milestones.first_useful_content);
             }, null, { timeout: 120_000 });
             sample.startup = await page.evaluate(() => window.__STOBIE_STARTUP);
             assert(!sample.startup.failure, JSON.stringify(sample.startup.failure));
-            assert(sample.startup.milestones.workspace_frame_submitted, 'actual queue submission observation required');
+            assert.equal(sample.startup.renderer?.backend, report.browser.renderer, 'the expected renderer must be running');
+            // WebGL2 has no GPUQueue, so only WebGPU samples observe a submission.
+            if (report.browser.renderer === 'webgpu') assert(sample.startup.milestones.workspace_frame_submitted, 'actual queue submission observation required');
             assert.equal(sample.startup.instantiateStreaming.completed, 1, 'generated page loader must complete streaming WASM init');
             assert.equal(sample.startup.instantiateStreaming.failures, 0, 'page loader must not fall back after a streaming error');
             if (app !== 'gallery') {

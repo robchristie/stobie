@@ -101,6 +101,46 @@ for your chosen retention period. Rebuilding over that same directory destroys
 its previous output and is therefore inappropriate for a retained deployment.
 This work does not deploy or publish a site.
 
+## Renderer backends
+
+`WebHost::start`, which every `AppHost` application uses through
+`web_handle!` or its own handle, chooses the GPU backend. Applications need no
+code for it.
+
+- **Default.** The first attempt uses eframe's unchanged `WebOptions`, so
+  WebGPU starts exactly as before wherever `navigator.gpu` returns an adapter.
+  Without `navigator.gpu`, or when `requestAdapter()` returns null, wgpu
+  starts on its GL backend, which is WebGL2. If WebGPU had an adapter but
+  failed to start, for example in `requestDevice`, the host replaces the
+  canvas with a fresh copy (same ID and attributes) and retries once on
+  WebGL2. A canvas keeps its first context type, so the retry needs a new
+  canvas.
+- **Override.** `?renderer=webgl2` or `?renderer=webgpu` in the page URL forces
+  one backend with no fallback. Any other value fails startup, naming the
+  accepted values.
+- **No backend.** When nothing starts, the start promise rejects with one
+  message covering both backends, for example "No supported renderer: WebGPU
+  is unavailable (no navigator.gpu); WebGL2 failed: …". The loaders show it as
+  a `framework_start` failure.
+
+The host reports what it started on in three places:
+- the canvas attributes `data-stobie-renderer` (`webgpu` or `webgl2`),
+  `data-stobie-renderer-adapter`, `data-stobie-renderer-selection`
+  (`preferred`, `fallback` or `forced`) and `data-stobie-renderer-reason`;
+- the startup report's `renderer` object, with the same four fields;
+- the optional `renderer` field of the application interface's `hello`.
+
+Native hosts report wgpu's backend name in `hello` too, with `forced` when
+`WGPU_BACKEND` is set. `stobie_ui_egui::renderer_identity` gives an application
+the same identity.
+
+The browser renders both backends identically on Chromium, including text and
+colour, because both configure an `Rgba8Unorm` surface and egui applies its
+own gamma. Software WebGL2 through ANGLE and SwiftShader is slower than
+hardware, and WebGL2 offers no GPU timing. The Emuella viewer is not on
+`AppHost`: its bootstrap passes `requireWebGpu` to `startApplication` and
+still fails without `navigator.gpu`.
+
 ## Finite milestones
 
 `window.__STOBIE_STARTUP` records navigation-relative milliseconds and epoch
@@ -114,11 +154,11 @@ never compare unnormalised page and worker `performance.now()` values.
 | `framework_start_begin/end` | WebHandle construction/start call through promise resolution. |
 | `application_construct_begin/end` | Rust application constructor boundaries within framework startup. |
 | `workspace_ui_complete` | First application UI frame handed back to eframe on the CPU. |
-| `workspace_frame_submitted` | First observed `GPUQueue.submit` after that UI handoff. Unavailable if the temporary hook cannot be installed. |
+| `workspace_frame_submitted` | First observed `GPUQueue.submit` after that UI handoff. Unavailable on WebGL2, which has no `GPUQueue`, and when the temporary hook cannot be installed; `submissionObservation` says which. |
 | `rendering_opportunity_proxy` | One subsequent requestAnimationFrame callback; a rendering opportunity only. |
 | `worker_ready` | Main realm receipt of worker initialisation readiness; viewer still fetches its catalogue afterwards. |
 | `first_useful_content` | Lab observes actual renderer draws plus resident image bytes; Gallery has constructed its component content; viewer has prepared nonzero rendered regions. |
-| `failure` | Terminal phase-labelled initialisation failure, including unavailable WebGPU, worker/init/transport failures and the bounded timeout. |
+| `failure` | Terminal phase-labelled initialisation failure, including no supported renderer (or unavailable WebGPU for the viewer), an invalid renderer override, worker/init/transport failures and the bounded timeout. |
 
 No milestone proves GPU completion or physical presentation. The report does not
 subtract transfer duration from streaming init and call the remainder compile
@@ -164,6 +204,38 @@ sysroot when `tools/bootstrap-linux-ui.sh` has provisioned it, as
 libraries instead. Evidence records browser version/flags, UI library source,
 actual adapter/backend, hardware, viewport, artifact identity, resources,
 headers, streaming calls and per-instance memory. Software rendering establishes only that environment.
+
+`STOBIE_BROWSER_RENDERER=webgl2` makes the same launch helper omit its
+WebGPU-only flags (unsafe WebGPU, the SwiftShader adapter, the Dawn features
+and the WebGPU developer features). With SwiftShader, Chromium then keeps
+`navigator.gpu` but returns no adapter. A hardware Vulkan adapter can still
+offer WebGPU, so smokes also open pages through `rendererUrl()`, which adds
+`?renderer=webgl2`. `assertBrowserRenderer(page)` checks the canvas's reported
+backend, so a WebGPU run cannot pass for a WebGL2 one. The `webgl2`
+verification stage runs these on WebGL2:
+- the Gallery and Record Desk browser smokes;
+- their ARIA layer checks;
+- Record Desk's browser CLI parity.
+
+Besides the WebGPU startup checks, the startup smoke starts the Lab and the
+Gallery on WebGL2 in three ways:
+- **fallback:** without `navigator.gpu`;
+- **device fallback:** with `requestDevice` rejected;
+- **forced:** with `?renderer=webgl2`.
+
+Each run checks the reported backend, selection and reason, that the
+submission milestone is unavailable, and that there is still one canvas.
+`?renderer=webgpu` on the Gallery must start on WebGPU and report it as
+forced. The smoke also compares the Gallery's screenshots on both backends: at
+most 0.1% of pixels may differ by more than 8/255 in any channel. On
+SwiftShader they are identical.
+Startup failures cover:
+- neither backend (no `navigator.gpu` and no `webgl2` context), for both
+  apps;
+- an invalid override, and a forced WebGPU without `navigator.gpu`, for the
+  Gallery;
+- the viewer's WebGPU requirement;
+- worker failures.
 
 Each cold visit starts a new Chromium process/profile. Its repeat revisits the
 same origin, URLs and profile with ordinary caching. The harness restores empty

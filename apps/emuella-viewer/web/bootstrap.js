@@ -6,6 +6,8 @@ await startApplication({
   workerUrl: new URL('./worker.js', import.meta.url).href,
   load: () => import('./pkg/emuella_viewer.js'),
   canvasId: 'viewer',
+  // The viewer's renderer is not on AppHost's WebGL2 fallback.
+  requireWebGpu: true,
   handleName: 'emuellaViewer',
   start: (viewer, canvas) => viewer.start(canvas, location.origin,
     Number(params.get('compressed_mib') || 64) << 20,

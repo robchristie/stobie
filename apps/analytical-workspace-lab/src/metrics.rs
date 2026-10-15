@@ -60,6 +60,9 @@ pub struct DiagnosticsSnapshot {
     pub platform: String,
     pub backend: String,
     pub adapter: String,
+    /// How the host chose the backend, such as `fallback: WebGPU returned no adapter`.
+    #[serde(default)]
+    pub renderer_selection: String,
     pub frame: FrameMetrics,
     pub workspace: WorkspaceMetrics,
     pub render: RenderMetrics,

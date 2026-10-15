@@ -290,6 +290,14 @@ the handle around `WebHost` yourself: `with_host` reads the running host and
 The component Gallery's `lib.rs` is an example. The
 [browser startup guide](browser-startup.md) covers packaging.
 
+The host prefers WebGPU and falls back to WebGL2 when WebGPU is missing, has
+no adapter or fails to start. `?renderer=webgl2` or `?renderer=webgpu` in the
+page URL forces one. The canvas's `data-stobie-renderer` attribute and the
+`renderer` field of `hello` say which backend is running. The application
+needs no code for any of this; the
+[browser startup guide](browser-startup.md#renderer-backends) gives the
+details.
+
 `WebHost` also mirrors the accessibility tree into a hidden ARIA layer beside
 the canvas, so screen readers and accessibility-tree browser agents can read
 the application. The [accessibility guide](ui-guides/accessibility.md#browser-aria-layer)
@@ -301,7 +309,8 @@ out.
 Depend on `stobie-core`, `stobie-ui-egui` and `eframe` with its `wgpu`
 feature. The UI crate's default `eframe` feature provides the native and
 browser entry points but leaves GPU backends to the application, which gets
-them from eframe's `wgpu` feature. Record Desk's
+them from eframe's `wgpu` feature. In the browser that feature compiles both
+wgpu's WebGPU and WebGL2 backends. Record Desk's
 [`Cargo.toml`](../consumers/record-desk/Cargo.toml) is a working example.
 Image applications add `stobie-imaging`, the tile runtime and renderer, and
 the UI crate's `image-rendering` feature, as described in

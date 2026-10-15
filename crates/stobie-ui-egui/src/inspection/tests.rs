@@ -6,6 +6,45 @@ use super::*;
 use crate::UiRect;
 
 #[test]
+fn hello_reports_the_renderer_only_when_the_host_knows_it() {
+    let (inspection, snapshot, bindings) = fixture();
+    publish(&inspection, &snapshot, &bindings);
+    let unknown = inspection
+        .handle_json(r#"{"version":1,"request_id":"hello-unknown","operation":{"op":"hello"}}"#);
+    assert!(!unknown.contains("renderer"), "{unknown}");
+    // A reply from a host without the field still parses.
+    let reply: InspectionReply = serde_json::from_str(&unknown).unwrap();
+    assert!(matches!(
+        reply.result,
+        Some(InspectionResult::Hello { renderer: None, .. })
+    ));
+    let renderer = RendererIdentity {
+        backend: "webgl2".into(),
+        adapter: "ANGLE".into(),
+        selection: RendererSelection::Fallback,
+        reason: Some("WebGPU returned no adapter".into()),
+    };
+    inspection.set_renderer(Some(renderer.clone()));
+    let known = inspection
+        .handle_json(r#"{"version":1,"request_id":"hello-known","operation":{"op":"hello"}}"#);
+    let value: serde_json::Value = serde_json::from_str(&known).unwrap();
+    assert_eq!(
+        value["result"]["renderer"],
+        serde_json::json!({
+            "backend": "webgl2",
+            "adapter": "ANGLE",
+            "selection": "fallback",
+            "reason": "WebGPU returned no adapter"
+        })
+    );
+    let reply: InspectionReply = serde_json::from_str(&known).unwrap();
+    assert!(matches!(
+        reply.result,
+        Some(InspectionResult::Hello { renderer: Some(reported), .. }) if reported == renderer
+    ));
+}
+
+#[test]
 fn negotiated_operations_identity_and_unsupported_operation_are_explicit() {
     let (inspection, snapshot, bindings) = fixture();
     publish(&inspection, &snapshot, &bindings);

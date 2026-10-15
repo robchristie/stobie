@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { focusByTab } from './browser-keyboard-focus.mjs';
 
@@ -213,6 +213,7 @@ try {
     serverStarted = true;
     url = `http://127.0.0.1:${server.address().port}/`;
   }
+  url = rendererUrl(url);
   context = await chromium.launchPersistentContext(profile, {
     ...hostedLinuxWebGpuLaunchOptions(), viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1,
     executablePath: process.env.STOBIE_CHROMIUM,
@@ -224,6 +225,7 @@ try {
   observeErrors(page);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await ready();
+  await assertBrowserRenderer(page);
   const manifest = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.manifest());
   const requiredStories = ['icons/vocabulary', 'icons/action-presentations', 'icons/toolbar', 'icons/long-narrow'];
   assert(requiredStories.every(id => manifest.some(story => story.id === id)), 'typed icon stories registered');
