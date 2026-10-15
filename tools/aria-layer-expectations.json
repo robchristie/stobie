@@ -830,7 +830,26 @@
         "role": "listbox",
         "name": "Thumbnails",
         "dy": 40
-      }
+      },
+      "thenClick": [
+        {
+          "target": {
+            "role": "tab",
+            "name": "Results"
+          }
+        },
+        {
+          "wheel": {
+            "role": "listbox",
+            "name": "Results",
+            "dy": 80
+          },
+          "target": {
+            "role": "tab",
+            "name": "Thumbnails"
+          }
+        }
+      ]
     }
   }
 }

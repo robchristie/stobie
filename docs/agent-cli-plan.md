@@ -142,8 +142,9 @@ through to the canvas, so they always fail that test.
   another control, so a plain click acted on the wrong one. The projection
   now carries the clip of scroll areas, lists, panes and regions, and marks a
   control only when its centre is visible. It also withholds the pixel where
-  a later control, which egui would put on top, covers the centre; dock
-  splitters register before their panes, so their grab areas lie beneath.
+  the visible part of a later control, which egui would put on top, covers
+  the centre; dock splitters register before their panes, so their grab areas
+  lie beneath, and rows a list has scrolled away contest nothing.
   The browser check sweeps every control for these rules, including after
   scrolling the Lab's thumbnails.
 - File drag events are forwarded too. Safari gesture events are not, a touch

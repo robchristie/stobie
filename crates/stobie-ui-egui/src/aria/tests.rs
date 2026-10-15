@@ -651,3 +651,42 @@ fn a_control_whose_centre_lies_on_another_control_takes_no_pointer() {
             .contains_key(HIT_ATTRIBUTE)
     );
 }
+
+#[test]
+fn a_row_clipped_out_of_its_list_does_not_contest_a_visible_control_beneath() {
+    // A tab strip at y 0..30, then a list from y 40 whose scrolled rows are
+    // still reported above it, over the tab.
+    let mut tab = node(Role::Tab, &[]);
+    tab.set_label("Thumbnails");
+    tab.add_action(Action::Click);
+    bounds(&mut tab, 0.0, 0.0, 100.0, 30.0);
+    let mut row = node(Role::ListBoxOption, &[]);
+    row.set_label("Scrolled away");
+    row.add_action(Action::Click);
+    bounds(&mut row, 0.0, 5.0, 200.0, 25.0);
+    let mut list = node(Role::ListBox, &[4]);
+    list.set_label("Results");
+    bounds(&mut list, 0.0, 40.0, 200.0, 300.0);
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2, 3])),
+                (2, tab),
+                (3, list),
+                (4, row),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    let hit = |label: &str| {
+        tree.elements
+            .values()
+            .find(|element| element.attributes.get("aria-label").map(String::as_str) == Some(label))
+            .expect("projected")
+            .attributes
+            .contains_key(HIT_ATTRIBUTE)
+    };
+    assert!(hit("Thumbnails"));
+    assert!(!hit("Scrolled away"));
+}

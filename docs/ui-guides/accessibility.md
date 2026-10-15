@@ -55,8 +55,9 @@ snapshot, is the source.
   is marked `data-stobie-hit` and holds a one-pixel element at its centre that
   takes pointer input. egui reports a widget's whole rectangle, even where a
   list, scroll area or pane clips it, so only a control whose centre is
-  visible within those has one. A control whose centre a later control also
-  covers has none either, because egui would give that control the click; a
+  visible within those has one. A control whose centre the visible part of a
+  later control also covers has none either, because egui would give that
+  control the click; a
   dock splitter's grab area, registered before its panes, lies beneath them. Playwright's default `click()` and Lantern's strict
   role/name targets hit-test that centre, so they now reach the control. The
   layer dispatches every pointer, mouse, touch, wheel and context-menu event

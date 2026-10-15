@@ -111,15 +111,30 @@ try {
     const sweep = await page.evaluate(layer => {
       const clickable = ['button', 'tab', 'option', 'radio', 'checkbox', 'switch', 'menuitem', 'combobox', 'link'];
       const clipping = ['listbox', 'list', 'grid', 'tree', 'tabpanel', 'region'];
-      const result = { targets: 0, outside: 0, contested: 0, occluded: [], unmarked: [], hidden: [], overlapping: [] };
+      const result = { targets: 0, outside: 0, contested: [], occluded: [], unmarked: [], hidden: [], overlapping: [] };
       const container = document.querySelector(layer);
       const inside = (rect, x, y) => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
       const targets = [...container.querySelectorAll('[data-stobie-hit]')];
       // Where a later control (egui's topmost) overlaps a control's centre,
       // that control offers no pixel.
       const interactive = [...container.querySelectorAll('[role]')].filter(element => [...clickable, 'separator', 'slider', 'scrollbar'].includes(element.getAttribute('role')));
+      // egui clips a control's interaction to its lists and regions, so only
+      // the visible part of a later control can take the click.
+      const visibleBox = element => {
+        const box = element.getBoundingClientRect();
+        let [left, top, right, bottom] = [box.left, box.top, box.right, box.bottom];
+        const clips = [container];
+        for (let ancestor = element.parentElement; ancestor && ancestor !== container; ancestor = ancestor.parentElement) {
+          if (clipping.includes(ancestor.getAttribute('role'))) clips.push(ancestor);
+        }
+        for (const clip of clips) {
+          const rect = clip.getBoundingClientRect();
+          [left, top, right, bottom] = [Math.max(left, rect.left), Math.max(top, rect.top), Math.min(right, rect.right), Math.min(bottom, rect.bottom)];
+        }
+        return { left, top, right, bottom };
+      };
       const contested = (element, x, y) => interactive.some(other => other !== element && !other.contains(element) && !element.contains(other)
-        && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(other.getBoundingClientRect(), x, y) && other.getBoundingClientRect().width > 0);
+        && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(visibleBox(other), x, y));
       for (const element of container.querySelectorAll('[role]')) {
         const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
         const box = element.getBoundingClientRect();
@@ -138,14 +153,14 @@ try {
           continue;
         }
         if (!marked) {
-          if (contested(element, x, y)) result.contested += 1;
+          if (contested(element, x, y)) result.contested.push(name);
           else if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
           continue;
         }
         result.targets += 1;
         if (!element.contains(document.elementFromPoint(x, y))) result.occluded.push(name);
         const under = targets.find(other => other !== element && !other.contains(element) && !element.contains(other)
-          && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(other.getBoundingClientRect(), x, y));
+          && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(visibleBox(other), x, y));
         if (under) result.overlapping.push(`${name} over ${under.getAttribute('role')} ${under.getAttribute('aria-label') ?? ''}`);
       }
       return result;
@@ -407,6 +422,21 @@ try {
     await page.mouse.wheel(0, wheel.dy);
     await settle('scrolled sweep wheel');
     await sweepHitTargets('hit targets after scrolling');
+    // Rows scrolled out of a list do not take tabs' clicks: plain clicks on
+    // the tabs above a scrolled list still reach them.
+    for (const step of expectations.scrolledSweep.thenClick ?? []) {
+      if (step.wheel) {
+        const scrolled = await box(page, step.wheel);
+        await page.mouse.move(scrolled.x, scrolled.y);
+        await page.mouse.wheel(0, step.wheel.dy);
+        await settle('scroll before a plain click');
+      }
+      await page.getByRole(step.target.role, { name: step.target.name, exact: true }).click({ timeout: 5000 });
+      await settle(`plain click ${step.target.name} after scrolling`);
+      const changed = await accessibilityTree(page);
+      assert(changed.some(node => matches(node, { ...step.target, properties: { selected: true } })), `after scrolling, a plain click selects ${step.target.name}`);
+      check('plain click after scrolling', { target: step.target });
+    }
   }
   // Destroying the application removes the layer and restores the canvas.
   if (expectations.handle) {

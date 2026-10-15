@@ -278,14 +278,26 @@ impl Projection<'_> {
                 self.interactive.len(),
             ));
         }
-        if width > 0.0
-            && height > 0.0
+        // egui clips a widget's interaction to its clip rectangle, so only the
+        // visible part of a control can take a click.
+        let visible = match clip {
+            None => Some((left, top, left + width, top + height)),
+            Some((x0, y0, x1, y1)) => {
+                let visible = (
+                    left.max(x0),
+                    top.max(y0),
+                    (left + width).min(x1),
+                    (top + height).min(y1),
+                );
+                (visible.0 < visible.2 && visible.1 < visible.3).then_some(visible)
+            }
+        };
+        if let Some(visible) = visible.filter(|_| width > 0.0 && height > 0.0)
             && attributes.contains_key("role")
             && (node.supports_action(accesskit::Action::Click)
                 || matches!(node.role(), Role::Splitter | Role::Slider | Role::ScrollBar))
         {
-            self.interactive
-                .push((element_id.clone(), (left, top, left + width, top + height)));
+            self.interactive.push((element_id.clone(), visible));
         }
         if let Some(author) = node.author_id() {
             attributes.insert(SEMANTIC_ID_ATTRIBUTE, author.to_owned());
