@@ -514,3 +514,140 @@ fn enabled_clickable_elements_are_hit_targets_and_carry_semantic_ids() {
         value: "true".into(),
     }));
 }
+
+#[test]
+fn only_controls_visible_within_their_clipping_ancestors_are_hit_targets() {
+    let option = |label: &str, y0: f64| {
+        let mut option = node(Role::ListBoxOption, &[]);
+        option.set_label(label);
+        option.add_action(Action::Click);
+        bounds(&mut option, 0.0, y0, 200.0, y0 + 20.0);
+        option
+    };
+    // A scroll area (flattened) shows 0..100; its list box over-renders rows.
+    let mut scroll = node(Role::ScrollView, &[3]);
+    bounds(&mut scroll, 0.0, 0.0, 200.0, 100.0);
+    let mut list = node(Role::ListBox, &[4, 5, 6]);
+    list.set_label("Results");
+    bounds(&mut list, 0.0, 0.0, 200.0, 300.0);
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2])),
+                (2, scroll),
+                (3, list),
+                (4, option("Visible", 10.0)),
+                (5, option("Half shown", 85.0)),
+                (6, option("Clipped", 140.0)),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    let hit = |label: &str| {
+        tree.elements
+            .values()
+            .find(|element| element.attributes.get("aria-label").map(String::as_str) == Some(label))
+            .expect("projected")
+            .attributes
+            .contains_key(HIT_ATTRIBUTE)
+    };
+    assert!(hit("Visible"));
+    // Its centre (y 95) is still shown.
+    assert!(hit("Half shown"));
+    // Drawn nowhere, so a pixel at its centre would cover another control.
+    assert!(!hit("Clipped"));
+
+    // Nothing beyond the window is shown either.
+    let mut window = node(Role::Window, &[2]);
+    bounds(&mut window, 0.0, 0.0, 400.0, 300.0);
+    let tree = project(
+        &update(vec![(1, window), (2, option("Below the window", 310.0))], 1),
+        1.0,
+    );
+    assert!(
+        tree.elements
+            .values()
+            .all(|element| !element.attributes.contains_key(HIT_ATTRIBUTE))
+    );
+}
+
+#[test]
+fn a_control_whose_centre_lies_on_another_control_takes_no_pointer() {
+    let mut row = node(Role::ListBoxOption, &[]);
+    row.set_label("Edge row");
+    row.add_action(Action::Click);
+    bounds(&mut row, 0.0, 80.0, 200.0, 100.0);
+    // A splitter's grab area reaches over the row's centre.
+    let mut splitter = node(Role::Splitter, &[]);
+    splitter.set_label("Horizontal splitter");
+    splitter.add_action(Action::Focus);
+    bounds(&mut splitter, 0.0, 88.0, 400.0, 96.0);
+    let mut list = node(Role::ListBox, &[3]);
+    list.set_label("Results");
+    bounds(&mut list, 0.0, 0.0, 200.0, 100.0);
+    let mut button = node(Role::Button, &[]);
+    button.set_label("Apply");
+    button.add_action(Action::Click);
+    bounds(&mut button, 300.0, 0.0, 360.0, 20.0);
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2, 4, 5])),
+                (2, list),
+                (3, row),
+                (4, splitter),
+                (5, button),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    let hit = |label: &str| {
+        tree.elements
+            .values()
+            .find(|element| element.attributes.get("aria-label").map(String::as_str) == Some(label))
+            .expect("projected")
+            .attributes
+            .contains_key(HIT_ATTRIBUTE)
+    };
+    // The splitter comes later, so egui would give it the click.
+    assert!(!hit("Edge row"));
+    assert!(hit("Apply"));
+
+    // A splitter that comes first, as a dock registers it before its panes,
+    // lies beneath the row, which keeps its target.
+    let mut row = node(Role::ListBoxOption, &[]);
+    row.set_label("Edge row");
+    row.add_action(Action::Click);
+    bounds(&mut row, 0.0, 80.0, 200.0, 100.0);
+    let mut splitter = node(Role::Splitter, &[]);
+    splitter.set_label("Horizontal splitter");
+    bounds(&mut splitter, 0.0, 88.0, 400.0, 96.0);
+    let mut list = node(Role::ListBox, &[4]);
+    list.set_label("Results");
+    bounds(&mut list, 0.0, 0.0, 200.0, 100.0);
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2, 3])),
+                (2, splitter),
+                (3, list),
+                (4, row),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    assert!(
+        tree.elements
+            .values()
+            .find(
+                |element| element.attributes.get("aria-label").map(String::as_str)
+                    == Some("Edge row")
+            )
+            .unwrap()
+            .attributes
+            .contains_key(HIT_ATTRIBUTE)
+    );
+}

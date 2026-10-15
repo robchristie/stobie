@@ -18,9 +18,13 @@
 //! at the same coordinates, and moving onto it does not tell the canvas the
 //! pointer left. egui sees the same input as without the layer, so a click
 //! there is a physical click, and hover, drags and wheel starting there behave
-//! as before. While the copy is dispatched, hit targets take no pointer input,
-//! so eframe's own check that the canvas is under the pointer passes. Only
-//! the cursor's shape over that pixel can differ.
+//! as before, and so do file drops. While the copy is dispatched, hit targets
+//! take no pointer input, so eframe's own check that the canvas is under the
+//! pointer passes. Only a control whose centre is visible within its list,
+//! scroll area or pane has a hit target. Over that pixel the cursor keeps the
+//! default shape; Safari's trackpad gesture events are not forwarded; and a
+//! touch that starts there and outlives its control's element stops reaching
+//! the canvas.
 //!
 //! A layer text field keeps DOM focus instead, so assistive technology and
 //! browser agents (`locator.fill()`, typing) can edit it. Each `input` event
@@ -62,7 +66,7 @@ const HIT_RULE: &str = "[data-stobie-hit-target]{pointer-events:auto}";
 const HIT_TARGET: &str = "data-stobie-hit-target";
 /// Input on a hit target that the canvas receives instead. Enter, leave, over
 /// and out stay with the hit target: the pointer has not left the canvas.
-const FORWARDED: [&str; 16] = [
+const FORWARDED: [&str; 19] = [
     "pointerdown",
     "pointermove",
     "pointerup",
@@ -79,10 +83,19 @@ const FORWARDED: [&str; 16] = [
     "touchmove",
     "touchend",
     "touchcancel",
+    "dragenter",
+    "dragover",
+    "drop",
 ];
 /// Canvas notifications that the pointer moved onto a hit target, which the
 /// canvas must not see as the pointer leaving it.
-const SUPPRESSED: [&str; 4] = ["pointerout", "pointerleave", "mouseout", "mouseleave"];
+const SUPPRESSED: [&str; 5] = [
+    "pointerout",
+    "pointerleave",
+    "mouseout",
+    "mouseleave",
+    "dragleave",
+];
 
 /// A DOM event listener the layer owns.
 type Listener = Closure<dyn FnMut(Event)>;
@@ -398,7 +411,15 @@ impl Layer {
                 .set_attribute("style", &format!("{CONTAINER_STYLE}{geometry}"))?;
             self.container_geometry = geometry;
         }
-        let next = aria::project(update, scale);
+        // The canvas, in egui points, bounds what is shown.
+        let scale_points = f64::from(scale.max(f32::EPSILON));
+        let viewport = (
+            0.0,
+            0.0,
+            bounds.width() / scale_points,
+            bounds.height() / scale_points,
+        );
+        let next = aria::project_within(update, scale, Some(viewport));
         for operation in aria::diff(&self.tree, &next) {
             // A field edited again since this pass took its input already
             // holds newer text than this pass mirrors.

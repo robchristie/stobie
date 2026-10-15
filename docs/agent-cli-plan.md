@@ -137,6 +137,19 @@ through to the canvas, so they always fail that test.
 - The known difference for real input is the pointer's cursor shape over
   that single pixel, which shows the default cursor rather than egui's.
 - A disabled control has no hit pixel, so Playwright reports it disabled.
+- egui reports a widget's whole rectangle even where a list or scroll area
+  clips it. Review found that an over-rendered row's pixel then sat over
+  another control, so a plain click acted on the wrong one. The projection
+  now carries the clip of scroll areas, lists, panes and regions, and marks a
+  control only when its centre is visible. It also withholds the pixel where
+  a later control, which egui would put on top, covers the centre; dock
+  splitters register before their panes, so their grab areas lie beneath.
+  The browser check sweeps every control for these rules, including after
+  scrolling the Lab's thumbnails.
+- File drag events are forwarded too. Safari gesture events are not, a touch
+  that outlives its control's element stops at the pixel, and egui popups
+  drawn over a control do not remove its pixel; these are documented
+  limits.
 
 ### Semantic agreement and stable IDs
 

@@ -98,6 +98,65 @@ try {
   const check = (name, details = {}) => report.checks.push({ name, ...details });
 
   await settle('startup');
+  // Every enabled clickable control shown on the canvas has a one-pixel hit
+  // target at its centre (where Lantern and Playwright click), and only a
+  // shown control has one. The pixel is the topmost element there, lies
+  // inside every list and region that encloses its control, and over no
+  // other control: egui reports a widget's whole rectangle even where a list
+  // clips it, so a pixel outside its list would sit over something else. A
+  // control whose centre a later (topmost) control's box also covers has
+  // none; an earlier one, such as a dock splitter's grab area beneath its
+  // panes, does not contest it.
+  async function sweepHitTargets(label) {
+    const sweep = await page.evaluate(layer => {
+      const clickable = ['button', 'tab', 'option', 'radio', 'checkbox', 'switch', 'menuitem', 'combobox', 'link'];
+      const clipping = ['listbox', 'list', 'grid', 'tree', 'tabpanel', 'region'];
+      const result = { targets: 0, outside: 0, contested: 0, occluded: [], unmarked: [], hidden: [], overlapping: [] };
+      const container = document.querySelector(layer);
+      const inside = (rect, x, y) => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      const targets = [...container.querySelectorAll('[data-stobie-hit]')];
+      // Where a later control (egui's topmost) overlaps a control's centre,
+      // that control offers no pixel.
+      const interactive = [...container.querySelectorAll('[role]')].filter(element => [...clickable, 'separator', 'slider', 'scrollbar'].includes(element.getAttribute('role')));
+      const contested = (element, x, y) => interactive.some(other => other !== element && !other.contains(element) && !element.contains(other)
+        && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(other.getBoundingClientRect(), x, y) && other.getBoundingClientRect().width > 0);
+      for (const element of container.querySelectorAll('[role]')) {
+        const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
+        const box = element.getBoundingClientRect();
+        // Lantern's point: the centre of the viewport-clipped border box.
+        const left = Math.max(box.left, 0), right = Math.min(box.right, innerWidth);
+        const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, innerHeight);
+        const [x, y] = [(left + right) / 2, (top + bottom) / 2];
+        let shown = right > left && bottom > top && inside(container.getBoundingClientRect(), x, y);
+        for (let ancestor = element.parentElement; shown && ancestor && ancestor !== container; ancestor = ancestor.parentElement) {
+          if (clipping.includes(ancestor.getAttribute('role'))) shown = inside(ancestor.getBoundingClientRect(), x, y);
+        }
+        const marked = element.hasAttribute('data-stobie-hit');
+        if (!shown) {
+          result.outside += 1;
+          if (marked) result.hidden.push(name);
+          continue;
+        }
+        if (!marked) {
+          if (contested(element, x, y)) result.contested += 1;
+          else if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
+          continue;
+        }
+        result.targets += 1;
+        if (!element.contains(document.elementFromPoint(x, y))) result.occluded.push(name);
+        const under = targets.find(other => other !== element && !other.contains(element) && !element.contains(other)
+          && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(other.getBoundingClientRect(), x, y));
+        if (under) result.overlapping.push(`${name} over ${under.getAttribute('role')} ${under.getAttribute('aria-label') ?? ''}`);
+      }
+      return result;
+    }, LAYER);
+    assert(sweep.targets > 0, `${label}: the layer offers hit targets`);
+    assert.deepEqual(sweep.hidden, [], `${label}: no control outside its list or region has a hit target`);
+    assert.deepEqual(sweep.occluded, [], `${label}: every hit target is the topmost element at its control's centre`);
+    assert.deepEqual(sweep.overlapping, [], `${label}: no hit target lies over another control`);
+    assert.deepEqual(sweep.unmarked, [], `${label}: every shown enabled clickable control has a hit target`);
+    check(label, { targets: sweep.targets, outside: sweep.outside, contested: sweep.contested });
+  }
   const tree = await accessibilityTree(page);
   await writeFile(resolve(evidence, 'ax-tree.json'), JSON.stringify(tree, null, 2));
 
@@ -186,37 +245,7 @@ try {
   // Playwright's actionability check and Lantern's strict targets both test
   // `elementFromPoint` there. Every enabled clickable element has a
   // one-pixel target, which forwards real input to the canvas.
-  const sweep = await page.evaluate(layer => {
-    const clickable = ['button', 'tab', 'option', 'radio', 'checkbox', 'switch', 'menuitem', 'combobox', 'link'];
-    const result = { targets: 0, outside: 0, occluded: [], unmarked: [] };
-    const container = document.querySelector(layer);
-    const visible = container.getBoundingClientRect();
-    for (const element of container.querySelectorAll('[role]')) {
-      const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
-      if (!element.hasAttribute('data-stobie-hit')) {
-        if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
-        continue;
-      }
-      const box = element.getBoundingClientRect();
-      // Lantern's point: the centre of the viewport-clipped border box.
-      const left = Math.max(box.left, 0), right = Math.min(box.right, innerWidth);
-      const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, innerHeight);
-      const [x, y] = [(left + right) / 2, (top + bottom) / 2];
-      // A control scrolled beyond the canvas is not shown, so no pointer can
-      // reach it there either.
-      if (right <= left || bottom <= top || x < visible.left || x > visible.right || y < visible.top || y > visible.bottom) {
-        result.outside += 1;
-        continue;
-      }
-      result.targets += 1;
-      if (!element.contains(document.elementFromPoint(x, y))) result.occluded.push(name);
-    }
-    return result;
-  }, LAYER);
-  assert(sweep.targets > 0, 'the layer offers hit targets');
-  assert.deepEqual(sweep.occluded, [], 'every hit target is the topmost element at its control\'s centre');
-  assert.deepEqual(sweep.unmarked, [], 'every enabled clickable control has a hit target');
-  check('hit targets', { targets: sweep.targets, outside: sweep.outside });
+  await sweepHitTargets('hit targets');
 
   // Real input at a hit target reaches the canvas unchanged: the canvas
   // receives the pointer's moves and never hears that the pointer left.
@@ -367,6 +396,17 @@ try {
     await page.keyboard.press('Escape');
     assert(await page.evaluate(() => document.activeElement === document.querySelector('canvas')), 'Escape returns focus to the canvas');
     check('fill', { target: step.target, length: step.text.length, facts: step.facts });
+  }
+  // After scrolling, rows drawn nowhere take no pointer either.
+  if (expectations.scrolledSweep) {
+    const { click, wheel } = expectations.scrolledSweep;
+    await page.getByRole(click.role, { name: click.name, exact: true }).click();
+    await settle('scrolled sweep tab');
+    const list = await box(page, wheel);
+    await page.mouse.move(list.x, list.y);
+    await page.mouse.wheel(0, wheel.dy);
+    await settle('scrolled sweep wheel');
+    await sweepHitTargets('hit targets after scrolling');
   }
   // Destroying the application removes the layer and restores the canvas.
   if (expectations.handle) {

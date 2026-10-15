@@ -541,6 +541,28 @@
             }
           }
         ]
+      },
+      {
+        "target": {
+          "role": "tab",
+          "name": "Overview"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Overview",
+            "properties": {
+              "selected": true
+            }
+          },
+          {
+            "role": "tab",
+            "name": "Primary image — Antarctic reconstruction sector 04",
+            "properties": {
+              "selected": false
+            }
+          }
+        ]
       }
     ]
   },
@@ -798,6 +820,17 @@
           }
         ]
       }
-    ]
+    ],
+    "scrolledSweep": {
+      "click": {
+        "role": "tab",
+        "name": "Thumbnails"
+      },
+      "wheel": {
+        "role": "listbox",
+        "name": "Thumbnails",
+        "dy": 40
+      }
+    }
   }
 }

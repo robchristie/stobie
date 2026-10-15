@@ -53,15 +53,23 @@ snapshot, is the source.
   their parent.
 - **Hit targets.** An enabled control with a click action (not a text field)
   is marked `data-stobie-hit` and holds a one-pixel element at its centre that
-  takes pointer input. Playwright's default `click()` and Lantern's strict
+  takes pointer input. egui reports a widget's whole rectangle, even where a
+  list, scroll area or pane clips it, so only a control whose centre is
+  visible within those has one. A control whose centre a later control also
+  covers has none either, because egui would give that control the click; a
+  dock splitter's grab area, registered before its panes, lies beneath them. Playwright's default `click()` and Lantern's strict
   role/name targets hit-test that centre, so they now reach the control. The
   layer dispatches every pointer, mouse, touch, wheel and context-menu event
   that lands on the pixel to the canvas again, at the same coordinates, with
   hit targets briefly disabled so eframe's own hit test finds the canvas. It
-  stops the canvas hearing that the pointer left. egui therefore receives the
-  same input as without the layer: a click there is a physical click, and
-  hover, drags and wheel starting there behave as before. Over that pixel the
-  cursor keeps the default shape rather than egui's.
+  stops the canvas hearing that the pointer left. File drags and drops are
+  forwarded too. egui therefore receives the same input as without the layer:
+  a click there is a physical click, and hover, drags and wheel starting there
+  behave as before. Over that pixel the cursor keeps the default shape rather
+  than egui's; Safari's trackpad gesture events are not forwarded; and a touch
+  that starts there stops reaching the canvas if its control's element is
+  removed mid-touch. A popup or menu drawn over a control does not remove its
+  target, so close popups before plain-clicking controls beneath them.
 - **Updates.** Each pass is diffed with the previous one by element ID. Only
   changed attributes, text, geometry and child order are written, and a pass
   whose tree is unchanged writes nothing. Hover repaints, for example, write
