@@ -33,7 +33,7 @@ def independence():
     if Path(metadata["workspace_root"]).resolve() != CONSUMER or members != ["record-desk"]:
         raise ValueError("consumer is not its own workspace")
     framework = sorted(p["name"] for p in packages.values() if p["name"].startswith("stobie-"))
-    if framework != ["stobie-core", "stobie-ui-egui", "stobie-ui-egui-derive"]:
+    if framework != ["stobie-core", "stobie-protocol", "stobie-ui-egui", "stobie-ui-egui-derive"]:
         raise ValueError(f"unnecessary framework dependencies: {framework}")
     forbidden = {"analytical-workspace-lab", "stobie-gallery", "emuella-viewer", "emuella-viewer-source", "emuella-viewer-tools", "stobie-tile-worker"}
     if forbidden.intersection(p["name"] for p in packages.values()):

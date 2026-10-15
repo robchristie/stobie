@@ -6,6 +6,10 @@
   stable pane IDs, generic coordinates, virtualisation, repaint reasons and the
   generic undo history. It must not depend on egui, eframe, wgpu, browser
   crates or the image domain.
+- `stobie-protocol` owns the inspection wire types, argument contracts and
+  the semantic, action and text observation types they carry. It must not
+  depend on egui, eframe, wgpu, browser crates or `stobie-ui-egui`; an optional
+  `emath` feature converts egui geometry.
 - `stobie-imaging` owns the image domain: document, session, cameras, image
   intents and commands, and renderer-independent tile and regional demands.
   Applications without images do not depend on it.
