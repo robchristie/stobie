@@ -2,7 +2,7 @@
 //!
 //! Run it with `cargo run -p stobie-ui-egui --example notes`. Set
 //! `STOBIE_AUTOMATION_SOCKET=/absolute/path.sock` to inspect and invoke it with
-//! `tools/application-cli.mjs`; the application contains no inspection code.
+//! the `stobie` command; the application contains no inspection code.
 //!
 //! Adding, removing and clearing notes are undoable. Clear removes each note as
 //! a separate step but records them as one history entry. The draft is not part

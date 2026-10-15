@@ -2,7 +2,7 @@
 //! at a time, with one bounded JSON line per connection and absolute deadlines.
 
 use std::io::{self, Read, Write};
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -39,10 +39,19 @@ impl NativeInspectionHost {
             ));
         }
         match std::fs::symlink_metadata(&path) {
+            // A socket that refuses connections was left by a host that a
+            // signal killed before it could remove it; nothing serves it.
+            Ok(metadata)
+                if metadata.file_type().is_socket()
+                    && UnixStream::connect(&path)
+                        .is_err_and(|error| error.kind() == io::ErrorKind::ConnectionRefused) =>
+            {
+                std::fs::remove_file(&path)?;
+            }
             Ok(_) => {
                 return Err(io::Error::new(
                     io::ErrorKind::AlreadyExists,
-                    "automation socket path already exists; refusing replacement",
+                    "automation socket path is in use or is not a socket; refusing replacement",
                 ));
             }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}

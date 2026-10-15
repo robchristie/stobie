@@ -101,13 +101,14 @@ Start it with `stobie_ui_egui::run_native("Notes", options, |_| Notes::new())`.
 ## Inspect and invoke it
 
 Enable automation with a private socket, then discover and invoke actions with
-the shared [application interface](application-interface.md) client:
+the [`stobie` command](agent-cli.md), which speaks the shared
+[application interface](application-interface.md):
 
 ```sh
-AUTOMATION_DIR=$(mktemp -d)
-STOBIE_AUTOMATION_SOCKET="$AUTOMATION_DIR/notes.sock" cargo run -p stobie-ui-egui --example notes
-node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" discover '{}'
-node tools/application-cli.mjs --socket "$AUTOMATION_DIR/notes.sock" invoke '{"capability":"notes.clear"}'
+stobie launch notes --package stobie-ui-egui --example notes
+stobie discover
+stobie invoke notes.clear
+stobie stop notes
 ```
 
 Every action is invocable unless it declares `physical_only = "reason"`, for

@@ -1,0 +1,20 @@
+[package]
+name = "stobie-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Client for the Stobie application interface: transports, invocation with receipts, waits and set text"
+
+[features]
+default = ["browser"]
+# Browser pages through Chromium's DevTools protocol.
+browser = ["dep:lantern-core", "dep:base64"]
+
+[dependencies]
+base64 = { version = "0.22.1", optional = true }
+# Lantern's blocking DevTools client, pinned to an exact revision.
+lantern-core = { git = "https://github.com/robchristie/lantern", rev = "2debc7eaf0b8d2e92a43364c47844ad5f8a35d0d", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+stobie-protocol = { path = "../stobie-protocol" }

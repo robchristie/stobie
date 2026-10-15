@@ -360,6 +360,7 @@ impl Application for RecordDesk {
             Action::FilterCategory | Action::FilterReview | Action::EditCategory => {
                 return Err(format!("{} needs a choice", action.specification().label));
             }
+            Action::SelectRecord => return Err("Select record needs a record ID".into()),
         }
         // Restore reports its own outcome; toggling edits only the draft.
         if !matches!(action, Action::Restore | Action::ToggleReviewed) {
@@ -395,6 +396,13 @@ impl Application for RecordDesk {
                 let mut draft = self.desk.draft().ok_or("Choose a record first")?.clone();
                 draft.category = argument.as_choice()?;
                 self.apply(Intent::Draft(draft), view)
+            }
+            Action::SelectRecord => {
+                let id = argument
+                    .as_text()
+                    .and_then(|id| id.trim().parse().ok())
+                    .ok_or("A record ID is a number, such as 1013")?;
+                self.apply(Intent::Select(RecordId(id)), view)
             }
             _ => self.perform(target, view),
         }

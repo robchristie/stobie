@@ -18,29 +18,32 @@ shared client; application startup, persistence and prerequisites remain in the
 
 ## Enable a host
 
-Install the repository's pinned browser tooling with `npm ci`. Native observation
-uses Node's standard library. Native physical input and capture additionally
-require X11, `xdotool` and ImageMagick's `import`; they target an explicit host
-window, without shell evaluation. Unix socket observation does not require X11.
+The [`stobie` command](agent-cli.md) is the agent CLI: it launches or attaches
+to an application and reads and operates it. The JavaScript client in
+`tools/application-client.mjs` serves the Playwright test harness; install its
+tooling with `npm ci`. Native physical input and capture require X11,
+`xdotool` and ImageMagick's `import`; they target an explicit host window,
+without shell evaluation. Unix socket observation does not require X11.
 
 Native applications enable automation only when `STOBIE_AUTOMATION_SOCKET`
-supplies an absolute path. Use a fresh private directory and launch the host with
-that environment:
+supplies an absolute path. `stobie launch` does this with a fresh private
+directory; by hand, launch the host with that environment:
 
 ```sh
+stobie launch desk --manifest-path consumers/record-desk/Cargo.toml
+# or
 AUTOMATION_DIR=$(mktemp -d)
 export STOBIE_AUTOMATION_SOCKET="$AUTOMATION_DIR/record-desk.sock"
 cargo run --release --manifest-path consumers/record-desk/Cargo.toml
 ```
 
-From another terminal, pass that same socket path to the CLI. The host refuses
-to replace an existing path, retains a private socket and removes its own socket
-on ordinary shutdown. A process killed by a signal leaves its socket behind, and
-the next start then reports `Automation could not start` on stderr; remove the
-stale path or use a fresh directory. Keep the path short: Unix socket paths are
-limited to about 100 bytes. Restart creates a new instance identity. Non-Unix native
-hosting is unavailable. Starting without the variable disables automation;
-closing the enabled host ends that instance.
+The host retains a private socket and removes its own socket on ordinary
+shutdown. A process killed by a signal leaves its socket behind; the next start
+removes a socket that nothing answers on, and refuses to replace a live socket
+or any other file. Keep the path short: Unix socket paths are limited to about
+100 bytes. Restart creates a new instance identity. Non-Unix native hosting is
+unavailable. Starting without the variable disables automation; closing the
+enabled host ends that instance.
 
 The native window must be mapped and unobscured for eframe to process the
 UI-thread invocation queue. A fully covered or minimised window can retain a
@@ -51,7 +54,7 @@ The client deadline reports uncertain completion while work remains queued.
 
 Browser applications enable the fixed dispatcher only when their startup URL
 contains `?automation=1`. Open the built app with that query string, then attach
-Playwright to its Chromium CDP endpoint. Removing the parameter and reloading
+`stobie` or Playwright to its Chromium DevTools endpoint. Removing the parameter and reloading
 starts a host without the dispatcher. The public `BrowserTransport` encapsulates
 `window.__STOBIE_AUTOMATION.request`; callers do not evaluate application
 globals or parse application-specific test snapshots.
@@ -60,15 +63,15 @@ The maintained bootstraps pass `crypto.randomUUID()` to
 nonce. Clients obtain it through `hello`; no nonce argument is needed in the CLI.
 
 ```sh
-node tools/application-cli.mjs --cdp http://127.0.0.1:9222 \
-  --url 'http://127.0.0.1:8080/?automation=1' hello
+stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'
+stobie hello --session web
 ```
 
-`--url` must select exactly one existing page. Native physical commands require
-`--window X11_ID`, obtained from the actual host window. Browser physical input
-requires exactly one canvas; use `--canvas SELECTOR` when the page contains other
-canvases. The native configured window must cover the application's client
-viewport: the client rejects mismatched root dimensions or scale.
+`--page` must select exactly one existing page. The JavaScript client's native
+physical adapter needs the actual host window's X11 ID. Its browser adapter
+needs exactly one canvas. The native configured window must cover the
+application's client viewport: the client rejects mismatched root dimensions or
+scale.
 
 ## Read, discover and invoke
 
@@ -94,13 +97,12 @@ Hidden availability still rejects invocation. Physical targeting always
 requires a currently rendered, enabled control.
 
 ```sh
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock observe
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  query '{"role":"text_input"}'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  discover '{"capability":"record-desk.apply"}'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  invoke '{"capability":"record-desk.apply"}'
+stobie observe
+stobie query --role text_input
+stobie discover record-desk.apply
+stobie invoke record-desk.edit-category --value ideas
+stobie set-text record-desk.notes.1001 'Checked against the survey'
+stobie invoke record-desk.apply
 ```
 
 `observe` returns the latest completed, non-discarded UI pass: its instance and
@@ -149,7 +151,8 @@ field is never set. Its receipt stays `queued`, and can no longer be
 cancelled, until the edit has applied and the intents it caused have settled;
 it then completes with the observation that presents them. If the field is no
 longer presented by then, the receipt is rejected. Hosts publish each text
-field's text as its node's optional `value`.
+field's text as its node's optional `value`; a combo box's `value` is its
+selected option's label.
 
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
@@ -170,8 +173,8 @@ If a reply is lost or the wait times out, `uncertain_completion` retains the
 original `request_id`. Read that receipt instead of repeating the mutation:
 
 ```sh
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock receipt REQUEST_ID
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock cancel REQUEST_ID
+stobie receipt REQUEST_ID
+stobie cancel REQUEST_ID
 ```
 
 Explicit cancellation can cancel a queued invocation. `too_late` means the
@@ -187,12 +190,13 @@ up in the new instance.
 
 `ApplicationClient.wait` polls completed observations with a monotonic deadline
 and optional `AbortSignal`. The CLI's deadline is `--timeout MS` (default
-15000), given before the command; condition objects take no timeout field. Conditions include `present`, `absent`, `enabled`,
+15000); condition objects take no timeout field, and unknown condition fields
+are rejected. Conditions include `present`, `absent`, `enabled`,
 `capability_enabled`, `focused`, `selected`, `checked`, `name`, `value`, `status`, `selection_changed`, `fact`
 and `audits_clear`. Checked compares a boolean `value`; audits-clear waits for
 empty semantic/text findings with retained coverage. Name, value and
 status conditions compare exact text with `value`; value compares a text
-field's published text; status restricts the role to
+field's published text or a combo box's selected label; status restricts the role to
 `status`. Selection change compares selected stable IDs, against `previous` or
 the first observation. Fact conditions compare a named application-published
 primitive value; the available names are visible in `observe`.
@@ -202,17 +206,13 @@ Timeout/cancellation diagnostics retain the last observation and relevant
 failure reason in both the JavaScript error and machine-readable CLI output.
 
 ```sh
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  wait '{"condition":"enabled","selector":{"capability":"record-desk.apply"}}'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  wait '{"condition":"fact","key":"undo_entries","value":1}'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  --window X11_ID click '{"id":"record-desk.title.1001"}'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  --window X11_ID key 'Control+a'
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  --window X11_ID text 'Revised title'
+stobie wait enabled --capability record-desk.apply
+stobie wait fact --key undo_entries --value 1
+stobie wait value --id record-desk.title.1001 --value 'Revised title'
 ```
+
+Physical input is a JavaScript client feature (see the script below); the
+`stobie` command uses the semantic route.
 
 Physical pointer targeting requires one enabled node with finite positive
 geometry inside the completed root. It confirms the same node, root, scale and
@@ -269,9 +269,7 @@ times, before/after observation IDs and each failed stage. Browser capture uses
 the host canvas; native capture uses only the configured X11 window.
 
 ```sh
-node tools/application-cli.mjs --socket /absolute/path/record-desk.sock \
-  --window X11_ID --capture /absolute/path/host.png \
-  --output /absolute/path/host.json capture
+stobie capture --output /absolute/path/host.png
 ```
 
 JavaScript callers may supply `inputRoute` to record the preceding exercise,
@@ -279,8 +277,8 @@ for example `physical_pointer_keyboard` or `semantic`. If a screenshot fails,
 the after-observation is still attempted and the partial semantic evidence is
 retained. If a bracket observation fails, a successful image remains available
 with that diagnostic. A metadata-write failure also returns partial evidence,
-retaining the observations and capture report in the returned object. The CLI
-returns status 2 for partial evidence. Host
+retaining the observations and capture report in the returned object. `stobie
+capture` exits with status 5 for partial evidence. Host
 capture cannot identify the exact GPU/OS frame for a completed UI submission;
 the report states that limit and never claims an atomic screenshot/snapshot.
 `BuildIdentity.source_revision` is optional: build with
@@ -345,7 +343,10 @@ snapshot. It offers nothing that a pointer or keyboard user cannot do.
 - Lantern's role/name targets work the same way, for example
   `lantern click --role button --name Apply --strict`. A name shared by two
   controls, such as one tool button per image pane, is ambiguous; use
-  `--selector '[data-stobie-id="…"]'` instead.
+  `--selector '[data-stobie-id="…"]'` instead. Type with
+  `lantern type --role textbox --name "Record notes" --text … --strict`
+  without clicking the field first: a click focuses it in egui, whose text
+  agent then shares the field's name.
 - Elements carry the stable semantic ID as `data-stobie-id`, so
   `page.locator('[data-stobie-id="record-desk.apply"]')` finds the control the
   inspection interface calls `record-desk.apply`.

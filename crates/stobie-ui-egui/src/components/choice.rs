@@ -132,10 +132,10 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
         })
         .response;
     crate::record_native_text_control(&response, crate::NativeTextControlKind::ComboBox);
-    let selected = options
+    let current = options
         .iter()
-        .find_map(|(candidate, name)| (*candidate == *value).then_some(*name))
-        .unwrap_or("Unavailable");
+        .find_map(|(candidate, name)| (*candidate == *value).then_some(*name));
+    let selected = current.unwrap_or("Unavailable");
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, label));
     ui.ctx().accesskit_node_builder(response.id, |node| {
         use egui::accesskit::{Action, Role};
@@ -149,7 +149,8 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
         options: option_nodes,
         control: SemanticControlOutput {
             node: UiNode {
-                value: None,
+                // The selected option's label, as the control shows it.
+                value: current.map(ToOwned::to_owned),
                 id: semantic_id,
                 parent: Some(parent),
                 role: UiRole::ComboBox,
@@ -185,6 +186,7 @@ mod tests {
         value: u8,
         reverse: bool,
         options: Vec<UiNode>,
+        control: Option<UiNode>,
     }
 
     #[test]
@@ -207,11 +209,17 @@ mod tests {
                     &DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable),
                 );
                 state.options = output.options;
+                state.control = Some(output.control.node);
             },
             State::default(),
         );
         h.run();
         assert!(h.state().options.is_empty());
+        // The control's value is the selected option's label.
+        assert_eq!(
+            h.state().control.as_ref().unwrap().value.as_deref(),
+            Some("First")
+        );
         h.get_by_label("Choice").click();
         h.run();
         let second = h
@@ -227,6 +235,10 @@ mod tests {
         h.get_by_label("Second").click();
         h.run();
         assert_eq!(h.state().value, 1);
+        assert_eq!(
+            h.state().control.as_ref().unwrap().value.as_deref(),
+            Some("Second")
+        );
         h.key_press(egui::Key::Escape);
         h.run();
         assert!(h.state().options.is_empty());

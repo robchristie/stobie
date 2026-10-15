@@ -250,6 +250,9 @@ does not update them automatically.
 - [Application inspection and exercise](docs/application-interface.md): shared
   native/browser client, typed discovery and invocation, bounded queries and
   waits, physical targeting and capture provenance.
+- [The `stobie` command](docs/agent-cli.md): launch or attach to an
+  application natively or in a browser, read it compactly and operate it from
+  a shell.
 - [UI guides](docs/ui-guides/README.md): entry point for component, pane,
   interaction, accessibility and UI review work.
 - [Design language](docs/design-language.md): visual and semantic contracts,

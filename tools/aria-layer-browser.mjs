@@ -117,7 +117,8 @@ try {
       const targets = [...container.querySelectorAll('[data-stobie-hit]')];
       // Where a later control (egui's topmost) overlaps a control's centre,
       // that control offers no pixel.
-      const interactive = [...container.querySelectorAll('[role]')].filter(element => [...clickable, 'separator', 'slider', 'scrollbar'].includes(element.getAttribute('role')));
+      const field = element => ['INPUT', 'TEXTAREA'].includes(element.tagName);
+      const interactive = [...container.querySelectorAll('[role], input, textarea')].filter(element => field(element) || [...clickable, 'separator', 'slider', 'scrollbar'].includes(element.getAttribute('role')));
       // egui clips a control's interaction to its lists and regions, so only
       // the visible part of a later control can take the click.
       const visibleBox = element => {
@@ -135,8 +136,8 @@ try {
       };
       const contested = (element, x, y) => interactive.some(other => other !== element && !other.contains(element) && !element.contains(other)
         && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(visibleBox(other), x, y));
-      for (const element of container.querySelectorAll('[role]')) {
-        const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
+      for (const element of container.querySelectorAll('[role], input, textarea')) {
+        const name = `${element.getAttribute('role') ?? element.tagName.toLowerCase()} ${element.getAttribute('aria-label') ?? ''}`;
         const box = element.getBoundingClientRect();
         // Lantern's point: the centre of the viewport-clipped border box.
         const left = Math.max(box.left, 0), right = Math.min(box.right, innerWidth);
@@ -154,7 +155,8 @@ try {
         }
         if (!marked) {
           if (contested(element, x, y)) result.contested.push(name);
-          else if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
+          else if ((clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true')
+            || (field(element) && !element.readOnly && !element.disabled && element.getAttribute('aria-disabled') !== 'true' && element.getAttribute('aria-readonly') !== 'true')) result.unmarked.push(name);
           continue;
         }
         result.targets += 1;
@@ -410,7 +412,19 @@ try {
     }
     await page.keyboard.press('Escape');
     assert(await page.evaluate(() => document.activeElement === document.querySelector('canvas')), 'Escape returns focus to the canvas');
-    check('fill', { target: step.target, length: step.text.length, facts: step.facts });
+    // A plain click, which hit-tests the field's centre as Lantern's `type`
+    // does, reaches the field and focuses it in egui as a real click does.
+    const layerField = page.locator(`${LAYER} :is(input, textarea)[aria-label="${step.target.name}"]`);
+    await layerField.click();
+    if (client) {
+      const focused = async () => (await client.observe()).snapshot.nodes.find(node => node.name === step.target.name)?.focused;
+      const deadline = Date.now() + 5000;
+      while (!(await focused()) && Date.now() < deadline) await page.waitForTimeout(100);
+      assert(await focused(), `a plain click focuses ${step.target.name}`);
+    }
+    await page.keyboard.press('Escape');
+    await settle(`after clicking ${step.target.name}`);
+    check('fill', { target: step.target, length: step.text.length, facts: step.facts, plainClick: true });
   }
   // After scrolling, rows drawn nowhere take no pointer either.
   if (expectations.scrolledSweep) {
