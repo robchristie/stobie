@@ -229,14 +229,16 @@ Measured locally on 2026-10-15. Raw results stay under ignored
   - its browser interface journey.
 
   The startup smoke's Lab comparison, image panes included, found 0 of
-  1,296,000 pixels beyond tolerance, with a maximum difference of 0/255. It
+  1,296,000 pixels beyond tolerance. The maximum difference was 0/255 locally
+  and 2/255 on hosted CI. It
   also checks the WebGL2 capability text.
 - **Fallback without an adapter.** The startup smoke now also starts the Lab
   and the Gallery with `requestAdapter()` returning null. Both report
   "WebGPU returned no adapter".
-- **Firefox.** Playwright 1.62.1's pinned Firefox 153 does not start on this
-  host, which lacks GTK 3. It does start in the repository's Arch-based Orca
-  container (see the workspace's local-host notes). Headful, it has no
+- **Firefox.** Playwright 1.62.1's pinned Firefox 153 did not start on the
+  development host, which lacks GTK 3. It ran in the Arch-based image built
+  from `tools/aria-layer-orca/Containerfile`, which has GTK 3, ALSA, Mesa and
+  Xvfb, under a container-local Xvfb. Headful, it has no
   `navigator.gpu` and offers WebGL2, so Record Desk started on its fallback.
   `tools/record-desk-firefox.mjs` then selected a record, set its notes, and
   applied and undid the edit through the ARIA layer.
@@ -260,7 +262,8 @@ Measured locally on 2026-10-15. Raw results stay under ignored
   - a region and a listbox both named "Records";
   - option names that join title, category and review state;
   - textbox `textContent()` being empty (`inputValue()` works).
-- **WASM size** (branch against main `a346980`, production package): the Lab
+- **WASM size** (production package, against `a346980`, the main before
+  increment 1, so the figures include both increments): the Lab
   is +22,438 B raw (+0.19%) and +3,929 B Brotli (+0.13%). The Gallery, tile
   worker and viewer are as in increment 1.
 
@@ -274,8 +277,10 @@ Measured locally on 2026-10-15. Raw results stay under ignored
 ## Closeout
 
 Every `AppHost` application starts on WebGL2 when WebGPU is missing, has no
-adapter or fails to start. It needs no application code and changes nothing
-where WebGPU works. The Lab's image renderer needed no WebGL2 changes.
+adapter or fails to start, with no application code. Where WebGPU works it
+keeps the same backend, output and startup times. The only visible change
+there is that diagnostics now name the backend (`wgpu webgpu` in place of
+`WebGPU/WGPU`). The Lab's image renderer needed no WebGL2 changes.
 `stobie-render-wgpu` remains one wgpu renderer for both backends, so the
 deferred rename stays deferred.
 
