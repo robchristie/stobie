@@ -253,6 +253,7 @@ local pair from `cargo xtask verify`, so it shows only that the gates pass.
 | 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
 | 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
 | 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.48%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
+| 4. Client and CLI, on 3 as landed | 2,974,026 B (+0.46%) | 2,849,357 B (+0.52%) | 170.6 / 127.6 ms | 102.8 / 49.5 ms |
 
 ## Lantern strict targets
 
@@ -279,9 +280,9 @@ Output per command, in bytes, from the CLI smoke against its budget:
 
 | Command | Record Desk | Lab |
 | --- | --- | --- |
-| `observe` | 3,721 / 8,192 (browser 3,733) | 8,726 / 16,384 |
-| `observe --json` | 11,536 / 24,576 | 23,102 / 49,152 |
-| `discover` | 1,839 / 6,144 | 6,528 / 12,288 |
+| `observe` | 3,769 / 8,192 (browser 3,781) | 8,760 / 16,384 |
+| `observe --json` | 11,563 / 24,576 | 23,102 / 49,152 |
+| `discover` | 2,194 / 6,144 | 6,528 / 12,288 |
 | `discover --json` | 10,376 / 49,152 | 35,347 / 98,304 |
 | `query --role result_row` / `query --role tab` | 1,121 / 4,096 | 390 / 2,048 |
 | `hello` | 126 / 512 | 139 / 512 |
