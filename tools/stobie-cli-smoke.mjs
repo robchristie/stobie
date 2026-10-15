@@ -23,7 +23,10 @@ const browserHost = app === 'record-desk-browser';
 await mkdir(evidence, { recursive: true });
 
 function cli(args, { json = true, input } = {}) {
-  const result = spawnSync(stobie, json ? [...args, '--json'] : args, { encoding: 'utf8', input, timeout: 180000 });
+  // stobie's own flags come before `--`; what follows belongs to the program.
+  const separator = args.indexOf('--');
+  const flagged = separator < 0 ? [...args, '--json'] : [...args.slice(0, separator), '--json', ...args.slice(separator)];
+  const result = spawnSync(stobie, json ? flagged : args, { encoding: 'utf8', input, timeout: 180000 });
   // A completed exchange prints JSON on stdout, even when its outcome is a
   // rejection; an error prints it on stderr.
   let body = null;

@@ -284,7 +284,7 @@ Output per command, in bytes, from the CLI smoke against its budget:
 | Command | Record Desk | Lab |
 | --- | --- | --- |
 | `observe` | 3,769 / 8,192 (browser 3,781) | 8,760 / 16,384 |
-| `observe --json` | 11,563 / 24,576 | 23,102 / 49,152 |
+| `observe --json` | 11,514 / 24,576 | 23,053 / 49,152 |
 | `discover` | 2,194 / 6,144 | 6,528 / 12,288 |
 | `discover --json` | 10,376 / 49,152 | 35,347 / 98,304 |
 | `query --role result_row` / `query --role tab` | 1,121 / 4,096 | 390 / 2,048 |
