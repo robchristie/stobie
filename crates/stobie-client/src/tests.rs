@@ -118,6 +118,7 @@ impl Transport for Fake {
                     pending: 8,
                 },
                 operations: Vec::new(),
+                renderer: None,
             },
             InspectionOperation::Observe => {
                 app.observation += 1;

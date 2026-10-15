@@ -3,7 +3,6 @@ import init, { WebHandle } from './pkg/record_desk.js';
 const status = document.getElementById('startup');
 let handle;
 try {
-  if (!navigator.gpu) throw new Error('WebGPU is unavailable in this browser.');
   await init();
   handle = new WebHandle();
   await handle.start(document.getElementById('record-desk-canvas'));

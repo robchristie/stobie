@@ -500,6 +500,28 @@ fn with_inspection(harness: &mut Harness<'_, Probe>) {
 }
 
 #[test]
+fn enabled_inspection_reports_the_renderer_the_host_started_on() {
+    let mut harness = harness(Counter::default());
+    let renderer = crate::RendererIdentity {
+        backend: "webgl2".into(),
+        adapter: "ANGLE".into(),
+        selection: crate::RendererSelection::Forced,
+        reason: Some("forced by ?renderer=webgl2".into()),
+    };
+    super::renderer::record_renderer(&harness.ctx, renderer.clone());
+    with_inspection(&mut harness);
+    let host = host(&harness);
+    let reply =
+        host.inspection()
+            .unwrap()
+            .handle(request(host, "hello", InspectionOperation::Hello));
+    assert!(matches!(
+        reply.result,
+        Some(InspectionResult::Hello { renderer: Some(reported), .. }) if reported == renderer
+    ));
+}
+
+#[test]
 fn observations_replace_discarded_passes_and_clip_to_their_region() {
     let mut harness = harness(Counter {
         discard_first_pass: true,

@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { focusNavigationDestination } from './navigation-browser-focus.mjs';
 
@@ -101,9 +101,10 @@ try {
   });
   browser = context.browser(); page = await context.newPage();
   page.on('pageerror', error => errors.push(String(error)));
-  const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  const response = await page.goto(rendererUrl(url), { waitUntil: 'domcontentloaded' });
   assert(response?.ok(), `Gallery HTTP status ${response?.status()}`);
   await page.waitForFunction(() => document.body.classList.contains('ready') && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0);
+  await assertBrowserRenderer(page);
   await story('navigation/sidebar');
   await record('sidebar', { selected: 'home', activations: 0 });
   await focus('tasks');

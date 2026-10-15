@@ -21,6 +21,54 @@ export function swiftShaderWebGpuFlags() {
   ];
 }
 
+// Flags that give Chromium a WebGPU adapter. Without them Linux Chromium keeps
+// `navigator.gpu` but `requestAdapter()` returns null, which is how real
+// browsers without usable WebGPU behave; ANGLE and WebGL2 are unaffected.
+const webGpuOnlyFlags = [
+  '--enable-unsafe-webgpu',
+  '--use-webgpu-adapter=swiftshader',
+  '--enable-dawn-features=allow_unsafe_apis',
+  '--disable-dawn-features=use_dxc',
+  '--enable-webgpu-developer-features',
+];
+
+/**
+ * The renderer browser smokes run on: `webgpu` by default, or `webgl2` when
+ * `STOBIE_BROWSER_RENDERER=webgl2` withholds the WebGPU flags and pages are
+ * opened through `rendererUrl`.
+ */
+export function expectedBrowserRenderer(environment = process.env) {
+  const renderer = environment.STOBIE_BROWSER_RENDERER || 'webgpu';
+  if (renderer !== 'webgpu' && renderer !== 'webgl2') {
+    throw new Error(`STOBIE_BROWSER_RENDERER must be webgpu or webgl2, not ${JSON.stringify(renderer)}`);
+  }
+  return renderer;
+}
+
+/** The launch flags for `renderer`: WebGL2 runs omit the WebGPU-only flags. */
+export function rendererFlags(flags, renderer = expectedBrowserRenderer()) {
+  return renderer === 'webgl2' ? flags.filter(flag => !webGpuOnlyFlags.includes(flag)) : flags;
+}
+
+/**
+ * `url` with `?renderer=webgl2` on a WebGL2 run. Omitting flags is not enough
+ * where Chromium has a hardware WebGPU adapter, so WebGL2 runs force the
+ * backend through the host's own override.
+ */
+export function rendererUrl(url, renderer = expectedBrowserRenderer()) {
+  if (renderer !== 'webgl2') return url;
+  const forced = new URL(url);
+  forced.searchParams.set('renderer', 'webgl2');
+  return forced.href;
+}
+
+/** Fail unless the page's canvas reports the renderer this run expects. */
+export async function assertBrowserRenderer(page, canvas = 'canvas', renderer = expectedBrowserRenderer()) {
+  const reported = await page.locator(canvas).first().getAttribute('data-stobie-renderer');
+  if (reported !== renderer) throw new Error(`expected the ${renderer} renderer, but the canvas reports ${reported ?? 'none'}`);
+  return reported;
+}
+
 // Without an explicit GL choice, chrome-headless-shell selects
 // `--use-angle=swiftshader-webgl`: software compositing, in which a WebGPU
 // canvas cannot allocate its swap-chain shared image. Nothing presents and the
@@ -31,7 +79,7 @@ export function headlessGpuCompositingFlags() {
 
 export function hostedLinuxWebGpuLaunchOptions(platform = process.platform) {
   const headless = process.env.STOBIE_BROWSER_HEADFUL !== '1';
-  const args = ['--no-sandbox', ...swiftShaderWebGpuFlags()];
+  const args = ['--no-sandbox', ...rendererFlags(swiftShaderWebGpuFlags())];
   if (!headless) args.push('--ozone-platform=x11');
   else if (platform === 'linux') args.push(...headlessGpuCompositingFlags());
   return { headless, args };

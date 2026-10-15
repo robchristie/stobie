@@ -22,7 +22,7 @@ import { extname, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl, uiLibraryEnvironment } from './browser-launch.mjs';
 import { ApplicationClient, BrowserTransport } from './application-client.mjs';
 
 const APPS = {
@@ -61,16 +61,22 @@ try {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   // Count presented frames by their GPU submissions, and layer writes by
   // mutation records, so idle and hover can be told apart from tree changes.
+  // On WebGL2, wgpu's queue submission is one `flush`.
   await page.addInitScript(() => {
     window.__ariaProbe = { submits: 0, mutations: 0 };
-    const submit = GPUQueue.prototype.submit;
-    GPUQueue.prototype.submit = function (...args) {
-      window.__ariaProbe.submits += 1;
-      return submit.apply(this, args);
-    };
+    for (const prototype of [globalThis.GPUQueue?.prototype, WebGL2RenderingContext.prototype]) {
+      const method = prototype && ('submit' in prototype ? 'submit' : 'flush');
+      if (!method) continue;
+      const original = prototype[method];
+      prototype[method] = function (...args) {
+        window.__ariaProbe.submits += 1;
+        return original.apply(this, args);
+      };
+    }
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  await page.goto(rendererUrl(`http://127.0.0.1:${server.address().port}/`));
   await page.waitForSelector(`${LAYER} [role]`, { state: 'attached', timeout: 60000 });
+  await assertBrowserRenderer(page);
   await page.evaluate(selector => {
     const layer = document.querySelector(selector);
     const canvas = document.querySelector(`[aria-owns~="${layer.id}"]`);

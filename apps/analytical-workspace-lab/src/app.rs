@@ -360,7 +360,7 @@ impl Lab {
                 ("wgpu".into(), "30.0.1".into()),
             ]),
             platform: if cfg!(target_arch = "wasm32") {
-                "wasm32/WebGPU".into()
+                "wasm32".into()
             } else {
                 std::env::consts::OS.into()
             },
@@ -369,9 +369,24 @@ impl Lab {
             ..Default::default()
         };
         if let Some(render_state) = cc.wgpu_render_state.as_ref() {
-            let info = render_state.adapter.get_info();
-            diagnostics.backend = format!("{:?}", info.backend);
-            diagnostics.adapter = info.name;
+            // The host's identity names the backend as agents see it, with how
+            // it was selected; a host-less creation falls back to wgpu's info.
+            match stobie_ui_egui::renderer_identity(&cc.egui_ctx) {
+                Some(renderer) => {
+                    diagnostics.backend = renderer.backend;
+                    diagnostics.adapter = renderer.adapter;
+                    diagnostics.renderer_selection = match renderer.reason {
+                        Some(reason) => format!("{}: {reason}", renderer.selection.as_str()),
+                        None => renderer.selection.as_str().into(),
+                    };
+                }
+                None => {
+                    let info = render_state.adapter.get_info();
+                    diagnostics.backend = info.backend.to_str().into();
+                    diagnostics.adapter = info.name;
+                    diagnostics.renderer_selection = "unavailable".into();
+                }
+            }
             render_state
                 .renderer
                 .write()

@@ -185,6 +185,7 @@ struct StagedPublication {
 }
 struct InspectionState {
     application: ApplicationIdentity,
+    renderer: Option<RendererIdentity>,
     instance: String,
     publication: Option<Publication>,
     observation: u64,
@@ -253,6 +254,7 @@ impl Inspection {
                     name: application,
                     build,
                 },
+                renderer: None,
                 instance,
                 publication: None,
                 observation: 0,
@@ -262,6 +264,14 @@ impl Inspection {
                 staged: None,
             })),
         })
+    }
+
+    /// Report the renderer's backend and adapter in `hello`.
+    pub fn set_renderer(&self, renderer: Option<RendererIdentity>) {
+        self.state
+            .lock()
+            .expect("inspection mutex poisoned")
+            .renderer = renderer;
     }
 
     pub fn instance(&self) -> String {
@@ -747,6 +757,7 @@ impl InspectionState {
         match &request.operation {
             InspectionOperation::Hello => Ok(InspectionResult::Hello {
                 application: self.application.clone(),
+                renderer: self.renderer.clone(),
                 operations: vec![
                     InspectionOperationKind::Hello,
                     InspectionOperationKind::Observe,

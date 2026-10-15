@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererFlags, rendererUrl } from './browser-launch.mjs';
 
 const root = normalize(join(process.cwd(), 'apps/stobie-gallery/web'));
 const evidenceRoot = normalize(process.env.STOBIE_EVIDENCE_DIR
@@ -14,7 +14,7 @@ await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
 const server = createServer(async (request, response) => {
   try {
-    const relative = request.url === '/' ? 'index.html' : request.url.slice(1).split('?')[0];
+    const relative = new URL(request.url, 'http://local').pathname.slice(1) || 'index.html';
     const path = normalize(join(root, relative));
     if (!path.startsWith(root) || !(await stat(path)).isFile()) throw new Error('not found');
     response.writeHead(200, { 'Content-Type': mime.get(extname(path)) ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
@@ -35,11 +35,11 @@ const headlessShell = process.env.STOBIE_CHROMIUM ?? join(
   'chrome-headless-shell-linux64',
   'chrome-headless-shell',
 );
-const browserFlags = [
+const browserFlags = rendererFlags([
   '--headless', '--no-sandbox',
   '--enable-unsafe-webgpu', '--enable-features=Vulkan,CDPScreenshotNewSurface', '--use-angle=vulkan',
   '--disable-vulkan-surface',
-];
+]);
 let browser;
 let browserProcess;
 let browserProfile;
@@ -126,10 +126,12 @@ const selectStory = async (story) => {
 };
 
 try {
-  await page.goto('http://127.0.0.1:4174', { waitUntil: 'domcontentloaded' });
+  await page.goto(rendererUrl('http://127.0.0.1:4174/'), { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.body.classList.contains('ready')
     && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
   releaseObservations.initial_ready_wall_ms = Date.now() - launchStartedMs;
+  await assertBrowserRenderer(page);
+  releaseObservations.renderer = await page.evaluate(() => window.__STOBIE_STARTUP?.renderer);
   const manifest = await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.manifest());
   if (manifest.length === 0 || new Set(manifest.map((entry) => entry.id)).size !== manifest.length) {
     throw new Error(`invalid gallery manifest: ${JSON.stringify(manifest)}`);
@@ -271,7 +273,7 @@ try {
     browser: browser.version(),
     automation: 'Playwright 1.62.1',
     host: `${process.platform}/${process.arch}`,
-    backend: 'browser WebGPU via eframe/wgpu',
+    backend: `browser ${releaseObservations.renderer?.backend} via eframe/wgpu`,
     viewport: '1440x900 CSS pixels',
     stories: manifest.length,
     release_observations: releaseObservations,

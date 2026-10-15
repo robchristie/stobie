@@ -86,11 +86,11 @@ test('worker envelopes use their own clock/memory and leave decode messages unto
   startup.fail('test', 'finish');
 });
 
-test('module/init and unsupported WebGPU errors become reported terminal failures', async () => {
+test('module/init errors and a required but missing WebGPU become reported terminal failures', async () => {
   for (const missingGpu of [false, true]) {
     const env = environment();
     if (missingGpu) delete env.scope.navigator.gpu;
-    const startup = await startApplication({ app: 'test', scope: env.scope, canvasId: 'canvas', handleName: 'handle',
+    const startup = await startApplication({ app: 'test', scope: env.scope, canvasId: 'canvas', handleName: 'handle', requireWebGpu: true,
       load: async () => {
         if (!missingGpu) throw new Error('module unavailable');
         return { default: async () => ({ memory: { buffer: { byteLength: 65536 } } }) };
@@ -99,6 +99,55 @@ test('module/init and unsupported WebGPU errors become reported terminal failure
     assert.equal(startup.report.status, 'failed');
     assert.equal(startup.report.failure.phase, missingGpu ? 'framework_start' : 'wasm_init');
   }
+});
+
+test('without navigator.gpu the framework host still starts and chooses its renderer', async () => {
+  const env = environment(); delete env.scope.navigator.gpu;
+  let started = 0;
+  const startup = await startApplication({ app: 'test', scope: env.scope, canvasId: 'canvas', handleName: 'handle',
+    load: async () => ({ default: async () => ({ memory: { buffer: { byteLength: 65536 } } }), WebHandle: class { destroy() {} } }),
+    start: async () => { started++; },
+  });
+  assert.equal(started, 1);
+  assert.equal(startup.report.status, 'starting');
+  assert.ok(startup.report.milestones.framework_start_end);
+});
+
+function rendererCanvas(env, dataset) {
+  const canvas = { dataset };
+  env.scope.document.getElementById = id => (id === 'canvas' ? canvas : env.loading);
+  return canvas;
+}
+
+test('a WebGL2 host reports its renderer and reaches readiness without a GPUQueue submission', () => {
+  const env = environment();
+  const original = env.scope.GPUQueue.prototype.submit;
+  rendererCanvas(env, { stobieRenderer: 'webgl2', stobieRendererAdapter: 'ANGLE', stobieRendererSelection: 'fallback', stobieRendererReason: 'WebGPU returned no adapter' });
+  const startup = installStartup({ app: 'test', canvasId: 'canvas', scope: env.scope });
+  startup.mark('application_construct_begin');
+  assert.deepEqual(startup.report.renderer, { backend: 'webgl2', adapter: 'ANGLE', selection: 'fallback', reason: 'WebGPU returned no adapter' });
+  assert.equal(env.scope.GPUQueue.prototype.submit, original, 'the submission hook is removed on WebGL2');
+  assert.equal(startup.report.submissionObservation, 'unavailable: webgl2 has no GPUQueue.submit');
+  startup.mark('workspace_ui_complete');
+  env.frame();
+  assert.equal(startup.report.status, 'ready');
+  assert.equal(startup.report.milestones.workspace_frame_submitted, undefined);
+  assert.ok(startup.report.milestones.rendering_opportunity_proxy);
+});
+
+test('a WebGPU host reports its renderer and keeps the submission observation', () => {
+  const env = environment();
+  rendererCanvas(env, { stobieRenderer: 'webgpu', stobieRendererAdapter: 'SwiftShader', stobieRendererSelection: 'preferred' });
+  const startup = installStartup({ app: 'test', canvasId: 'canvas', scope: env.scope });
+  startup.mark('framework_start_end');
+  assert.deepEqual(startup.report.renderer, { backend: 'webgpu', adapter: 'SwiftShader', selection: 'preferred', reason: null });
+  startup.mark('workspace_ui_complete');
+  env.frame();
+  assert.equal(startup.report.status, 'starting', 'readiness waits for the queue submission');
+  new env.scope.GPUQueue().submit();
+  env.frame();
+  assert.ok(startup.report.milestones.workspace_frame_submitted);
+  assert.equal(startup.report.status, 'ready');
 });
 
 test('worker publishes bounded one-shot timing snapshots and terminal errors', () => {

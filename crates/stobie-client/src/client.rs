@@ -9,8 +9,8 @@ use stobie_protocol::{
     ApplicationIdentity, CapabilityDescription, CompletedObservation, INSPECTION_VERSION,
     InspectionCursor, InspectionErrorCode, InspectionLimits, InspectionOperation,
     InspectionOperationKind, InspectionReply, InspectionRequest, InspectionResult,
-    InspectionSelector, InvocationReceipt, ObservedNode, ReceiptState, ResolvedTarget,
-    SET_TEXT_CAPABILITY, UiNode,
+    InspectionSelector, InvocationReceipt, ObservedNode, ReceiptState, RendererIdentity,
+    ResolvedTarget, SET_TEXT_CAPABILITY, UiNode,
 };
 
 use crate::condition::{one_node, selected_ids};
@@ -29,6 +29,9 @@ pub struct Hello {
     pub application: ApplicationIdentity,
     pub limits: InspectionLimits,
     pub operations: Vec<InspectionOperationKind>,
+    /// The GPU backend and adapter, when the application reports them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub renderer: Option<RendererIdentity>,
 }
 
 /// One page of a query.
@@ -246,6 +249,7 @@ impl<T: Transport> Client<T> {
             application,
             limits,
             operations,
+            renderer,
         } = self.read(InspectionOperation::Hello)?
         else {
             unreachable!("checked kind")
@@ -256,6 +260,7 @@ impl<T: Transport> Client<T> {
             application,
             limits,
             operations,
+            renderer,
         })
     }
 

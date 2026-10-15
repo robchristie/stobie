@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertGpuCompositing, hostedLinuxWebGpuLaunchOptions, uiLibraryEnvironment, uiLibrarySource } from '../browser-launch.mjs';
+import { assertGpuCompositing, expectedBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererFlags, swiftShaderWebGpuFlags, uiLibraryEnvironment, uiLibrarySource } from '../browser-launch.mjs';
 
 function launchOptions(headful, platform = 'linux') {
   const previous = process.env.STOBIE_BROWSER_HEADFUL;
@@ -37,6 +37,17 @@ test('headless launch elsewhere keeps the browser GL default', () => {
   const options = launchOptions(undefined, 'darwin');
   assert.equal(options.headless, true);
   assert.ok(!options.args.some(arg => arg.startsWith('--use-gl=') || arg.startsWith('--use-angle=')));
+});
+
+test('a WebGL2 run withholds only the WebGPU adapter flags', () => {
+  assert.equal(expectedBrowserRenderer({}), 'webgpu');
+  assert.equal(expectedBrowserRenderer({ STOBIE_BROWSER_RENDERER: 'webgl2' }), 'webgl2');
+  assert.throws(() => expectedBrowserRenderer({ STOBIE_BROWSER_RENDERER: 'webgl' }), /webgpu or webgl2/);
+  const flags = swiftShaderWebGpuFlags();
+  assert.deepEqual(rendererFlags(flags, 'webgpu'), flags);
+  const webgl2 = rendererFlags(flags, 'webgl2');
+  assert.ok(!webgl2.some(flag => /webgpu|dawn/i.test(flag)), webgl2.join(' '));
+  assert.ok(webgl2.includes('--use-vulkan=swiftshader') && webgl2.includes('--enable-unsafe-swiftshader'));
 });
 
 test('GPU compositing check accepts enabled compositing', () => {

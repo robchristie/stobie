@@ -133,6 +133,17 @@ impl PaneSurface<'_> {
                 "Rendering",
                 &[
                     (
+                        "Backend / adapter",
+                        format!(
+                            "{} / {}",
+                            self.diagnostics.backend, self.diagnostics.adapter
+                        ),
+                    ),
+                    (
+                        "Backend selection",
+                        self.diagnostics.renderer_selection.clone(),
+                    ),
+                    (
                         "GPU viewports / jobs",
                         format!(
                             "{} / {}",

@@ -78,7 +78,10 @@ scale.
 Each request has `version`, a unique `request_id`, the bound host `instance` and
 an `operation`. `hello` returns application/build identity, supported operation
 names and limits and binds
-the client. Other calls require the same instance. The CLI performs `hello`
+the client. It also carries an optional `renderer`, absent when unknown: the
+running GPU `backend` (`webgpu` or `webgl2` in a browser, wgpu's backend name
+natively), its `adapter`, a `selection` of `preferred`, `fallback` or `forced`,
+and an optional `reason`. Other calls require the same instance. The CLI performs `hello`
 before its selected command; a JavaScript caller performs it once explicitly.
 
 Selectors use exact AND matching across any supplied `id`, `role`, `name`,

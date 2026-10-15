@@ -28,8 +28,8 @@ bash build-web.sh
 python3 -m http.server 8090 --bind 127.0.0.1 --directory web
 ```
 
-Open [Record Desk](http://localhost:8090) in a WebGPU-capable browser. Serve over
-HTTP, then rebuild and reload after Rust changes. No worker or data service is
+Open [Record Desk](http://localhost:8090) in a browser with WebGPU or WebGL2.
+Serve over HTTP, then rebuild and reload after Rust changes. No worker or data service is
 needed. For a configured private HTTPS development gateway:
 
 ```sh

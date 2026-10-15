@@ -1,6 +1,6 @@
 # CI verification and cache ownership
 
-The required `verify` check aggregates eight parallel qualification stages. The
+The required `verify` check aggregates nine parallel qualification stages. The
 closed inventory in `tools/verification-stages.json` is shared with
 `cargo xtask verify`, which runs the same stages sequentially locally. A stage
 can be reproduced with `cargo xtask verify-stage <name>`.
@@ -15,6 +15,7 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 | `production` | Separate production release WASM build, packaging and response-header validation, startup smoke and the prescribed startup benchmark |
 | `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
 | `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
+| `webgl2` | Gallery and Record Desk release WASM/bindgen packages; with WebGPU withheld, the Gallery, icon, navigation, status-chip and Record Desk browser smokes, both ARIA layer checks and Record Desk's browser CLI parity |
 
 The two native package selections cover the previous workspace release targets.
 The Lab's example is selected with its normal library and binary to avoid a
@@ -23,7 +24,7 @@ workspace and dependency boundary. Product release settings remain ThinLTO with
 one codegen unit; parallel qualification does not substitute a faster profile.
 
 `tools/verify.py` remains the Git-derived scope guard. Only a successful docs
-classification may select documentation verification instead of the eight
+classification may select documentation verification instead of the nine
 stages. The final job runs even after failure and cancellation; it requires the
 selected route to succeed and rejects missing, failed, cancelled or unexpected
 job results. Full qualification also checks the observed four app/host interface
@@ -52,7 +53,8 @@ input frame move egui focus only once.
 
 `Swatinem/rust-cache@v2` owns the Cargo registry and dependency build artefacts.
 Each build workload has its own key and caches only target directories created
-by its commands; only Record Desk includes the independent consumer target. The docs
+by its commands; only the Record Desk and WebGL2 stages include the independent
+consumer target. The docs
 route can restore the checks-stage cache. `gallery-browser` restores the UI
 archive and is never a writer: both lanes invoke the exact same Gallery Cargo
 and bindgen builder, and the Gallery smokes add no Cargo builds. UI owns that
