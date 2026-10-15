@@ -1,58 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+use crate::{TextAuditCoverage, TextComponentId, TextExclusion, TextLayoutObservation};
 use egui::{Context, Id, Response};
-use serde::{Deserialize, Serialize};
-
-use crate::{TextComponentId, TextLayoutObservation};
-
-/// Categories outside the structural text audit, not audit failures.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TextExclusion {
-    /// Ordinary labels, headings and hover text are not enumerated.
-    OrdinaryEguiLabels,
-    NativeComboBoxText,
-    NativeButtonText,
-    NativeRadioButtonText,
-    NativeSliderText,
-    NativeSelectableText,
-    NativeTextEditText,
-}
-
-/// The denominator for one viewport's current UI pass, not a visible-string census.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TextAuditCoverage {
-    /// Distinct component IDs represented by measured text observations.
-    pub measured_components: usize,
-    /// Distinct submitted components, including failed visible fallbacks.
-    pub attempted_components: usize,
-    pub successful_components: usize,
-    pub failed_components: usize,
-    /// Explicitly recorded native control responses, including submitted clipped
-    /// controls and open popup options. Closed popups and virtual items that were
-    /// not instantiated do not contribute. A control is not a count of its labels.
-    pub native_text_controls: usize,
-    /// Native controls whose internal text has structural layout observations.
-    /// Currently zero: AccessKit and keyboard evidence do not measure text layout.
-    pub observed_native_controls: usize,
-    /// Ordinary labels are always outside scope; native categories are included
-    /// only when those controls were recorded in this pass.
-    pub excluded_categories: Vec<TextExclusion>,
-}
-
-impl Default for TextAuditCoverage {
-    fn default() -> Self {
-        Self {
-            measured_components: 0,
-            attempted_components: 0,
-            successful_components: 0,
-            failed_components: 0,
-            native_text_controls: 0,
-            observed_native_controls: 0,
-            excluded_categories: vec![TextExclusion::OrdinaryEguiLabels],
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub enum NativeTextControlKind {

@@ -1,5 +1,6 @@
 use egui::{Color32, Stroke, TextStyle, Theme, Visuals};
 
+use crate::TextRoleStyles;
 use crate::{
     AppearancePreference, ContrastPreference, DesignTokens, MotionPreference, ThemeVariant,
     UiPreferences,

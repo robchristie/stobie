@@ -153,6 +153,18 @@ fn architecture() -> Result<()> {
         assert_gpu_only_through_eframe(label, arguments)?;
     }
     assert_tree_excludes("stobie-runtime", &["egui", "eframe", "wgpu"])?;
+    // Inspection clients use the protocol without the UI framework.
+    assert_tree_excludes(
+        "stobie-protocol",
+        &[
+            "egui",
+            "eframe",
+            "wgpu",
+            "web-sys",
+            "winit",
+            "stobie-ui-egui",
+        ],
+    )?;
     let mut pane_sources = Vec::new();
     collect_rust_sources(
         Path::new("apps/analytical-workspace-lab/src/panes"),
@@ -312,21 +324,33 @@ fn architecture() -> Result<()> {
     if canonical_definitions != 1 {
         bail!("expected exactly one canonical Workspace definition, found {canonical_definitions}");
     }
-    let action_source = fs::read_to_string("crates/stobie-ui-egui/src/actions.rs")?;
-    let framework_actions = action_source
-        .split_once("#[cfg(test)]")
-        .map_or(action_source.as_str(), |(production, _)| production);
-    for required in [
-        "pub trait ActionKey",
-        "pub struct ActionSpec<A: ActionKey>",
-        "pub struct ActionTarget<A: ActionKey>",
+    // The generic action boundary: identity and metadata in the protocol
+    // crate, targets in the egui framework.
+    for (path, required) in [
+        (
+            "crates/stobie-protocol/src/actions.rs",
+            "pub trait ActionKey",
+        ),
+        (
+            "crates/stobie-protocol/src/actions.rs",
+            "pub struct ActionSpec<A: ActionKey>",
+        ),
+        (
+            "crates/stobie-ui-egui/src/actions.rs",
+            "pub struct ActionTarget<A: ActionKey>",
+        ),
     ] {
-        if !framework_actions.contains(required) {
-            bail!("egui action framework is missing generic boundary: {required}");
+        let source = fs::read_to_string(path)?;
+        let production = source
+            .split_once("#[cfg(test)]")
+            .map_or(source.as_str(), |(production, _)| production);
+        if !production.contains(required) {
+            bail!("action framework is missing generic boundary {required} in {path}");
         }
     }
     let mut egui_sources = Vec::new();
     collect_rust_sources(Path::new("crates/stobie-ui-egui/src"), &mut egui_sources)?;
+    collect_rust_sources(Path::new("crates/stobie-protocol/src"), &mut egui_sources)?;
     for path in egui_sources {
         let source = fs::read_to_string(&path)?;
         if source.starts_with("#![cfg(test)]") {
@@ -351,7 +375,7 @@ fn architecture() -> Result<()> {
         }
     }
     println!(
-        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime and protocol, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }

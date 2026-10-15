@@ -1,5 +1,6 @@
 use egui::{Rect, Response, Sense};
 
+use crate::TextRoleStyles;
 use crate::{
     DesignTokens, HorizontalTextAlignment, PaneWidthClass, TextComponentId, TextComponentKind,
     TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextSpec,

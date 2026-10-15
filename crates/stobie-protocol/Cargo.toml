@@ -1,0 +1,17 @@
+[package]
+name = "stobie-protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The Stobie application interface: wire types, argument contracts and the semantic types they carry, without egui"
+
+[features]
+# Conversions from egui's geometry (`emath`, not egui itself) for UI crates.
+emath = ["dep:emath"]
+
+[dependencies]
+emath = { version = "0.36.1", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+stobie-core = { path = "../stobie-core" }

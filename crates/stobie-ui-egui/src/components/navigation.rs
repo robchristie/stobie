@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use egui::{Rect, Response, Sense, Stroke};
 
+use crate::TextRoleStyles;
 use crate::{
     ActionKey, ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
     IconId, PresentationId, SemanticActionId, SemanticUiId, TextComponentId, TextComponentKind,

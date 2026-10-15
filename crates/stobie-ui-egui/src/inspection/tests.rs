@@ -1,6 +1,9 @@
 #![cfg(test)]
 
+use serde::Serialize;
+
 use super::*;
+use crate::UiRect;
 
 #[test]
 fn negotiated_operations_identity_and_unsupported_operation_are_explicit() {

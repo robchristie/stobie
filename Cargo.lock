@@ -3621,6 +3621,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "stobie-protocol"
+version = "0.1.6"
+dependencies = [
+ "emath",
+ "serde",
+ "serde_json",
+ "stobie-core",
+]
+
+[[package]]
 name = "stobie-render-wgpu"
 version = "0.1.6"
 dependencies = [
@@ -3669,6 +3679,7 @@ dependencies = [
  "serde",
  "serde_json",
  "stobie-core",
+ "stobie-protocol",
  "stobie-render-wgpu",
  "stobie-ui-egui-derive",
  "trybuild",

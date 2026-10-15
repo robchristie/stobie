@@ -44,6 +44,7 @@ use crate::{
 
 #[cfg(feature = "eframe")]
 mod entry;
+use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
 pub use entry::*;
 

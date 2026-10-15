@@ -167,6 +167,7 @@ presentation so each has a clear owner.
 | Package | Responsibility |
 | --- | --- |
 | [`stobie-core`](crates/stobie-core) | What every application needs: the serialisable dock tree, stable pane IDs, generic coordinates, virtualisation, repaint reasons and a generic undo history. No egui, wgpu, browser or image dependencies. |
+| [`stobie-protocol`](crates/stobie-protocol) | The application interface without egui: the version 1 inspection wire types, typed argument contracts, and the semantic, action and text observation types they carry. `stobie-ui-egui` re-exports it; clients depend on it alone. |
 | [`stobie-imaging`](crates/stobie-imaging) | The image domain that image applications opt into: documents, sessions, cameras, image intents and commands, and renderer-independent tile and regional demands. |
 | [`stobie-runtime`](crates/stobie-runtime) | Demand reconciliation, bounded worker scheduling and completion state for image tiles and regions. Independent of egui and wgpu. |
 | [`stobie-render-wgpu`](crates/stobie-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |

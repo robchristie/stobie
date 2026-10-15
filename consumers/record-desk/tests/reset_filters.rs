@@ -10,7 +10,7 @@ use record_desk::{
     },
     store::Store,
 };
-use stobie_ui_egui::{ActionKey, SemanticActionId, UiNode};
+use stobie_ui_egui::{ActionKey, SemanticActionId, ShortcutEgui, UiNode};
 
 #[derive(Default)]
 struct TestState {

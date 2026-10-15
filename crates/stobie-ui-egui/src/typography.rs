@@ -89,6 +89,7 @@ pub fn install_typography_fonts(context: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TextRoleStyles;
     use crate::{
         DensityVariant, TextOverflow, TextRole, TextSpec, ThemeVariant, UiPreferences,
         apply_design_system_with_typography, measure_text,
