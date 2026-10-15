@@ -1,7 +1,7 @@
 # WebGL2 fallback for Stobie web apps
 
-Status: active
-Next action: Land increment 1, then start increment 2 (the Lab's image renderer on WebGL2).
+Status: complete
+Delivery: [PR #85](https://github.com/robchristie/stobie/pull/85) completes the plan; increment 1 landed in [PR #84](https://github.com/robchristie/stobie/pull/84).
 
 ## Outcome and boundaries
 
@@ -268,5 +268,20 @@ Measured locally on 2026-10-15. Raw results stay under ignored
 
 | Increment | Scope | Status |
 | --- | --- | --- |
-| 1 | Host policy and override, reporting (`hello`, canvas, startup, Lab Diagnostics), JavaScript gates removed, Record Desk and Gallery WebGL2 stage, startup smoke cases, README and browser startup guide | In review |
-| 2 | Lab image renderer on WebGL2 with tests, honest capability text, composition guides, Firefox check, General-agent probe, WASM size and startup evidence, plan closeout | Planned |
+| 1 | Host policy and override, reporting (`hello`, canvas, startup, Lab Diagnostics), JavaScript gates removed, Record Desk and Gallery WebGL2 stage, startup smoke cases, README and browser startup guide | Landed |
+| 2 | Lab image renderer on WebGL2 with tests, honest capability text, composition guides, Firefox check, General-agent probe, WASM size evidence, plan closeout | Complete |
+
+## Closeout
+
+Every `AppHost` application starts on WebGL2 when WebGPU is missing, has no
+adapter or fails to start. It needs no application code and changes nothing
+where WebGPU works. The Lab's image renderer needed no WebGL2 changes.
+`stobie-render-wgpu` remains one wgpu renderer for both backends, so the
+deferred rename stays deferred.
+
+Later work, outside this plan:
+- Firefox plain clicks can miss the one-pixel ARIA hit targets.
+- The rough edges in the ARIA tree that the probe found.
+- An unknown-value fallback for `RendererSelection`, so a future selection
+  stays additive for older clients.
+- The single uncaptured WebGL2 CLI parity mismatch, should it recur.
