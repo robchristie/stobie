@@ -2,8 +2,8 @@
 
 These guides are the implementation and review entry points for the UI layer.
 They apply the normative [design language](../design-language.md) and preserve
-the architectural boundaries in the repository [working agreements](../../AGENTS.md).
-They are deliberately focused: repository policy stays in `AGENTS.md`, and
+the architectural boundaries in the repository [contributor guide](../../CONTRIBUTING.md).
+They are deliberately focused: repository policy stays in `CONTRIBUTING.md`, and
 component API details stay with the Rust types.
 
 - [Components](components.md): production recipes, text and responsive contracts.
