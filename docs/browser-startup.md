@@ -134,9 +134,10 @@ Native hosts report wgpu's backend name in `hello` too, with `forced` when
 `WGPU_BACKEND` is set. `stobie_ui_egui::renderer_identity` gives an application
 the same identity.
 
-The browser renders both backends identically on Chromium, including text and
-colour, because both configure an `Rgba8Unorm` surface and egui applies its
-own gamma. Software WebGL2 through ANGLE and SwiftShader is slower than
+Both backends render the same output on Chromium, text and colour included,
+because both configure an `Rgba8Unorm` surface and egui applies its own gamma.
+Rasterisers can differ by a few levels per channel; the startup smoke checks
+the stated tolerance. Software WebGL2 through ANGLE and SwiftShader is slower than
 hardware, and WebGL2 offers no GPU timing. The Emuella viewer is not on
 `AppHost`: its bootstrap passes `requireWebGpu` to `startApplication` and
 still fails without `navigator.gpu`.
@@ -227,8 +228,9 @@ Each run checks the reported backend, selection and reason, that the
 submission milestone is unavailable, and that there is still one canvas.
 `?renderer=webgpu` on the Gallery must start on WebGPU and report it as
 forced. The smoke also compares the Gallery's screenshots on both backends: at
-most 0.1% of pixels may differ by more than 8/255 in any channel. On
-SwiftShader they are identical.
+most 0.1% of pixels may differ by more than 8/255 in any channel. Local
+headless SwiftShader showed a largest difference of 1/255, and hosted headful
+CI one of 8/255, with no pixel beyond the threshold.
 Startup failures cover:
 - neither backend (no `navigator.gpu` and no `webgl2` context), for both
   apps;

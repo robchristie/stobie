@@ -86,7 +86,7 @@ Lab, Gallery and Record Desk handles need no change.
   other value fails startup and names the accepted values.
 - **Failure.** When no attempt starts, the start promise rejects with one
   message naming each backend and why it failed, such as "No supported
-  renderer: WebGPU is unavailable (navigator.gpu is missing); WebGL2 failed:
+  renderer: WebGPU is unavailable (no navigator.gpu); WebGL2 failed:
   …". The loaders show it under the existing `framework_start` phase.
 - **Creator reuse.** eframe consumes the app creator only after its painter
   succeeds, so the host keeps the creator in a shared slot and passes each
@@ -116,8 +116,9 @@ Lab, Gallery and Record Desk handles need no change.
   unavailable on WebGL2, taking the rendering opportunity straight after the
   CPU UI handoff, as it already does when the hook cannot be installed.
 - **Lab Diagnostics.** Backend, adapter and selection come from the host's
-  identity. Platform and the renderer capability name the real backend, and
-  GPU timestamps stay unavailable.
+  identity. Platform no longer claims WebGPU, and GPU timestamps stay
+  unavailable. The scalar renderer's capability text still says WebGPU until
+  increment 2 makes it name the real backend.
 - **Applications.** `renderer_identity(&egui::Context)` lets an application
   read the identity, as the Lab does.
 
