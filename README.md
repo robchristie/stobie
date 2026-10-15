@@ -242,7 +242,7 @@ does not update them automatically.
 
 ## Documentation
 
-- [Working rules](AGENTS.md): architectural boundaries and contribution expectations.
+- [Contributing](CONTRIBUTING.md): architectural boundaries, verification and contribution expectations.
 - [Application composition](docs/application-composition.md): the hosted
   application path, derived actions, panes, browser entry and local rustdoc.
 - [Image application composition](docs/image-application-composition.md): the

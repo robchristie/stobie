@@ -29,7 +29,7 @@ For a prose-only closeout, run `python3 tools/verify.py --base <comparison-commi
 The narrow allowlist covers `README.md`, this lifecycle guide and top-level
 `docs/*-plan.md` files. The guard checks both sides of renames and deletions and
 all committed, staged, unstaged and untracked changes. Any other path (including
-AGENTS instructions, tooling, workflows, dependencies, qualification reports,
+contributor guidance, tooling, workflows, dependencies, qualification reports,
 UI contracts, snapshots and evidence), unsupported file mode, unresolved index,
 tracked assume-unchanged/skip-worktree flags, sparse checkout or missing comparison
 commit selects the complete `cargo xtask verify` surface.
