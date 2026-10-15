@@ -256,7 +256,7 @@ local pair from `cargo xtask verify`, so it shows only that the gates pass.
 | 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
 | 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
 | 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.48%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
-| 4. Client and CLI, on 3 as landed | 2,974,026 B (+0.46%) | 2,849,357 B (+0.52%) | 170.6 / 127.6 ms | 102.8 / 49.5 ms |
+| 4. Client and CLI, on 3 as landed | 2,975,436 B (+0.51%) | 2,848,660 B (+0.49%) | 180.5 / 119.1 ms | 102.4 / 56.2 ms |
 
 ## Lantern strict targets
 
@@ -275,8 +275,8 @@ pane, so Lantern correctly refuses it as ambiguous.
 
 ## CLI size and output
 
-The `stobie` release binary is 2,991,544 B (2,430,480 B stripped), and a clean
-release build of `stobie-cli` and its dependencies takes 15.3 s on a 32-core
+The `stobie` release binary is 3,038,872 B (2,470,176 B stripped), and a clean
+release build of `stobie-cli` and its dependencies takes 15.6 s on a 32-core
 host. No application or WASM build includes it.
 
 Output per command, in bytes, from the CLI smoke against its budget:
