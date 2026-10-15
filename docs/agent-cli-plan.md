@@ -1,7 +1,8 @@
 # Agent CLI, action arguments and browser-agent operability
 
-Status: active
-Next action: Increment 4, the client library and the `stobie` CLI.
+Status: complete
+Delivery: [PR #81](https://github.com/robchristie/stobie/pull/81) completes the plan; increments 0 to 3 landed in PRs #77 to #80.
+Landed commit: a3f06c353d8f89b1cce981ee9ba900b7382eb9b9
 
 ## Outcome and boundaries
 
@@ -241,7 +242,7 @@ through to the canvas, so they always fail that test.
 | 1. Typed action arguments and set text, including `fill()` | Landed | [PR #78](https://github.com/robchristie/stobie/pull/78): protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
 | 2. Plain browser click and the semantic agreement check | Landed | [PR #79](https://github.com/robchristie/stobie/pull/79): projection tests for hit markers and semantic IDs; agreement unit tests for each field; agreement over every Gallery story, four Record Desk states and three Lab states, with no disagreement found; the ARIA check sweeps every visible enabled control for a centre hit, moves a real pointer over a hit target and plain-clicks controls in all three applications; the Lab, Gallery, icon, navigation and status-chip pointer, drag, wheel and keyboard smokes pass unchanged. Real Lantern `--strict` role/name clicks are recorded below. |
 | 3. Protocol crate extraction | Landed | [PR #80](https://github.com/robchristie/stobie/pull/80): `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
-| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Complete | This PR: `stobie-client` and `stobie-cli` with unit tests against a scripted application; the CLI smoke runs the same scenarios through `stobie` and the Node client, natively and in the browser, and checks each command's output budget; `tools/application-cli.mjs` is retired; the native host replaces only a stale socket; fresh-agent probe findings and fixes are below. |
+| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Landed | [PR #81](https://github.com/robchristie/stobie/pull/81): `stobie-client` and `stobie-cli` with unit tests against a scripted application; the CLI smoke runs the same scenarios through `stobie` and the Node client, natively and in the browser, and checks each command's output budget; `tools/application-cli.mjs` is retired; the native host replaces only a stale socket; fresh-agent probe findings and fixes are below. |
 
 Each increment lands through review in order, rebased on the previous merge.
 
@@ -389,3 +390,14 @@ Its owner chose Apache-2.0 to match Stobie, and
 added the licence text and metadata. `stobie-client` depends on `lantern-core`
 as a Git dependency pinned to that merge, `2debc7e`, behind its default
 `browser` feature.
+
+## Later work
+
+Non-blocking notes from the review of PR #81:
+
+- Native `capture` should check that the launched application is still
+  running before it uses the recorded PID.
+- The supervisor's session lock should retry when a concurrent probe holds it
+  briefly.
+- Document that a descendant process which inherits the lock keeps the session
+  alive after the application exits.
