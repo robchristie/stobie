@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/stobie-core",
+    "crates/stobie-protocol",
     "crates/stobie-imaging",
     "crates/stobie-runtime",
     "crates/stobie-render-wgpu",

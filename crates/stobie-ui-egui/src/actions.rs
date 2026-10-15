@@ -1,101 +1,30 @@
-use std::borrow::Cow;
 use std::hash::Hash;
 
 use egui::{Key, KeyboardShortcut, Modifiers, Ui};
 use serde::{Deserialize, Serialize};
 use stobie_core::PaneId;
 
-/// Application-owned identity for a user-visible capability.
-///
-/// Implementations own both the stable external identity and the presentation
-/// metadata used by generic egui controls. Action keys route capabilities into
-/// the application's intent and command system; they are not a second mutation
-/// architecture. Prefer `#[derive(Action)]`, which implements this trait and
-/// [`ActionSet`] from declarative attributes and checks them at compile time.
-pub trait ActionKey: Copy + Eq + Hash + Ord + Serialize {
-    /// Stable external capability identity shared by semantics and automation.
-    /// Keep it independent of translated/compact labels and collection positions.
-    fn stable_id(self) -> &'static str;
-    /// Presentation and routing metadata for this application-owned capability.
-    fn specification(self) -> ActionSpec<Self>;
-    /// Whether agents may invoke this capability through semantic inspection.
-    /// Actions are invocable unless they declare why physical input is required.
-    fn invocation(self) -> ActionInvocation {
-        ActionInvocation::Semantic
-    }
-    /// The argument this capability takes, published by discovery and
-    /// validated before the application receives it. Most actions take none.
-    fn argument(self) -> crate::ArgumentContract {
-        crate::ArgumentContract::None
+pub use stobie_protocol::actions::*;
+
+/// egui forms of the protocol's shortcut types.
+pub trait ShortcutEgui {
+    type Egui;
+    /// The egui key or keyboard shortcut.
+    fn egui(self) -> Self::Egui;
+}
+
+impl ShortcutEgui for ShortcutKey {
+    type Egui = Key;
+
+    fn egui(self) -> Key {
+        Key::from_name(self.name()).expect("every shortcut key name parses as an egui key")
     }
 }
 
-/// The complete, closed set of an application's actions, used to discover,
-/// dispatch and audit every capability without a hand-maintained list.
-pub trait ActionSet: ActionKey + std::fmt::Debug + 'static {
-    /// Every action, in declaration order.
-    const ALL: &'static [Self];
-}
+impl ShortcutEgui for ActionShortcut {
+    type Egui = KeyboardShortcut;
 
-/// How a capability may be exercised by an inspection client.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ActionInvocation {
-    /// The action can run through the same validated route as a click.
-    Semantic,
-    /// The action needs physical input, for example because it takes a value
-    /// argument. The reason records the application's decision.
-    PhysicalOnly { reason: &'static str },
-}
-
-impl ActionInvocation {
-    pub const fn semantic(self) -> bool {
-        matches!(self, Self::Semantic)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ActionScope {
-    Application,
-    ActivePane,
-    Pane,
-}
-
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct ActionShortcut {
-    pub command: bool,
-    pub shift: bool,
-    pub alt: bool,
-    pub key: ShortcutKey,
-}
-
-impl ActionShortcut {
-    pub const fn new(key: ShortcutKey) -> Self {
-        Self {
-            command: false,
-            shift: false,
-            alt: false,
-            key,
-        }
-    }
-
-    pub const fn command(key: ShortcutKey) -> Self {
-        Self {
-            command: true,
-            ..Self::new(key)
-        }
-    }
-
-    pub const fn command_shift(key: ShortcutKey) -> Self {
-        Self {
-            command: true,
-            shift: true,
-            alt: false,
-            key,
-        }
-    }
-
-    pub fn egui(self) -> KeyboardShortcut {
+    fn egui(self) -> KeyboardShortcut {
         KeyboardShortcut::new(
             Modifiers {
                 command: self.command,
@@ -105,202 +34,6 @@ impl ActionShortcut {
             },
             self.key.egui(),
         )
-    }
-
-    /// The shortcut as an `aria-keyshortcuts` value, which assistive
-    /// technology announces. Cmd is Control, or Meta on macOS; in the browser,
-    /// where the platform is decided at run time, a command shortcut lists
-    /// both forms.
-    pub fn aria_keyshortcuts(self) -> String {
-        let key = match self.key {
-            ShortcutKey::ArrowUp => "ArrowUp",
-            ShortcutKey::ArrowDown => "ArrowDown",
-            ShortcutKey::ArrowLeft => "ArrowLeft",
-            ShortcutKey::ArrowRight => "ArrowRight",
-            ShortcutKey::PageUp => "PageUp",
-            ShortcutKey::PageDown => "PageDown",
-            // Printable keys use their character.
-            ShortcutKey::Comma
-            | ShortcutKey::Period
-            | ShortcutKey::Minus
-            | ShortcutKey::Equals
-            | ShortcutKey::Slash => self.key.label(),
-            key => key.egui().name(),
-        };
-        let mut chord = String::new();
-        if self.shift {
-            chord.push_str("Shift+");
-        }
-        if self.alt {
-            chord.push_str("Alt+");
-        }
-        chord.push_str(key);
-        if !self.command {
-            chord
-        } else if cfg!(target_arch = "wasm32") {
-            format!("Control+{chord} Meta+{chord}")
-        } else if cfg!(target_os = "macos") {
-            format!("Meta+{chord}")
-        } else {
-            format!("Control+{chord}")
-        }
-    }
-
-    pub fn display(self) -> String {
-        let mut parts = Vec::new();
-        if self.command {
-            parts.push("Ctrl/Cmd");
-        }
-        if self.shift {
-            parts.push("Shift");
-        }
-        if self.alt {
-            parts.push("Alt");
-        }
-        parts.push(self.key.label());
-        parts.join("+")
-    }
-}
-
-macro_rules! shortcut_keys {
-    ($($variant:ident => $key:ident, $label:literal;)*) => {
-        /// A key that an application shortcut can bind. Tab is deliberately absent:
-        /// it belongs to keyboard focus traversal.
-        #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-        #[serde(rename_all = "snake_case")]
-        pub enum ShortcutKey {
-            $($variant,)*
-        }
-
-        impl ShortcutKey {
-            /// Every bindable key, in declaration order.
-            pub const ALL: &'static [Self] = &[$(Self::$variant,)*];
-
-            pub const fn egui(self) -> Key {
-                match self {
-                    $(Self::$variant => Key::$key,)*
-                }
-            }
-
-            pub const fn label(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $label,)*
-                }
-            }
-        }
-    };
-}
-
-// `#[derive(Action)]` keeps a matching table of shortcut spellings; the derive
-// tests bind every key here so the two cannot drift silently.
-shortcut_keys! {
-    A => A, "A";
-    B => B, "B";
-    C => C, "C";
-    D => D, "D";
-    E => E, "E";
-    F => F, "F";
-    G => G, "G";
-    H => H, "H";
-    I => I, "I";
-    J => J, "J";
-    K => K, "K";
-    L => L, "L";
-    M => M, "M";
-    N => N, "N";
-    O => O, "O";
-    P => P, "P";
-    Q => Q, "Q";
-    R => R, "R";
-    S => S, "S";
-    T => T, "T";
-    U => U, "U";
-    V => V, "V";
-    W => W, "W";
-    X => X, "X";
-    Y => Y, "Y";
-    Z => Z, "Z";
-    Zero => Num0, "0";
-    One => Num1, "1";
-    Two => Num2, "2";
-    Three => Num3, "3";
-    Four => Num4, "4";
-    Five => Num5, "5";
-    Six => Num6, "6";
-    Seven => Num7, "7";
-    Eight => Num8, "8";
-    Nine => Num9, "9";
-    Enter => Enter, "Enter";
-    Escape => Escape, "Escape";
-    Space => Space, "Space";
-    Backspace => Backspace, "Backspace";
-    Delete => Delete, "Delete";
-    Insert => Insert, "Insert";
-    Home => Home, "Home";
-    End => End, "End";
-    PageUp => PageUp, "Page Up";
-    PageDown => PageDown, "Page Down";
-    ArrowUp => ArrowUp, "Up";
-    ArrowDown => ArrowDown, "Down";
-    ArrowLeft => ArrowLeft, "Left";
-    ArrowRight => ArrowRight, "Right";
-    Comma => Comma, ",";
-    Period => Period, ".";
-    Minus => Minus, "-";
-    Equals => Equals, "=";
-    Slash => Slash, "/";
-    F1 => F1, "F1";
-    F2 => F2, "F2";
-    F3 => F3, "F3";
-    F4 => F4, "F4";
-    F5 => F5, "F5";
-    F6 => F6, "F6";
-    F7 => F7, "F7";
-    F8 => F8, "F8";
-    F9 => F9, "F9";
-    F10 => F10, "F10";
-    F11 => F11, "F11";
-    F12 => F12, "F12";
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-pub struct ActionSpec<A: ActionKey> {
-    /// The typed capability described by these fields.
-    pub id: A,
-    /// Full visible and accessible label.
-    pub label: &'static str,
-    /// User-facing purpose, also used by observable control semantics.
-    pub description: &'static str,
-    /// Optional short display label; the full label remains available to semantics.
-    pub compact_label: Option<&'static str>,
-    /// Optional application-routed shortcut; declaring it alone does not dispatch it.
-    pub shortcut: Option<ActionShortcut>,
-    /// Application, active-pane or explicit-pane routing scope.
-    pub scope: ActionScope,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "state", rename_all = "snake_case")]
-pub enum Availability {
-    Enabled,
-    Disabled { reason: Cow<'static, str> },
-    Hidden,
-}
-
-impl Availability {
-    pub const fn enabled(&self) -> bool {
-        matches!(self, Self::Enabled)
-    }
-
-    pub const fn visible(&self) -> bool {
-        !matches!(self, Self::Hidden)
-    }
-
-    pub fn disabled_reason(&self) -> Option<&str> {
-        match self {
-            Self::Disabled { reason } => Some(reason),
-            Self::Enabled | Self::Hidden => None,
-        }
     }
 }
 
@@ -413,6 +146,22 @@ pub(crate) fn stable_action_hash<A: ActionKey>(action: A, pane: Option<PaneId>) 
 mod tests {
     use super::*;
     use crate::test_actions::TestAction;
+
+    #[test]
+    fn every_shortcut_key_name_is_a_distinct_egui_key() {
+        let keys: std::collections::BTreeSet<_> = ShortcutKey::ALL
+            .iter()
+            .map(|key| {
+                let egui = Key::from_name(key.name()).expect("the name parses");
+                assert_eq!(egui, key.egui());
+                egui
+            })
+            .collect();
+        assert_eq!(keys.len(), ShortcutKey::ALL.len());
+        assert_eq!(ShortcutKey::Zero.egui(), Key::Num0);
+        assert_eq!(ShortcutKey::PageUp.egui(), Key::PageUp);
+        assert_eq!(ShortcutKey::ArrowLeft.egui(), Key::ArrowLeft);
+    }
 
     #[test]
     fn shortcuts_have_aria_key_names() {

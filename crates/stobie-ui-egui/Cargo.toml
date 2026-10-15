@@ -18,6 +18,7 @@ egui.workspace = true
 egui-wgpu = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 stobie-core = { path = "../stobie-core" }
+stobie-protocol = { path = "../stobie-protocol", features = ["emath"] }
 stobie-ui-egui-derive = { path = "../stobie-ui-egui-derive" }
 stobie-render-wgpu = { path = "../stobie-render-wgpu", optional = true }
 serde.workspace = true

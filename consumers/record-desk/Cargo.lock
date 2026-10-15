@@ -2791,6 +2791,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "stobie-protocol"
+version = "0.1.6"
+dependencies = [
+ "emath",
+ "serde",
+ "serde_json",
+ "stobie-core",
+]
+
+[[package]]
 name = "stobie-ui-egui"
 version = "0.1.6"
 dependencies = [
@@ -2801,6 +2811,7 @@ dependencies = [
  "serde",
  "serde_json",
  "stobie-core",
+ "stobie-protocol",
  "stobie-ui-egui-derive",
  "wasm-bindgen",
  "wasm-bindgen-futures",

@@ -3,8 +3,8 @@ use serde::Serialize;
 use stobie_ui_egui::{
     ContentTextSpec, DesignTokens, DomainReference, IconId, PresentationContext, PresentationScope,
     SemanticUiId, StatusChipSpec, StatusChipWidth, StatusTone, TextComponentId, TextComponentKind,
-    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextSpec, UiNode, UiRole,
-    measure_component_text, paint_measured_text,
+    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextRoleStyles, TextSpec,
+    UiNode, UiRole, measure_component_text, paint_measured_text,
 };
 
 use super::StoryReport;

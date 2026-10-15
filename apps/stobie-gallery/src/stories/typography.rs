@@ -1,6 +1,6 @@
 use eframe::egui;
 use stobie_ui_egui::{
-    DesignTokens, TextInteraction, TextLayoutObservation, TextOverflow, TextRole,
+    DesignTokens, TextInteraction, TextLayoutObservation, TextOverflow, TextRole, TextRoleStyles,
     TypographyProfile, measured_content_label, measured_fixed_slot_label,
 };
 

@@ -5,8 +5,9 @@ discover typed capabilities, dispatch a validated action, wait for an observed
 result and exercise the same host through physical input. Record Desk, the
 component Gallery and Analytical Workspace Lab expose the same version 1 JSON contract on an explicitly
 enabled local Unix socket or browser page. Rust types in
-[`inspection.rs`](../crates/stobie-ui-egui/src/inspection.rs) are authoritative;
-the JavaScript client does not maintain a separate action registry or schema.
+[`stobie-protocol`](../crates/stobie-protocol/src/inspection.rs) are
+authoritative, and `stobie-ui-egui` re-exports them; the JavaScript client
+does not maintain a separate action registry or schema.
 
 The [execution plan](application-interface-plan.md) and
 [qualification evidence](application-interface-evidence.md) own the current
