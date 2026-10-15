@@ -2,6 +2,8 @@
 members = [
     "crates/stobie-core",
     "crates/stobie-protocol",
+    "crates/stobie-client",
+    "crates/stobie-cli",
     "crates/stobie-imaging",
     "crates/stobie-runtime",
     "crates/stobie-render-wgpu",

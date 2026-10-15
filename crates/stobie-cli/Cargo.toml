@@ -1,0 +1,17 @@
+[package]
+name = "stobie-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The `stobie` command: launch or attach to a Stobie application, read it compactly and operate it"
+
+[[bin]]
+name = "stobie"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+serde.workspace = true
+serde_json.workspace = true
+stobie-client = { path = "../stobie-client" }

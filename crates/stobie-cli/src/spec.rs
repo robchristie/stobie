@@ -1,0 +1,425 @@
+//! The command registry: one description drives `--help`, per-command help
+//! and `capabilities --json`.
+
+use serde::Serialize;
+
+/// The JSON output schema version every command emits.
+pub const SCHEMA_VERSION: u32 = 1;
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Flag {
+    pub name: &'static str,
+    /// The value's placeholder, or `None` for a switch.
+    pub value: Option<&'static str>,
+    pub description: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Command {
+    pub name: &'static str,
+    pub usage: &'static str,
+    pub summary: &'static str,
+    /// Whether the command addresses an application (needs a target).
+    pub connects: bool,
+    pub flags: &'static [Flag],
+    pub output_schema_version: u32,
+}
+
+const fn flag(name: &'static str, value: Option<&'static str>, description: &'static str) -> Flag {
+    Flag {
+        name,
+        value,
+        description,
+    }
+}
+
+/// Flags every connecting command accepts.
+pub const TARGET_FLAGS: &[Flag] = &[
+    flag(
+        "--session",
+        Some("NAME"),
+        "Use a session from `launch` or `attach` (default: $STOBIE_SESSION, or the only session)",
+    ),
+    flag(
+        "--socket",
+        Some("PATH"),
+        "Attach to a native application's automation socket",
+    ),
+    flag(
+        "--cdp",
+        Some("URL"),
+        "Attach to a browser page through Chromium's DevTools endpoint, such as http://127.0.0.1:9222",
+    ),
+    flag(
+        "--page",
+        Some("URL"),
+        "With --cdp: the page's URL, opened with ?automation=1 (a unique prefix is enough)",
+    ),
+    flag(
+        "--target",
+        Some("ID"),
+        "With --cdp: the page's DevTools target ID",
+    ),
+    flag(
+        "--timeout",
+        Some("MS"),
+        "Deadline for the operation, including waits (default 15000)",
+    ),
+    flag("--json", None, "Emit one JSON object instead of text"),
+];
+
+/// Selector flags: all given properties must match (exact AND).
+pub const SELECTOR_FLAGS: &[Flag] = &[
+    flag(
+        "--id",
+        Some("ID"),
+        "Stable semantic ID, such as record-desk.apply",
+    ),
+    flag(
+        "--role",
+        Some("ROLE"),
+        "Semantic role, such as button or text_input",
+    ),
+    flag("--name", Some("NAME"), "Exact accessible name"),
+    flag(
+        "--capability",
+        Some("ID"),
+        "Capability ID, such as record-desk.apply",
+    ),
+    flag("--pane", Some("N"), "Pane ID"),
+    flag(
+        "--domain",
+        Some("JSON"),
+        "Domain reference, such as {\"kind\":\"pane\",\"value\":1}",
+    ),
+    flag(
+        "--selector",
+        Some("JSON"),
+        "The whole selector as JSON, for example {\"role\":\"tab\",\"pane\":2}",
+    ),
+];
+
+const PAGE_FLAGS: &[Flag] = &[
+    flag(
+        "--limit",
+        Some("N"),
+        "Entries per page, 1 to 256 (default 64)",
+    ),
+    flag(
+        "--cursor",
+        Some("CURSOR"),
+        "Continue from a previous page's next cursor",
+    ),
+];
+
+pub const COMMANDS: &[Command] = &[
+    Command {
+        name: "capabilities",
+        usage: "stobie capabilities [--json]",
+        summary: "Describe commands, flags, exit codes and output schemas without connecting",
+        connects: false,
+        flags: &[flag(
+            "--json",
+            None,
+            "Emit JSON (the default output is also JSON)",
+        )],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "launch",
+        usage: "stobie launch NAME (--manifest-path PATH | --package PKG | -- PROGRAM [ARGS...]) [--bin NAME | --example NAME] [--debug]",
+        summary: "Build if needed and start a native application with a fresh private automation socket, record it as session NAME and wait until it answers",
+        connects: false,
+        flags: &[
+            flag(
+                "--manifest-path",
+                Some("PATH"),
+                "Cargo manifest of the application to build",
+            ),
+            flag(
+                "--package",
+                Some("PKG"),
+                "Cargo package to build in the current workspace",
+            ),
+            flag(
+                "--bin",
+                Some("NAME"),
+                "Binary to run when the package has several",
+            ),
+            flag(
+                "--example",
+                Some("NAME"),
+                "Cargo example to build and run instead of a binary",
+            ),
+            flag("--debug", None, "Build without --release"),
+            flag(
+                "--timeout",
+                Some("MS"),
+                "How long to wait for the application to answer (default 120000)",
+            ),
+            flag("--json", None, "Emit one JSON object instead of text"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "attach",
+        usage: "stobie attach NAME --cdp URL [--page URL | --target ID]",
+        summary: "Record session NAME for a browser page opened with ?automation=1, after checking it answers",
+        connects: false,
+        flags: &[
+            flag(
+                "--cdp",
+                Some("URL"),
+                "The browser's DevTools HTTP endpoint, as `lantern browser endpoint` prints it",
+            ),
+            flag(
+                "--page",
+                Some("URL"),
+                "The page's URL (a unique prefix is enough)",
+            ),
+            flag("--target", Some("ID"), "The page's DevTools target ID"),
+            flag(
+                "--timeout",
+                Some("MS"),
+                "How long to wait for the page to answer (default 15000)",
+            ),
+            flag("--json", None, "Emit one JSON object instead of text"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "stop",
+        usage: "stobie stop NAME [--json]",
+        summary: "Stop a launched application and remove its session and socket directory",
+        connects: false,
+        flags: &[flag("--json", None, "Emit one JSON object instead of text")],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "sessions",
+        usage: "stobie sessions [--json]",
+        summary: "List recorded sessions and whether each still answers",
+        connects: false,
+        flags: &[flag("--json", None, "Emit one JSON object instead of text")],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "hello",
+        usage: "stobie hello [TARGET FLAGS]",
+        summary: "Show the application's identity, protocol limits and operations",
+        connects: true,
+        flags: &[],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "observe",
+        usage: "stobie observe [--limit N] [--offset N] [--include-text] [TARGET FLAGS]",
+        summary: "Outline the current UI: role, name, state, value, stable ID and capabilities of each node, with application facts",
+        connects: true,
+        flags: &[
+            flag("--limit", Some("N"), "Nodes to show (default 200)"),
+            flag("--offset", Some("N"), "Skip this many nodes"),
+            flag(
+                "--include-text",
+                None,
+                "Include measured text observations (JSON only)",
+            ),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "query",
+        usage: "stobie query [ID] [SELECTOR FLAGS] [--limit N] [--cursor CURSOR] [TARGET FLAGS]",
+        summary: "List nodes matching a selector, with the capabilities bound to each",
+        connects: true,
+        flags: PAGE_FLAGS,
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "discover",
+        usage: "stobie discover [CAPABILITY] [SELECTOR FLAGS] [--limit N] [--cursor CURSOR] [TARGET FLAGS]",
+        summary: "List capabilities: availability, argument contract, shortcut and target",
+        connects: true,
+        flags: PAGE_FLAGS,
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "invoke",
+        usage: "stobie invoke CAPABILITY [SELECTOR FLAGS] [--value VALUE | --value-json JSON] [--request-id ID] [--no-wait] [TARGET FLAGS]",
+        summary: "Invoke one capability with an optional typed value, wait for its receipt, then for the observation that shows its effect",
+        connects: true,
+        flags: &[
+            flag(
+                "--value",
+                Some("VALUE"),
+                "The argument, converted by the capability's contract: text, true/false, a number or a choice ID",
+            ),
+            flag("--value-json", Some("JSON"), "The argument as a JSON value"),
+            flag(
+                "--expected",
+                Some("JSON"),
+                "A previously discovered target, to fail if it changed",
+            ),
+            flag(
+                "--request-id",
+                Some("ID"),
+                "The mutation's ID; retrying with it never runs the action twice",
+            ),
+            flag("--no-wait", None, "Return once the invocation is admitted"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "set-text",
+        usage: "stobie set-text ID (TEXT | --text-file PATH) [--request-id ID] [TARGET FLAGS]",
+        summary: "Replace a text field's text as typing would; `-` reads the text from standard input",
+        connects: true,
+        flags: &[
+            flag("--text-file", Some("PATH"), "Read the text from a file"),
+            flag(
+                "--request-id",
+                Some("ID"),
+                "The mutation's ID; retrying with it never runs the edit twice",
+            ),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "wait",
+        usage: "stobie wait CONDITION [SELECTOR FLAGS] [--value VALUE] [--key KEY] [--condition JSON] [TARGET FLAGS]",
+        summary: "Wait until a condition holds: present, absent, enabled, capability_enabled, focused, selected, checked, name, value, status, selection_changed, fact or audits_clear",
+        connects: true,
+        flags: &[
+            flag(
+                "--value",
+                Some("VALUE"),
+                "Expected text, or true/false for checked; for fact, a JSON value or text",
+            ),
+            flag("--key", Some("KEY"), "Fact name, for the fact condition"),
+            flag(
+                "--condition",
+                Some("JSON"),
+                "The whole condition as JSON, for example {\"condition\":\"fact\",\"key\":\"undo_entries\",\"value\":1}",
+            ),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "capture",
+        usage: "stobie capture --output PNG [TARGET FLAGS]",
+        summary: "Screenshot the application, bracketed by observations before and after",
+        connects: true,
+        flags: &[flag(
+            "--output",
+            Some("PNG"),
+            "Where to write the screenshot",
+        )],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "receipt",
+        usage: "stobie receipt REQUEST_ID [TARGET FLAGS]",
+        summary: "Read an invocation's receipt; use it instead of repeating an uncertain mutation",
+        connects: true,
+        flags: &[],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "cancel",
+        usage: "stobie cancel REQUEST_ID [TARGET FLAGS]",
+        summary: "Cancel a queued invocation that has not started",
+        connects: true,
+        flags: &[],
+        output_schema_version: SCHEMA_VERSION,
+    },
+];
+
+/// Exit statuses, stable across versions.
+pub const EXIT_CODES: &[(i32, &str, &str)] = &[
+    (0, "ok", "The command succeeded"),
+    (
+        1,
+        "rejected",
+        "The application rejected or could not match the request, or an invocation was rejected",
+    ),
+    (2, "usage", "The command line or a request was malformed"),
+    (
+        3,
+        "connection",
+        "No application answered, or it restarted (wrong instance)",
+    ),
+    (
+        4,
+        "deadline",
+        "A deadline passed, or a mutation's outcome is uncertain: read its receipt",
+    ),
+    (
+        5,
+        "partial",
+        "Evidence is partial, for example a capture whose screenshot failed",
+    ),
+];
+
+pub fn find(name: &str) -> Option<&'static Command> {
+    COMMANDS.iter().find(|command| command.name == name)
+}
+
+fn flags_help(flags: &[Flag]) -> String {
+    flags
+        .iter()
+        .map(|flag| {
+            let left = match flag.value {
+                Some(value) => format!("{} {value}", flag.name),
+                None => flag.name.to_owned(),
+            };
+            format!("  {left:<26} {}\n", flag.description)
+        })
+        .collect()
+}
+
+pub fn help() -> String {
+    let mut text = String::from(
+        "stobie: launch or attach to a Stobie application, read its UI compactly and operate it.\n\n\
+         Usage: stobie COMMAND [ARGS] [FLAGS]   (stobie COMMAND --help for details)\n\nCommands:\n",
+    );
+    for command in COMMANDS {
+        text.push_str(&format!("  {:<13} {}\n", command.name, command.summary));
+    }
+    text.push_str("\nTarget flags (commands that address an application):\n");
+    text.push_str(&flags_help(TARGET_FLAGS));
+    text.push_str("\nSelector flags (exact AND match):\n");
+    text.push_str(&flags_help(SELECTOR_FLAGS));
+    text.push_str("\nExit statuses:\n");
+    for (code, name, description) in EXIT_CODES {
+        text.push_str(&format!("  {code} {name:<11} {description}\n"));
+    }
+    text.push_str(
+        "\nTypical browser session (serve the app, open it with ?automation=1):\n  \
+         stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'\n\
+         \nTypical native session:\n  stobie launch desk --manifest-path consumers/record-desk/Cargo.toml\n  \
+         stobie observe\n  stobie set-text record-desk.notes.1001 'Checked'\n  \
+         stobie invoke record-desk.edit-category --value ideas\n  stobie invoke record-desk.apply\n  \
+         stobie stop desk\n",
+    );
+    text
+}
+
+pub fn command_help(command: &Command) -> String {
+    let mut text = format!("{}\n\nUsage: {}\n", command.summary, command.usage);
+    if !command.flags.is_empty() {
+        text.push_str("\nFlags:\n");
+        text.push_str(&flags_help(command.flags));
+    }
+    if command.connects {
+        text.push_str("\nTarget flags:\n");
+        text.push_str(&flags_help(TARGET_FLAGS));
+        if matches!(
+            command.name,
+            "query" | "discover" | "invoke" | "set-text" | "wait"
+        ) {
+            text.push_str("\nSelector flags:\n");
+            text.push_str(&flags_help(SELECTOR_FLAGS));
+        }
+    }
+    text
+}

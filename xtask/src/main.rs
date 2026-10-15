@@ -153,6 +153,23 @@ fn architecture() -> Result<()> {
         assert_gpu_only_through_eframe(label, arguments)?;
     }
     assert_tree_excludes("stobie-runtime", &["egui", "eframe", "wgpu"])?;
+    // Agent tooling stays out of every application and its WASM graph.
+    for (label, arguments) in [
+        ("stobie-ui-egui", &["-p", "stobie-ui-egui"][..]),
+        (
+            "analytical-workspace-lab",
+            &["-p", "analytical-workspace-lab"][..],
+        ),
+        ("stobie-gallery", &["-p", "stobie-gallery"][..]),
+        ("stobie-tile-worker", &["-p", "stobie-tile-worker"][..]),
+        ("emuella-viewer", &["-p", "emuella-viewer"][..]),
+        (
+            "record-desk",
+            &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],
+        ),
+    ] {
+        assert_tree_excludes_with(label, arguments, AGENT_TOOLING)?;
+    }
     // Inspection clients use the protocol without the UI framework.
     assert_tree_excludes(
         "stobie-protocol",
@@ -375,7 +392,7 @@ fn architecture() -> Result<()> {
         }
     }
     println!(
-        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime and protocol, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime and protocol, agent tooling outside applications, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }
@@ -448,6 +465,15 @@ fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) 
 
 /// The image layer, which only image applications may resolve.
 const IMAGE_LAYER: &[&str] = &["stobie-imaging", "stobie-runtime", "stobie-render-wgpu"];
+
+/// The CLI, its client and their transport dependencies.
+const AGENT_TOOLING: &[&str] = &[
+    "stobie-cli",
+    "stobie-client",
+    "lantern-core",
+    "tungstenite",
+    "ureq",
+];
 
 /// Image and Lab-demo items that `stobie-core` must not define.
 const IMAGE_ITEMS: &[&str] = &[

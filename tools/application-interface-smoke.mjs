@@ -157,13 +157,9 @@ async function journey(app, host, client, physical, build) {
     await failure('unknown category', category, 'invalid_arguments', { arguments: { value: 'archive' } });
     const chosen = await invoke(category, { arguments: { value: 'ideas' } });
     assert.equal(chosen.state, 'completed', JSON.stringify(chosen));
-    // Apply's meaning tracks the draft, so discover it from an observation
-    // that includes the chosen category.
-    const deadline = Date.now() + 15000;
-    while ((await client.observe()).id < chosen.after_observation) {
-      assert(Date.now() < deadline, `observation ${chosen.after_observation} was not published`);
-      await new Promise(done => setTimeout(done, 50));
-    }
+    // The client returns once the observation presenting the choice is
+    // published, so Apply's draft-dependent meaning is current.
+    assert((await client.observe()).id >= chosen.after_observation);
     const applied = await invoke(selector('record-desk.apply'));
     assert.equal(applied.state, 'completed', JSON.stringify(applied));
     await client.wait(fact('undo_entries', 3));

@@ -199,8 +199,8 @@ through to the canvas, so they always fail that test.
 - `stobie-cli` builds the `stobie` binary from the library. Neither crate is
   in any application or WASM dependency graph; `cargo xtask architecture`
   enforces that.
-- **Sessions.** `stobie launch NAME (--package PKG | -- COMMAND…)` starts a
-  native application with a fresh private socket directory, waits for
+- **Sessions.** `stobie launch NAME (--manifest-path PATH | --package PKG |
+  -- COMMAND…)` builds with Cargo when needed and starts a native application with a fresh private socket directory, waits for
   `hello`, records the session and returns. A detached supervisor removes the
   directory when the application exits, and `stobie stop NAME` ends it.
   `stobie attach NAME --cdp URL [--page URL | --target ID]` records a
@@ -214,7 +214,7 @@ through to the canvas, so they always fail that test.
   value, stable ID and available capabilities, plus facts. `--json` emits one
   object with `schema_version`, `command` and `ok` first, fixed field order,
   `limit` and `cursor` pagination, explicit `truncated` markers and an
-  `unavailable` list of anything not collected. Budget: Record Desk's default
+  `omitted` list of anything left out. Budget: Record Desk's default
   `observe` stays under 8 KB.
 - **Exit codes.** 0 success; 1 the application rejected or did not match;
   2 usage; 3 connection or attach failure; 4 deadline or uncertain
@@ -297,8 +297,11 @@ expanded and text values. Roles the layer flattens or presents as text
   and after.
 - `cargo xtask verify` passes, including the production stage.
 
-## Open questions
+## Lantern licence
 
-- Lantern carries no licence text: only `license = "MIT"` in its Cargo
-  metadata. Increment 4 depends on `lantern-core` only after that is
-  resolved.
+Lantern carried no licence text, only `license = "MIT"` in its Cargo metadata.
+Its owner chose Apache-2.0 to match Stobie, and
+[robchristie/lantern#25](https://github.com/robchristie/lantern/pull/25)
+added the licence text and metadata. `stobie-client` depends on `lantern-core`
+as a Git dependency pinned to that merge, `2debc7e`, behind its default
+`browser` feature.

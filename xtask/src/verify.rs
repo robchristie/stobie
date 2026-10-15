@@ -158,6 +158,12 @@ pub fn run_stage(name: &str) -> Result<()> {
                     ],
                     &interface_environment,
                 )?;
+                run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
+                run_with_environment(
+                    "bash",
+                    &["tools/stobie-cli-smoke.sh", "lab"],
+                    &evidence_environment,
+                )?;
             }
         }
         "native-other" => {
@@ -308,6 +314,27 @@ pub fn run_stage(name: &str) -> Result<()> {
                         "record-desk",
                     ],
                     &interface_environment,
+                )?;
+                // The Rust CLI and the Node client agree on the same scenarios.
+                run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
+                run(
+                    "cargo",
+                    &[
+                        "build",
+                        "--release",
+                        "--manifest-path",
+                        "consumers/record-desk/Cargo.toml",
+                    ],
+                )?;
+                run_with_environment(
+                    "bash",
+                    &["tools/stobie-cli-smoke.sh", "record-desk"],
+                    &evidence_environment,
+                )?;
+                run_with_environment(
+                    "bash",
+                    &["tools/stobie-cli-smoke.sh", "record-desk-browser"],
+                    &evidence_environment,
                 )?;
             }
         }
