@@ -151,7 +151,8 @@ field is never set. Its receipt stays `queued`, and can no longer be
 cancelled, until the edit has applied and the intents it caused have settled;
 it then completes with the observation that presents them. If the field is no
 longer presented by then, the receipt is rejected. Hosts publish each text
-field's text as its node's optional `value`.
+field's text as its node's optional `value`; a combo box's `value` is its
+selected option's label.
 
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
@@ -195,7 +196,7 @@ are rejected. Conditions include `present`, `absent`, `enabled`,
 and `audits_clear`. Checked compares a boolean `value`; audits-clear waits for
 empty semantic/text findings with retained coverage. Name, value and
 status conditions compare exact text with `value`; value compares a text
-field's published text; status restricts the role to
+field's published text or a combo box's selected label; status restricts the role to
 `status`. Selection change compares selected stable IDs, against `previous` or
 the first observation. Fact conditions compare a named application-published
 primitive value; the available names are visible in `observe`.

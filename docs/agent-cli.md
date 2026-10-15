@@ -90,7 +90,7 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab` and
   `--cursor`. `discover` shows each capability's availability, argument
   contract and shortcut.
 - `invoke CAPABILITY [--value VALUE]` discovers one target, checks the value
-  against its contract (text, `true`/`false`, a number or a choice ID; or
+  against its contract (text, `true`/`false`, a number or a choice ID or label; or
   `--value-json`), sends the mutation once, waits for its receipt and then for
   the observation that presents its effect, and reports the facts that
   changed. `--request-id` makes a retry safe; `--no-wait` returns once the

@@ -8,7 +8,7 @@ use stobie_protocol::{
     INSPECTION_VERSION, InspectionError, InspectionErrorCode, InspectionLimits,
     InspectionOperation, InspectionReply, InspectionRequest, InspectionResult, InspectionSelector,
     InvocationReceipt, ObservationValue, ReceiptState, ResolvedTarget, SET_TEXT_CAPABILITY,
-    SemanticUiId, UiSnapshot,
+    SemanticUiId, UiNode, UiRect, UiRole, UiSnapshot,
 };
 
 use crate::{Client, ClientError, Condition, ErrorClass, InvokeOptions, Transport};
@@ -21,6 +21,7 @@ struct App {
     instance: String,
     observation: u64,
     facts: Vec<(String, ObservationValue)>,
+    nodes: Vec<UiNode>,
     invocations: Vec<(String, serde_json::Value)>,
     receipt_reads: usize,
     after: u64,
@@ -132,7 +133,7 @@ impl Transport for Fake {
                             frame: app.observation,
                             pixels_per_point: 1.,
                             root: SemanticUiId::new("root"),
-                            nodes: Vec::new(),
+                            nodes: app.nodes.clone(),
                             text: Vec::new(),
                             text_audit: Vec::new(),
                             text_audit_coverage: None,
@@ -357,4 +358,46 @@ fn waits_return_the_observation_that_satisfies_them_or_keep_the_last_on_timeout(
         Condition::parse(serde_json::json!({ "condition": "audits_clear" })).unwrap(),
         Condition::AuditsClear {}
     );
+}
+
+#[test]
+fn a_value_wait_that_times_out_says_what_the_node_presents() {
+    let (client, fake) = client();
+    let mut client = client.with_timeout(Duration::from_millis(200));
+    let node = |value: Option<&str>| {
+        let mut node = UiNode::container(
+            SemanticUiId::new("desk.category"),
+            None,
+            UiRole::ComboBox,
+            UiRect {
+                min_x: 0.,
+                min_y: 0.,
+                max_x: 10.,
+                max_y: 10.,
+            },
+        );
+        node.value = value.map(ToOwned::to_owned);
+        node
+    };
+    let condition = Condition::Value {
+        selector: InspectionSelector {
+            id: Some(SemanticUiId::new("desk.category")),
+            ..InspectionSelector::default()
+        },
+        value: "Ideas".into(),
+    };
+    fake.0.borrow_mut().nodes = vec![node(None)];
+    let error = client.wait(&condition).unwrap_err();
+    assert!(
+        error.message.contains("#desk.category has no value"),
+        "{error}"
+    );
+    fake.0.borrow_mut().nodes = vec![node(Some("Research"))];
+    let error = client.wait(&condition).unwrap_err();
+    assert!(
+        error.message.contains(r#"latest value: "Research""#),
+        "{error}"
+    );
+    fake.0.borrow_mut().nodes = vec![node(Some("Ideas"))];
+    assert!(client.wait(&condition).is_ok());
 }

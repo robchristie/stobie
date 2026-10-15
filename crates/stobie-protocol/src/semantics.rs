@@ -197,7 +197,8 @@ pub struct UiNode {
     pub text_selectable: bool,
     pub disabled_reason: Option<String>,
     /// A text field's current text, published by hosts for framework text
-    /// fields while AccessKit is enabled; omitted otherwise.
+    /// fields while AccessKit is enabled, or a combo box's selected option
+    /// label; omitted otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
 }

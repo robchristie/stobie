@@ -550,9 +550,15 @@ impl<T: Transport> Client<T> {
                 Err(error) => return Err(error),
             }
             if Instant::now() + POLL_INTERVAL >= deadline {
+                let latest = last
+                    .as_ref()
+                    .and_then(|observation| latest_state(condition, observation));
                 let mut error = ClientError::timeout(format!(
-                    "the condition did not hold within {} ms{}",
+                    "the condition did not hold within {} ms{}{}",
                     self.timeout.as_millis(),
+                    latest
+                        .map(|latest| format!("; {latest}"))
+                        .unwrap_or_default(),
                     last_error
                         .map(|error| format!("; last error: {error}"))
                         .unwrap_or_default()
@@ -667,6 +673,26 @@ impl<T: Transport> Client<T> {
             }
         })
     }
+}
+
+/// What the node a text or state condition names last presented, for a
+/// timeout message: `latest value: "Research"` or `the node has no value`.
+fn latest_state(condition: &Condition, observation: &CompletedObservation) -> Option<String> {
+    let node = one_node(observation, &condition.node_selector()?).ok()??;
+    Some(match condition {
+        Condition::Value { .. } => match &node.value {
+            Some(value) => format!("latest value: {value:?}"),
+            None => format!("#{} has no value", node.id.0),
+        },
+        Condition::Name { .. } | Condition::Status { .. } => {
+            format!("latest name: {:?}", node.name)
+        }
+        Condition::Checked { .. } => match node.checked {
+            Some(checked) => format!("latest checked: {checked}"),
+            None => format!("#{} is not checkable", node.id.0),
+        },
+        _ => return None,
+    })
 }
 
 /// An application error that a request was well formed but refused.

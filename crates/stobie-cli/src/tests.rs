@@ -166,7 +166,16 @@ fn values_are_converted_by_the_argument_contract() {
             label: "Ideas".into(),
         }],
     };
-    // A choice is sent as given; the application validates it.
+    // A choice is sent by ID; a label or ID in any case names its option, and
+    // anything else is sent as given for the application to reject.
+    assert_eq!(
+        converted(choice.clone(), "Ideas").unwrap(),
+        wrapped("ideas".into())
+    );
+    assert_eq!(
+        converted(choice.clone(), "IDEAS").unwrap(),
+        wrapped("ideas".into())
+    );
     assert_eq!(
         converted(choice.clone(), "archive").unwrap(),
         wrapped("archive".into())

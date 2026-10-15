@@ -52,7 +52,8 @@ pub enum Condition {
         selector: InspectionSelector,
         value: String,
     },
-    /// A text field's text is exactly `value`.
+    /// The node's value (a text field's text, or a combo box's selected
+    /// option label) is exactly `value`.
     Value {
         #[serde(default)]
         selector: InspectionSelector,

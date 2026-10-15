@@ -53,7 +53,7 @@ pub const TARGET_FLAGS: &[Flag] = &[
     flag(
         "--page",
         Some("URL"),
-        "With --cdp: the page's URL, opened with ?automation=1 (a unique prefix is enough)",
+        "With --cdp: the page's URL, which must include ?automation=1 (stobie does not add it; a unique prefix is enough)",
     ),
     flag(
         "--target",
@@ -86,7 +86,11 @@ pub const SELECTOR_FLAGS: &[Flag] = &[
         Some("ID"),
         "Capability ID, such as record-desk.apply",
     ),
-    flag("--pane", Some("N"), "Pane ID"),
+    flag(
+        "--pane",
+        Some("N"),
+        "Pane ID carried by the node or capability itself (controls inside a pane may carry none)",
+    ),
     flag(
         "--domain",
         Some("JSON"),
@@ -116,12 +120,12 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "capabilities",
         usage: "stobie capabilities [--json]",
-        summary: "Describe commands, flags, exit codes and output schemas without connecting",
+        summary: "Describe commands, flags, exit codes, wait conditions and the output envelope as JSON, without connecting",
         connects: false,
         flags: &[flag(
             "--json",
             None,
-            "Emit JSON (the default output is also JSON)",
+            "Accepted for consistency; the output is always JSON",
         )],
         output_schema_version: SCHEMA_VERSION,
     },
@@ -175,7 +179,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--page",
                 Some("URL"),
-                "The page's URL (a unique prefix is enough)",
+                "The page's URL, including ?automation=1 (a unique prefix is enough)",
             ),
             flag("--target", Some("ID"), "The page's DevTools target ID"),
             flag(
@@ -190,7 +194,7 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "stop",
         usage: "stobie stop NAME [--json]",
-        summary: "Stop a launched application and remove its session and socket directory",
+        summary: "Stop a launched application and remove its session and socket directory; for an attached browser session, forget the session and leave the page running",
         connects: false,
         flags: &[flag("--json", None, "Emit one JSON object instead of text")],
         output_schema_version: SCHEMA_VERSION,
@@ -198,7 +202,7 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "sessions",
         usage: "stobie sessions [--json]",
-        summary: "List recorded sessions and whether each still answers",
+        summary: "List recorded sessions, and whether each launched application is still running",
         connects: false,
         flags: &[flag("--json", None, "Emit one JSON object instead of text")],
         output_schema_version: SCHEMA_VERSION,
@@ -222,7 +226,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--include-text",
                 None,
-                "Include measured text observations (JSON only)",
+                "Include text layout measurements: geometry, line counts and overflow, not the strings (JSON only)",
             ),
         ],
         output_schema_version: SCHEMA_VERSION,
@@ -252,7 +256,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--value",
                 Some("VALUE"),
-                "The argument, converted by the capability's contract: text, true/false, a number or a choice ID",
+                "The argument, converted by the capability's contract: text, true/false, a number, or a choice ID or label",
             ),
             flag("--value-json", Some("JSON"), "The argument as a JSON value"),
             flag(
@@ -312,7 +316,7 @@ pub const COMMANDS: &[Command] = &[
         flags: &[flag(
             "--output",
             Some("PNG"),
-            "Where to write the screenshot",
+            "Where to write the screenshot (an existing file is replaced)",
         )],
         output_schema_version: SCHEMA_VERSION,
     },
@@ -396,10 +400,13 @@ pub fn help() -> String {
     text.push_str(
         "\nTypical browser session (serve the app, open it with ?automation=1):\n  \
          stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'\n\
-         \nTypical native session:\n  stobie launch desk --manifest-path consumers/record-desk/Cargo.toml\n  \
-         stobie observe\n  stobie set-text record-desk.notes.1001 'Checked'\n  \
-         stobie invoke record-desk.edit-category --value ideas\n  stobie invoke record-desk.apply\n  \
-         stobie stop desk\n",
+         \nTypical native session:\n  \
+         stobie launch app --manifest-path path/to/Cargo.toml   (or: stobie launch app -- ./program)\n  \
+         stobie observe                       # outline: role \"name\" state #ID [capabilities]\n  \
+         stobie discover CAPABILITY           # availability and argument contract\n  \
+         stobie set-text ID 'text'\n  \
+         stobie invoke CAPABILITY [--value VALUE]\n  \
+         stobie stop app\n",
     );
     text
 }

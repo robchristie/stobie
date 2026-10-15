@@ -267,6 +267,23 @@ accessibility tree:
 Every click was acknowledged. The Lab's "Polygon" is one button per image
 pane, so Lantern correctly refuses it as ambiguous.
 
+## CLI size and output
+
+The `stobie` release binary is 2,991,544 B (2,430,480 B stripped), and a clean
+release build of `stobie-cli` and its dependencies takes 15.3 s on a 32-core
+host. No application or WASM build includes it.
+
+Output per command, in bytes, from the CLI smoke against its budget:
+
+| Command | Record Desk | Lab |
+| --- | --- | --- |
+| `observe` | 3,721 / 8,192 (browser 3,733) | 8,726 / 16,384 |
+| `observe --json` | 11,536 / 24,576 | 23,102 / 49,152 |
+| `discover` | 1,839 / 6,144 | 6,528 / 12,288 |
+| `discover --json` | 10,376 / 49,152 | 35,347 / 98,304 |
+| `query --role result_row` / `query --role tab` | 1,121 / 4,096 | 390 / 2,048 |
+| `hello` | 126 / 512 | 139 / 512 |
+
 ## Semantic agreement findings
 
 The comparison found no disagreement in the tested states. Every Gallery

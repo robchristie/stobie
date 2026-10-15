@@ -138,10 +138,13 @@ fn main() -> ExitCode {
                     ok: output.status == 0,
                     payload: output.json,
                 };
-                println!(
-                    "{}",
-                    serde_json::to_string(&envelope).expect("outputs serialise")
-                );
+                // The command registry is read by people as well as parsed.
+                let text = if command.name == "capabilities" {
+                    serde_json::to_string_pretty(&envelope)
+                } else {
+                    serde_json::to_string(&envelope)
+                };
+                println!("{}", text.expect("outputs serialise"));
             } else {
                 print!("{}", output.text);
             }
@@ -292,10 +295,11 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
         "stop" => {
             let name = positional(0, "a session NAME")?;
             let stopped = session::stop(name, Duration::from_secs(10))?;
-            Ok(Output::new(
-                format!("stopped {name}\n"),
-                serde_json::json!({ "session": stopped }),
-            ))
+            let text = match &stopped.target {
+                Target::Browser { .. } => format!("detached {name}; the page keeps running\n"),
+                Target::Native { .. } => format!("stopped {name}\n"),
+            };
+            Ok(Output::new(text, serde_json::json!({ "session": stopped })))
         }
         "hello" => {
             let (mut client, _, _) = connect(args)?;
@@ -399,6 +403,13 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
                     }
                 );
                 let _ = writeln!(text, "{line}");
+                // What a value means is in the description, such as which ID
+                // to give.
+                if capability.arguments != ArgumentContract::None
+                    && !capability.description.is_empty()
+                {
+                    let _ = writeln!(text, "  {}", output::clip(&capability.description));
+                }
             }
             let _ = writeln!(
                 text,
@@ -666,8 +677,27 @@ fn argument(
                     capability.capability
                 )));
             }
-            ArgumentContract::Text { .. } | ArgumentContract::Choice { .. } => {
-                serde_json::Value::String(value.to_owned())
+            ArgumentContract::Text { .. } => serde_json::Value::String(value.to_owned()),
+            // A choice is sent by ID; an option's label, in any case, names
+            // its ID when no other option matches it. Anything else is sent as
+            // given for the application to reject with the valid IDs.
+            ArgumentContract::Choice { options } => {
+                let matching: Vec<_> = options
+                    .iter()
+                    .filter(|option| {
+                        option.id.eq_ignore_ascii_case(value)
+                            || option.label.to_lowercase() == value.to_lowercase()
+                    })
+                    .collect();
+                let id = match (
+                    options.iter().find(|option| option.id == value),
+                    matching.as_slice(),
+                ) {
+                    (Some(exact), _) => exact.id.as_str(),
+                    (None, [only]) => only.id.as_str(),
+                    _ => value,
+                };
+                serde_json::Value::String(id.to_owned())
             }
             ArgumentContract::Boolean => serde_json::Value::Bool(match value {
                 "true" => true,
@@ -695,10 +725,11 @@ fn argument(
         }),
         (None, None) => {
             if let Some(summary) = output::argument_summary(&capability.arguments) {
-                return Err(ClientError::usage(format!(
-                    "{} needs --value ({summary})",
-                    capability.capability
-                )));
+                let mut message = format!("{} needs --value ({summary})", capability.capability);
+                if !capability.description.is_empty() {
+                    let _ = write!(message, ": {}", capability.description);
+                }
+                return Err(ClientError::usage(message));
             }
             None
         }
@@ -804,8 +835,14 @@ fn invoked_output(before: &CompletedObservation, invoked: Invoked) -> Output {
         let _ = write!(text, " · observation {}", after.id);
     }
     text.push('\n');
-    if let Some(changed) = &changed {
-        if changed.is_empty() {
+    let nodes = invoked
+        .observation
+        .as_ref()
+        .map(|after| output::changed_nodes(before, after));
+    if let (Some(changed), Some(nodes)) = (&changed, &nodes) {
+        if changed.is_empty() && nodes.is_empty() {
+            text.push_str("no observed change in facts or nodes\n");
+        } else if changed.is_empty() {
             text.push_str("facts unchanged\n");
         } else {
             let changes: Vec<String> = changed
@@ -825,6 +862,10 @@ fn invoked_output(before: &CompletedObservation, invoked: Invoked) -> Output {
                 .collect();
             let _ = writeln!(text, "changed: {}", changes.join(", "));
         }
+        if !nodes.is_empty() {
+            let _ = writeln!(text, "nodes changed: {}", nodes.len());
+            text.push_str(&output::changed_nodes_text(nodes));
+        }
     }
     let status = receipt_status(&invoked.receipt);
     let mut output = Output::new(
@@ -836,6 +877,8 @@ fn invoked_output(before: &CompletedObservation, invoked: Invoked) -> Output {
                 .into_iter()
                 .map(|(key, (old, new))| (key, serde_json::json!({ "before": old, "after": new })))
                 .collect::<BTreeMap<_, _>>()),
+            "changed_nodes": nodes.as_ref().map(|nodes| nodes.iter().take(32).collect::<Vec<_>>()),
+            "changed_nodes_total": nodes.as_ref().map(Vec::len),
         }),
     );
     output.status = status;
@@ -879,7 +922,9 @@ fn sessions() -> Result<Output, ClientError> {
         entries.push(serde_json::json!({ "session": session, "running": running }));
     }
     if sessions.is_empty() {
-        text.push_str("no sessions; start one with `stobie launch NAME ...`\n");
+        text.push_str(
+            "no sessions; start one with `stobie launch NAME ...` or `stobie attach NAME --cdp URL --page URL`\n",
+        );
     }
     Ok(Output::new(
         text,

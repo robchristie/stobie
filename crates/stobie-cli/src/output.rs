@@ -404,3 +404,101 @@ pub fn observe_json<'a>(
         text_observations: include_text.then_some(snapshot.text.as_slice()),
     }
 }
+
+/// How a node differs between two observations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeChangeKind {
+    Added,
+    Removed,
+    Changed,
+}
+
+/// One node whose presented state differs between two observations.
+#[derive(Serialize)]
+pub struct NodeChange<'a> {
+    pub id: &'a SemanticUiId,
+    pub change: NodeChangeKind,
+    /// The node as now presented, or as last presented when removed.
+    #[serde(skip)]
+    pub node: &'a UiNode,
+}
+
+/// Whether two presentations of a node differ in what an agent reads: name,
+/// state or value. Geometry and focus are ignored.
+fn presented_differently(before: &UiNode, after: &UiNode) -> bool {
+    (
+        &before.name,
+        before.enabled,
+        &before.disabled_reason,
+        before.selected,
+        before.checked,
+        before.expanded,
+        &before.value,
+    ) != (
+        &after.name,
+        after.enabled,
+        &after.disabled_reason,
+        after.selected,
+        after.checked,
+        after.expanded,
+        &after.value,
+    )
+}
+
+/// Nodes added, removed or presented differently, in outline order.
+pub fn changed_nodes<'a>(
+    before: &'a CompletedObservation,
+    after: &'a CompletedObservation,
+) -> Vec<NodeChange<'a>> {
+    let mut changes: Vec<NodeChange> = ordered(after)
+        .into_iter()
+        .filter_map(|(_, node)| {
+            let change = match before.snapshot.node(&node.id) {
+                None => NodeChangeKind::Added,
+                Some(old) if presented_differently(old, node) => NodeChangeKind::Changed,
+                Some(_) => return None,
+            };
+            Some(NodeChange {
+                id: &node.id,
+                change,
+                node,
+            })
+        })
+        .collect();
+    changes.extend(
+        ordered(before)
+            .into_iter()
+            .filter(|(_, node)| after.snapshot.node(&node.id).is_none())
+            .map(|(_, node)| NodeChange {
+                id: &node.id,
+                change: NodeChangeKind::Removed,
+                node,
+            }),
+    );
+    changes
+}
+
+/// At most this many changed nodes are listed in text output.
+const CHANGED_NODE_LINES: usize = 6;
+
+/// The changed nodes as text lines: `~` changed, `+` added, `-` removed.
+pub fn changed_nodes_text(changes: &[NodeChange]) -> String {
+    let mut text = String::new();
+    for change in changes.iter().take(CHANGED_NODE_LINES) {
+        let mark = match change.change {
+            NodeChangeKind::Added => '+',
+            NodeChangeKind::Removed => '-',
+            NodeChangeKind::Changed => '~',
+        };
+        let _ = writeln!(text, "  {mark} {}", node_line(change.node, &[]));
+    }
+    if changes.len() > CHANGED_NODE_LINES {
+        let _ = writeln!(
+            text,
+            "  … {} more changed nodes; observe to see them",
+            changes.len() - CHANGED_NODE_LINES
+        );
+    }
+    text
+}

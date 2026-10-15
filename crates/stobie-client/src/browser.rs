@@ -219,7 +219,8 @@ impl Transport for BrowserTransport {
         if reply.get("exceptionDetails").is_some() {
             return Err(ClientError::connection(
                 "the page has no Stobie automation dispatcher",
-                "open the application with ?automation=1 in its URL",
+                "open the application with ?automation=1 in its URL; if it has that, the \
+                 application has not started yet or failed to start (see the browser console)",
             ));
         }
         reply["result"]["value"]
@@ -235,6 +236,11 @@ impl Transport for BrowserTransport {
     }
 
     fn describe(&self) -> String {
-        format!("browser {} page {:?}", self.endpoint, self.page)
+        let page = match &self.page {
+            PageSelector::Url(url) => url.clone(),
+            PageSelector::Target(target) => format!("target {target}"),
+            PageSelector::Only => "(the only page)".into(),
+        };
+        format!("browser {} page {page}", self.endpoint)
     }
 }
