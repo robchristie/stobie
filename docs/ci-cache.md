@@ -15,7 +15,7 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 | `production` | Separate production release WASM build, packaging and response-header validation, startup smoke and the prescribed startup benchmark |
 | `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
 | `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
-| `webgl2` | Gallery and Record Desk release WASM/bindgen packages; with WebGPU withheld, the Gallery, icon, navigation, status-chip and Record Desk browser smokes, both ARIA layer checks and Record Desk's browser CLI parity |
+| `webgl2` | Development Lab/Gallery/Worker/Viewer and Record Desk release WASM/bindgen packages; forced onto WebGL2, the Lab, Gallery, icon, navigation, status-chip and Record Desk browser smokes, the three ARIA layer checks, the Lab/browser interface journey and Record Desk's browser CLI parity |
 
 The two native package selections cover the previous workspace release targets.
 The Lab's example is selected with its normal library and binary to avoid a

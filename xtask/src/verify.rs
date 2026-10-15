@@ -340,9 +340,9 @@ pub fn run_stage(name: &str) -> Result<()> {
             }
         }
         "webgl2" => {
-            // Record Desk and the Gallery repeat their browser checks with
-            // WebGPU withheld, so the host falls back to WebGL2; each smoke
-            // checks that the canvas reports the WebGL2 renderer.
+            // The Lab, the Gallery and Record Desk repeat their browser checks
+            // on WebGL2: WebGPU flags are withheld and pages open with
+            // `?renderer=webgl2`. Each smoke checks the canvas reports WebGL2.
             let webgl2 = evidence.join("webgl2");
             let environment = [
                 ("STOBIE_EVIDENCE_DIR", webgl2.as_path()),
@@ -353,10 +353,15 @@ pub fn run_stage(name: &str) -> Result<()> {
                 ("STOBIE_EVIDENCE_DIR", icons.as_path()),
                 ("STOBIE_BROWSER_RENDERER", Path::new("webgl2")),
             ];
+            let interface_environment = [
+                ("STOBIE_EVIDENCE_DIR", interface.as_path()),
+                ("STOBIE_BROWSER_RENDERER", Path::new("webgl2")),
+            ];
             fs::create_dir_all(&icons)?;
-            build_gallery_web()?;
+            build_web()?;
             run("bash", &["consumers/record-desk/build-web.sh"])?;
             prepare_browser()?;
+            run_with_environment("npm", &["run", "browser-smoke"], &environment)?;
             run_with_environment("npm", &["run", "gallery-browser-smoke"], &environment)?;
             run_with_environment(
                 "bash",
@@ -370,7 +375,7 @@ pub fn run_stage(name: &str) -> Result<()> {
             ] {
                 run_with_environment("bash", &[smoke], &environment)?;
             }
-            for app in ["gallery", "record-desk"] {
+            for app in ["lab", "gallery", "record-desk"] {
                 run_with_environment(
                     "bash",
                     &["tools/aria-layer-browser.sh", "--app", app],
@@ -378,6 +383,17 @@ pub fn run_stage(name: &str) -> Result<()> {
                 )?;
             }
             if cfg!(target_os = "linux") {
+                run_with_environment(
+                    "bash",
+                    &[
+                        "tools/application-interface-smoke.sh",
+                        "--apps",
+                        "lab",
+                        "--hosts",
+                        "browser",
+                    ],
+                    &interface_environment,
+                )?;
                 run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
                 run_with_environment(
                     "bash",

@@ -5,7 +5,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { open, mkdir, readFile, writeFile, mkdtemp, rm, unlink } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { ApplicationClient, SocketTransport, BrowserTransport, BrowserPhysicalAdapter, NativePhysicalAdapter } from './application-client.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { interfaceSelection, assertInterfaceCoverage } from './application-interface-selection.mjs';
@@ -254,8 +254,9 @@ try {
   }
   for (const app of selection.hosts.includes('browser') ? selection.apps : []) {
     const page = await browser.newPage({ viewport: app === 'lab' ? { width: 1440, height: 900 } : { width: 1080, height: 760 } });
-    await page.goto(`http://127.0.0.1:${server.address().port}/${app}/?automation=1`);
+    await page.goto(rendererUrl(`http://127.0.0.1:${server.address().port}/${app}/?automation=1`));
     await journey(app, 'browser', new ApplicationClient(new BrowserTransport(page)), new BrowserPhysicalAdapter(page), { wasm_sha256: await hash(resolve(webRoots[app], 'pkg', app === 'lab' ? 'analytical_workspace_lab_bg.wasm' : 'record_desk_bg.wasm')) });
+    await assertBrowserRenderer(page);
     await page.close();
   }
   for (const app of selection.hosts.includes('native') ? selection.apps : []) {

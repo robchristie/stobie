@@ -1,7 +1,7 @@
 # WebGL2 fallback for Stobie web apps
 
-Status: active
-Next action: Land increment 1, then start increment 2 (the Lab's image renderer on WebGL2).
+Status: complete
+Delivery: [PR #85](https://github.com/robchristie/stobie/pull/85) completes the plan; increment 1 landed in [PR #84](https://github.com/robchristie/stobie/pull/84).
 
 ## Outcome and boundaries
 
@@ -116,9 +116,9 @@ Lab, Gallery and Record Desk handles need no change.
   unavailable on WebGL2, taking the rendering opportunity straight after the
   CPU UI handoff, as it already does when the hook cannot be installed.
 - **Lab Diagnostics.** Backend, adapter and selection come from the host's
-  identity. Platform no longer claims WebGPU, and GPU timestamps stay
-  unavailable. The scalar renderer's capability text still says WebGPU until
-  increment 2 makes it name the real backend.
+  identity. Platform no longer claims WebGPU, the scalar renderer's
+  capability text names the running backend, and GPU timestamps stay
+  unavailable.
 - **Applications.** `renderer_identity(&egui::Context)` lets an application
   read the identity, as the Lab does.
 
@@ -165,7 +165,7 @@ Lab, Gallery and Record Desk handles need no change.
 ### Image renderer
 
 The probe found the scalar renderer working on GL without changes. Increment
-2 adds the proof:
+2 added the proof (see its evidence below):
 - the Lab's browser smoke on WebGL2, checking draws, residency and a pixel
   readback of an image pane against the WebGPU run;
 - its ARIA and application-interface checks;
@@ -211,9 +211,82 @@ SwiftShader. Raw results stay under ignored `.tools/runtime/`.
   The first run failed once with a parity mismatch whose detail was not
   captured; it did not recur in 14 further WebGL2 runs and 3 WebGPU runs.
 
+## Increment 2 evidence
+
+Measured locally on 2026-10-15. Raw results stay under ignored
+`.tools/runtime/`.
+
+- **Image renderer outcome: works on WebGL2 unchanged.** The scalar
+  renderer's `R16Uint` upload and `textureLoad` sampling run on wgpu's GL
+  backend within WebGL2's downlevel limits. The only renderer change names the
+  backend in its capability text (`wgpu webgl2; scalar=R16Uint; …`). No
+  declared WebGPU requirement is needed.
+- **Image tests.** On WebGL2, the `webgl2` stage passes:
+  - the Lab's full browser smoke: default image panes, pan raster change,
+    display and appearance controls, uploads, polygons, thumbnails,
+    persistence, narrow layouts and idle;
+  - its ARIA layer check;
+  - its browser interface journey.
+
+  The startup smoke's Lab comparison, image panes included, found 0 of
+  1,296,000 pixels beyond tolerance. The maximum difference was 0/255 locally
+  and 2/255 on hosted CI. It
+  also checks the WebGL2 capability text.
+- **Fallback without an adapter.** The startup smoke now also starts the Lab
+  and the Gallery with `requestAdapter()` returning null. Both report
+  "WebGPU returned no adapter".
+- **Firefox.** Playwright 1.62.1's pinned Firefox 153 did not start on the
+  development host, which lacks GTK 3. It ran in the Arch-based image built
+  from `tools/aria-layer-orca/Containerfile`, which has GTK 3, ALSA, Mesa and
+  Xvfb, under a container-local Xvfb. Headful, it has no
+  `navigator.gpu` and offers WebGL2, so Record Desk started on its fallback.
+  `tools/record-desk-firefox.mjs` then selected a record, set its notes, and
+  applied and undid the edit through the ARIA layer.
+
+  Playwright's Firefox clicks at whole CSS pixels. These clicks can miss the
+  layer's one-pixel hit target: at Apply's centre (418.35, 477.80), the
+  rounded point hit the target, and the floor and ceiling points hit the
+  canvas. The check therefore activates controls with `element.click()`.
+  Chromium's fractional clicks are unaffected. This is an ARIA layer and
+  Firefox limitation, independent of the backend.
+- **General-agent probe.** A fresh agent with only Playwright and the page URL
+  operated Record Desk on forced WebGL2 in Chromium entirely through role and
+  name locators. It selected "Prepare review agenda", filled "Record notes",
+  then used plain `click()` on Apply and on Undo. It needed two scripts, with
+  no coordinate fallback.
+
+  The agent noted these existing ARIA layer rough edges, which are
+  independent of the backend:
+  - the unnamed-looking `textbox "Text entry"` (eframe's text agent);
+  - two `tablist "Workspace panes"` elements with the same name;
+  - a region and a listbox both named "Records";
+  - option names that join title, category and review state;
+  - textbox `textContent()` being empty (`inputValue()` works).
+- **WASM size** (production package, against `a346980`, the main before
+  increment 1, so the figures include both increments): the Lab
+  is +22,438 B raw (+0.19%) and +3,929 B Brotli (+0.13%). The Gallery, tile
+  worker and viewer are as in increment 1.
+
 ## Delivery
 
 | Increment | Scope | Status |
 | --- | --- | --- |
-| 1 | Host policy and override, reporting (`hello`, canvas, startup, Lab Diagnostics), JavaScript gates removed, Record Desk and Gallery WebGL2 stage, startup smoke cases, README and browser startup guide | In review |
-| 2 | Lab image renderer on WebGL2 with tests, honest capability text, composition guides, Firefox check, General-agent probe, WASM size and startup evidence, plan closeout | Planned |
+| 1 | Host policy and override, reporting (`hello`, canvas, startup, Lab Diagnostics), JavaScript gates removed, Record Desk and Gallery WebGL2 stage, startup smoke cases, README and browser startup guide | Landed |
+| 2 | Lab image renderer on WebGL2 with tests, honest capability text, composition guides, Firefox check, General-agent probe, WASM size evidence, plan closeout | Complete |
+
+## Closeout
+
+Every `AppHost` application starts on WebGL2 when WebGPU is missing, has no
+adapter or fails to start, with no application code. Where WebGPU works it
+keeps the same backend, output and startup times. The only visible change
+there is that diagnostics now name the backend (`wgpu webgpu` in place of
+`WebGPU/WGPU`). The Lab's image renderer needed no WebGL2 changes.
+`stobie-render-wgpu` remains one wgpu renderer for both backends, so the
+deferred rename stays deferred.
+
+Later work, outside this plan:
+- Firefox plain clicks can miss the one-pixel ARIA hit targets.
+- The rough edges in the ARIA tree that the probe found.
+- An unknown-value fallback for `RendererSelection`, so a future selection
+  stays additive for older clients.
+- The single uncaptured WebGL2 CLI parity mismatch, should it recur.

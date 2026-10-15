@@ -138,9 +138,26 @@ Both backends render the same output on Chromium, text and colour included,
 because both configure an `Rgba8Unorm` surface and egui applies its own gamma.
 Rasterisers can differ by a few levels per channel; the startup smoke checks
 the stated tolerance. Software WebGL2 through ANGLE and SwiftShader is slower than
-hardware, and WebGL2 offers no GPU timing. The Emuella viewer is not on
+hardware, and WebGL2 offers no GPU timing. The Lab's scalar image renderer
+runs on both backends unchanged; see the
+[image composition guide](image-application-composition.md). The Emuella viewer is not on
 `AppHost`: its bootstrap passes `requireWebGpu` to `startApplication` and
 still fails without `navigator.gpu`.
+
+## Firefox
+
+`node tools/record-desk-firefox.mjs` runs Record Desk in Playwright's pinned
+Firefox and operates it through the ARIA layer: select a record, set its
+notes, Apply and Undo. Install Firefox with `npx playwright install --with-deps
+firefox`, then run the check headful with `STOBIE_FIREFOX_HEADFUL=1` and a
+`DISPLAY`, because headless Firefox offers no WebGL2. Firefox 153 on Linux has
+no `navigator.gpu`, so Record Desk starts on its WebGL2 fallback.
+
+Playwright's Firefox clicks at whole CSS pixels, and the ARIA layer's hit
+target is one CSS pixel at the control's centre. A plain `locator.click()`
+can therefore land beside it and reach the canvas instead. The check activates
+controls with `element.click()`, the layer's assistive technology route.
+`cargo xtask verify` installs only Chromium and does not run this check.
 
 ## Finite milestones
 
@@ -214,20 +231,23 @@ offer WebGPU, so smokes also open pages through `rendererUrl()`, which adds
 `?renderer=webgl2`. `assertBrowserRenderer(page)` checks the canvas's reported
 backend, so a WebGPU run cannot pass for a WebGL2 one. The `webgl2`
 verification stage runs these on WebGL2:
-- the Gallery and Record Desk browser smokes;
+- the Lab, Gallery and Record Desk browser smokes;
 - their ARIA layer checks;
+- the Lab's browser interface journey;
 - Record Desk's browser CLI parity.
 
 Besides the WebGPU startup checks, the startup smoke starts the Lab and the
-Gallery on WebGL2 in three ways:
+Gallery on WebGL2 in four ways:
 - **fallback:** without `navigator.gpu`;
+- **no-adapter fallback:** with `requestAdapter()` returning null;
 - **device fallback:** with `requestDevice` rejected;
 - **forced:** with `?renderer=webgl2`.
 
 Each run checks the reported backend, selection and reason, that the
 submission milestone is unavailable, and that there is still one canvas.
 `?renderer=webgpu` on the Gallery must start on WebGPU and report it as
-forced. The smoke also compares the Gallery's screenshots on both backends: at
+forced. The smoke also compares screenshots of the Gallery and of the Lab,
+image panes included, on both backends: at
 most 0.1% of pixels may differ by more than 8/255 in any channel. Local
 headless SwiftShader showed a largest difference of 1/255, and hosted headful
 CI one of 8/255, with no pixel beyond the threshold.
