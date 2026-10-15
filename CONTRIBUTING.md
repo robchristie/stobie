@@ -1,6 +1,9 @@
-# Stobie working rules
+# Contributing to Stobie
 
-## Boundaries
+These rules apply to every change to Stobie. `cargo xtask architecture` and the
+test suite enforce part of them; review covers the rest.
+
+## Crate boundaries
 
 - `stobie-core` owns what every application needs: the canonical dock tree,
   stable pane IDs, generic coordinates, virtualisation, repaint reasons and the
@@ -37,22 +40,12 @@
   scheduling work; reject stale generations.
 - Repaint only for a recorded reason. Never add an unconditional frame repaint.
 
-## Verification and instrumentation
+## Verification
 
 - Run focused tests and the relevant native/WASM build after each increment.
-- Instrument before optimising; profile a representative release scenario
-  before changing architecture for performance.
-- Keep diagnostics honest: report unavailable GPU timing as unavailable.
-- Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 - Full verification is `cargo xtask verify`. It must retain formatting, lint,
   tests, release native build, WASM build, architecture checks and browser smoke.
-- Never commit raw captures such as screenshots, logs or runtime observation
-  dumps. Write them under ignored `.tools/runtime/`, archive durable ones in
-  stobie-evidence and keep conclusions and permalinks in Markdown. Only small
-  protocols, receipts and result summaries that tools use or reports cite may
-  stay tracked. See [docs/evidence-archive.md](docs/evidence-archive.md).
-- Do not allocate the complete raster, one million result rows, or one hundred
-  thousand thumbnail widgets.
+- Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 
 For ordinary README, plan lifecycle prose and `docs/*-plan.md` closeout changes,
 `python3 tools/verify.py --base <comparison-commit>` is the scoped alternative.
@@ -63,8 +56,24 @@ Keep qualification reports, snapshots and evidence on the full surface. CI uses
 the same guard for pull requests and main pushes under the required `verify`
 check. Scope selection does not establish review, merge or acceptance evidence.
 
-## UI guidance
+## Evidence and captures
 
-- Start UI implementation and review from [docs/ui-guides/README.md](docs/ui-guides/README.md);
-  use the frozen [UI evaluation seed](docs/ui-evaluation-seed.md) for repeatable
-  component and semantic evidence.
+Never commit raw captures such as screenshots, logs or runtime observation
+dumps. Write them under ignored `.tools/runtime/`, archive durable ones in
+stobie-evidence and keep conclusions and permalinks in Markdown. Only small
+protocols, receipts and result summaries that tools use or reports cite may
+stay tracked. See [docs/evidence-archive.md](docs/evidence-archive.md).
+
+## Performance and diagnostics
+
+- Instrument before optimising; profile a representative release scenario
+  before changing architecture for performance.
+- Keep diagnostics honest: report unavailable GPU timing as unavailable.
+- Do not allocate the complete raster, one million result rows, or one hundred
+  thousand thumbnail widgets.
+
+## UI work
+
+Start UI implementation and review from [docs/ui-guides/README.md](docs/ui-guides/README.md);
+use the frozen [UI evaluation seed](docs/ui-evaluation-seed.md) for repeatable
+component and semantic evidence.
