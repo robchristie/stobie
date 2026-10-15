@@ -238,7 +238,7 @@ through to the canvas, so they always fail that test.
 | 1. Typed action arguments and set text, including `fill()` | Landed | [PR #78](https://github.com/robchristie/stobie/pull/78): protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
 | 2. Plain browser click and the semantic agreement check | Landed | [PR #79](https://github.com/robchristie/stobie/pull/79): projection tests for hit markers and semantic IDs; agreement unit tests for each field; agreement over every Gallery story, four Record Desk states and three Lab states, with no disagreement found; the ARIA check sweeps every visible enabled control for a centre hit, moves a real pointer over a hit target and plain-clicks controls in all three applications; the Lab, Gallery, icon, navigation and status-chip pointer, drag, wheel and keyboard smokes pass unchanged. Real Lantern `--strict` role/name clicks are recorded below. |
 | 3. Protocol crate extraction | Landed | [PR #80](https://github.com/robchristie/stobie/pull/80): `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
-| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Planned | |
+| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Complete | This PR: `stobie-client` and `stobie-cli` with unit tests against a scripted application; the CLI smoke runs the same scenarios through `stobie` and the Node client, natively and in the browser, and checks each command's output budget; `tools/application-cli.mjs` is retired; the native host replaces only a stale socket; fresh-agent probe findings and fixes are below. |
 
 Each increment lands through review in order, rebased on the previous merge.
 
@@ -285,6 +285,67 @@ Output per command, in bytes, from the CLI smoke against its budget:
 | `discover --json` | 10,376 / 49,152 | 35,347 / 98,304 |
 | `query --role result_row` / `query --role tab` | 1,121 / 4,096 | 390 / 2,048 |
 | `hello` | 126 / 512 | 139 / 512 |
+
+## Probe findings
+
+Fresh agents were given only the binaries and their help, and asked to find a
+Record Desk record, set its notes, choose its category, Apply, Save and Undo.
+In the first round, the native and browser `stobie` agents finished, and the
+Lantern-only agent finished every step except the notes. After the fixes
+below, a second round of browser `stobie` and Lantern-only agents finished
+every step: `stobie` on the first try, and Lantern with role and name targets
+throughout.
+
+Fixed:
+
+- A text field took no pointer, so Lantern reported it occluded. An editable
+  field is now its own hit target, clipped to its centre pixel, and its input
+  there reaches the canvas like any other hit target's.
+- A combo box's choice was readable only as its description. Its `value` is
+  now the selected option's label.
+- A receipt listed only changed facts, so a combo choice, a search or a no-op
+  looked the same. It now also lists nodes whose name, state or value
+  changed, were added or were removed, or says that nothing changed.
+- Agents guessed what a text argument meant. `discover` and the missing-value
+  error now give the capability's description, and a choice accepts its
+  label.
+- Wording fixes:
+  - `--include-text` provides layout measurements, not strings.
+  - `capabilities` describes the output envelope, not output schemas, and its
+    JSON is printed indented.
+  - For a browser session, `stop` detaches.
+  - `--page` must already carry `?automation=1`.
+  - The list of empty sessions now mentions `attach`.
+  - A missing dispatcher may mean the application failed to start.
+  - A timed-out value wait says what the node holds.
+  - `--pane` matches only a node's own pane.
+  - Usage lines now show `set-text -` and `invoke --expected`.
+
+Environment: in the first round, typing through Lantern did not land because
+the probe's Chromium ran without the font configuration that the
+repository's browser wrappers provide. Chromium's editable elements accept no
+inserted text without a usable font. Lantern-managed Chromium could not run
+Record Desk here, because its WebGPU mode needs GPU passthrough and the host's
+NVIDIA CDI specification is stale. The probes therefore used the
+repository's WebGPU Chromium launch with a DevTools port, which Lantern drove
+as an external endpoint.
+
+Not changed:
+
+- Lantern's `accessibility` and `dom` output omits states and values, which
+  the layer does publish (`aria-disabled`, `aria-pressed`, `aria-selected`,
+  field values). Lantern has no modifier keys, so it cannot select all or
+  reach shortcuts. Both are outside this work.
+- After a click focuses a text field, eframe's text agent shares the field's
+  name for screen readers, so a role/name target for that field is ambiguous
+  until focus leaves. Typing by role and name without clicking first, or
+  using `data-stobie-id`, works. The accessibility guide documents this.
+- Record Desk's own presentation:
+  - Its saved or unsaved state is shown only as text.
+  - Its category popup is a set of radio buttons, as egui draws it.
+  - Its search field's name differs from its visible label.
+  - Its rows select through the `record-desk.select-record` capability rather
+    than a binding on each row.
 
 ## Semantic agreement findings
 
