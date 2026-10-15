@@ -116,9 +116,9 @@ Lab, Gallery and Record Desk handles need no change.
   unavailable on WebGL2, taking the rendering opportunity straight after the
   CPU UI handoff, as it already does when the hook cannot be installed.
 - **Lab Diagnostics.** Backend, adapter and selection come from the host's
-  identity. Platform no longer claims WebGPU, and GPU timestamps stay
-  unavailable. The scalar renderer's capability text still says WebGPU until
-  increment 2 makes it name the real backend.
+  identity. Platform no longer claims WebGPU, the scalar renderer's
+  capability text names the running backend, and GPU timestamps stay
+  unavailable.
 - **Applications.** `renderer_identity(&egui::Context)` lets an application
   read the identity, as the Lab does.
 
@@ -165,7 +165,7 @@ Lab, Gallery and Record Desk handles need no change.
 ### Image renderer
 
 The probe found the scalar renderer working on GL without changes. Increment
-2 adds the proof:
+2 added the proof (see its evidence below):
 - the Lab's browser smoke on WebGL2, checking draws, residency and a pixel
   readback of an image pane against the WebGPU run;
 - its ARIA and application-interface checks;
@@ -210,6 +210,59 @@ SwiftShader. Raw results stay under ignored `.tools/runtime/`.
   the `webgl2` stage. Browser CLI parity on WebGL2 passed 14 of 15 local runs.
   The first run failed once with a parity mismatch whose detail was not
   captured; it did not recur in 14 further WebGL2 runs and 3 WebGPU runs.
+
+## Increment 2 evidence
+
+Measured locally on 2026-10-15. Raw results stay under ignored
+`.tools/runtime/`.
+
+- **Image renderer outcome: works on WebGL2 unchanged.** The scalar
+  renderer's `R16Uint` upload and `textureLoad` sampling run on wgpu's GL
+  backend within WebGL2's downlevel limits. The only renderer change names the
+  backend in its capability text (`wgpu webgl2; scalar=R16Uint; …`). No
+  declared WebGPU requirement is needed.
+- **Image tests.** On WebGL2, the `webgl2` stage passes:
+  - the Lab's full browser smoke: default image panes, pan raster change,
+    display and appearance controls, uploads, polygons, thumbnails,
+    persistence, narrow layouts and idle;
+  - its ARIA layer check;
+  - its browser interface journey.
+
+  The startup smoke's Lab comparison, image panes included, found 0 of
+  1,296,000 pixels beyond tolerance, with a maximum difference of 0/255. It
+  also checks the WebGL2 capability text.
+- **Fallback without an adapter.** The startup smoke now also starts the Lab
+  and the Gallery with `requestAdapter()` returning null. Both report
+  "WebGPU returned no adapter".
+- **Firefox.** Playwright 1.62.1's pinned Firefox 153 does not start on this
+  host, which lacks GTK 3. It does start in the repository's Arch-based Orca
+  container (see the workspace's local-host notes). Headful, it has no
+  `navigator.gpu` and offers WebGL2, so Record Desk started on its fallback.
+  `tools/record-desk-firefox.mjs` then selected a record, set its notes, and
+  applied and undid the edit through the ARIA layer.
+
+  Playwright's Firefox clicks at whole CSS pixels. These clicks can miss the
+  layer's one-pixel hit target: at Apply's centre (418.35, 477.80), the
+  rounded point hit the target, and the floor and ceiling points hit the
+  canvas. The check therefore activates controls with `element.click()`.
+  Chromium's fractional clicks are unaffected. This is an ARIA layer and
+  Firefox limitation, independent of the backend.
+- **General-agent probe.** A fresh agent with only Playwright and the page URL
+  operated Record Desk on forced WebGL2 in Chromium entirely through role and
+  name locators. It selected "Prepare review agenda", filled "Record notes",
+  then used plain `click()` on Apply and on Undo. It needed two scripts, with
+  no coordinate fallback.
+
+  The agent noted these existing ARIA layer rough edges, which are
+  independent of the backend:
+  - the unnamed-looking `textbox "Text entry"` (eframe's text agent);
+  - two `tablist "Workspace panes"` elements with the same name;
+  - a region and a listbox both named "Records";
+  - option names that join title, category and review state;
+  - textbox `textContent()` being empty (`inputValue()` works).
+- **WASM size** (branch against main `a346980`, production package): the Lab
+  is +22,438 B raw (+0.19%) and +3,929 B Brotli (+0.13%). The Gallery, tile
+  worker and viewer are as in increment 1.
 
 ## Delivery
 

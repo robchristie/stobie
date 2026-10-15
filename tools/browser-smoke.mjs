@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
-import { hostedLinuxWebGpuLaunchOptions } from './browser-launch.mjs';
+import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererFlags, rendererUrl } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { assertFrozenResultTarget, firstResultRowTarget, resolveResultRowTarget,
   resultSelectionConfirmed, waitForStableResultTarget } from './lab-result-selection.mjs';
@@ -17,7 +17,7 @@ await mkdir(evidenceRoot, { recursive: true });
 const mime = new Map([['.html', 'text/html'], ['.js', 'text/javascript'], ['.css', 'text/css'], ['.wasm', 'application/wasm']]);
 const server = createServer(async (request, response) => {
   try {
-    const relative = request.url === '/' ? 'index.html' : request.url.slice(1).split('?')[0];
+    const relative = new URL(request.url, 'http://local').pathname.slice(1) || 'index.html';
     const path = normalize(join(root, relative));
     if (!path.startsWith(root) || !(await stat(path)).isFile()) throw new Error('not found');
     response.writeHead(200, { 'Content-Type': mime.get(extname(path)) ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
@@ -39,14 +39,14 @@ const headlessShell = process.env.STOBIE_CHROMIUM ?? join(
   'chrome-headless-shell-linux64',
   'chrome-headless-shell',
 );
-const browserFlags = [
+const browserFlags = rendererFlags([
   '--headless',
   '--no-sandbox',
   '--enable-unsafe-webgpu',
   '--enable-features=Vulkan,CDPScreenshotNewSurface',
   '--use-angle=vulkan',
   '--disable-vulkan-surface',
-];
+]);
 let browser;
 let browserProcess;
 let browserProfile;
@@ -134,8 +134,9 @@ const captureX11Root = async (path) => {
 };
 
 try {
-  await page.goto('http://127.0.0.1:4173', { waitUntil: 'domcontentloaded' });
+  await page.goto(rendererUrl('http://127.0.0.1:4173/'), { waitUntil: 'domcontentloaded' });
   await page.locator('#stobie-canvas[data-stobie-ready="true"]').waitFor({ timeout: 30_000 });
+  await assertBrowserRenderer(page, '#stobie-canvas');
   await page.waitForFunction(() => {
     const diagnostics = window.__STOBIE_DIAGNOSTICS;
     return Number(document.querySelector('#stobie-canvas')?.dataset.workerCompletions ?? 0) > 0 && diagnostics?.runtime?.in_flight === 0 && diagnostics?.render?.draw_calls > 0;

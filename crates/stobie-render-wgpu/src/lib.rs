@@ -305,6 +305,14 @@ pub struct ScalarRenderer {
     source_generation: Option<u64>,
 }
 
+/// The backend as diagnostics name it: wgpu's GL backend is WebGL2 in a browser.
+fn backend_name(backend: wgpu::Backend) -> &'static str {
+    match backend {
+        wgpu::Backend::Gl if cfg!(target_arch = "wasm32") => "webgl2",
+        other => other.to_str(),
+    }
+}
+
 impl ScalarRenderer {
     /// Create resources using the host's device and render-target format.
     /// Share the matching bridge with the application; do not create a renderer
@@ -389,7 +397,8 @@ impl ScalarRenderer {
         {
             let mut state = bridge.0.lock();
             state.metrics.capability_profile = format!(
-                "WebGPU/WGPU; scalar=R16Uint; target={target_format:?}; timestamps=unavailable"
+                "wgpu {}; scalar=R16Uint; target={target_format:?}; timestamps=unavailable",
+                backend_name(device.adapter_info().backend)
             );
         }
         Self {
@@ -712,6 +721,14 @@ fn viridis(t: f32) -> vec3<f32> {
 mod tests {
     use super::*;
     use stobie_imaging::{ImagePoint, SourceId};
+
+    #[test]
+    fn capability_text_names_the_running_backend() {
+        assert_eq!(backend_name(wgpu::Backend::BrowserWebGpu), "webgpu");
+        assert_eq!(backend_name(wgpu::Backend::Vulkan), "vulkan");
+        // Native GL keeps wgpu's name; only a browser's GL backend is WebGL2.
+        assert_eq!(backend_name(wgpu::Backend::Gl), "gl");
+    }
 
     fn key(x: u32) -> TileKey {
         TileKey {

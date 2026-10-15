@@ -41,11 +41,15 @@ async function restoredNonImageLayout(browser, url) {
   } finally { await context.close(); }
 }
 
-// WebGPU unavailable in three ways, each starting on WebGL2.
+// WebGPU unavailable in four ways, each starting on WebGL2.
 const webgl2Cases = {
   fallback: {
     init: () => Object.defineProperty(navigator, 'gpu', { value: undefined }),
     selection: 'fallback', reason: /^WebGPU is unavailable \(no navigator\.gpu\)$/,
+  },
+  'no-adapter': {
+    init: () => { GPU.prototype.requestAdapter = async () => null; },
+    selection: 'fallback', reason: /^WebGPU returned no adapter$/,
   },
   device: {
     init: () => { GPUAdapter.prototype.requestDevice = () => Promise.reject(new Error('smoke: device refused')); },
@@ -80,8 +84,9 @@ const failureSpecs = {
 };
 const failureCases = { lab: ['neither', 'worker'], gallery: ['neither', 'override', 'forced-webgpu'], viewer: ['webgpu', 'worker'] };
 
-// The Gallery renders the same pixels on both backends: both use an Rgba8Unorm
-// surface with egui's own gamma. Allow a little rasteriser variation.
+// The Gallery and the Lab, image panes included, render the same pixels on both
+// backends: both use an Rgba8Unorm surface with egui's own gamma. Allow a little
+// rasteriser variation.
 const VISUAL_TOLERANCE = { channel: 8, fraction: 0.001 };
 async function backendScreenshot(browser, url) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -89,14 +94,29 @@ async function backendScreenshot(browser, url) {
     const page = await context.newPage();
     await page.goto(url);
     await page.waitForFunction(() => window.__STOBIE_STARTUP?.failure || window.__STOBIE_STARTUP?.status === 'ready', null, { timeout: 60000 });
+    // The Lab's image panes are compared once every visible tile is resident.
+    if (url.includes('/lab/')) await page.waitForFunction(() => {
+      const d = window.__STOBIE_DIAGNOSTICS;
+      return d?.runtime.in_flight === 0 && d.render.draw_calls > 0 && d.render.pending_upload_bytes === 0;
+    }, null, { timeout: 60000 });
     await page.mouse.move(1439, 899);
     await page.waitForTimeout(1000);
     return { backend: await page.locator('canvas').getAttribute('data-stobie-renderer'), png: await page.screenshot() };
   } finally { await context.close(); }
 }
+async function labCapability(browser, url) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  try {
+    const page = await context.newPage();
+    await page.goto(url);
+    await page.waitForFunction(() => window.__STOBIE_DIAGNOSTICS?.render.draw_calls > 0, null, { timeout: 60000 });
+    return await page.evaluate(() => window.__STOBIE_DIAGNOSTICS.render.capability_profile);
+  } finally { await context.close(); }
+}
 async function compareBackends(browser, url) {
   const webgpu = await backendScreenshot(browser, url);
   const webgl2 = await backendScreenshot(browser, `${url}?renderer=webgl2`);
+  if (url.includes('/lab/')) assert.equal(await labCapability(browser, `${url}?renderer=webgl2`), 'wgpu webgl2; scalar=R16Uint; target=Rgba8Unorm; timestamps=unavailable');
   assert.deepEqual([webgpu.backend, webgl2.backend], ['webgpu', 'webgl2']);
   const context = await browser.newContext();
   try {
@@ -174,9 +194,9 @@ try {
         console.log(`Startup complete: ${basePath}${app}/`);
       }
       if (basePath === '/') await restoredNonImageLayout(browser, `http://127.0.0.1:${server.address().port}/lab/`);
-      if (basePath === '/') {
-        const visual = await compareBackends(browser, `http://127.0.0.1:${server.address().port}/gallery/`);
-        console.log(`Gallery WebGPU and WebGL2 agree: ${visual.differing} of ${visual.pixels} pixels differ by more than ${VISUAL_TOLERANCE.channel}/255 (maximum ${visual.maximum})`);
+      if (basePath === '/') for (const app of ['gallery', 'lab']) {
+        const visual = await compareBackends(browser, `http://127.0.0.1:${server.address().port}/${app}/`);
+        console.log(`${app} WebGPU and WebGL2 agree: ${visual.differing} of ${visual.pixels} pixels differ by more than ${VISUAL_TOLERANCE.channel}/255 (maximum ${visual.maximum})`);
       }
       {
         // Forcing the preferred backend keeps WebGPU and says it was forced.

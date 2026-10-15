@@ -169,6 +169,17 @@ tiles and is not an arbitrary image decoder.
    work. Retry backpressure while work is pending. Stop repainting when idle;
    never add an unconditional repaint loop.
 
+The scalar renderer runs on whichever backend the host started, with no
+application code: WebGPU, or WebGL2 through wgpu's GL backend when the
+[browser host](browser-startup.md#renderer-backends) falls back. It uploads
+`R16Uint` tiles and samples them with `textureLoad`, needs no extra features,
+storage buffers or compute, and fits WebGL2's downlevel limits. Its
+diagnostics capability text names the backend, for example `wgpu webgl2`, and
+GPU timestamps stay unavailable. The Lab's browser smoke, ARIA layer check and
+interface journey run on WebGL2 in the `webgl2` verification stage. The
+startup smoke compares the Lab's image panes on both backends against the same
+tolerance as the Gallery.
+
 The application update owns mutable model/runtime state; workers exchange
 owned messages and renderer callbacks own GPU mutation. `RenderBridge` clones
 share synchronised hand-off/acknowledgement queues. These are public composition
