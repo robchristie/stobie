@@ -48,8 +48,29 @@ snapshot, is the source.
   Each element is absolutely positioned at its node's bounds, so a pointer at
   an element's centre reaches the canvas and the same control. A node's
   `author_id`, which Stobie recipes set to the semantic ID, becomes the element
-  ID `stobie-a11y:<semantic ID>`. Unnamed layout containers are flattened into
+  ID `stobie-a11y:<semantic ID>` and its `data-stobie-id`, the ID the
+  inspection interface uses. Unnamed layout containers are flattened into
   their parent.
+- **Hit targets.** An enabled control with a click action (not a text field)
+  is marked `data-stobie-hit` and holds a one-pixel element at its centre that
+  takes pointer input. egui reports a widget's whole rectangle, even where a
+  list, scroll area or pane clips it, so only a control whose centre is
+  visible within those has one. A control whose centre the visible part of a
+  later control also covers has none either, because egui would give that
+  control the click; a
+  dock splitter's grab area, registered before its panes, lies beneath them. Playwright's default `click()` and Lantern's strict
+  role/name targets hit-test that centre, so they now reach the control. The
+  layer dispatches every pointer, mouse, touch, wheel and context-menu event
+  that lands on the pixel to the canvas again, at the same coordinates, with
+  hit targets briefly disabled so eframe's own hit test finds the canvas. It
+  stops the canvas hearing that the pointer left. File drags and drops are
+  forwarded too. egui therefore receives the same input as without the layer:
+  a click there is a physical click, and hover, drags and wheel starting there
+  behave as before. Over that pixel the cursor keeps the default shape rather
+  than egui's; Safari's trackpad gesture events are not forwarded; and a touch
+  that starts there stops reaching the canvas if its control's element is
+  removed mid-touch. A popup or menu drawn over a control does not remove its
+  target, so close popups before plain-clicking controls beneath them.
 - **Updates.** Each pass is diffed with the previous one by element ID. Only
   changed attributes, text, geometry and child order are written, and a pass
   whose tree is unchanged writes nothing. Hover repaints, for example, write
@@ -60,8 +81,8 @@ snapshot, is the source.
   screen readers pass keys to egui, which handles Tab, arrows and shortcuts.
   The layer can still be read in browse mode. Destroying the host removes the
   layer and restores the canvas.
-- **Activation.** A `click` event on a layer element becomes an AccessKit click
-  request for its node on egui's next pass. That covers a screen reader's
+- **Activation.** A `click` event on a layer element (not on its hit target)
+  becomes an AccessKit click request for its node on egui's next pass. That covers a screen reader's
   default action, `element.click()` and Playwright's `dispatchEvent('click')`.
   Native assistive technology uses the same route. egui clicks only an enabled
   widget that senses clicks, and a triggered action still rechecks its
@@ -133,6 +154,11 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 - hover frames write nothing;
 - a coordinate click at an element's centre changes the same control and
   writes fewer changes than the layer has elements;
+- every enabled clickable control shown on the canvas is the topmost element
+  at its centre, as Lantern computes it, and the canvas receives a real
+  pointer's moves at a hit target without hearing it leave;
+- a plain Playwright `click()` activates enabled controls in each
+  application;
 - activation through a click event, `element.click()` and Playwright's forced
   coordinate click gives the same outcome as a physical click. In Record Desk
   this is confirmed through application-interface facts. A disabled control

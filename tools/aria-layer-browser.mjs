@@ -6,7 +6,8 @@
 //
 // It then activates controls through the layer (a click event, as a screen
 // reader's default action sends; `element.click()`; and Playwright's forced
-// coordinate click) and checks focus reporting. Where an application exposes
+// coordinate click), checks that a plain Playwright click hits an enabled
+// control's one-pixel target, and checks focus reporting. Where an application exposes
 // its handle, the outcome is read through the application interface, which
 // the check enables on the running page only after the structural, idle and
 // hover checks, so those see the default page.
@@ -97,6 +98,80 @@ try {
   const check = (name, details = {}) => report.checks.push({ name, ...details });
 
   await settle('startup');
+  // Every enabled clickable control shown on the canvas has a one-pixel hit
+  // target at its centre (where Lantern and Playwright click), and only a
+  // shown control has one. The pixel is the topmost element there, lies
+  // inside every list and region that encloses its control, and over no
+  // other control: egui reports a widget's whole rectangle even where a list
+  // clips it, so a pixel outside its list would sit over something else. A
+  // control whose centre a later (topmost) control's box also covers has
+  // none; an earlier one, such as a dock splitter's grab area beneath its
+  // panes, does not contest it.
+  async function sweepHitTargets(label) {
+    const sweep = await page.evaluate(layer => {
+      const clickable = ['button', 'tab', 'option', 'radio', 'checkbox', 'switch', 'menuitem', 'combobox', 'link'];
+      const clipping = ['listbox', 'list', 'grid', 'tree', 'tabpanel', 'region'];
+      const result = { targets: 0, outside: 0, contested: [], occluded: [], unmarked: [], hidden: [], overlapping: [] };
+      const container = document.querySelector(layer);
+      const inside = (rect, x, y) => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      const targets = [...container.querySelectorAll('[data-stobie-hit]')];
+      // Where a later control (egui's topmost) overlaps a control's centre,
+      // that control offers no pixel.
+      const interactive = [...container.querySelectorAll('[role]')].filter(element => [...clickable, 'separator', 'slider', 'scrollbar'].includes(element.getAttribute('role')));
+      // egui clips a control's interaction to its lists and regions, so only
+      // the visible part of a later control can take the click.
+      const visibleBox = element => {
+        const box = element.getBoundingClientRect();
+        let [left, top, right, bottom] = [box.left, box.top, box.right, box.bottom];
+        const clips = [container];
+        for (let ancestor = element.parentElement; ancestor && ancestor !== container; ancestor = ancestor.parentElement) {
+          if (clipping.includes(ancestor.getAttribute('role'))) clips.push(ancestor);
+        }
+        for (const clip of clips) {
+          const rect = clip.getBoundingClientRect();
+          [left, top, right, bottom] = [Math.max(left, rect.left), Math.max(top, rect.top), Math.min(right, rect.right), Math.min(bottom, rect.bottom)];
+        }
+        return { left, top, right, bottom };
+      };
+      const contested = (element, x, y) => interactive.some(other => other !== element && !other.contains(element) && !element.contains(other)
+        && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(visibleBox(other), x, y));
+      for (const element of container.querySelectorAll('[role]')) {
+        const name = `${element.getAttribute('role')} ${element.getAttribute('aria-label') ?? ''}`;
+        const box = element.getBoundingClientRect();
+        // Lantern's point: the centre of the viewport-clipped border box.
+        const left = Math.max(box.left, 0), right = Math.min(box.right, innerWidth);
+        const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, innerHeight);
+        const [x, y] = [(left + right) / 2, (top + bottom) / 2];
+        let shown = right > left && bottom > top && inside(container.getBoundingClientRect(), x, y);
+        for (let ancestor = element.parentElement; shown && ancestor && ancestor !== container; ancestor = ancestor.parentElement) {
+          if (clipping.includes(ancestor.getAttribute('role'))) shown = inside(ancestor.getBoundingClientRect(), x, y);
+        }
+        const marked = element.hasAttribute('data-stobie-hit');
+        if (!shown) {
+          result.outside += 1;
+          if (marked) result.hidden.push(name);
+          continue;
+        }
+        if (!marked) {
+          if (contested(element, x, y)) result.contested.push(name);
+          else if (clickable.includes(element.getAttribute('role')) && element.getAttribute('aria-disabled') !== 'true') result.unmarked.push(name);
+          continue;
+        }
+        result.targets += 1;
+        if (!element.contains(document.elementFromPoint(x, y))) result.occluded.push(name);
+        const under = targets.find(other => other !== element && !other.contains(element) && !element.contains(other)
+          && (element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING) && inside(visibleBox(other), x, y));
+        if (under) result.overlapping.push(`${name} over ${under.getAttribute('role')} ${under.getAttribute('aria-label') ?? ''}`);
+      }
+      return result;
+    }, LAYER);
+    assert(sweep.targets > 0, `${label}: the layer offers hit targets`);
+    assert.deepEqual(sweep.hidden, [], `${label}: no control outside its list or region has a hit target`);
+    assert.deepEqual(sweep.occluded, [], `${label}: every hit target is the topmost element at its control's centre`);
+    assert.deepEqual(sweep.overlapping, [], `${label}: no hit target lies over another control`);
+    assert.deepEqual(sweep.unmarked, [], `${label}: every shown enabled clickable control has a hit target`);
+    check(label, { targets: sweep.targets, outside: sweep.outside, contested: sweep.contested });
+  }
   const tree = await accessibilityTree(page);
   await writeFile(resolve(evidence, 'ax-tree.json'), JSON.stringify(tree, null, 2));
 
@@ -181,16 +256,51 @@ try {
     assert.match(changed, new RegExp(then), 'the status reports the change');
     check('live status', { before: text, after: changed });
   }
+  // An ordinary pointer click needs a hit target at the element's centre:
+  // Playwright's actionability check and Lantern's strict targets both test
+  // `elementFromPoint` there. Every enabled clickable element has a
+  // one-pixel target, which forwards real input to the canvas.
+  await sweepHitTargets('hit targets');
+
+  // Real input at a hit target reaches the canvas unchanged: the canvas
+  // receives the pointer's moves and never hears that the pointer left.
+  {
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      window.__canvasInput = { moves: [], leaves: 0 };
+      canvas.addEventListener('pointermove', event => window.__canvasInput.moves.push([event.clientX, event.clientY]));
+      canvas.addEventListener('mouseleave', () => { window.__canvasInput.leaves += 1; });
+    });
+    const centre = await page.evaluate(layer => {
+      const element = document.querySelector(`${layer} [data-stobie-hit]`);
+      const box = element.querySelector('[data-stobie-hit-target]').getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }, LAYER);
+    before = await probe();
+    await page.mouse.move(centre.x - 3, centre.y);
+    await page.mouse.move(centre.x, centre.y);
+    await page.mouse.move(centre.x + 3, centre.y);
+    after = await settle('pointer over a hit target');
+    const input = await page.evaluate(() => window.__canvasInput);
+    assert(input.moves.some(([x, y]) => Math.abs(x - centre.x) < 0.5 && Math.abs(y - centre.y) < 0.5), `the canvas received the move onto the hit target: ${JSON.stringify(input.moves)}`);
+    assert.equal(input.leaves, 0, 'the canvas never heard the pointer leave');
+    assert.equal(after.mutations, before.mutations, 'pointer movement wrote nothing');
+    check('pointer at a hit target', { moves: input.moves.length });
+  }
+
   // Activation through the layer takes the same route as a physical click: a
   // disabled control does nothing, and a hidden capability has no element.
-  // A plain Playwright click cannot target a layer element: the pointer passes
-  // through to the canvas, as the agent guide documents.
-  if (expectations.plainClick) {
-    const { role, name } = expectations.plainClick;
-    const failure = await page.getByRole(role, { name, exact: true }).click({ timeout: 2000 }).then(() => null, error => error.message);
-    assert.match(failure ?? 'clicked', /intercepts pointer events/, 'a plain click reports the canvas intercepting it');
-    await settle('plain click');
-    check('plain click', { target: { role, name } });
+  // A plain Playwright click hits the control's target and activates it as a
+  // physical click at its centre does.
+  for (const step of expectations.plainClick ?? []) {
+    const { role, name } = step.target;
+    await page.getByRole(role, { name, exact: true }).click({ timeout: 5000 });
+    await settle(`plain click ${name}`);
+    const changed = await accessibilityTree(page);
+    for (const expected of step.then ?? []) {
+      assert(changed.some(node => matches(node, expected)), `after a plain click on ${name}, expected ${JSON.stringify(expected)}`);
+    }
+    check('plain click', { target: step.target });
   }
   let client;
   if (expectations.handle) {
@@ -301,6 +411,32 @@ try {
     await page.keyboard.press('Escape');
     assert(await page.evaluate(() => document.activeElement === document.querySelector('canvas')), 'Escape returns focus to the canvas');
     check('fill', { target: step.target, length: step.text.length, facts: step.facts });
+  }
+  // After scrolling, rows drawn nowhere take no pointer either.
+  if (expectations.scrolledSweep) {
+    const { click, wheel } = expectations.scrolledSweep;
+    await page.getByRole(click.role, { name: click.name, exact: true }).click();
+    await settle('scrolled sweep tab');
+    const list = await box(page, wheel);
+    await page.mouse.move(list.x, list.y);
+    await page.mouse.wheel(0, wheel.dy);
+    await settle('scrolled sweep wheel');
+    await sweepHitTargets('hit targets after scrolling');
+    // Rows scrolled out of a list do not take tabs' clicks: plain clicks on
+    // the tabs above a scrolled list still reach them.
+    for (const step of expectations.scrolledSweep.thenClick ?? []) {
+      if (step.wheel) {
+        const scrolled = await box(page, step.wheel);
+        await page.mouse.move(scrolled.x, scrolled.y);
+        await page.mouse.wheel(0, step.wheel.dy);
+        await settle('scroll before a plain click');
+      }
+      await page.getByRole(step.target.role, { name: step.target.name, exact: true }).click({ timeout: 5000 });
+      await settle(`plain click ${step.target.name} after scrolling`);
+      const changed = await accessibilityTree(page);
+      assert(changed.some(node => matches(node, { ...step.target, properties: { selected: true } })), `after scrolling, a plain click selects ${step.target.name}`);
+      check('plain click after scrolling', { target: step.target });
+    }
   }
   // Destroying the application removes the layer and restores the canvas.
   if (expectations.handle) {

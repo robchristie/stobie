@@ -721,7 +721,8 @@ mod tests {
     }
 
     /// Every story's AccessKit tree, which the browser ARIA layer mirrors,
-    /// agrees with its semantic snapshot.
+    /// agrees with its semantic snapshot, and so does the layer projected
+    /// from it.
     #[test]
     fn every_story_accesskit_tree_matches_its_semantic_snapshot() {
         for story in STORIES {
@@ -746,9 +747,15 @@ mod tests {
                 output.textures_delta.clear();
                 update = output.platform_output.accesskit_update.take();
             }
-            let findings =
-                stobie_ui_egui::audit_accesskit(host.ui_snapshot(), &update.expect("AccessKit"));
+            let update = update.expect("AccessKit");
+            let findings = stobie_ui_egui::audit_accesskit(host.ui_snapshot(), &update);
             assert!(findings.is_empty(), "{}: {findings:#?}", story.id.as_str());
+            let disagreements = stobie_ui_egui::semantic_agreement(host.ui_snapshot(), &update);
+            assert!(
+                disagreements.is_empty(),
+                "{}: {disagreements:#?}",
+                story.id.as_str()
+            );
         }
     }
 
