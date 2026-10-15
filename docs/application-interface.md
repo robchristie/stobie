@@ -335,13 +335,19 @@ snapshot. It offers nothing that a pointer or keyboard user cannot do.
 - Find controls with `page.getByRole(role, { name, exact: true })`. Names are
   the controls' accessible names, and states such as `pressed`, `selected` and
   `disabled` are ARIA states.
-- Activate a control with `locator.dispatchEvent('click')` or
-  `locator.evaluate(element => element.click())`. Either becomes an AccessKit
-  click, which egui handles as a click on that control. For a physical click
-  at the control's centre, use `locator.click({ force: true })`.
-- A plain `locator.click()` waits and then fails, reporting that the canvas
-  intercepts pointer events. Layer elements pass the pointer through to the
-  canvas, so they are never hit targets.
+- Activate an enabled control with `locator.click()`. Each enabled control
+  holds a one-pixel hit target at its centre, so the click is a physical
+  click there. `locator.dispatchEvent('click')` and `element.click()` become
+  an AccessKit click, which egui handles as a click on that control. A
+  disabled control has no hit target, so Playwright waits for it to be
+  enabled.
+- Lantern's role/name targets work the same way, for example
+  `lantern click --role button --name Apply --strict`. A name shared by two
+  controls, such as one tool button per image pane, is ambiguous; use
+  `--selector '[data-stobie-id="…"]'` instead.
+- Elements carry the stable semantic ID as `data-stobie-id`, so
+  `page.locator('[data-stobie-id="record-desk.apply"]')` finds the control the
+  inspection interface calls `record-desk.apply`.
 - Read a text field's value from the snapshot, for example
   `textbox "Record title": Survey notes`.
 - Edit text with `locator.fill(text)`, or `locator.focus()` and then

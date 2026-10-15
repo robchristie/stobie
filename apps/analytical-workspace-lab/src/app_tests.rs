@@ -410,20 +410,20 @@ fn a_preference_change_counts_one_repaint() {
     assert_eq!(preferences(&harness), before + 1);
 }
 
-/// The whole hosted Lab's AccessKit tree, which the browser ARIA layer mirrors,
-/// agrees with its semantic snapshot, including status and pane regions.
-#[test]
-fn hosted_accesskit_tree_matches_the_semantic_snapshot() {
+/// The whole hosted Lab's AccessKit tree, as kittest holds it.
+fn accesskit_tree(harness: &Harness<'_, Probe>) -> egui::accesskit::TreeUpdate {
     fn collect(
         node: egui_kittest::kittest::AccessKitNode<'_>,
         update: &mut egui::accesskit::TreeUpdate,
     ) {
+        if node.is_focused() {
+            update.focus = node.locate().0;
+        }
         update.nodes.push((node.locate().0, node.data().clone()));
         for child in node.children() {
             collect(child, update);
         }
     }
-    let harness = harness();
     let root = harness.kittest_state().root();
     let mut update = egui::accesskit::TreeUpdate {
         nodes: Vec::new(),
@@ -432,9 +432,89 @@ fn hosted_accesskit_tree_matches_the_semantic_snapshot() {
         focus: root.locate().0,
     };
     collect(root, &mut update);
+    update
+}
+
+/// The whole hosted Lab's AccessKit tree, which the browser ARIA layer mirrors,
+/// agrees with its semantic snapshot, including status and pane regions.
+#[test]
+fn hosted_accesskit_tree_matches_the_semantic_snapshot() {
+    let harness = harness();
+    let update = accesskit_tree(&harness);
     let snapshot = host(&harness).ui_snapshot();
     assert!(snapshot.by_role(UiRole::Status).count() >= 2);
     assert!(snapshot.by_role(UiRole::Pane).count() >= 2);
     let findings = stobie_ui_egui::audit_accesskit(snapshot, &update);
     assert!(findings.is_empty(), "{findings:#?}");
+}
+
+/// The ARIA layer projected from the AccessKit tree and the inspection
+/// snapshot agree in representative states.
+#[test]
+fn semantic_views_agree_across_representative_states() {
+    let mut harness = harness();
+    let check = |harness: &Harness<'_, Probe>, state: &str| {
+        let snapshot = host(harness).ui_snapshot();
+        let compared = snapshot
+            .nodes
+            .iter()
+            .filter(|node| stobie_ui_egui::expected_aria_role(node.role).is_some())
+            .count();
+        assert!(compared > 10, "{state}: {compared} nodes compared");
+        let disagreements = stobie_ui_egui::semantic_agreement(snapshot, &accesskit_tree(harness));
+        assert!(disagreements.is_empty(), "{state}: {disagreements:#?}");
+    };
+    check(&harness, "initial");
+    // Keyboard focus on a control.
+    for _ in 0..3 {
+        harness.key_press(egui::Key::Tab);
+        harness.run_steps(2);
+    }
+    assert!(
+        host(&harness)
+            .ui_snapshot()
+            .nodes
+            .iter()
+            .any(|node| node.focused)
+    );
+    check(&harness, "Tab focus");
+    // A selected result and the diagnostics pane.
+    harness.key_press(egui::Key::Escape);
+    let row = host(&harness)
+        .ui_snapshot()
+        .by_role(UiRole::ResultRow)
+        .nth(1)
+        .expect("a second result row")
+        .rect;
+    click(&mut harness, egui::Rect::from(row).center());
+    harness.run_steps(4);
+    assert!(
+        host(&harness)
+            .ui_snapshot()
+            .by_role(UiRole::ResultRow)
+            .any(|node| node.selected)
+    );
+    // Closing Diagnostics rearranges the dock.
+    let (_, expected) = discover(&harness, LabAction::ToggleDiagnostics, None);
+    let operation = InspectionOperation::Invoke {
+        selector: InspectionSelector {
+            capability: Some(LabAction::ToggleDiagnostics.stable_id().into()),
+            ..Default::default()
+        },
+        expected,
+        arguments: serde_json::Value::Null,
+    };
+    host(&harness)
+        .inspection()
+        .unwrap()
+        .handle(request(&harness, "close-diagnostics", operation));
+    harness.run_steps(4);
+    assert!(
+        host(&harness)
+            .app()
+            .workspace
+            .closed_optional_panes
+            .contains(&DIAGNOSTICS_PANE)
+    );
+    check(&harness, "selected result without diagnostics");
 }

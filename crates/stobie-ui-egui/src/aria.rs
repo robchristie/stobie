@@ -16,6 +16,15 @@ use egui::accesskit::{self, AriaCurrent, Live, Node, NodeId, Orientation, Role, 
 /// Prefix of every element ID the layer creates, kept apart from page IDs.
 pub const ARIA_ID_PREFIX: &str = "stobie-a11y:";
 
+/// The attribute carrying a node's semantic ID, which agents share with the
+/// inspection interface.
+pub const SEMANTIC_ID_ATTRIBUTE: &str = "data-stobie-id";
+
+/// Marks an enabled element that an ordinary pointer click can target. The
+/// browser host gives it a one-pixel hit target at its centre that forwards
+/// pointer input to the canvas.
+pub const HIT_ATTRIBUTE: &str = "data-stobie-hit";
+
 /// One element of the projected layer.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AriaElement {
@@ -89,6 +98,16 @@ pub enum DomOp {
 /// Project one AccessKit update. `scale` converts egui points to CSS pixels
 /// (egui's zoom factor on the web).
 pub fn project(update: &accesskit::TreeUpdate, scale: f32) -> AriaTree {
+    project_within(update, scale, None)
+}
+
+/// [`project`], showing only what lies within `viewport` (in points), such as
+/// the canvas, where egui's root carries no bounds.
+pub fn project_within(
+    update: &accesskit::TreeUpdate,
+    scale: f32,
+    viewport: Option<(f64, f64, f64, f64)>,
+) -> AriaTree {
     let nodes: HashMap<NodeId, &Node> = update.nodes.iter().map(|(id, node)| (*id, node)).collect();
     let mut tree = AriaTree::default();
     let Some(root) = update.tree.as_ref().map(|tree| tree.root) else {
@@ -103,12 +122,45 @@ pub fn project(update: &accesskit::TreeUpdate, scale: f32) -> AriaTree {
         tree: &mut tree,
         ids: HashMap::new(),
         used: BTreeSet::new(),
+        interactive: Vec::new(),
+        hits: Vec::new(),
     };
+    // Nothing outside the window is shown.
+    let window = root_node
+        .bounds()
+        .map(|bounds| (bounds.x0, bounds.y0, bounds.x1, bounds.y1))
+        .or(viewport);
     for child in root_node.children() {
-        projection.visit(*child, None, None);
+        projection.visit(*child, None, None, window);
     }
+    let hits = projection.hits;
+    let interactive = projection.interactive;
     // Relations name other nodes, so resolve them once every element exists.
     let ids = projection.ids;
+    // egui gives a click to the control registered last among those under
+    // the pointer, which comes later in the tree. A hit target whose centre a
+    // later control also covers would click that control instead, so it takes
+    // no pointer. An earlier one, such as a dock splitter's grab area that
+    // its panes' contents overlap, lies beneath it.
+    for (id, (x, y), order) in &hits {
+        let contested = interactive[order + 1..]
+            .iter()
+            .any(|(other, (x0, y0, x1, y1))| {
+                !is_ancestor(&tree, other, id)
+                    && !is_ancestor(&tree, id, other)
+                    && x0 <= x
+                    && x <= x1
+                    && y0 <= y
+                    && y <= y1
+            });
+        if contested {
+            tree.elements
+                .get_mut(id)
+                .expect("projected hit target")
+                .attributes
+                .remove(HIT_ATTRIBUTE);
+        }
+    }
     for (id, node) in &nodes {
         let Some(element_id) = ids.get(id) else {
             continue;
@@ -140,21 +192,28 @@ struct Projection<'a> {
     tree: &'a mut AriaTree,
     ids: HashMap<NodeId, String>,
     used: BTreeSet<String>,
+    /// Elements a pointer acts on, in tree order, with their bounds in points.
+    interactive: Vec<(String, (f64, f64, f64, f64))>,
+    /// Hit target candidates, with their centres in points and their index
+    /// in `interactive`.
+    hits: Vec<(String, (f64, f64), usize)>,
 }
 
 impl Projection<'_> {
     /// Visit `id` under the nearest kept ancestor `parent`, whose absolute
-    /// origin (in points) is `origin`.
-    fn visit(&mut self, id: NodeId, parent: Option<&str>, origin: Option<(f64, f64)>) {
+    /// origin (in points) is `origin`, within the visible area `clip` that
+    /// clipping ancestors leave (in points).
+    fn visit(&mut self, id: NodeId, parent: Option<&str>, origin: Option<(f64, f64)>, clip: Clip) {
         let Some(node) = self.nodes.get(&id).copied() else {
             return;
         };
         if node.is_hidden() {
             return;
         }
+        let clip = narrow(clip, node);
         if is_transparent(node) {
             for child in node.children() {
-                self.visit(*child, parent, origin);
+                self.visit(*child, parent, origin, clip);
             }
             return;
         }
@@ -197,6 +256,51 @@ impl Projection<'_> {
             attributes.insert("tabindex", "-1".to_owned());
             attributes.insert("autocomplete", "off".to_owned());
             attributes.insert("spellcheck", "false".to_owned());
+        } else if attributes.contains_key("role")
+            && node.supports_action(accesskit::Action::Click)
+            && !node.is_disabled()
+            && width > 0.0
+            && height > 0.0
+            && clip.is_none_or(|(x0, y0, x1, y1)| {
+                let (x, y) = (left + width / 2.0, top + height / 2.0);
+                x0 <= x && x <= x1 && y0 <= y && y <= y1
+            })
+        {
+            // A text field cannot hold the hit target's element; agents fill
+            // or focus it instead. egui reports a widget's whole rectangle,
+            // even where a list or scroll area clips it, so only a control
+            // whose centre is visible takes a pointer: elsewhere the pixel
+            // would sit over another control.
+            attributes.insert(HIT_ATTRIBUTE, "true".to_owned());
+            self.hits.push((
+                element_id.clone(),
+                (left + width / 2.0, top + height / 2.0),
+                self.interactive.len(),
+            ));
+        }
+        // egui clips a widget's interaction to its clip rectangle, so only the
+        // visible part of a control can take a click.
+        let visible = match clip {
+            None => Some((left, top, left + width, top + height)),
+            Some((x0, y0, x1, y1)) => {
+                let visible = (
+                    left.max(x0),
+                    top.max(y0),
+                    (left + width).min(x1),
+                    (top + height).min(y1),
+                );
+                (visible.0 < visible.2 && visible.1 < visible.3).then_some(visible)
+            }
+        };
+        if let Some(visible) = visible.filter(|_| width > 0.0 && height > 0.0)
+            && attributes.contains_key("role")
+            && (node.supports_action(accesskit::Action::Click)
+                || matches!(node.role(), Role::Splitter | Role::Slider | Role::ScrollBar))
+        {
+            self.interactive.push((element_id.clone(), visible));
+        }
+        if let Some(author) = node.author_id() {
+            attributes.insert(SEMANTIC_ID_ATTRIBUTE, author.to_owned());
         }
         self.tree.elements.insert(
             element_id.clone(),
@@ -226,7 +330,7 @@ impl Projection<'_> {
             return;
         }
         for child in node.children() {
-            self.visit(*child, Some(&element_id), Some((left, top)));
+            self.visit(*child, Some(&element_id), Some((left, top)), clip);
         }
     }
 
@@ -241,6 +345,51 @@ impl Projection<'_> {
         self.used.insert(candidate.clone());
         candidate
     }
+}
+
+/// Whether element `ancestor` contains element `id`.
+fn is_ancestor(tree: &AriaTree, ancestor: &str, id: &str) -> bool {
+    let mut current = tree
+        .elements
+        .get(id)
+        .and_then(|element| element.parent.as_deref());
+    while let Some(parent) = current {
+        if parent == ancestor {
+            return true;
+        }
+        current = tree
+            .elements
+            .get(parent)
+            .and_then(|element| element.parent.as_deref());
+    }
+    false
+}
+
+/// A visible area in points: `(x0, y0, x1, y1)`, or `None` for no clip.
+type Clip = Option<(f64, f64, f64, f64)>;
+
+/// Narrow `clip` to a node that clips its descendants: a scroll area, list,
+/// pane or region shows only what lies within its bounds.
+fn narrow(clip: Clip, node: &Node) -> Clip {
+    let clips = matches!(
+        node.role(),
+        Role::ScrollView
+            | Role::ListBox
+            | Role::List
+            | Role::Grid
+            | Role::Tree
+            | Role::Pane
+            | Role::Region
+            | Role::TabPanel
+    );
+    let Some(bounds) = node.bounds().filter(|_| clips) else {
+        return clip;
+    };
+    let own = (bounds.x0, bounds.y0, bounds.x1, bounds.y1);
+    Some(match clip {
+        None => own,
+        Some((x0, y0, x1, y1)) => (x0.max(own.0), y0.max(own.1), x1.min(own.2), y1.min(own.3)),
+    })
 }
 
 /// Unnamed layout containers add nothing for assistive technology, so their

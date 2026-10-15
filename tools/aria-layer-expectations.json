@@ -335,10 +335,38 @@
         "fact": "draft_title"
       }
     },
-    "plainClick": {
-      "role": "button",
-      "name": "Save"
-    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "button",
+          "name": "Reviewed"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "false"
+            }
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "button",
+          "name": "Reviewed"
+        },
+        "then": [
+          {
+            "role": "button",
+            "name": "Reviewed",
+            "properties": {
+              "pressed": "true"
+            }
+          }
+        ]
+      }
+    ],
     "fill": [
       {
         "target": {
@@ -497,7 +525,46 @@
     ],
     "focus": {
       "tabs": 3
-    }
+    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "tab",
+          "name": "Primary image — Antarctic reconstruction sector 04"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Primary image — Antarctic reconstruction sector 04",
+            "properties": {
+              "selected": true
+            }
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "tab",
+          "name": "Overview"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Overview",
+            "properties": {
+              "selected": true
+            }
+          },
+          {
+            "role": "tab",
+            "name": "Primary image — Antarctic reconstruction sector 04",
+            "properties": {
+              "selected": false
+            }
+          }
+        ]
+      }
+    ]
   },
   "lab": {
     "application": "Analytical Workspace Lab",
@@ -714,6 +781,75 @@
     ],
     "focus": {
       "tabs": 3
+    },
+    "plainClick": [
+      {
+        "target": {
+          "role": "tab",
+          "name": "Thumbnails"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Thumbnails",
+            "properties": {
+              "selected": true
+            }
+          }
+        ]
+      },
+      {
+        "target": {
+          "role": "tab",
+          "name": "Results"
+        },
+        "then": [
+          {
+            "role": "tab",
+            "name": "Results",
+            "properties": {
+              "selected": true
+            }
+          },
+          {
+            "role": "tab",
+            "name": "Thumbnails",
+            "properties": {
+              "selected": false
+            }
+          }
+        ]
+      }
+    ],
+    "scrolledSweep": {
+      "click": {
+        "role": "tab",
+        "name": "Thumbnails"
+      },
+      "wheel": {
+        "role": "listbox",
+        "name": "Thumbnails",
+        "dy": 40
+      },
+      "thenClick": [
+        {
+          "target": {
+            "role": "tab",
+            "name": "Results"
+          }
+        },
+        {
+          "wheel": {
+            "role": "listbox",
+            "name": "Results",
+            "dy": 80
+          },
+          "target": {
+            "role": "tab",
+            "name": "Thumbnails"
+          }
+        }
+      ]
     }
   }
 }

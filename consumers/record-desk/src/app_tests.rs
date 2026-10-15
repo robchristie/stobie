@@ -456,3 +456,85 @@ fn set_text_edits_notes_as_typing_would() {
     );
     assert_eq!(host.app().desk.undo_len(), 1);
 }
+
+/// Present one pass and return its AccessKit tree.
+fn present_tree(
+    host: &mut RecordDeskApp,
+    context: &egui::Context,
+    width: f32,
+) -> egui::accesskit::TreeUpdate {
+    let mut output = context.run_ui(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(width, 760.0),
+            )),
+            ..Default::default()
+        },
+        |ui| host.present(ui),
+    );
+    output.textures_delta.clear();
+    output
+        .platform_output
+        .accesskit_update
+        .expect("automation enables AccessKit")
+}
+
+/// The ARIA layer projected from the AccessKit tree and the inspection
+/// snapshot agree in representative states.
+#[test]
+fn semantic_views_agree_across_representative_states() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = egui::Context::default();
+    let mut host = hosted(&context, &directory);
+    let check = |host: &mut RecordDeskApp, state: &str, width: f32| {
+        // Settle intents and focus before comparing the views of one pass.
+        for _ in 0..2 {
+            present(host, &context, width);
+        }
+        let update = present_tree(host, &context, width);
+        let snapshot = host.ui_snapshot();
+        let compared = snapshot
+            .nodes
+            .iter()
+            .filter(|node| expected_aria_role(node.role).is_some())
+            .count();
+        assert!(compared > 10, "{state}: {compared} nodes compared");
+        let disagreements = semantic_agreement(snapshot, &update);
+        assert!(disagreements.is_empty(), "{state}: {disagreements:#?}");
+    };
+    check(&mut host, "initial", 1080.0);
+    // Focused search field.
+    let search = target(&host, Action::Search);
+    invoke(&mut host, Action::Search, search, "search");
+    check(&mut host, "search focused", 1080.0);
+    assert!(
+        host.ui_snapshot()
+            .node(&SemanticUiId::new("record-desk.search"))
+            .unwrap()
+            .focused
+    );
+    // Filters and a dirty draft with a changed category.
+    let filters = Filters {
+        review: ReviewFilter::Unreviewed,
+        ..host.app().desk.filters().clone()
+    };
+    host.submit(Intent::Filters(filters));
+    let mut draft = host.app().desk.draft().unwrap().clone();
+    draft.category = Category::Ideas;
+    draft.notes = "Checked\nagainst the survey".into();
+    host.submit(Intent::Draft(draft));
+    check(&mut host, "filtered with a draft", 1080.0);
+    // Another record in the narrow, stacked layout.
+    let other = host
+        .app()
+        .desk
+        .visible()
+        .iter()
+        .map(|record| record.id)
+        .find(|id| Some(*id) != host.app().desk.draft().map(|draft| draft.id))
+        .unwrap();
+    perform(&mut host, Action::Cancel);
+    host.submit(Intent::Select(other));
+    check(&mut host, "narrow with another record", 560.0);
+}
