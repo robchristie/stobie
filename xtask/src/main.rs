@@ -170,9 +170,11 @@ fn architecture() -> Result<()> {
     ] {
         assert_tree_excludes_with(label, arguments, AGENT_TOOLING)?;
     }
-    // Inspection clients use the protocol without the UI framework.
-    assert_tree_excludes(
+    // Inspection clients use the protocol without the UI framework, whatever
+    // features are enabled.
+    assert_tree_excludes_with(
         "stobie-protocol",
+        &["-p", "stobie-protocol", "--all-features"],
         &[
             "egui",
             "eframe",

@@ -235,7 +235,7 @@ through to the canvas, so they always fail that test.
 | 0. README native Orca claim | Landed | [PR #77](https://github.com/robchristie/stobie/pull/77) |
 | 1. Typed action arguments and set text, including `fill()` | Landed | [PR #78](https://github.com/robchristie/stobie/pull/78): protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
 | 2. Plain browser click and the semantic agreement check | Landed | [PR #79](https://github.com/robchristie/stobie/pull/79): projection tests for hit markers and semantic IDs; agreement unit tests for each field; agreement over every Gallery story, four Record Desk states and three Lab states, with no disagreement found; the ARIA check sweeps every visible enabled control for a centre hit, moves a real pointer over a hit target and plain-clicks controls in all three applications; the Lab, Gallery, icon, navigation and status-chip pointer, drag, wheel and keyboard smokes pass unchanged. Real Lantern `--strict` role/name clicks are recorded below. |
-| 3. Protocol crate extraction | Complete | This PR: `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
+| 3. Protocol crate extraction | Landed | [PR #80](https://github.com/robchristie/stobie/pull/80): `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
 | 4. Client library, `stobie` CLI, parity tests, documentation and probes | Planned | |
 
 Each increment lands through review in order, rebased on the previous merge.
@@ -250,7 +250,7 @@ local pair from `cargo xtask verify`, so it shows only that the gates pass.
 | Baseline `b3abff7` | 2,960,391 B | 2,834,735 B | 171.1 / 125.4 ms | 94.2 / 66.0 ms |
 | 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
 | 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
-| 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.49%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
+| 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.48%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
 
 ## Lantern strict targets
 

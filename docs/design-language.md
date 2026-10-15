@@ -75,7 +75,8 @@ Consumers resolve `DesignTokens::with_typography_profile` and apply matching
 native styles with `apply_design_system_with_typography`. Native egui heading,
 body, button, small and monospace styles use the same role font IDs. For exact
 semantic line height and emphasis in native controls, use
-`TextRole::style(...).rich_text(...)`; egui's plain string API does not expose
+`TextRole::style(...).rich_text(...)`, with the `TextRoleStyles` trait in
+scope; egui's plain string API does not expose
 role-specific line-height or muted-colour defaults.
 
 `measured_content_label` measures first and allocates the actual bounded galley

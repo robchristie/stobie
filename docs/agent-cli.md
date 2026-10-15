@@ -43,7 +43,9 @@ built program given after `--`. It creates a fresh private socket directory,
 starts the program under a detached supervisor with
 `STOBIE_AUTOMATION_SOCKET` set, and returns once the application answers and
 has published its first observation. The supervisor removes the directory and
-the session when the application exits. `stop NAME` ends it. The
+the session when the application exits. `stop NAME` ends it; for an
+attached browser session it only forgets the session and leaves the page
+running. The
 application's output is kept in `NAME.log` beside the sessions.
 
 The native window must be mapped and not covered: eframe runs queued
@@ -64,7 +66,8 @@ stobie observe --session web
 ```
 
 `--page` selects the page whose URL is exactly the one given or, failing
-that, the only page whose URL starts with it; `--target ID` names a DevTools
+that, the only page whose URL starts with it; `stobie` does not add
+`?automation=1`, so the URL must already carry it. `--target ID` names a DevTools
 target. Each request evaluates only the page's fixed dispatcher,
 `window.__STOBIE_AUTOMATION.request`, with `Runtime.evaluate`. A page opened
 without `?automation=1` has no dispatcher, and `stobie` says so. The DevTools
@@ -83,17 +86,20 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab` and
 
 - `observe` outlines the latest observation: application facts, collections,
   audits, then one line per node with its role, name, state, value, stable
-  `#ID` and `[capabilities]`, indented by containment. Capabilities without a
+  `#ID` and `[capabilities]`, indented by containment. A text field's value
+is its text and a combo box's is its selected option's label. Capabilities without a
   rendered control follow as `other capabilities`. `--limit` and `--offset`
   page through long outlines.
 - `query` and `discover` list nodes or capabilities with `--limit` and
   `--cursor`. `discover` shows each capability's availability, argument
-  contract and shortcut.
+  contract and shortcut, and what a value-taking capability expects.
 - `invoke CAPABILITY [--value VALUE]` discovers one target, checks the value
   against its contract (text, `true`/`false`, a number or a choice ID or label; or
   `--value-json`), sends the mutation once, waits for its receipt and then for
   the observation that presents its effect, and reports the facts that
-  changed. `--request-id` makes a retry safe; `--no-wait` returns once the
+  changed and up to six nodes whose name, state or value changed (`~`), or
+  that appeared (`+`) or went (`-`). A choice value may also be its option's
+  label, in any case. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file).
@@ -116,8 +122,9 @@ Text is the default. `--json` prints one JSON object whose first fields are
 `schema_version`, `command` and `ok`, in a fixed order, followed by the
 command's payload. Lists say how many entries there are, whether they are
 `truncated`, and the cursor or offset to continue from. Outputs list what they
-leave out in `omitted`, such as node geometry and measured text observations
-(`observe --include-text` adds them). Budgets are tested: Record Desk's default
+leave out in `omitted`, such as node geometry and text layout measurements
+(`observe --include-text` adds the measurements: geometry, line counts and
+overflow, not the strings). Budgets are tested: Record Desk's default
 `observe` stays under 8 KB and the Lab's under 16 KB.
 
 Errors go to standard error. With `--json` they are
