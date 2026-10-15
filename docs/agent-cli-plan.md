@@ -116,10 +116,12 @@ Playwright's `click()` and Lantern's `--strict` targets hit-test the centre
 of the element's box with `elementFromPoint`. Layer elements pass the pointer
 through to the canvas, so they always fail that test.
 
-- Each enabled layer element whose node supports AccessKit `Click`, except
-  text fields (`input` and `textarea` cannot hold children), gets a 1 CSS px
-  child at its centre with `pointer-events: auto`. Only that pixel becomes a
-  hit target.
+- Each enabled layer element whose node supports AccessKit `Click` gets a
+  1 CSS px child at its centre with `pointer-events: auto`. Only that pixel
+  becomes a hit target. An editable text field cannot hold a child (`input`
+  and `textarea`), so its own element is the hit target, clipped to its centre
+  pixel with `clip-path`; increment 4 added this after the Lantern-only probe
+  could not reach text fields.
 - The layer re-dispatches every pointer, mouse, touch, wheel and context-menu
   event that lands on such a pixel to the canvas, at the same coordinates,
   and preserves `preventDefault`. It stops the canvas's `mouseleave` and

@@ -467,7 +467,8 @@ fn enabled_clickable_elements_are_hit_targets_and_carry_semantic_ids() {
             .all(|element| element.attributes.is_empty())
     );
 
-    // A disabled control, a text field and an empty box take no pointer.
+    // A disabled control, a read-only text field and an empty box take no
+    // pointer.
     let mut disabled = node(Role::Button, &[]);
     disabled.set_label("Undo");
     disabled.add_action(Action::Click);
@@ -476,6 +477,7 @@ fn enabled_clickable_elements_are_hit_targets_and_carry_semantic_ids() {
     let mut field = node(Role::TextInput, &[]);
     field.set_label("Title");
     field.add_action(Action::Click);
+    field.set_read_only();
     bounds(&mut field, 0.0, 30.0, 40.0, 50.0);
     let mut empty = node(Role::Button, &[]);
     empty.set_label("Hidden");
@@ -689,4 +691,47 @@ fn a_row_clipped_out_of_its_list_does_not_contest_a_visible_control_beneath() {
     };
     assert!(hit("Thumbnails"));
     assert!(!hit("Scrolled away"));
+}
+
+#[test]
+fn an_editable_text_field_is_its_own_centre_pixel_hit_target() {
+    let mut field = node(Role::MultilineTextInput, &[]);
+    field.set_label("Record notes");
+    field.set_author_id("record-desk.notes.1001".to_owned());
+    bounds(&mut field, 0.0, 30.0, 40.0, 50.0);
+    let tree = project(
+        &update(vec![(1, node(Role::Window, &[2])), (2, field)], 1),
+        1.0,
+    );
+    let field = &tree.elements["stobie-a11y:record-desk.notes.1001"];
+    assert_eq!(field.tag, "textarea");
+    assert_eq!(field.attributes[HIT_ATTRIBUTE], "true");
+    // Only the centre pixel takes pointer input; the rest stays the canvas's.
+    assert!(
+        field.style.ends_with(";clip-path:inset(calc(50% - 0.5px))"),
+        "{}",
+        field.style
+    );
+
+    // A later control over its centre takes the pointer there instead.
+    let mut field = node(Role::TextInput, &[]);
+    field.set_label("Title");
+    bounds(&mut field, 0.0, 0.0, 40.0, 20.0);
+    let mut button = node(Role::Button, &[]);
+    button.set_label("Clear");
+    button.add_action(Action::Click);
+    bounds(&mut button, 10.0, 5.0, 30.0, 15.0);
+    let tree = project(
+        &update(
+            vec![(1, node(Role::Window, &[2, 3])), (2, field), (3, button)],
+            1,
+        ),
+        1.0,
+    );
+    let field = tree
+        .elements
+        .values()
+        .find(|element| element.tag == "input")
+        .unwrap();
+    assert!(!field.attributes.contains_key(HIT_ATTRIBUTE));
 }

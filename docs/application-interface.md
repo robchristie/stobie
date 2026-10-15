@@ -343,7 +343,10 @@ snapshot. It offers nothing that a pointer or keyboard user cannot do.
 - Lantern's role/name targets work the same way, for example
   `lantern click --role button --name Apply --strict`. A name shared by two
   controls, such as one tool button per image pane, is ambiguous; use
-  `--selector '[data-stobie-id="…"]'` instead.
+  `--selector '[data-stobie-id="…"]'` instead. Type with
+  `lantern type --role textbox --name "Record notes" --text … --strict`
+  without clicking the field first: a click focuses it in egui, whose text
+  agent then shares the field's name.
 - Elements carry the stable semantic ID as `data-stobie-id`, so
   `page.locator('[data-stobie-id="record-desk.apply"]')` finds the control the
   inspection interface calls `record-desk.apply`.
