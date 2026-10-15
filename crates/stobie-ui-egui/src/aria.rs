@@ -258,7 +258,7 @@ impl Projection<'_> {
             attributes.insert("spellcheck", "false".to_owned());
             // A text field cannot hold a hit target element, so its own
             // centre pixel is its hit target, and only while it takes one.
-            style.push_str(";clip-path:inset(calc(50% - 0.5px))");
+            style.push_str(";clip-path:inset(calc(50% - 0.5px));touch-action:none");
         }
         let pointer_control = if tag == "div" {
             attributes.contains_key("role") && node.supports_action(accesskit::Action::Click)

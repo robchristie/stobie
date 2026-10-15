@@ -170,6 +170,7 @@ fn architecture() -> Result<()> {
     ] {
         assert_tree_excludes_with(label, arguments, AGENT_TOOLING)?;
     }
+    assert_lantern_pinned()?;
     // Inspection clients use the protocol without the UI framework, whatever
     // features are enabled.
     assert_tree_excludes_with(
@@ -476,6 +477,24 @@ const AGENT_TOOLING: &[&str] = &[
     "tungstenite",
     "ureq",
 ];
+
+/// The browser transport's DevTools client is a Git dependency, so it must
+/// name one exact revision: never a branch, a tag or the default branch.
+fn assert_lantern_pinned() -> Result<()> {
+    let manifest = fs::read_to_string("crates/stobie-client/Cargo.toml")?;
+    let line = manifest
+        .lines()
+        .find(|line| line.trim_start().starts_with("lantern-core"))
+        .context("stobie-client depends on lantern-core")?;
+    let pinned = line.split("rev = \"").nth(1).is_some_and(|rest| {
+        let revision = rest.split('"').next().unwrap_or_default();
+        revision.len() == 40 && revision.chars().all(|c| c.is_ascii_hexdigit())
+    });
+    if !pinned || line.contains("branch") || line.contains("tag =") {
+        bail!("lantern-core must be pinned to a full 40-character Git revision: {line}");
+    }
+    Ok(())
+}
 
 /// Image and Lab-demo items that `stobie-core` must not define.
 const IMAGE_ITEMS: &[&str] = &[

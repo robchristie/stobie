@@ -708,7 +708,9 @@ fn an_editable_text_field_is_its_own_centre_pixel_hit_target() {
     assert_eq!(field.attributes[HIT_ATTRIBUTE], "true");
     // Only the centre pixel takes pointer input; the rest stays the canvas's.
     assert!(
-        field.style.ends_with(";clip-path:inset(calc(50% - 0.5px))"),
+        field
+            .style
+            .ends_with(";clip-path:inset(calc(50% - 0.5px));touch-action:none"),
         "{}",
         field.style
     );

@@ -144,6 +144,12 @@ try {
       async () => {},
     );
     assert.equal(cli(['stop', 'parity-browser']).status, 0);
+    // A page opened without ?automation=1 has no dispatcher to call.
+    const plain = `http://127.0.0.1:${server.address().port}/`;
+    await page.goto(plain);
+    const refused = cli(['attach', 'plain', '--cdp', endpoint, '--page', plain]);
+    assert.equal(refused.status, 3, `attach without automation: ${refused.stderr}`);
+    assert.match(refused.body.error.message, /no Stobie automation dispatcher/);
   } else {
     // Output size budgets for each command, in bytes. Launching reports the
     // application's socket.

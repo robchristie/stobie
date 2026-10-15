@@ -81,7 +81,9 @@ impl ClientError {
             InspectionErrorCode::TooLate => "the action already started or finished",
             InspectionErrorCode::UnknownRequest => "no mutation used this request ID",
             InspectionErrorCode::ValidationFailed => "the application refused it; see the message",
-            InspectionErrorCode::RequestIdConflict => "use a new request ID",
+            InspectionErrorCode::RequestIdConflict => {
+                "this request ID was already used: read `stobie receipt ID` and do not repeat the action"
+            }
             InspectionErrorCode::UnsupportedVersion
             | InspectionErrorCode::UnsupportedOperation
             | InspectionErrorCode::InvalidRequest

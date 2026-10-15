@@ -574,3 +574,22 @@ fn cursors_round_trip_through_their_printed_token() {
 }
 
 const SET_TEXT: &str = stobie_client::protocol::SET_TEXT_CAPABILITY;
+
+#[test]
+fn the_envelope_leads_and_the_payload_keeps_its_field_order() {
+    #[derive(serde::Serialize)]
+    struct Payload {
+        zeta: u8,
+        alpha: u8,
+    }
+    let payload = serde_json::to_string(&Payload { zeta: 1, alpha: 2 }).unwrap();
+    assert_eq!(
+        envelope("observe", true, &payload),
+        r#"{"schema_version":1,"command":"observe","ok":true,"zeta":1,"alpha":2}"#
+    );
+    let empty = serde_json::to_string(&serde_json::json!({})).unwrap();
+    assert_eq!(
+        envelope("stop", false, &empty),
+        r#"{"schema_version":1,"command":"stop","ok":false}"#
+    );
+}

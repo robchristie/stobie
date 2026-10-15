@@ -11,6 +11,12 @@ use stobie_client::ClientError;
 /// Unix socket paths are limited to about 100 bytes.
 const SOCKET_PATH_LIMIT: usize = 100;
 
+/// The lock file in a launched session's directory. The supervisor holds an
+/// exclusive lock on it, which the application inherits, so the lock is held
+/// exactly while one of them still runs. A recorded PID is trusted only then:
+/// once both have gone, the PID may belong to an unrelated process.
+const LOCK_FILE: &str = "supervisor.lock";
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Target {
@@ -64,14 +70,18 @@ fn create_private(path: &Path) -> Result<(), ClientError> {
                 "check the runtime directory's permissions",
             )
         })?;
-    let metadata = std::fs::metadata(path).map_err(|error| {
+    // Never follow a symbolic link planted in a shared temporary directory.
+    let metadata = std::fs::symlink_metadata(path).map_err(|error| {
         ClientError::new(
             "session_failed",
             error.to_string(),
             "check the runtime directory",
         )
     })?;
-    if metadata.uid() != unsafe { libc::getuid() } || metadata.permissions().mode() & 0o077 != 0 {
+    if !metadata.is_dir()
+        || metadata.uid() != unsafe { libc::getuid() }
+        || metadata.permissions().mode() & 0o077 != 0
+    {
         return Err(ClientError::new(
             "session_failed",
             format!("{} is not private to this user", path.display()),
@@ -203,6 +213,30 @@ pub fn alive(pid: u32) -> bool {
     unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
 }
 
+/// Whether some process holds the lock on `path`: the probe takes it only
+/// when nobody does, and releases it at once.
+pub fn lock_held(path: &Path) -> bool {
+    use std::os::fd::AsRawFd;
+    let Ok(file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let free = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } == 0;
+    !free
+}
+
+/// Whether `session`'s launched application still runs under its supervisor
+/// or on its own. Only then may its recorded PID be signalled.
+pub fn running(session: &Session) -> Option<bool> {
+    match &session.target {
+        Target::Native {
+            pid: Some(_),
+            directory: Some(directory),
+            ..
+        } => Some(lock_held(&directory.join(LOCK_FILE))),
+        Target::Native { .. } | Target::Browser { .. } => None,
+    }
+}
+
 /// Build the application if needed and return its executable: binary `bin`
 /// or example `example` when one is given.
 pub fn build(
@@ -288,9 +322,7 @@ pub fn launch(
 ) -> Result<Session, ClientError> {
     validate_name(name)?;
     if let Ok(existing) = load(name) {
-        if let Target::Native { pid, .. } = &existing.target
-            && pid.is_some_and(alive)
-        {
+        if running(&existing) == Some(true) {
             return Err(ClientError::usage(format!(
                 "session {name} is running; stop it with `stobie stop {name}` or choose another name"
             )));
@@ -386,6 +418,10 @@ pub fn launch(
 /// the session, and clean up when the application exits.
 pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[String]) -> i32 {
     let socket = directory.join("app.sock");
+    // Held for this process's life, and inherited by the application.
+    let Some(_lock) = hold_lock(&directory.join(LOCK_FILE)) else {
+        return 1;
+    };
     let log = log_path(name)
         .ok()
         .and_then(|path| std::fs::File::create(path).ok());
@@ -427,7 +463,27 @@ pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[Stri
     status.ok().and_then(|status| status.code()).unwrap_or(0)
 }
 
+/// Lock `path` exclusively and keep the lock across `exec`, so a child
+/// holds it too. `None` if it cannot be taken.
+fn hold_lock(path: &Path) -> Option<std::fs::File> {
+    use std::os::fd::AsRawFd;
+    let file = std::fs::File::create(path).ok()?;
+    let fd = file.as_raw_fd();
+    unsafe {
+        if libc::flock(fd, libc::LOCK_EX | libc::LOCK_NB) != 0 {
+            return None;
+        }
+        let flags = libc::fcntl(fd, libc::F_GETFD);
+        if flags < 0 || libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
+            return None;
+        }
+    }
+    Some(file)
+}
+
 /// Stop session `name`'s application and wait for its supervisor to clean up.
+/// A session whose application no longer runs is removed without signalling
+/// anything: its recorded PID may now be another process's.
 pub fn stop(name: &str, timeout: Duration) -> Result<Session, ClientError> {
     let session = load(name)?;
     let Target::Native { pid, directory, .. } = &session.target else {
@@ -435,20 +491,19 @@ pub fn stop(name: &str, timeout: Duration) -> Result<Session, ClientError> {
         remove(name);
         return Ok(session);
     };
-    let Some(pid) = *pid else {
-        remove(name);
-        return Ok(session);
-    };
-    unsafe {
-        libc::kill(pid as libc::pid_t, libc::SIGTERM);
-    }
-    let started = Instant::now();
-    while alive(pid) && started.elapsed() < timeout {
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    if alive(pid) {
+    if let (Some(pid), Some(true)) = (*pid, running(&session)) {
+        let still_running = || running(&session) == Some(true);
         unsafe {
-            libc::kill(pid as libc::pid_t, libc::SIGKILL);
+            libc::kill(pid as libc::pid_t, libc::SIGTERM);
+        }
+        let started = Instant::now();
+        while still_running() && started.elapsed() < timeout {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        if still_running() && alive(pid) {
+            unsafe {
+                libc::kill(pid as libc::pid_t, libc::SIGKILL);
+            }
         }
     }
     // The supervisor removes both once the application exits.
@@ -461,4 +516,37 @@ pub fn stop(name: &str, timeout: Duration) -> Result<Session, ClientError> {
         let _ = std::fs::remove_dir_all(directory);
     }
     Ok(session)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_lock_is_held_while_its_holder_or_an_inheriting_child_runs() {
+        let directory = std::env::temp_dir().join(format!("stobie-lock-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join(LOCK_FILE);
+        assert!(!lock_held(&path), "a missing lock file is not held");
+        let lock = hold_lock(&path).expect("the lock is free");
+        assert!(lock_held(&path));
+        assert!(
+            hold_lock(&path).is_none(),
+            "a held lock cannot be taken again"
+        );
+        // A child inherits the lock and keeps it after the holder lets go.
+        let mut child = std::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
+        drop(lock);
+        assert!(lock_held(&path), "the application keeps the lock");
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(
+            !lock_held(&path),
+            "nobody holds the lock once both have gone"
+        );
+        let _ = std::fs::remove_dir_all(&directory);
+    }
 }

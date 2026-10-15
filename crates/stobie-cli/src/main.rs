@@ -31,7 +31,8 @@ use spec::SCHEMA_VERSION;
 /// `schema_version`, `command` and `ok`.
 struct Output {
     text: String,
-    json: serde_json::Value,
+    /// Serialised once, so a struct payload keeps its field order.
+    json: String,
     /// Exit status for a successful exchange whose outcome is not success,
     /// such as a rejected invocation.
     status: u8,
@@ -41,19 +42,50 @@ impl Output {
     fn new(text: String, json: impl Serialize) -> Self {
         Self {
             text,
-            json: serde_json::to_value(json).expect("outputs serialise"),
+            json: serde_json::to_string(&json).expect("outputs serialise"),
             status: 0,
         }
     }
 }
 
 #[derive(Serialize)]
-struct Envelope<'a> {
+struct EnvelopeHead<'a> {
     schema_version: u32,
     command: &'a str,
     ok: bool,
-    #[serde(flatten)]
-    payload: serde_json::Value,
+}
+
+/// One JSON object: the envelope's fields, then the payload object's fields
+/// in the order the payload serialised them.
+fn envelope(command: &str, ok: bool, payload: &str) -> String {
+    let head = serde_json::to_string(&EnvelopeHead {
+        schema_version: SCHEMA_VERSION,
+        command,
+        ok,
+    })
+    .expect("envelopes serialise");
+    let body = payload.trim();
+    let fields = body
+        .strip_prefix('{')
+        .and_then(|body| body.strip_suffix('}'))
+        .expect("payloads are objects")
+        .trim();
+    let head = head.strip_suffix('}').expect("an object");
+    if fields.is_empty() {
+        format!("{head}}}")
+    } else {
+        format!("{head},{fields}}}")
+    }
+}
+
+/// Write to standard output, ignoring a reader that has gone away, such as
+/// `stobie observe | head`.
+fn emit(text: &str) {
+    use std::io::Write as _;
+    let mut stdout = std::io::stdout().lock();
+    let _ = stdout
+        .write_all(text.as_bytes())
+        .and_then(|()| stdout.flush());
 }
 
 #[derive(Serialize)]
@@ -111,7 +143,11 @@ fn main() -> ExitCode {
         println!("stobie {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
-    let json = arguments.iter().any(|argument| argument == "--json");
+    // A program's own arguments after `--` are not stobie's.
+    let json = arguments
+        .iter()
+        .take_while(|argument| *argument != "--")
+        .any(|argument| argument == "--json");
     let Some(command) = spec::find(&name) else {
         report(
             &name,
@@ -132,21 +168,16 @@ fn main() -> ExitCode {
     match result {
         Ok(output) => {
             if json || command.name == "capabilities" {
-                let envelope = Envelope {
-                    schema_version: SCHEMA_VERSION,
-                    command: command.name,
-                    ok: output.status == 0,
-                    payload: output.json,
-                };
+                let mut text = envelope(command.name, output.status == 0, &output.json);
                 // The command registry is read by people as well as parsed.
-                let text = if command.name == "capabilities" {
-                    serde_json::to_string_pretty(&envelope)
-                } else {
-                    serde_json::to_string(&envelope)
-                };
-                println!("{}", text.expect("outputs serialise"));
+                if command.name == "capabilities" {
+                    let value: serde_json::Value =
+                        serde_json::from_str(&text).expect("envelopes parse");
+                    text = serde_json::to_string_pretty(&value).expect("values serialise");
+                }
+                emit(&format!("{text}\n"));
             } else {
-                print!("{}", output.text);
+                emit(&output.text);
             }
             ExitCode::from(output.status)
         }
@@ -891,9 +922,9 @@ fn sessions() -> Result<Output, ClientError> {
     let mut entries = Vec::new();
     for session in &sessions {
         let (place, running) = match &session.target {
-            Target::Native { socket, pid, .. } => (
+            Target::Native { socket, .. } => (
                 format!("native {}", socket.display()),
-                Some(pid.is_none_or(session::alive)),
+                session::running(session),
             ),
             Target::Browser {
                 endpoint,

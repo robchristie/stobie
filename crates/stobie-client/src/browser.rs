@@ -3,8 +3,8 @@
 //!
 //! Each request evaluates only the fixed dispatcher
 //! `window.__STOBIE_AUTOMATION.request(json)` in the page, with
-//! `Runtime.evaluate`. Nothing else in the page is evaluated or read, apart
-//! from the canvas's rectangle for a screenshot.
+//! `Runtime.evaluate`. Nothing else in the page is evaluated. A screenshot
+//! reads the canvas's box through the DOM domain, without running script.
 
 use std::time::Instant;
 
@@ -157,29 +157,44 @@ impl BrowserTransport {
     /// A PNG of the page's canvas.
     pub fn screenshot(&mut self, deadline: Instant) -> Result<Vec<u8>, ClientError> {
         let mut socket = self.socket(deadline)?;
-        let rectangle = socket
+        let measure = |error| cdp_error("cannot measure the canvas", error);
+        let document = socket
+            .call("DOM.getDocument", Some(json!({ "depth": 0 })))
+            .map_err(measure)?;
+        let canvas = socket
             .call(
-                "Runtime.evaluate",
-                Some(json!({
-                    "expression": "(() => { const canvas = document.querySelector('canvas'); if (!canvas) return null; const r = canvas.getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; })()",
-                    "returnByValue": true,
-                })),
+                "DOM.querySelector",
+                Some(json!({ "nodeId": document["root"]["nodeId"], "selector": "canvas" })),
             )
-            .map_err(|error| cdp_error("cannot measure the canvas", error))?;
-        let clip = &rectangle["result"]["value"];
-        if clip.is_null() {
-            return Err(ClientError::new(
+            .map_err(measure)?;
+        let no_canvas = || {
+            ClientError::new(
                 "capture_failed",
                 "the page has no canvas",
                 "attach to a Stobie application page",
-            ));
-        }
+            )
+        };
+        let node = canvas["nodeId"]
+            .as_u64()
+            .filter(|node| *node != 0)
+            .ok_or_else(no_canvas)?;
+        let model = socket
+            .call("DOM.getBoxModel", Some(json!({ "nodeId": node })))
+            .map_err(measure)?;
+        // The border quad's corners, clockwise from the top left.
+        let quad: Vec<f64> = model["model"]["border"]
+            .as_array()
+            .map(|quad| quad.iter().filter_map(serde_json::Value::as_f64).collect())
+            .unwrap_or_default();
+        let [left, top, right, _, _, bottom, ..] = quad[..] else {
+            return Err(no_canvas());
+        };
         let shot = socket
             .call(
                 "Page.captureScreenshot",
                 Some(json!({
                     "format": "png",
-                    "clip": { "x": clip["x"], "y": clip["y"], "width": clip["width"], "height": clip["height"], "scale": 1 },
+                    "clip": { "x": left, "y": top, "width": right - left, "height": bottom - top, "scale": 1 },
                 })),
             )
             .map_err(|error| cdp_error("the screenshot failed", error))?;
@@ -216,7 +231,25 @@ impl Transport for BrowserTransport {
                 })),
             )
             .map_err(|error| cdp_error("the request could not reach the page", error))?;
-        if reply.get("exceptionDetails").is_some() {
+        if let Some(exception) = reply.get("exceptionDetails") {
+            let description = exception["exception"]["description"]
+                .as_str()
+                .or_else(|| exception["text"].as_str())
+                .unwrap_or_default();
+            // A missing dispatcher fails reading `request` from undefined;
+            // any other exception came from the dispatcher itself.
+            let missing = description.contains("__STOBIE_AUTOMATION")
+                || description.contains("(reading 'request')");
+            if !missing {
+                return Err(ClientError::new(
+                    "protocol_violation",
+                    format!(
+                        "the page's dispatcher threw: {}",
+                        description.lines().next().unwrap_or_default()
+                    ),
+                    "reload the page; if it persists, report this application",
+                ));
+            }
             return Err(ClientError::connection(
                 "the page has no Stobie automation dispatcher",
                 "open the application with ?automation=1 in its URL; if it has that, the \

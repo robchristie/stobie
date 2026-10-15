@@ -4,8 +4,8 @@
 natively or in a browser, read its UI compactly and operate it through the
 [application interface](application-interface.md). It needs no Stobie source
 or documentation at run time: `stobie --help`, `stobie COMMAND --help` and
-`stobie capabilities --json` describe every command, flag, exit status and
-output schema.
+`stobie capabilities --json` describe every command, flag, exit status, wait
+condition and the JSON output envelope.
 
 Build it with `cargo build --release -p stobie-cli` (the binary is
 `target/release/stobie`), or install it with
@@ -43,7 +43,11 @@ built program given after `--`. It creates a fresh private socket directory,
 starts the program under a detached supervisor with
 `STOBIE_AUTOMATION_SOCKET` set, and returns once the application answers and
 has published its first observation. The supervisor removes the directory and
-the session when the application exits. `stop NAME` ends it; for an
+the session when the application exits. It holds a lock in the session
+directory, which the application inherits; `stop`, `sessions` and `launch`
+treat a session as running only while that lock is held, so a session left
+behind by a killed supervisor is removed without signalling a PID that may
+since belong to another process. `stop NAME` ends it; for an
 attached browser session it only forgets the session and leaves the page
 running. The
 application's output is kept in `NAME.log` beside the sessions.
@@ -138,7 +142,7 @@ is printed on standard output with status 1.
 | Status | Meaning |
 | --- | --- |
 | 0 | Success |
-| 1 | The application rejected or could not match the request, or an invocation was rejected |
+| 1 | The application rejected or could not match the request, an invocation was rejected, or a build or capture failed |
 | 2 | The command line or a request was malformed |
 | 3 | No application answered, or it restarted |
 | 4 | A deadline passed, or a mutation's outcome is uncertain: read its receipt, do not repeat it |

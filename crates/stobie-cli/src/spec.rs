@@ -344,7 +344,7 @@ pub const EXIT_CODES: &[(i32, &str, &str)] = &[
     (
         1,
         "rejected",
-        "The application rejected or could not match the request, or an invocation was rejected",
+        "The application rejected or could not match the request, an invocation was rejected, or a build or capture failed",
     ),
     (2, "usage", "The command line or a request was malformed"),
     (

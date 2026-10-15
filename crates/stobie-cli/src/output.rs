@@ -171,7 +171,12 @@ fn ordered(observation: &CompletedObservation) -> Vec<(usize, &UiNode)> {
     for root in roots.into_iter().rev() {
         stack.push((0, root));
     }
+    // A malformed tree whose parents form a cycle must not loop forever.
+    let mut visited = std::collections::BTreeSet::new();
     while let Some((depth, node)) = stack.pop() {
+        if !visited.insert(&node.id) {
+            continue;
+        }
         let child_depth = if folded(node) {
             depth
         } else {
@@ -335,9 +340,6 @@ pub struct AuditsOutput<'a> {
 /// The JSON for `observe`, in a fixed field order.
 #[derive(Serialize)]
 pub struct ObserveOutput<'a> {
-    pub schema_version: u32,
-    pub command: &'static str,
-    pub ok: bool,
     pub instance: &'a str,
     pub application: &'a stobie_client::protocol::ApplicationIdentity,
     pub observation: u64,
@@ -377,9 +379,6 @@ pub fn observe_json<'a>(
         omitted.push("text_observations");
     }
     ObserveOutput {
-        schema_version: crate::spec::SCHEMA_VERSION,
-        command: "observe",
-        ok: true,
         instance: &observation.instance,
         application: &observation.application,
         observation: observation.id,

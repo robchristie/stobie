@@ -192,9 +192,10 @@ through to the canvas, so they always fail that test.
 
 - `stobie-client` (library) holds the transports, `hello`, observe, query,
   discover, invoke with receipts and cancel, set text, wait conditions and
-  capture. Native capture uses the existing X11 route (`xdotool` and
-  ImageMagick `import` on the host window), so the protocol needs no image
-  operation; browser capture uses CDP `Page.captureScreenshot`.
+  the browser screenshot, CDP `Page.captureScreenshot` clipped to the canvas
+  box that the DOM domain reports. The CLI's native capture uses the existing
+  X11 route (`xdotool` and ImageMagick `import` on the host window), so the
+  protocol needs no image operation.
 - The browser transport uses `lantern-core`'s blocking CDP client to call
   only the fixed `window.__STOBIE_AUTOMATION.request` dispatcher with
   `Runtime.evaluate`.
@@ -211,7 +212,7 @@ through to the canvas, so they always fail that test.
 - **Commands.** `observe`, `query`, `discover`, `invoke` (typed `--value`,
   waits for the receipt), `set-text`, `wait`, `capture`, `receipt`, `cancel`,
   `sessions` and `capabilities --json`, which describes commands, exit codes
-  and output schemas without connecting.
+  and the output envelope without connecting.
 - **Output.** Text by default: a compact outline of role, name, state,
   value, stable ID and available capabilities, plus facts. `--json` emits one
   object with `schema_version`, `command` and `ok` first, fixed field order,
@@ -223,7 +224,9 @@ through to the canvas, so they always fail that test.
   completion; 5 partial evidence. Errors go to stderr with a code, a message
   and the next step.
 - **Robustness.** The native host removes a stale socket only when nothing
-  answers on it. Diagnostics name the deadline, reject unknown condition
+  answers on it. A launched session is running only while its supervisor's
+  lock, which the application inherits, is held; `stop` never signals the
+  recorded PID of a session whose lock is free. Diagnostics name the deadline, reject unknown condition
   fields and report target mismatches. Optional facts may be `null`.
 - **Node client.** The Rust CLI becomes the documented agent CLI. The Node
   client stays for the Playwright harness, and a parity test runs the same

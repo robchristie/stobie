@@ -601,6 +601,16 @@ fn forward(canvas: &HtmlCanvasElement, rule: &JsValue, event: &Event) {
     if !is_hit_target(event.target()) {
         return;
     }
+    // A text field is its own hit target, so a scripted `element.click()` on
+    // it lands here too. Only real input goes to the canvas; a scripted click
+    // stays an AccessKit request, as for every other element.
+    let field = event
+        .target()
+        .and_then(|target| target.dyn_into::<HtmlElement>().ok())
+        .is_some_and(|element| is_text_field(&element));
+    if field && !event.is_trusted() {
+        return;
+    }
     event.stop_propagation();
     // The canvas, not a layer element, takes focus from a press.
     if event.type_() == "mousedown" {
