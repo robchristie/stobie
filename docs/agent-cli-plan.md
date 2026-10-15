@@ -116,10 +116,12 @@ Playwright's `click()` and Lantern's `--strict` targets hit-test the centre
 of the element's box with `elementFromPoint`. Layer elements pass the pointer
 through to the canvas, so they always fail that test.
 
-- Each enabled layer element whose node supports AccessKit `Click`, except
-  text fields (`input` and `textarea` cannot hold children), gets a 1 CSS px
-  child at its centre with `pointer-events: auto`. Only that pixel becomes a
-  hit target.
+- Each enabled layer element whose node supports AccessKit `Click` gets a
+  1 CSS px child at its centre with `pointer-events: auto`. Only that pixel
+  becomes a hit target. An editable text field cannot hold a child (`input`
+  and `textarea`), so its own element is the hit target, clipped to its centre
+  pixel with `clip-path`; increment 4 added this after the Lantern-only probe
+  could not reach text fields.
 - The layer re-dispatches every pointer, mouse, touch, wheel and context-menu
   event that lands on such a pixel to the canvas, at the same coordinates,
   and preserves `preventDefault`. It stops the canvas's `mouseleave` and
@@ -190,17 +192,18 @@ through to the canvas, so they always fail that test.
 
 - `stobie-client` (library) holds the transports, `hello`, observe, query,
   discover, invoke with receipts and cancel, set text, wait conditions and
-  capture. Native capture uses the existing X11 route (`xdotool` and
-  ImageMagick `import` on the host window), so the protocol needs no image
-  operation; browser capture uses CDP `Page.captureScreenshot`.
+  the browser screenshot, CDP `Page.captureScreenshot` clipped to the canvas
+  box that the DOM domain reports. The CLI's native capture uses the existing
+  X11 route (`xdotool` and ImageMagick `import` on the host window), so the
+  protocol needs no image operation.
 - The browser transport uses `lantern-core`'s blocking CDP client to call
   only the fixed `window.__STOBIE_AUTOMATION.request` dispatcher with
   `Runtime.evaluate`.
 - `stobie-cli` builds the `stobie` binary from the library. Neither crate is
   in any application or WASM dependency graph; `cargo xtask architecture`
   enforces that.
-- **Sessions.** `stobie launch NAME (--package PKG | -- COMMAND…)` starts a
-  native application with a fresh private socket directory, waits for
+- **Sessions.** `stobie launch NAME (--manifest-path PATH | --package PKG |
+  -- COMMAND…)` builds with Cargo when needed and starts a native application with a fresh private socket directory, waits for
   `hello`, records the session and returns. A detached supervisor removes the
   directory when the application exits, and `stobie stop NAME` ends it.
   `stobie attach NAME --cdp URL [--page URL | --target ID]` records a
@@ -209,19 +212,21 @@ through to the canvas, so they always fail that test.
 - **Commands.** `observe`, `query`, `discover`, `invoke` (typed `--value`,
   waits for the receipt), `set-text`, `wait`, `capture`, `receipt`, `cancel`,
   `sessions` and `capabilities --json`, which describes commands, exit codes
-  and output schemas without connecting.
+  and the output envelope without connecting.
 - **Output.** Text by default: a compact outline of role, name, state,
   value, stable ID and available capabilities, plus facts. `--json` emits one
   object with `schema_version`, `command` and `ok` first, fixed field order,
   `limit` and `cursor` pagination, explicit `truncated` markers and an
-  `unavailable` list of anything not collected. Budget: Record Desk's default
+  `omitted` list of anything left out. Budget: Record Desk's default
   `observe` stays under 8 KB.
 - **Exit codes.** 0 success; 1 the application rejected or did not match;
   2 usage; 3 connection or attach failure; 4 deadline or uncertain
   completion; 5 partial evidence. Errors go to stderr with a code, a message
   and the next step.
 - **Robustness.** The native host removes a stale socket only when nothing
-  answers on it. Diagnostics name the deadline, reject unknown condition
+  answers on it. A launched session is running only while its supervisor's
+  lock, which the application inherits, is held; `stop` never signals the
+  recorded PID of a session whose lock is free. Diagnostics name the deadline, reject unknown condition
   fields and report target mismatches. Optional facts may be `null`.
 - **Node client.** The Rust CLI becomes the documented agent CLI. The Node
   client stays for the Playwright harness, and a parity test runs the same
@@ -235,8 +240,8 @@ through to the canvas, so they always fail that test.
 | 0. README native Orca claim | Landed | [PR #77](https://github.com/robchristie/stobie/pull/77) |
 | 1. Typed action arguments and set text, including `fill()` | Landed | [PR #78](https://github.com/robchristie/stobie/pull/78): protocol tests for each argument kind and the set-text binding; derive expansion and compile-fail tests; host tests showing set text gives the same state and history as typing, AccessKit `SetValue`, coalescing and focus return; Record Desk choice and notes tests; the Record Desk interface smoke sets notes and a category on both hosts; the ARIA layer check fills a single-line and a multiline field. Sizes and startup below. |
 | 2. Plain browser click and the semantic agreement check | Landed | [PR #79](https://github.com/robchristie/stobie/pull/79): projection tests for hit markers and semantic IDs; agreement unit tests for each field; agreement over every Gallery story, four Record Desk states and three Lab states, with no disagreement found; the ARIA check sweeps every visible enabled control for a centre hit, moves a real pointer over a hit target and plain-clicks controls in all three applications; the Lab, Gallery, icon, navigation and status-chip pointer, drag, wheel and keyboard smokes pass unchanged. Real Lantern `--strict` role/name clicks are recorded below. |
-| 3. Protocol crate extraction | Complete | This PR: `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
-| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Planned | |
+| 3. Protocol crate extraction | Landed | [PR #80](https://github.com/robchristie/stobie/pull/80): `stobie-protocol` holds the wire, argument, semantic, action and text types; the full test suite, UI snapshot baselines and smokes pass unchanged; the architecture check covers the protocol's dependency graph. |
+| 4. Client library, `stobie` CLI, parity tests, documentation and probes | Complete | This PR: `stobie-client` and `stobie-cli` with unit tests against a scripted application; the CLI smoke runs the same scenarios through `stobie` and the Node client, natively and in the browser, and checks each command's output budget; `tools/application-cli.mjs` is retired; the native host replaces only a stale socket; fresh-agent probe findings and fixes are below. |
 
 Each increment lands through review in order, rebased on the previous merge.
 
@@ -250,7 +255,8 @@ local pair from `cargo xtask verify`, so it shows only that the gates pass.
 | Baseline `b3abff7` | 2,960,391 B | 2,834,735 B | 171.1 / 125.4 ms | 94.2 / 66.0 ms |
 | 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
 | 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
-| 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.49%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
+| 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.48%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |
+| 4. Client and CLI, on 3 as landed | 2,975,436 B (+0.51%) | 2,848,660 B (+0.49%) | 180.5 / 119.1 ms | 102.4 / 56.2 ms |
 
 ## Lantern strict targets
 
@@ -266,6 +272,84 @@ accessibility tree:
 
 Every click was acknowledged. The Lab's "Polygon" is one button per image
 pane, so Lantern correctly refuses it as ambiguous.
+
+## CLI size and output
+
+The `stobie` release binary is 3,038,872 B (2,470,176 B stripped), and a clean
+release build of `stobie-cli` and its dependencies takes 15.6 s on a 32-core
+host. No application or WASM build includes it.
+
+Output per command, in bytes, from the CLI smoke against its budget:
+
+| Command | Record Desk | Lab |
+| --- | --- | --- |
+| `observe` | 3,769 / 8,192 (browser 3,781) | 8,760 / 16,384 |
+| `observe --json` | 11,514 / 24,576 | 23,053 / 49,152 |
+| `discover` | 2,194 / 6,144 | 6,528 / 12,288 |
+| `discover --json` | 10,376 / 49,152 | 35,347 / 98,304 |
+| `query --role result_row` / `query --role tab` | 1,121 / 4,096 | 390 / 2,048 |
+| `hello` | 126 / 512 | 139 / 512 |
+
+## Probe findings
+
+Fresh agents were given only the binaries and their help, and asked to find a
+Record Desk record, set its notes, choose its category, Apply, Save and Undo.
+In the first round, the native and browser `stobie` agents finished, and the
+Lantern-only agent finished every step except the notes. After the fixes
+below, a second round of browser `stobie` and Lantern-only agents finished
+every step: `stobie` on the first try, and Lantern with role and name targets
+throughout.
+
+Fixed:
+
+- A text field took no pointer, so Lantern reported it occluded. An editable
+  field is now its own hit target, clipped to its centre pixel, and its input
+  there reaches the canvas like any other hit target's.
+- A combo box's choice was readable only as its description. Its `value` is
+  now the selected option's label.
+- A receipt listed only changed facts, so a combo choice, a search or a no-op
+  looked the same. It now also lists nodes whose name, state or value
+  changed, were added or were removed, or says that nothing changed.
+- Agents guessed what a text argument meant. `discover` and the missing-value
+  error now give the capability's description, and a choice accepts its
+  label.
+- Wording fixes:
+  - `--include-text` provides layout measurements, not strings.
+  - `capabilities` describes the output envelope, not output schemas, and its
+    JSON is printed indented.
+  - For a browser session, `stop` detaches.
+  - `--page` must already carry `?automation=1`.
+  - The list of empty sessions now mentions `attach`.
+  - A missing dispatcher may mean the application failed to start.
+  - A timed-out value wait says what the node holds.
+  - `--pane` matches only a node's own pane.
+  - Usage lines now show `set-text -` and `invoke --expected`.
+
+Environment: in the first round, typing through Lantern did not land because
+the probe's Chromium ran without the font configuration that the
+repository's browser wrappers provide. Chromium's editable elements accept no
+inserted text without a usable font. Lantern-managed Chromium could not run
+Record Desk here, because its WebGPU mode needs GPU passthrough and the host's
+NVIDIA CDI specification is stale. The probes therefore used the
+repository's WebGPU Chromium launch with a DevTools port, which Lantern drove
+as an external endpoint.
+
+Not changed:
+
+- Lantern's `accessibility` and `dom` output omits states and values, which
+  the layer does publish (`aria-disabled`, `aria-pressed`, `aria-selected`,
+  field values). Lantern has no modifier keys, so it cannot select all or
+  reach shortcuts. Both are outside this work.
+- After a click focuses a text field, eframe's text agent shares the field's
+  name for screen readers, so a role/name target for that field is ambiguous
+  until focus leaves. Typing by role and name without clicking first, or
+  using `data-stobie-id`, works. The accessibility guide documents this.
+- Record Desk's own presentation:
+  - Its saved or unsaved state is shown only as text.
+  - Its category popup is a set of radio buttons, as egui draws it.
+  - Its search field's name differs from its visible label.
+  - Its rows select through the `record-desk.select-record` capability rather
+    than a binding on each row.
 
 ## Semantic agreement findings
 
@@ -297,8 +381,11 @@ expanded and text values. Roles the layer flattens or presents as text
   and after.
 - `cargo xtask verify` passes, including the production stage.
 
-## Open questions
+## Lantern licence
 
-- Lantern carries no licence text: only `license = "MIT"` in its Cargo
-  metadata. Increment 4 depends on `lantern-core` only after that is
-  resolved.
+Lantern carried no licence text, only `license = "MIT"` in its Cargo metadata.
+Its owner chose Apache-2.0 to match Stobie, and
+[robchristie/lantern#25](https://github.com/robchristie/lantern/pull/25)
+added the licence text and metadata. `stobie-client` depends on `lantern-core`
+as a Git dependency pinned to that merge, `2debc7e`, behind its default
+`browser` feature.

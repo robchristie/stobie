@@ -973,6 +973,35 @@ fn native_socket_is_private_read_without_ui_and_owned_cleanup() {
     assert!(!path.exists());
 }
 
+#[test]
+fn native_start_replaces_only_a_stale_socket() {
+    use std::os::unix::net::UnixListener;
+    let directory = std::env::temp_dir().join(format!("stale-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join("app.sock");
+    // A host killed by a signal leaves its socket with nobody listening.
+    drop(UnixListener::bind(&path).unwrap());
+    assert!(path.exists());
+    let host =
+        NativeInspectionHost::start(Inspection::new("restarted"), path.clone(), Arc::new(|| {}))
+            .expect("a stale socket is replaced");
+    // A live socket and an ordinary file are never replaced.
+    let live =
+        NativeInspectionHost::start(Inspection::new("second"), path.clone(), Arc::new(|| {}));
+    assert_eq!(
+        live.err().unwrap().kind(),
+        std::io::ErrorKind::AlreadyExists
+    );
+    drop(host);
+    std::fs::write(&path, b"not a socket").unwrap();
+    let file = NativeInspectionHost::start(Inspection::new("third"), path.clone(), Arc::new(|| {}));
+    assert_eq!(
+        file.err().unwrap().kind(),
+        std::io::ErrorKind::AlreadyExists
+    );
+    std::fs::remove_dir_all(&directory).unwrap();
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Colour {
     Red,

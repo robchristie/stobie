@@ -284,6 +284,18 @@ test('semantic invocation discovers one target and dispatches once while reading
   assert.deepEqual(requests.find(request => request.operation.op === 'invoke').operation.expected, target);
 });
 
+test('a completed invocation returns once its effect is observed', async () => {
+  let observations = 0;
+  const { client } = await bound(op => {
+    if (op.op === 'discover') return { kind: 'discover', total: 1, capabilities: [{ target }] };
+    if (op.op === 'observe') return { kind: 'observe', observation: { ...observation(), id: ++observations } };
+    return { kind: 'receipt', receipt: { request_id: 'mutation-2', route: 'semantic', state: 'completed', after_observation: 3 } };
+  });
+  const receipt = await client.invoke({ capability: 'record.apply' }, { requestId: 'mutation-2' });
+  assert.equal(receipt.after_observation, 3);
+  assert.equal(observations, 3, 'observed until the effect was published');
+});
+
 test('ambiguous discovery prevents semantic invocation', async () => {
   const { client, requests } = await bound(() => ({ kind: 'discover', total: 2, capabilities: [{ target }, { target }] }));
   await assert.rejects(client.invoke({ capability: 'record.apply' }), { code: 'ambiguous' });

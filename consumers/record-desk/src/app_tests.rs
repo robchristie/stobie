@@ -538,3 +538,43 @@ fn semantic_views_agree_across_representative_states() {
     host.submit(Intent::Select(other));
     check(&mut host, "narrow with another record", 560.0);
 }
+
+#[test]
+fn records_are_selected_by_id_as_a_row_click_does() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = egui::Context::default();
+    let mut host = hosted(&context, &directory);
+    present(&mut host, &context, 1080.0);
+    let select = InspectionSelector {
+        capability: Some(Action::SelectRecord.stable_id().into()),
+        ..Default::default()
+    };
+    let receipt = invoke_with(
+        &mut host,
+        select.clone(),
+        serde_json::json!("1013"),
+        "select",
+    );
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    assert_eq!(host.app().desk.selected(), Some(RecordId(1013)));
+    present(&mut host, &context, 1080.0);
+    let unknown = invoke_with(
+        &mut host,
+        select.clone(),
+        serde_json::json!("9999"),
+        "unknown",
+    );
+    assert_eq!(unknown.state, ReceiptState::Rejected);
+    assert_eq!(
+        unknown.error.unwrap().message,
+        "The selected record does not exist."
+    );
+    // A draft blocks selection, as it blocks a row click.
+    let mut draft = host.app().desk.draft().unwrap().clone();
+    draft.title = "Changed".into();
+    host.submit(Intent::Draft(draft));
+    present(&mut host, &context, 1080.0);
+    let blocked = invoke_with(&mut host, select, serde_json::json!("1001"), "blocked");
+    assert_eq!(blocked.state, ReceiptState::Rejected);
+    assert_eq!(host.app().desk.selected(), Some(RecordId(1013)));
+}

@@ -109,6 +109,13 @@ pub enum Action {
     )]
     FilterReview,
     #[action(
+        label = "Select record",
+        description = "Select a record by its ID, such as 1013, as clicking its row does",
+        argument = "text",
+        max_length = 20
+    )]
+    SelectRecord,
+    #[action(
         label = "Record category",
         description = "Change the draft's category",
         argument = "choice",

@@ -470,11 +470,14 @@ impl Layer {
             DomOp::RemoveAttribute { id, name } => {
                 let element = self.element(&id)?;
                 element.remove_attribute(name)?;
-                if name == aria::HIT_ATTRIBUTE
-                    && let Some(hit) =
+                if name == aria::HIT_ATTRIBUTE {
+                    if is_text_field(element) {
+                        element.remove_attribute(HIT_TARGET)?;
+                    } else if let Some(hit) =
                         element.query_selector(&format!(":scope > [{HIT_TARGET}]"))?
-                {
-                    hit.remove();
+                    {
+                        hit.remove();
+                    }
                 }
             }
             DomOp::SetText { id, text } => {
@@ -565,9 +568,12 @@ fn set_text(element: &HtmlElement, text: Option<&str>) -> Result<(), JsValue> {
 }
 
 impl Layer {
-    /// Give `element` its hit target, unless it has one.
+    /// Give `element` its hit target, unless it has one. A text field, which
+    /// cannot hold one, is its own: its style clips it to its centre pixel.
     fn place_hit_target(&self, element: &HtmlElement) -> Result<(), JsValue> {
-        if element
+        if is_text_field(element) {
+            element.set_attribute(HIT_TARGET, "")?;
+        } else if element
             .query_selector(&format!(":scope > [{HIT_TARGET}]"))?
             .is_none()
         {
@@ -593,6 +599,16 @@ fn is_hit_target(target: Option<web_sys::EventTarget>) -> bool {
 /// must not also send an AccessKit click.
 fn forward(canvas: &HtmlCanvasElement, rule: &JsValue, event: &Event) {
     if !is_hit_target(event.target()) {
+        return;
+    }
+    // A text field is its own hit target, so a scripted `element.click()` on
+    // it lands here too. Only real input goes to the canvas; a scripted click
+    // stays an AccessKit request, as for every other element.
+    let field = event
+        .target()
+        .and_then(|target| target.dyn_into::<HtmlElement>().ok())
+        .is_some_and(|element| is_text_field(&element));
+    if field && !event.is_trusted() {
         return;
     }
     event.stop_propagation();

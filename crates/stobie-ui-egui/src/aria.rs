@@ -227,7 +227,7 @@ impl Projection<'_> {
         };
         let (origin_x, origin_y) = origin.unwrap_or_default();
         let scale = f64::from(self.scale);
-        let style = format!(
+        let mut style = format!(
             "left:{:.1}px;top:{:.1}px;width:{:.1}px;height:{:.1}px",
             (left - origin_x) * scale,
             (top - origin_y) * scale,
@@ -256,8 +256,16 @@ impl Projection<'_> {
             attributes.insert("tabindex", "-1".to_owned());
             attributes.insert("autocomplete", "off".to_owned());
             attributes.insert("spellcheck", "false".to_owned());
-        } else if attributes.contains_key("role")
-            && node.supports_action(accesskit::Action::Click)
+            // A text field cannot hold a hit target element, so its own
+            // centre pixel is its hit target, and only while it takes one.
+            style.push_str(";clip-path:inset(calc(50% - 0.5px));touch-action:none");
+        }
+        let pointer_control = if tag == "div" {
+            attributes.contains_key("role") && node.supports_action(accesskit::Action::Click)
+        } else {
+            !node.is_read_only()
+        };
+        if pointer_control
             && !node.is_disabled()
             && width > 0.0
             && height > 0.0
@@ -266,11 +274,10 @@ impl Projection<'_> {
                 x0 <= x && x <= x1 && y0 <= y && y <= y1
             })
         {
-            // A text field cannot hold the hit target's element; agents fill
-            // or focus it instead. egui reports a widget's whole rectangle,
-            // even where a list or scroll area clips it, so only a control
-            // whose centre is visible takes a pointer: elsewhere the pixel
-            // would sit over another control.
+            // egui reports a widget's whole rectangle, even where a list or
+            // scroll area clips it, so only a control whose centre is visible
+            // takes a pointer: elsewhere the pixel would sit over another
+            // control.
             attributes.insert(HIT_ATTRIBUTE, "true".to_owned());
             self.hits.push((
                 element_id.clone(),
@@ -293,9 +300,10 @@ impl Projection<'_> {
             }
         };
         if let Some(visible) = visible.filter(|_| width > 0.0 && height > 0.0)
-            && attributes.contains_key("role")
-            && (node.supports_action(accesskit::Action::Click)
-                || matches!(node.role(), Role::Splitter | Role::Slider | Role::ScrollBar))
+            && (tag != "div"
+                || attributes.contains_key("role")
+                    && (node.supports_action(accesskit::Action::Click)
+                        || matches!(node.role(), Role::Splitter | Role::Slider | Role::ScrollBar)))
         {
             self.interactive.push((element_id.clone(), visible));
         }

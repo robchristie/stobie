@@ -306,9 +306,27 @@ export class ApplicationClient {
       ...(suppliedArguments !== undefined ? { arguments: suppliedArguments } : {}) }, {
       ...readOptions(), requestId, mutation: true,
     });
-    if (!wait || result.receipt.state !== 'queued') return result.receipt;
-    if (remaining() <= 0) throw failure('uncertain_completion', 'Receipt completion is unconfirmed at the invocation deadline', { request_id: requestId });
-    return this.waitReceipt(requestId, { timeoutMs: remaining(), signal });
+    if (!wait) return result.receipt;
+    let receipt = result.receipt;
+    if (receipt.state === 'queued') {
+      if (remaining() <= 0) throw failure('uncertain_completion', 'Receipt completion is unconfirmed at the invocation deadline', { request_id: requestId });
+      receipt = await this.waitReceipt(requestId, { timeoutMs: remaining(), signal });
+    }
+    // A completed receipt names the first observation that presents its
+    // effect; read nothing older, so a target the action changed is fresh.
+    if (receipt.state === 'completed' && Number.isInteger(receipt.after_observation)) {
+      try {
+        while ((await this.observe({ timeoutMs: Math.max(1, remaining()), signal })).id < receipt.after_observation) {
+          if (remaining() <= 0) throw failure('timeout', `Observation ${receipt.after_observation} was not published before the deadline`);
+          await this.scheduler.sleep(Math.min(50, Math.max(0, remaining())), signal);
+        }
+      } catch (error) {
+        throw failure('uncertain_completion', 'The invocation completed, but its effect was not observed before the deadline. Observe before acting on it.', {
+          request_id: requestId, cause_code: error.code, cause: error,
+        });
+      }
+    }
+    return receipt;
   }
   async waitReceipt(requestId, { timeoutMs = this.timeoutMs, signal, intervalMs = 50 } = {}) {
     const deadline = this.scheduler.now() + timeout(timeoutMs);

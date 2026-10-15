@@ -153,9 +153,29 @@ fn architecture() -> Result<()> {
         assert_gpu_only_through_eframe(label, arguments)?;
     }
     assert_tree_excludes("stobie-runtime", &["egui", "eframe", "wgpu"])?;
-    // Inspection clients use the protocol without the UI framework.
-    assert_tree_excludes(
+    // Agent tooling stays out of every application and its WASM graph.
+    for (label, arguments) in [
+        ("stobie-ui-egui", &["-p", "stobie-ui-egui"][..]),
+        (
+            "analytical-workspace-lab",
+            &["-p", "analytical-workspace-lab"][..],
+        ),
+        ("stobie-gallery", &["-p", "stobie-gallery"][..]),
+        ("stobie-tile-worker", &["-p", "stobie-tile-worker"][..]),
+        ("emuella-viewer", &["-p", "emuella-viewer"][..]),
+        (
+            "record-desk",
+            &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],
+        ),
+    ] {
+        assert_tree_excludes_with(label, arguments, AGENT_TOOLING)?;
+    }
+    assert_lantern_pinned()?;
+    // Inspection clients use the protocol without the UI framework, whatever
+    // features are enabled.
+    assert_tree_excludes_with(
         "stobie-protocol",
+        &["-p", "stobie-protocol", "--all-features"],
         &[
             "egui",
             "eframe",
@@ -375,7 +395,7 @@ fn architecture() -> Result<()> {
         }
     }
     println!(
-        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime and protocol, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
+        "architecture boundaries passed: native AccessKit adapter, GPU-free and image-free core, image-free Gallery and Record Desk, egui-free runtime and protocol, agent tooling outside applications, narrow panes, application-owned actions, measured UI text, one workspace tree, no viewport device creation"
     );
     Ok(())
 }
@@ -448,6 +468,33 @@ fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) 
 
 /// The image layer, which only image applications may resolve.
 const IMAGE_LAYER: &[&str] = &["stobie-imaging", "stobie-runtime", "stobie-render-wgpu"];
+
+/// The CLI, its client and their transport dependencies.
+const AGENT_TOOLING: &[&str] = &[
+    "stobie-cli",
+    "stobie-client",
+    "lantern-core",
+    "tungstenite",
+    "ureq",
+];
+
+/// The browser transport's DevTools client is a Git dependency, so it must
+/// name one exact revision: never a branch, a tag or the default branch.
+fn assert_lantern_pinned() -> Result<()> {
+    let manifest = fs::read_to_string("crates/stobie-client/Cargo.toml")?;
+    let line = manifest
+        .lines()
+        .find(|line| line.trim_start().starts_with("lantern-core"))
+        .context("stobie-client depends on lantern-core")?;
+    let pinned = line.split("rev = \"").nth(1).is_some_and(|rest| {
+        let revision = rest.split('"').next().unwrap_or_default();
+        revision.len() == 40 && revision.chars().all(|c| c.is_ascii_hexdigit())
+    });
+    if !pinned || line.contains("branch") || line.contains("tag =") {
+        bail!("lantern-core must be pinned to a full 40-character Git revision: {line}");
+    }
+    Ok(())
+}
 
 /// Image and Lab-demo items that `stobie-core` must not define.
 const IMAGE_ITEMS: &[&str] = &[

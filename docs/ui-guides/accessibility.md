@@ -51,9 +51,11 @@ snapshot, is the source.
   ID `stobie-a11y:<semantic ID>` and its `data-stobie-id`, the ID the
   inspection interface uses. Unnamed layout containers are flattened into
   their parent.
-- **Hit targets.** An enabled control with a click action (not a text field)
-  is marked `data-stobie-hit` and holds a one-pixel element at its centre that
-  takes pointer input. egui reports a widget's whole rectangle, even where a
+- **Hit targets.** An enabled control with a click action, and an editable
+  text field, is marked `data-stobie-hit` and takes pointer input at its
+  centre pixel only: a control through a one-pixel child element, and a text
+  field, whose `input` or `textarea` cannot hold one, through its own element
+  clipped to that pixel. egui reports a widget's whole rectangle, even where a
   list, scroll area or pane clips it, so only a control whose centre is
   visible within those has one. A control whose centre the visible part of a
   later control also covers has none either, because egui would give that
@@ -71,6 +73,11 @@ snapshot, is the source.
   that starts there stops reaching the canvas if its control's element is
   removed mid-touch. A popup or menu drawn over a control does not remove its
   target, so close popups before plain-clicking controls beneath them.
+  Clicking a text field focuses it in egui, as a real click does; eframe's
+  text agent then takes the field's name, so a role/name target for the field
+  matches two text boxes until focus leaves. Type into a field by role and
+  name without clicking it first (Lantern's `type` focuses the layer field
+  itself), or address it by `data-stobie-id`.
 - **Updates.** Each pass is diffed with the previous one by element ID. Only
   changed attributes, text, geometry and child order are written, and a pass
   whose tree is unchanged writes nothing. Hover repaints, for example, write
