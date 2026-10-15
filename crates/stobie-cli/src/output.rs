@@ -482,21 +482,22 @@ pub fn changed_nodes<'a>(
 /// At most this many changed nodes are listed in text output.
 const CHANGED_NODE_LINES: usize = 6;
 
-/// The changed nodes as text lines: `~` changed, `+` added, `-` removed.
+/// The changed nodes as text lines, each marked `changed`, `added` or
+/// `removed`.
 pub fn changed_nodes_text(changes: &[NodeChange]) -> String {
     let mut text = String::new();
     for change in changes.iter().take(CHANGED_NODE_LINES) {
         let mark = match change.change {
-            NodeChangeKind::Added => '+',
-            NodeChangeKind::Removed => '-',
-            NodeChangeKind::Changed => '~',
+            NodeChangeKind::Added => "added",
+            NodeChangeKind::Removed => "removed",
+            NodeChangeKind::Changed => "changed",
         };
         let _ = writeln!(text, "  {mark} {}", node_line(change.node, &[]));
     }
     if changes.len() > CHANGED_NODE_LINES {
         let _ = writeln!(
             text,
-            "  … {} more changed nodes; observe to see them",
+            "  … {} more; --json lists up to 32",
             changes.len() - CHANGED_NODE_LINES
         );
     }

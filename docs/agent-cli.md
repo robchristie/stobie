@@ -97,8 +97,8 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   against its contract (text, `true`/`false`, a number or a choice ID or label; or
   `--value-json`), sends the mutation once, waits for its receipt and then for
   the observation that presents its effect, and reports the facts that
-  changed and up to six nodes whose name, state or value changed (`~`), or
-  that appeared (`+`) or went (`-`). A choice value may also be its option's
+  changed and up to six nodes whose name, state or value `changed`, or that
+  were `added` or `removed` (`--json` lists up to 32). A choice value may also be its option's
   label, in any case. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route

@@ -249,7 +249,7 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         name: "invoke",
-        usage: "stobie invoke CAPABILITY [SELECTOR FLAGS] [--value VALUE | --value-json JSON] [--request-id ID] [--no-wait] [TARGET FLAGS]",
+        usage: "stobie invoke CAPABILITY [SELECTOR FLAGS] [--value VALUE | --value-json JSON] [--expected JSON] [--request-id ID] [--no-wait] [TARGET FLAGS]",
         summary: "Invoke one capability with an optional typed value, wait for its receipt, then for the observation that shows its effect",
         connects: true,
         flags: &[
@@ -275,7 +275,7 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         name: "set-text",
-        usage: "stobie set-text ID (TEXT | --text-file PATH) [--request-id ID] [TARGET FLAGS]",
+        usage: "stobie set-text ID (TEXT | - | --text-file PATH) [SELECTOR FLAGS] [--request-id ID] [TARGET FLAGS]",
         summary: "Replace a text field's text as typing would; `-` reads the text from standard input",
         connects: true,
         flags: &[
