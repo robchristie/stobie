@@ -267,7 +267,9 @@ client. Sizes are rough: small is days, medium one to two weeks, large more.
    `assets/<content hash>/` and adds `<base href>`, so a service worker or
    manifest written into the web root would land in the hashed directory,
    outside the page's scope. The keyboard sizing was the spike's own script,
-   and it is why item 3 of the checklist passed.
+   and it is why item 3 of the checklist passed. Safe-area insets read 0 when
+   measured by script at load on 5 of 9 standalone launches, so layout should
+   take them from CSS `env()` as the spike's shell did.
 5. **Font fallback strategy** (confirmed; medium to large). The CJK fallback
    works but costs 1.18 MB of Brotli and 619 ms of cold-start readiness on
    Safari. Japanese kanji take Simplified Chinese glyph forms, and a
