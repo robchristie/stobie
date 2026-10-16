@@ -35,7 +35,7 @@ def independence():
     framework = sorted(p["name"] for p in packages.values() if p["name"].startswith("stobie-"))
     if framework != ["stobie-core", "stobie-protocol", "stobie-ui-egui", "stobie-ui-egui-derive"]:
         raise ValueError(f"unnecessary framework dependencies: {framework}")
-    forbidden = {"analytical-workspace-lab", "stobie-gallery", "emuella-viewer", "emuella-viewer-source", "emuella-viewer-tools", "stobie-tile-worker"}
+    forbidden = {"analytical-workspace-lab", "stobie-gallery", "stobie-tile-worker"}
     if forbidden.intersection(p["name"] for p in packages.values()):
         raise ValueError("consumer depends on an application package")
     for source in (CONSUMER / "src").rglob("*.rs"):

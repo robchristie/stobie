@@ -1,7 +1,7 @@
 # Apps outside the repository, the viewer's own repository and the front door
 
 Status: active
-Next action: Land increment 1 (`stobie new`, `stobie build-web`, one packaging path, the outside-app CI stage and the "Start a new app" guide).
+Next action: Land increment 2c (remove the viewer from Stobie) after the viewer repository is green and registered, then increment 3 (README and front-door documents, the fresh-agent probe and closeout).
 
 ## Outcome and boundaries
 
@@ -128,8 +128,28 @@ viewer readers to the new repository.
 
 | Increment | Repository | Status |
 | --- | --- | --- |
-| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | In progress |
-| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Planned |
-| 2b. Register the viewer repository | stobie-workspace | Planned |
-| 2c. Remove the viewer from Stobie | stobie | Planned |
+| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | Landed in [PR #86](https://github.com/robchristie/stobie/pull/86) (`8bfcdd6`) |
+| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Imported in [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77), pinned to `8bfcdd6` |
+| 2b. Register the viewer repository | stobie-workspace | In progress |
+| 2c. Remove the viewer from Stobie | stobie | In progress |
 | 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Planned |
+
+## Evidence
+
+- **Production packaging, increment 1.** Compared with `main` (`f79b477`):
+  - the layout, manifest settings and raw assets are unchanged, apart from about
+    380 bytes in the Lab and Gallery WASM for the startup mark;
+  - Brotli representations are +0.18% and gzip +0.3% on WASM, from the Rust
+    encoders;
+  - the startup smoke and benchmark pass.
+- **Viewer in its own repository.** `bash tools/verify.sh` passed there against
+  the git pin, unpatched and `--locked`. All 485 third-party lockfile versions
+  match Stobie's.
+- **Counts.** At `8bfcdd6`, before the removal:
+  - `docs/` held 132 top-level entries (139 files);
+  - `tools/` held 90 top-level entries (133 files);
+  - the 162 files that moved were 65 docs, 29 tools, 17 tool tests and 51 crate
+    files.
+
+  After the removal, `docs/` holds 68 entries (75 files, including the pointer
+  [emuella-viewer.md](emuella-viewer.md)) and `tools/` holds 61 (87 files).

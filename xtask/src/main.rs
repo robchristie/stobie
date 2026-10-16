@@ -19,8 +19,6 @@ fn main() -> Result<()> {
         ),
         "build-web" => build_web(),
         "build-browser-production" => browser::build(env::args().skip(2).collect()),
-        "build-viewer-web" => build_viewer_web(),
-        "viewer-smoke" => run("node", &["tools/viewer-browser-smoke.mjs"]),
         "architecture" => architecture(),
         "plans" => plans::check(Path::new(".")),
         "docs" => run("python3", &["tools/check-api-docs.py"]),
@@ -83,7 +81,6 @@ fn build_web() -> Result<()> {
         "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
         "apps/analytical-workspace-lab/web/worker-pkg",
     )?;
-    build_viewer_web()?;
     Ok(())
 }
 
@@ -162,7 +159,6 @@ fn architecture() -> Result<()> {
         ),
         ("stobie-gallery", &["-p", "stobie-gallery"][..]),
         ("stobie-tile-worker", &["-p", "stobie-tile-worker"][..]),
-        ("emuella-viewer", &["-p", "emuella-viewer"][..]),
         (
             "record-desk",
             &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],
@@ -666,34 +662,6 @@ fn run_with_environment(
             arguments.join(" ")
         );
     }
-    Ok(())
-}
-
-fn build_viewer_web() -> Result<()> {
-    ensure_wasm_bindgen()?;
-    run(
-        "cargo",
-        &[
-            "build",
-            "--release",
-            "--target",
-            "wasm32-unknown-unknown",
-            "-p",
-            "emuella-viewer",
-        ],
-    )?;
-    let output =
-        env::var("STOBIE_VIEWER_WEB_DIR").unwrap_or_else(|_| ".tools/runtime/viewer-web".into());
-    let output = Path::new(&output);
-    stobie_build::stage_web(Path::new("apps/emuella-viewer/web"), output, &[])?;
-    stobie_build::write_startup_loader(output)?;
-    bindgen(
-        "target/wasm32-unknown-unknown/release/emuella_viewer.wasm",
-        output.join("pkg"),
-    )?;
-    let output = output.to_str().context("UTF-8 web output path")?;
-    run("node", &["tools/viewer-response-headers.mjs", output])?;
-    println!("Serve the viewer's complete static root: {output}");
     Ok(())
 }
 

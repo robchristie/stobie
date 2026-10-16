@@ -9,11 +9,13 @@ together dockable panes, large tiled images, linked views, annotations and
 virtualised collections above **egui**, **eframe** and **wgpu**.
 
 The repository contains reusable framework crates, an independent consumer and
-three runnable applications:
-**Analytical Workspace Lab** exercises an analytical workflow, **Stobie
-Gallery** demonstrates the UI components, and **Emuella Image Viewer** composes
-indexed JPEG 2000 regional delivery with multiple views and detection browsing.
-They run natively and in the browser from Rust application code.
+two runnable applications:
+**Analytical Workspace Lab** exercises an analytical workflow and **Stobie
+Gallery** demonstrates the UI components. They run natively and in the browser
+from Rust application code. The
+[Emuella image viewer](https://github.com/robchristie/emuella-viewer), which
+composes indexed JPEG 2000 regional delivery on Stobie's image layer, lives in
+its own repository.
 
 The project is under active development. Its APIs remain concrete and driven
 by the example applications; it is not yet a stable general-purpose framework.
@@ -72,20 +74,6 @@ and application chrome across normal, narrow, long-text, loading and error
 states. It also exposes semantic snapshots and text-layout observations for
 repeatable UI inspection and verification.
 
-### Emuella Image Viewer
-
-The [viewer application](apps/emuella-viewer/README.md) reconstructs regions and
-detection thumbnails from larger indexed HTJ2K codestreams. A shared compressed
-cache serves multiple image panes and a virtualised gallery of 10000 logical
-detections; display stretch preserves compressed-data identity. Native and
-browser workers use Emuella, while Stobie owns generic demands and bounded
-decoded/GPU resources.
-
-Start with the [preparation and local service commands](docs/emuella-viewer-service.md),
-then run the native application or its same-origin browser build. Deterministic
-fixtures require no external imagery. The [calibration guide](docs/emuella-viewer-calibration.md)
-distinguishes current evidence and frozen limits from final qualification.
-
 ## Run locally
 
 Run these commands from the repository root.
@@ -101,8 +89,7 @@ Run these commands from the repository root.
 - For native applications, a graphical session and a working graphics backend
   supported by wgpu. Linux builds enable X11 and Wayland support.
 - For browser builds, the `wasm32-unknown-unknown` target,
-  **wasm-bindgen-cli 0.2.127**, and a browser with WebGPU or WebGL2 (the
-  Emuella viewer needs WebGPU).
+  **wasm-bindgen-cli 0.2.127**, and a browser with WebGPU or WebGL2.
 - Python 3 for the optional local HTTP server shown below.
 - Node.js and npm for automated browser/UI verification. CI currently uses
   Node.js **25.8.2**; Playwright is pinned in `package-lock.json`.
@@ -156,8 +143,7 @@ than opening `index.html` directly. Applications on the framework host prefer
 WebGPU and fall back to WebGL2 when WebGPU is missing, has no adapter or fails
 to start; add `?renderer=webgl2` or `?renderer=webgpu` to the URL to force one.
 The [browser startup guide](docs/browser-startup.md#renderer-backends) describes
-the policy and how the running backend is reported. The Emuella viewer still
-requires WebGPU. Re-run `cargo xtask build-web` after changing Rust code.
+the policy and how the running backend is reported. Re-run `cargo xtask build-web` after changing Rust code.
 
 For measured production packaging, compression, immutable asset URLs and consumer
 workspace setup, use the [browser build and startup guide](docs/browser-startup.md).
