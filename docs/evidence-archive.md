@@ -139,7 +139,8 @@ of stobie-evidence preserves the original history:
   `606fdd682709dc75baf12892a638f9959436fb6121cdd0ff437f40a9c7f52e0a`) maps
   the original ID of each of the 63 commits on the rewritten branches to its
   new ID. For example, `03ad5c5` became `14139f7` and `7dae8fc` became
-  `adbb281`.
+  `adbb281`. The second rewrite below renamed `adbb281` again, to
+  `ce7f370`; IDs up to `14139f7` are unchanged.
 
 Download the bundle and its `.sha256` file, then restore every original branch
 and pull-request ref with:
@@ -166,3 +167,55 @@ before the rewrite must be re-cloned, or their branches reset to the rewritten
 remote branches; working trees at `main` do not change. Rebase local branches
 built on the old history onto the rewritten commits, using the commit map to
 find each base.
+
+### Second rewrite, 2026-10-15
+
+On 2026-10-15, after PR #83 merged and before PR #84 opened, `main` was
+rewritten again to remove `Co-Authored-By:` and `Co-authored-by:` trailers
+from commit messages. Seven commits carried them: PRs #61 to #67. Every tree,
+author, committer and date is unchanged, and so is the rest of each message
+apart from blank lines left by the removed trailers. Each pair of commits below
+was checked. Only `main` was rewritten:
+`codex/generic-application-actions` is unaffected.
+
+Two things changed:
+
+- **Commit IDs.** All 23 commits from PR #61 to PR #83 have new IDs, because
+  each new ID changes its children's. IDs cited before the rewrite, in plans,
+  pull requests and the first commit map above, refer to the earlier history.
+  GitHub pull-request pages for PRs #61 to #83 still show their earlier merge
+  commits.
+- **Signatures.** The 22 merges from PR #62 to PR #83 carried GitHub's
+  web-flow signature. The rewritten commits are unsigned.
+
+No bundle was archived for this rewrite: no file content changed, so the map
+below is enough to translate cited IDs.
+
+| Pull request | ID before | Current ID |
+| --- | --- | --- |
+| #61 | `adbb281` | `ce7f370` |
+| #62 | `7254ded` | `4aa1c47` |
+| #63 | `f32a09e` | `a4f954c` |
+| #64 | `b8d8b87` | `55b17bc` |
+| #65 | `9ad2d9c` | `ac9b347` |
+| #66 | `fe67a4b` | `04451fb` |
+| #67 | `b18c906` | `0ba5a64` |
+| #68 | `8cf1718` | `14de091` |
+| #69 | `25183f4` | `4505c68` |
+| #70 | `747028b` | `b026586` |
+| #71 | `87b71f7` | `11cf3fa` |
+| #72 | `944b284` | `f8d2eb3` |
+| #73 | `a4d1756` | `437aa1f` |
+| #74 | `d985f2c` | `cdcd53f` |
+| #75 | `7a89d74` | `c02ea82` |
+| #76 | `6e62fb3` | `7cdc4cf` |
+| #77 | `b3abff7` | `3e90693` |
+| #78 | `cb83f41` | `580bae6` |
+| #79 | `c8d6565` | `9ac801d` |
+| #80 | `058a4e9` | `afd4779` |
+| #81 | `a3f06c3` | `0d9f318` |
+| #82 | `fb14c30` | `638244c` |
+| #83 | `e2ad856` | `a346980` |
+
+Do not rewrite `main` again; see "Git history" in
+[CONTRIBUTING.md](../CONTRIBUTING.md#git-history).

@@ -11,8 +11,10 @@ built on **egui**, **eframe** and **wgpu**.
 Agents can operate every Stobie application with no inspection code in the
 application. The `stobie` command launches or attaches to it, natively or in
 a browser, then reads its UI compactly and invokes its declared actions. In the
-browser, a hidden ARIA layer mirrors the accessibility tree, so screen readers
-and accessibility-tree browser agents can read it too.
+browser, a hidden ARIA layer mirrors the accessibility tree, so
+accessibility-tree browser agents can read and operate it too. The layer is
+built for screen readers as well, but no browser and screen-reader combination
+is qualified yet; see [Current limits](#current-limits).
 
 Stobie is **experimental and pre-1.0**. Its APIs change between commits. It is
 not on crates.io and has no releases: applications depend on it through git,
