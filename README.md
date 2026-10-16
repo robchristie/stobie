@@ -54,6 +54,8 @@ pub enum NoteAction {
 }
 ```
 
+Actions can also take a value, such as text, a number or a choice; see
+[Add an action with an argument](docs/start-a-new-app.md#add-an-action-with-an-argument).
 The [composition guide](docs/application-composition.md) explains the four
 parts and the host's contract, with the compiled
 [`notes` example](crates/stobie-ui-egui/examples/notes.rs), which adds undo and

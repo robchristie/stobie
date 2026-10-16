@@ -213,6 +213,48 @@ impl BrowserTransport {
     }
 }
 
+/// The error for a page without a dispatcher: not opened with
+/// `?automation=1`, still starting, or failed to start, as the page's startup
+/// report says.
+fn missing_dispatcher(socket: &mut CdpWebSocket) -> ClientError {
+    let state = socket
+        .call(
+            "Runtime.evaluate",
+            Some(json!({
+                "expression": "(() => { const s = window.__STOBIE_STARTUP; return { \
+                    automation: new URL(location.href).searchParams.get('automation') === '1', \
+                    status: s?.status ?? null, \
+                    failure: s?.failure ? `${s.failure.phase}: ${s.failure.message}` : null }; })()",
+                "returnByValue": true,
+            })),
+        )
+        .ok()
+        .map(|reply| reply["result"]["value"].clone())
+        .unwrap_or_default();
+    if let Some(failure) = state["failure"].as_str() {
+        return ClientError::connection(
+            format!("the application on the page failed to start ({failure})"),
+            "fix the failure the page shows; without GPU acceleration, Chromium may need \
+             --use-angle=swiftshader --enable-unsafe-swiftshader for WebGL2",
+        );
+    }
+    if state["automation"] == true {
+        return ClientError::connection(
+            NOT_STARTED,
+            "wait for the page to finish loading and retry; `stobie attach` waits for it",
+        );
+    }
+    ClientError::connection(
+        "the page has no Stobie automation dispatcher",
+        "open the application with ?automation=1 in its URL; if it has that, the \
+         application has not started yet or failed to start (see the browser console)",
+    )
+}
+
+/// A page opened with `?automation=1` whose application has not yet
+/// installed its dispatcher.
+pub const NOT_STARTED: &str = "the application on the page has not started yet";
+
 impl Transport for BrowserTransport {
     fn request(&mut self, body: &str, deadline: Instant) -> Result<String, ClientError> {
         if body.len() > INSPECTION_REQUEST_BYTES {
@@ -250,11 +292,7 @@ impl Transport for BrowserTransport {
                     "reload the page; if it persists, report this application",
                 ));
             }
-            return Err(ClientError::connection(
-                "the page has no Stobie automation dispatcher",
-                "open the application with ?automation=1 in its URL; if it has that, the \
-                 application has not started yet or failed to start (see the browser console)",
-            ));
+            return Err(missing_dispatcher(&mut socket));
         }
         reply["result"]["value"]
             .as_str()

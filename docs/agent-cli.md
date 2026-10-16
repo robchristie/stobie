@@ -105,7 +105,12 @@ that, the only page whose URL starts with it; `stobie` does not add
 `?automation=1`, so the URL must already carry it. `--target ID` names a DevTools
 target. Each request evaluates only the page's fixed dispatcher,
 `window.__STOBIE_AUTOMATION.request`, with `Runtime.evaluate`. A page opened
-without `?automation=1` has no dispatcher, and `stobie` says so. The DevTools
+without `?automation=1` has no dispatcher, and `stobie` says so. While a page
+opened with it is still loading its application, `attach` waits for the
+dispatcher until `--timeout`, and other commands say that the application has
+not started yet. When the page's startup failed, both report its failure, for
+example "No supported renderer". Without GPU acceleration, Chromium may need
+`--use-angle=swiftshader --enable-unsafe-swiftshader` for WebGL2. The DevTools
 client is Lantern's `lantern-core`, pinned to an exact revision.
 
 ## Selectors
