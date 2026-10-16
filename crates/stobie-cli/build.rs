@@ -1,12 +1,18 @@
 //! Record the Stobie revision this CLI is built from, which `stobie new` pins
 //! new applications to. `STOBIE_SOURCE_REVISION` overrides Git.
+//!
+//! Cargo's hashes for a git package ignore its revision, so a target
+//! directory shared between `cargo install --git` runs keeps this script and
+//! its output across revisions. The script therefore reads its directory at
+//! run time, and watches Git's files through paths relative to the package,
+//! which Cargo resolves against the current checkout.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn git(arguments: &[&str]) -> Option<String> {
+fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
     let output = Command::new("git")
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .current_dir(directory)
         .args(arguments)
         .output()
         .ok()?;
@@ -18,36 +24,37 @@ fn git(arguments: &[&str]) -> Option<String> {
 
 fn main() {
     println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
+    let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("set by Cargo"));
     // Only a Stobie checkout names a Stobie revision, not, say, another
     // repository that vendors this source.
-    let in_stobie = git(&["rev-parse", "--show-toplevel"]).is_some_and(|top| {
-        Path::new(&top)
-            .join("crates/stobie-cli/Cargo.toml")
-            .canonicalize()
-            .ok()
-            == Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("Cargo.toml")
-                .canonicalize()
-                .ok()
-    });
+    let top = git(&manifest, &["rev-parse", "--show-toplevel"])
+        .and_then(|top| Path::new(&top).canonicalize().ok())
+        .filter(|top| {
+            top.join("crates/stobie-cli/Cargo.toml").canonicalize().ok()
+                == manifest.join("Cargo.toml").canonicalize().ok()
+        });
     let revision = std::env::var("STOBIE_SOURCE_REVISION")
         .ok()
-        .or_else(|| in_stobie.then(|| git(&["rev-parse", "HEAD"])).flatten());
+        .or_else(|| top.as_ref().and(git(&manifest, &["rev-parse", "HEAD"])));
     if let (Some(directory), Some(common)) = (
-        git(&["rev-parse", "--absolute-git-dir"]),
-        git(&["rev-parse", "--git-common-dir"]),
+        git(&manifest, &["rev-parse", "--absolute-git-dir"]),
+        git(&manifest, &["rev-parse", "--git-common-dir"]),
     ) {
-        let common = Path::new(env!("CARGO_MANIFEST_DIR")).join(common);
-        // A missing path would rerun the script on every build.
+        let common = manifest.join(common);
         let mut watched = vec![
             Path::new(&directory).join("HEAD"),
             common.join("packed-refs"),
         ];
-        if let Some(reference) = git(&["symbolic-ref", "-q", "HEAD"]) {
+        if let Some(reference) = git(&manifest, &["symbolic-ref", "-q", "HEAD"]) {
             watched.push(common.join(reference));
         }
-        for path in watched.iter().filter(|path| path.exists()) {
-            println!("cargo:rerun-if-changed={}", path.display());
+        // A missing path would rerun the script on every build.
+        for path in watched.iter().filter_map(|path| path.canonicalize().ok()) {
+            // This crate is `crates/stobie-cli` below the checkout's top level.
+            match top.as_ref().and_then(|top| path.strip_prefix(top).ok()) {
+                Some(inside) => println!("cargo:rerun-if-changed=../../{}", inside.display()),
+                None => println!("cargo:rerun-if-changed={}", path.display()),
+            }
         }
     }
     if let Some(revision) = revision.filter(|revision| {
