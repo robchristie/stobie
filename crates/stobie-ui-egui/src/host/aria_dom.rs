@@ -35,6 +35,16 @@
 //! than the browser's own editing keys reach egui too, so application
 //! shortcuts keep working while a field is edited in place.
 //!
+//! iOS raises the keyboard only for a focus made while a touch is being
+//! dispatched, and eframe focuses its text agent in a later frame. A tap that
+//! ends on an editable text field therefore focuses the text agent at once,
+//! inside the gesture. A tap on a native field (see `native_text`) instead
+//! moves the field's layer element out of the transparent container into a
+//! visible host over the canvas, styles it as the field and focuses it, so
+//! the platform owns the caret, selection and text input while egui keeps
+//! the text. It returns to the layer when it loses DOM focus or egui's focus
+//! leaves its field.
+//!
 //! DOM objects are not `Send`, but egui plugins must be. The plugin therefore
 //! holds only a key into a thread-local registry; WASM runs the UI on one
 //! thread.
@@ -42,12 +52,16 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, HashMap};
 
-use egui::accesskit::{Action, ActionData, ActionRequest, TreeId};
+use egui::accesskit::{Action, ActionData, ActionRequest, NodeId, TreeId};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Document, Element, Event, HtmlCanvasElement, HtmlElement, KeyboardEvent};
+use web_sys::{
+    Document, Element, Event, EventTarget, HtmlCanvasElement, HtmlElement, KeyboardEvent,
+    TouchEvent,
+};
 
 use crate::aria::{self, AriaTree, DomOp};
+use crate::native_text::{self, NativeTextRegistration};
 
 /// Keeps the layer invisible and out of hit testing without removing it from
 /// the accessibility tree: no `display: none`, `visibility: hidden` or
@@ -97,8 +111,19 @@ const SUPPRESSED: [&str; 5] = [
     "dragleave",
 ];
 
+/// The visible host of an active native field: over the canvas, outside the
+/// layer's transparent container, taking no pointer input itself.
+const NATIVE_HOST_STYLE: &str =
+    "position:fixed;margin:0;padding:0;border:0;overflow:hidden;pointer-events:none;";
+/// Stands in for an active native field's element in the layer.
+const NATIVE_PLACEHOLDER_STYLE: &str = "display:none;";
+/// Events on which the page may have moved the canvas without an egui pass.
+const NATIVE_VIEWPORT_EVENTS: [&str; 3] = ["resize", "scroll", "orientationchange"];
+
 /// A DOM event listener the layer owns.
 type Listener = Closure<dyn FnMut(Event)>;
+/// A handler for one event on a layer element, given the layer's key.
+type Handler = fn(u32, &Event);
 
 thread_local! {
     static LAYERS: RefCell<BTreeMap<u32, Layer>> = const { RefCell::new(BTreeMap::new()) };
@@ -160,6 +185,13 @@ impl egui::Plugin for AriaPlugin {
                 input.events.append(&mut layer.keys);
                 // This pass applies the edits; check their fields after it.
                 layer.checking = std::mem::take(&mut layer.edited);
+                // eframe counts the application focused only while the
+                // canvas or its text agent has DOM focus. A focused native
+                // field is the application's too, and egui reports a field
+                // focused only in a focused viewport.
+                if layer.native_focused() {
+                    input.focused = true;
+                }
             }
         });
     }
@@ -177,17 +209,20 @@ impl egui::Plugin for AriaPlugin {
             return;
         };
         let scale = context.zoom_factor();
+        let native = native_text::registered_in_completed_pass(context);
         LAYERS.with(|layers| {
-            if let Some(layer) = layers.borrow_mut().get_mut(&self.key)
-                && let Err(error) = layer.apply(&update, scale)
-            {
-                log_error(&error);
+            if let Some(layer) = layers.borrow_mut().get_mut(&self.key) {
+                if let Err(error) = layer.apply(&update, scale, &native) {
+                    log_error(&error);
+                }
+                layer.cover_agent_tap(&update, &mut platform.ime);
             }
         });
     }
 }
 
 struct Layer {
+    key: u32,
     context: egui::Context,
     document: Document,
     canvas: HtmlCanvasElement,
@@ -215,6 +250,41 @@ struct Layer {
     listeners: Vec<(&'static str, Listener)>,
     /// Capture listeners on the document, which see the canvas's own events.
     document_listeners: Vec<(&'static str, Listener)>,
+    /// egui's zoom factor at the last pass: CSS pixels per point.
+    scale: f64,
+    /// The touch that may become a tap: its identifier, where it began in
+    /// client coordinates and when, in milliseconds.
+    touch: Option<(i32, f64, f64, f64)>,
+    /// Whether a tap's `touchend` focused a field, so the same tap's later
+    /// `pointerup` must not reach eframe (see [`pointer`]).
+    tap_focused: bool,
+    /// The ordinary text field a tap gave eframe's text agent to, and how
+    /// many more shown passes may cover for egui's IME output.
+    agent_tap: Option<(NodeId, u8)>,
+    /// The native fields of the last pass, by element ID.
+    native_fields: HashMap<String, NativeTextRegistration>,
+    /// The visible host of native fields and its stylesheet, made on first use.
+    native_host: Option<(HtmlElement, Element)>,
+    native: Option<ActiveNative>,
+    /// Whether Stobie's face is registered for native fields.
+    native_font: bool,
+}
+
+/// The native field that is active.
+struct ActiveNative {
+    id: String,
+    /// Holds the element's place in the layer.
+    placeholder: Element,
+    /// The layer element that owns it for assistive technology, and its
+    /// `aria-owns` before.
+    owner: Element,
+    owns: Option<String>,
+    /// Whether egui has reported focus on the field since activation.
+    confirmed: bool,
+    style: String,
+    rules: String,
+    /// Window and visual viewport listeners that keep the host in place.
+    listeners: Vec<(EventTarget, &'static str, Listener)>,
 }
 
 impl Layer {
@@ -308,7 +378,25 @@ impl Layer {
             )?;
             document_listeners.push((event_name, listener));
         }
+        // Taps that end on a text field focus it inside the gesture; the
+        // capture phase runs before eframe's own `touchend` on the document.
+        for (event_name, handler) in [
+            ("touchstart", touch as Handler),
+            ("touchend", touch),
+            ("touchcancel", touch),
+            ("pointerdown", pointer),
+            ("pointerup", pointer),
+        ] {
+            let listener = Listener::new(move |event: Event| handler(key, &event));
+            document.add_event_listener_with_callback_and_bool(
+                event_name,
+                listener.as_ref().unchecked_ref(),
+                true,
+            )?;
+            document_listeners.push((event_name, listener));
+        }
         let mut layer = Self {
+            key,
             context: context.clone(),
             document,
             canvas: canvas.clone(),
@@ -327,12 +415,24 @@ impl Layer {
             checking: Vec::new(),
             listeners,
             document_listeners,
+            scale: 1.0,
+            touch: None,
+            tap_focused: false,
+            agent_tap: None,
+            native_fields: HashMap::new(),
+            native_host: None,
+            native: None,
+            native_font: false,
         };
         layer.name_text_agent()?;
         Ok(layer)
     }
 
-    fn remove(self) {
+    fn remove(mut self) {
+        let _ = self.deactivate_native(false);
+        if let Some((host, _)) = &self.native_host {
+            host.remove();
+        }
         for (event, listener) in &self.listeners {
             let _ = self
                 .container
@@ -377,7 +477,11 @@ impl Layer {
             return Ok(());
         };
         let in_layer_field = self.document.active_element().is_some_and(|active| {
-            self.container.contains(Some(&active))
+            (self.container.contains(Some(&active))
+                || self
+                    .native_host
+                    .as_ref()
+                    .is_some_and(|(host, _)| host.contains(Some(&active))))
                 && matches!(active.tag_name().as_str(), "INPUT" | "TEXTAREA")
         });
         let name = self
@@ -396,7 +500,12 @@ impl Layer {
         Ok(())
     }
 
-    fn apply(&mut self, update: &egui::accesskit::TreeUpdate, scale: f32) -> Result<(), JsValue> {
+    fn apply(
+        &mut self,
+        update: &egui::accesskit::TreeUpdate,
+        scale: f32,
+        native: &[NativeTextRegistration],
+    ) -> Result<(), JsValue> {
         // Read before writing, so the read never forces a layout of our writes.
         let bounds = self.canvas.get_bounding_client_rect();
         let geometry = format!(
@@ -409,17 +518,35 @@ impl Layer {
         if geometry != self.container_geometry {
             self.container
                 .set_attribute("style", &format!("{CONTAINER_STYLE}{geometry}"))?;
+            if let Some((host, _)) = &self.native_host {
+                host.set_attribute("style", &format!("{NATIVE_HOST_STYLE}{geometry}"))?;
+            }
             self.container_geometry = geometry;
         }
         // The canvas, in egui points, bounds what is shown.
         let scale_points = f64::from(scale.max(f32::EPSILON));
+        self.scale = scale_points;
         let viewport = (
             0.0,
             0.0,
             bounds.width() / scale_points,
             bounds.height() / scale_points,
         );
-        let next = aria::project_within(update, scale, Some(viewport));
+        let next = aria::project_native(update, scale, Some(viewport), native);
+        if !next.native.is_empty() {
+            self.register_native_font();
+        }
+        self.native_fields = next
+            .native
+            .keys()
+            .filter_map(|id| {
+                let node = next.elements.get(id)?.node;
+                let field = native
+                    .iter()
+                    .find(|field| field.id.accesskit_id() == node)?;
+                Some((id.clone(), field.clone()))
+            })
+            .collect();
         for operation in aria::diff(&self.tree, &next) {
             // A field edited again since this pass took its input already
             // holds newer text than this pass mirrors.
@@ -444,6 +571,7 @@ impl Layer {
                 set_text(element, mirrored.text.as_deref())?;
             }
         }
+        self.keep_native()?;
         self.name_text_agent()
     }
 
@@ -451,6 +579,29 @@ impl Layer {
         self.elements
             .get(id)
             .ok_or_else(|| JsValue::from_str(&format!("missing layer element {id}")))
+    }
+
+    /// What stands at `id`'s place in the layer: its element, or the
+    /// placeholder of an active native field.
+    fn placed(&self, id: &str) -> Result<&web_sys::Node, JsValue> {
+        match &self.native {
+            Some(active) if active.id == id => Ok(&active.placeholder),
+            _ => Ok(self.element(id)?),
+        }
+    }
+
+    /// Whether the active native field has DOM focus.
+    fn native_focused(&self) -> bool {
+        self.native
+            .as_ref()
+            .and_then(|active| self.elements.get(&active.id))
+            .is_some_and(|element| {
+                self.document.active_element().as_ref() == Some(element.unchecked_ref::<Element>())
+            })
+    }
+
+    fn is_active_native(&self, id: &str) -> bool {
+        self.native.as_ref().is_some_and(|active| active.id == id)
     }
 
     fn perform(&mut self, operation: DomOp) -> Result<(), JsValue> {
@@ -488,20 +639,27 @@ impl Layer {
                     self.place_hit_target(element)?;
                 }
             }
+            // An active native field keeps its native style; it takes its
+            // layer style again when it returns.
+            DomOp::SetStyle { id, .. } if self.is_active_native(&id) => {}
             DomOp::SetStyle { id, style } => {
                 self.element(&id)?
                     .set_attribute("style", &format!("{ELEMENT_STYLE}{style}"))?;
             }
             DomOp::Place { id, parent, before } => {
-                let element = self.element(&id)?;
+                // An active native field's placeholder holds its place.
+                let element = self.placed(&id)?;
                 let parent = match parent {
                     Some(parent) => self.element(&parent)?,
                     None => &self.container,
                 };
-                let before = before.map(|before| self.element(&before)).transpose()?;
-                parent.insert_before(element, before.map(|before| before.as_ref()))?;
+                let before = before.map(|before| self.placed(&before)).transpose()?;
+                parent.insert_before(element, before)?;
             }
             DomOp::Remove { id } => {
+                if self.is_active_native(&id) {
+                    self.deactivate_native(false)?;
+                }
                 if let Some(element) = self.elements.remove(&id) {
                     element.remove();
                 }
@@ -795,6 +953,452 @@ fn hand_back(key: u32, event: &Event) {
         }
         layer.context.request_repaint();
     });
+}
+
+/// Follow a touch that may become a tap on a text field.
+fn touch(key: u32, event: &Event) {
+    // The layer's own forwarded copies are untrusted; the original counts.
+    let Some(event) = event
+        .dyn_ref::<TouchEvent>()
+        .filter(|event| event.is_trusted())
+    else {
+        return;
+    };
+    LAYERS.with(|layers| {
+        let Ok(mut layers) = layers.try_borrow_mut() else {
+            return;
+        };
+        if let Some(layer) = layers.get_mut(&key)
+            && let Err(error) = layer.touch(event)
+        {
+            log_error(&error);
+        }
+    });
+}
+
+/// eframe's `pointerup` on the canvas focuses the canvas and runs a pass.
+/// Where a browser sends a touch's `pointerup` after its `touchend`, that would
+/// blur the field the tap just focused, outside the gesture, so it stops
+/// here. egui still receives the release, which eframe's `touchend` sends.
+fn pointer(key: u32, event: &Event) {
+    if !event.is_trusted() {
+        return;
+    }
+    let touch = js_sys::Reflect::get(event, &"pointerType".into())
+        .ok()
+        .and_then(|kind| kind.as_string())
+        .is_some_and(|kind| kind == "touch");
+    LAYERS.with(|layers| {
+        let Ok(mut layers) = layers.try_borrow_mut() else {
+            return;
+        };
+        let Some(layer) = layers.get_mut(&key) else {
+            return;
+        };
+        let focused = std::mem::take(&mut layer.tap_focused);
+        if event.type_() == "pointerup" && touch && focused {
+            event.stop_propagation();
+        }
+    });
+}
+
+/// Keep an active native field over its egui field when the page moves the
+/// canvas without a pass.
+fn reposition(key: u32) {
+    LAYERS.with(|layers| {
+        let Ok(layers) = layers.try_borrow() else {
+            return;
+        };
+        if let Some(layer) = layers.get(&key)
+            && let Some((host, _)) = &layer.native_host
+        {
+            let bounds = layer.canvas.get_bounding_client_rect();
+            let style = format!(
+                "{NATIVE_HOST_STYLE}left:{:.1}px;top:{:.1}px;width:{:.1}px;height:{:.1}px",
+                bounds.left(),
+                bounds.top(),
+                bounds.width(),
+                bounds.height()
+            );
+            if let Err(error) = host.set_attribute("style", &style) {
+                log_error(&error);
+            }
+        }
+    });
+}
+
+/// A native field lost DOM focus; the next pass returns it to the layer.
+fn native_blur(key: u32) {
+    LAYERS.with(|layers| {
+        if let Ok(layers) = layers.try_borrow()
+            && let Some(layer) = layers.get(&key)
+        {
+            layer.context.request_repaint();
+        }
+    });
+}
+
+fn focus_without_scroll(element: &HtmlElement) -> Result<(), JsValue> {
+    let options = web_sys::FocusOptions::new();
+    options.set_prevent_scroll(true);
+    element.focus_with_options(&options)
+}
+
+impl Layer {
+    fn touch(&mut self, event: &TouchEvent) -> Result<(), JsValue> {
+        let first = |list: web_sys::TouchList| (list.length() == 1).then(|| list.get(0)).flatten();
+        match event.type_().as_str() {
+            "touchstart" => {
+                self.touch = first(event.touches()).map(|touch| {
+                    (
+                        touch.identifier(),
+                        f64::from(touch.client_x()),
+                        f64::from(touch.client_y()),
+                        event.time_stamp(),
+                    )
+                });
+            }
+            "touchend" => {
+                let Some((identifier, x, y, started)) = self.touch.take() else {
+                    return Ok(());
+                };
+                let Some(end) = first(event.changed_touches())
+                    .filter(|end| end.identifier() == identifier && event.touches().length() == 0)
+                else {
+                    return Ok(());
+                };
+                if !self.on_canvas(event.target()) {
+                    return Ok(());
+                }
+                let bounds = self.canvas.get_bounding_client_rect();
+                let point = |x: f64, y: f64| {
+                    (
+                        (x - bounds.left()) / self.scale,
+                        (y - bounds.top()) / self.scale,
+                    )
+                };
+                let end = point(f64::from(end.client_x()), f64::from(end.client_y()));
+                let seconds = (event.time_stamp() - started) / 1000.0;
+                if !aria::is_tap(point(x, y), end, seconds) {
+                    return Ok(());
+                }
+                let Some(id) = aria::text_field_at(&self.tree, end).map(ToOwned::to_owned) else {
+                    return Ok(());
+                };
+                if self.tree.native.contains_key(&id) {
+                    self.activate_native(&id, end)?;
+                } else {
+                    self.focus_text_agent()?;
+                    self.agent_tap = self.tree.elements.get(&id).map(|element| (element.node, 2));
+                }
+                self.tap_focused = true;
+            }
+            _ => self.touch = None,
+        }
+        Ok(())
+    }
+
+    /// Whether a touch began on the canvas or on a layer hit target over it.
+    fn on_canvas(&self, target: Option<EventTarget>) -> bool {
+        let Some(target) = target.and_then(|target| target.dyn_into::<Element>().ok()) else {
+            return false;
+        };
+        target == *self.canvas.unchecked_ref::<Element>()
+            || target.has_attribute(HIT_TARGET) && self.container.contains(Some(&target))
+    }
+
+    /// Focus eframe's text agent now, inside the gesture, so iOS raises the
+    /// keyboard. egui focuses the field in its next pass, and eframe then
+    /// finds the agent focused already.
+    fn focus_text_agent(&self) -> Result<(), JsValue> {
+        let Some(agent) = self
+            .text_agent
+            .as_ref()
+            .and_then(|agent| agent.dyn_ref::<HtmlElement>())
+        else {
+            return Ok(());
+        };
+        if self.document.active_element().as_ref() == Some(agent.unchecked_ref()) {
+            return Ok(());
+        }
+        focus_without_scroll(agent)
+    }
+
+    /// In the pass in which egui takes focus from a tap, its text edit emits
+    /// no IME output yet, and eframe would blur the text agent the tap just
+    /// focused, which closes the keyboard on iOS. While egui's focus is on
+    /// the tapped field, give eframe that field's rectangle instead, for at
+    /// most two shown passes.
+    fn cover_agent_tap(
+        &mut self,
+        update: &egui::accesskit::TreeUpdate,
+        ime: &mut Option<egui::output::IMEOutput>,
+    ) {
+        let Some((node, passes)) = self.agent_tap.take() else {
+            return;
+        };
+        if ime.is_some() {
+            return;
+        }
+        if update.focus == node
+            && let Some(bounds) = update
+                .nodes
+                .iter()
+                .find(|(id, _)| *id == node)
+                .and_then(|(_, node)| node.bounds())
+        {
+            let rect = egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            );
+            *ime = Some(egui::output::IMEOutput {
+                purpose: egui::IMEPurpose::Normal,
+                rect,
+                cursor_rect: rect,
+                should_interrupt_composition: false,
+            });
+        }
+        if passes > 1 {
+            self.agent_tap = Some((node, passes - 1));
+        }
+    }
+
+    /// The visible host of native fields and its stylesheet.
+    fn native_host(&mut self) -> Result<(HtmlElement, Element), JsValue> {
+        if let Some((host, rules)) = &self.native_host {
+            return Ok((host.clone(), rules.clone()));
+        }
+        let host: HtmlElement = self.document.create_element("div")?.unchecked_into();
+        host.set_id(&format!("{}native-{}", aria::ARIA_ID_PREFIX, self.key));
+        host.set_attribute(
+            "style",
+            &format!("{NATIVE_HOST_STYLE}{}", self.container_geometry),
+        )?;
+        let rules = self.document.create_element("style")?;
+        host.append_child(&rules)?;
+        self.container.after_with_node_1(&host)?;
+        // The field edits and hands keys back as it does in the layer.
+        let key = self.key;
+        let handlers: [(&'static str, Handler); 3] = [
+            ("input", edit),
+            ("keydown", hand_back),
+            ("focusout", |key, _| native_blur(key)),
+        ];
+        for (event_name, handler) in handlers {
+            let listener = Listener::new(move |event: Event| handler(key, &event));
+            host.add_event_listener_with_callback(event_name, listener.as_ref().unchecked_ref())?;
+            self.listeners.push((event_name, listener));
+        }
+        self.native_host = Some((host.clone(), rules.clone()));
+        Ok((host, rules))
+    }
+
+    /// Register Stobie's face, from the bytes egui uses, for native fields.
+    fn register_native_font(&mut self) {
+        use js_sys::{Array, Function, Reflect, Uint8Array};
+        if std::mem::replace(&mut self.native_font, true) {
+            return;
+        }
+        let result = (|| -> Result<(), JsValue> {
+            let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
+            let constructor: Function = Reflect::get(&window, &"FontFace".into())?.dyn_into()?;
+            let bytes = Uint8Array::from(crate::typography::REGULAR_FONT_BYTES);
+            let face = Reflect::construct(
+                &constructor,
+                &Array::of2(&crate::REGULAR_FONT_FAMILY.into(), &bytes),
+            )?;
+            let fonts = Reflect::get(&self.document, &"fonts".into())?;
+            let add: Function = Reflect::get(&fonts, &"add".into())?.dyn_into()?;
+            add.call1(&fonts, &face)?;
+            Ok(())
+        })();
+        if let Err(error) = result {
+            log_error(&error);
+        }
+    }
+
+    /// Move native field `id` out of the layer, over its egui field, and
+    /// focus it with the caret where the tap at `point` (in points) landed.
+    /// Called inside a tap, so iOS raises the keyboard.
+    fn activate_native(&mut self, id: &str, point: (f64, f64)) -> Result<(), JsValue> {
+        if self.is_active_native(id) {
+            return Ok(());
+        }
+        self.deactivate_native(false)?;
+        let (Some(element), Some(field), Some(registration), Some(node)) = (
+            self.elements.get(id).cloned(),
+            self.tree.native.get(id).cloned(),
+            self.native_fields.get(id),
+            self.tree.elements.get(id).map(|element| element.node),
+        ) else {
+            return Ok(());
+        };
+        let egui_id = registration.id;
+        // A programmatic focus puts the caret at the end; egui's layout of
+        // the text says where the tap put it.
+        let caret = registration.char_at(egui::pos2(point.0 as f32, point.1 as f32));
+        let (host, rules) = self.native_host()?;
+        // Move before focusing: moving a focused element blurs it.
+        let placeholder = self.document.create_element("span")?;
+        placeholder.set_attribute("aria-hidden", "true")?;
+        placeholder.set_attribute("style", NATIVE_PLACEHOLDER_STYLE)?;
+        element.replace_with_with_node_1(&placeholder)?;
+        // Its layer parent still owns it for assistive technology.
+        let owner = placeholder
+            .parent_element()
+            .ok_or_else(|| JsValue::from_str("native field placeholder has no parent"))?;
+        let owns = owner.get_attribute("aria-owns");
+        let owned = match &owns {
+            Some(owns) => format!("{owns} {id}"),
+            None => id.to_owned(),
+        };
+        owner.set_attribute("aria-owns", &owned)?;
+        element.set_attribute("style", &field.style)?;
+        element.set_attribute(aria::NATIVE_ACTIVE_ATTRIBUTE, "")?;
+        if field.placeholder.is_empty() {
+            element.remove_attribute("placeholder")?;
+        } else {
+            element.set_attribute("placeholder", &field.placeholder)?;
+        }
+        rules.set_text_content(Some(&field.rules));
+        host.append_child(&element)?;
+        focus_without_scroll(&element)?;
+        let value = field_value(&element);
+        let caret: u32 = value
+            .chars()
+            .take(caret)
+            .map(char::len_utf16)
+            .sum::<usize>()
+            .try_into()
+            .unwrap_or(u32::MAX);
+        let select: js_sys::Function =
+            js_sys::Reflect::get(&element, &"setSelectionRange".into())?.dyn_into()?;
+        select.call2(&element, &caret.into(), &caret.into())?;
+        let mut listeners = Vec::new();
+        let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
+        let viewport = js_sys::Reflect::get(&window, &"visualViewport".into())?;
+        let targets: Vec<(EventTarget, &[&'static str])> = [
+            Some((
+                window.unchecked_into::<EventTarget>(),
+                &NATIVE_VIEWPORT_EVENTS[..],
+            )),
+            viewport
+                .dyn_into::<EventTarget>()
+                .ok()
+                .map(|viewport| (viewport, &NATIVE_VIEWPORT_EVENTS[..2])),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let key = self.key;
+        for (target, events) in targets {
+            for event_name in events {
+                let listener = Listener::new(move |_: Event| reposition(key));
+                target.add_event_listener_with_callback(
+                    event_name,
+                    listener.as_ref().unchecked_ref(),
+                )?;
+                listeners.push((target.clone(), *event_name, listener));
+            }
+        }
+        native_text::set_native_text_active(&self.context, Some(egui_id));
+        self.requests.push(ActionRequest {
+            action: Action::Focus,
+            target_node: node,
+            target_tree: TreeId::ROOT,
+            data: None,
+        });
+        self.context.request_repaint();
+        self.native = Some(ActiveNative {
+            id: id.to_owned(),
+            placeholder,
+            owner,
+            owns,
+            confirmed: false,
+            style: field.style,
+            rules: field.rules,
+            listeners,
+        });
+        Ok(())
+    }
+
+    /// Return the active native field to the layer. `focus_canvas` gives DOM
+    /// focus to the canvas if the field had it, so eframe's text agent can
+    /// take it for another field.
+    fn deactivate_native(&mut self, focus_canvas: bool) -> Result<(), JsValue> {
+        let Some(active) = self.native.take() else {
+            return Ok(());
+        };
+        for (target, event_name, listener) in &active.listeners {
+            let _ = target
+                .remove_event_listener_with_callback(event_name, listener.as_ref().unchecked_ref());
+        }
+        native_text::set_native_text_active(&self.context, None);
+        self.context.request_repaint();
+        match &active.owns {
+            Some(owns) => active.owner.set_attribute("aria-owns", owns)?,
+            None => active.owner.remove_attribute("aria-owns")?,
+        }
+        let Some(element) = self.elements.get(&active.id) else {
+            active.placeholder.remove();
+            return Ok(());
+        };
+        let focused =
+            self.document.active_element().as_ref() == Some(element.unchecked_ref::<Element>());
+        element.remove_attribute(aria::NATIVE_ACTIVE_ATTRIBUTE)?;
+        element.remove_attribute("placeholder")?;
+        if let Some(mirrored) = self.tree.elements.get(&active.id) {
+            element.set_attribute("style", &format!("{ELEMENT_STYLE}{}", mirrored.style))?;
+        }
+        // Its focus-out listener finds the layer busy and does nothing.
+        if focused {
+            element.blur()?;
+        }
+        active.placeholder.replace_with_with_node_1(element)?;
+        if focus_canvas && focused {
+            focus_without_scroll(&self.canvas)?;
+        }
+        Ok(())
+    }
+
+    /// After a pass: keep the active native field's presentation current, and
+    /// return it to the layer once it is no longer native, presented or
+    /// focused, or once egui's focus leaves the field it had.
+    fn keep_native(&mut self) -> Result<(), JsValue> {
+        let Some(active) = &self.native else {
+            return Ok(());
+        };
+        let id = active.id.clone();
+        let Some(element) = self.elements.get(&id).cloned() else {
+            return self.deactivate_native(false);
+        };
+        let focused =
+            self.document.active_element().as_ref() == Some(element.unchecked_ref::<Element>());
+        let Some(field) = self.tree.native.get(&id).cloned() else {
+            return self.deactivate_native(focused);
+        };
+        if !focused {
+            return self.deactivate_native(false);
+        }
+        let egui_focus = self.tree.active.as_deref() == Some(id.as_str());
+        let active = self.native.as_mut().expect("an active native field");
+        if !active.confirmed && egui_focus {
+            active.confirmed = true;
+        } else if active.confirmed && !egui_focus {
+            return self.deactivate_native(true);
+        }
+        if field.style != active.style {
+            element.set_attribute("style", &field.style)?;
+            active.style = field.style;
+        }
+        if field.rules != active.rules
+            && let Some((_, rules)) = &self.native_host
+        {
+            rules.set_text_content(Some(&field.rules));
+            active.rules = field.rules;
+        }
+        Ok(())
+    }
 }
 
 fn log_error(error: &JsValue) {

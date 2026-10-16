@@ -121,6 +121,33 @@ snapshot, is the source.
   expose their current text. Sliders expose `aria-valuenow`, minimum and
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.
+- **Touch.** iOS raises the keyboard only for a focus made while a touch is
+  dispatched, and eframe focuses its text agent in the frame after egui
+  focuses a field. A tap, one touch that egui will take as a click, that ends
+  on an enabled, editable text field therefore focuses the text agent at
+  once, from a capture `touchend` listener. The field is the topmost
+  interactive element at that point in the last pass, as egui decides
+  clicks. eframe's canvas `pointerup` handler focuses the canvas, so the
+  same tap's touch `pointerup`, where a browser sends it after `touchend`,
+  stops at the document; egui takes the release from `touchend`. A popup that egui draws over a field but registers earlier still
+  loses the tap to the field; the keyboard then opens and closes again.
+- **Native fields.** A field shown with `NativeTextEdit` carries
+  `data-stobie-native`, spelling, autocorrect and sentence capitalisation
+  (unless the application turns them off). A tap on it moves its element
+  out of the transparent container into a visible host over the canvas,
+  leaving a hidden placeholder in its place. Its layer parent owns it through
+  `aria-owns`, so it stays in its region. The layer styles it from the `Ui`'s
+  visuals and font, with text under 16 CSS pixels scaled so that iOS does not
+  zoom, and focuses it inside the gesture. egui focuses the field through
+  AccessKit, the native caret takes egui's cursor position, and egui stops
+  drawing the text, caret and selection while it is active. Edits reach egui
+  as `SetValue`, as in other layer fields. The field returns to the layer
+  when it loses DOM focus or egui's focus leaves it. Only a tap activates it:
+  mouse clicks, Tab and assistive technology use it as an ordinary layer
+  field. While it is active, window and visual viewport resize and scroll
+  events move its host without a pass, and popups that egui draws over it are
+  hidden beneath it. The [plan](../plans/ios-native-text-plan.md) records
+  the design.
 - **Shortcuts.** An action button's registered shortcut is its
   `aria-keyshortcuts`. In the browser a Cmd shortcut lists both forms, such
   as `Control+S Meta+S`; native AccessKit gives the platform's form.
@@ -176,7 +203,13 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 - in Record Desk, focusing a text field through the layer then typing edits
   it, `locator.fill()` edits a single-line and a multiline field as typing
   would, a status change reaches its polite live region, and destroying the host
-  restores the canvas.
+  restores the canvas;
+- in Record Desk with touch, a tap on the title focuses eframe's text agent
+  before the next animation frame. A tap on the native notes field focuses
+  its element there, shown and topmost over the field and outside the layer
+  container, with one notes textbox in its region. Inserted text reaches
+  egui, the active field presents no frames while idle, and a tap on the
+  title returns it to the layer.
 
 This proves the browser accessibility tree only. It is not screen-reader
 qualification. `tools/aria-layer-orca/run.sh` runs Record Desk under actual

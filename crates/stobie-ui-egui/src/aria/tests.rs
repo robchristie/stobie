@@ -737,3 +737,226 @@ fn an_editable_text_field_is_its_own_centre_pixel_hit_target() {
         .unwrap();
     assert!(!field.attributes.contains_key(HIT_ATTRIBUTE));
 }
+
+/// A window with a pane holding a title field, a read-only field, a disabled
+/// field, notes clipped by a scroll area and a button over part of the notes.
+fn fields() -> TreeUpdate {
+    let field = |role: Role, label: &str, y0: f64| {
+        let mut field = node(role, &[]);
+        field.set_label(label);
+        bounds(&mut field, 0.0, y0, 200.0, y0 + 20.0);
+        field
+    };
+    let mut read_only = field(Role::TextInput, "Read only", 30.0);
+    read_only.set_read_only();
+    let mut disabled = field(Role::TextInput, "Disabled", 60.0);
+    disabled.set_disabled();
+    let mut notes = field(Role::MultilineTextInput, "Notes", 90.0);
+    bounds(&mut notes, 0.0, 90.0, 200.0, 150.0);
+    let mut scroll = node(Role::ScrollView, &[6]);
+    bounds(&mut scroll, 0.0, 90.0, 200.0, 120.0);
+    let mut button = node(Role::Button, &[]);
+    button.set_label("Send");
+    button.add_action(Action::Click);
+    bounds(&mut button, 150.0, 90.0, 200.0, 110.0);
+    update(
+        vec![
+            (1, node(Role::Window, &[2, 3, 4, 5, 7])),
+            (2, field(Role::TextInput, "Title", 0.0)),
+            (3, read_only),
+            (4, disabled),
+            (5, scroll),
+            (6, notes),
+            (7, button),
+        ],
+        1,
+    )
+}
+
+fn label_of<'a>(tree: &'a AriaTree, id: Option<&str>) -> Option<&'a str> {
+    id.and_then(|id| tree.elements[id].attributes.get("aria-label"))
+        .map(String::as_str)
+}
+
+#[test]
+fn a_tap_finds_the_topmost_editable_text_field_shown_there() {
+    let tree = project(&fields(), 1.0);
+    let at = |x, y| label_of(&tree, text_field_at(&tree, (x, y)));
+    assert_eq!(at(100.0, 10.0), Some("Title"));
+    // Read-only and disabled fields take no typing.
+    assert_eq!(at(100.0, 40.0), None);
+    assert_eq!(at(100.0, 70.0), None);
+    // The scroll area shows the notes down to 120 only.
+    assert_eq!(at(100.0, 100.0), Some("Notes"));
+    assert_eq!(at(100.0, 130.0), None);
+    // A later control over the field takes the tap.
+    assert_eq!(at(160.0, 100.0), None);
+    // Nothing is there.
+    assert_eq!(at(300.0, 10.0), None);
+}
+
+#[test]
+fn a_tap_stays_within_egui_click_distance_and_time() {
+    assert!(is_tap((10.0, 10.0), (14.0, 14.0), 0.1));
+    assert!(!is_tap((10.0, 10.0), (20.0, 10.0), 0.1), "a drag scrolls");
+    assert!(!is_tap((10.0, 10.0), (10.0, 10.0), 0.9), "a long press");
+}
+
+fn empty_galley() -> std::sync::Arc<egui::Galley> {
+    let context = egui::Context::default();
+    let mut galley = None;
+    let mut output = context.run_ui(Default::default(), |ui| {
+        galley = Some(ui.painter().layout_no_wrap(
+            String::new(),
+            egui::FontId::default(),
+            egui::Color32::WHITE,
+        ));
+    });
+    output.textures_delta.clear();
+    galley.expect("laid out")
+}
+
+fn registration(id: &str) -> NativeTextRegistration {
+    let rect = egui::Rect::from_min_max(egui::pos2(10.0, 200.0), egui::pos2(210.0, 240.0));
+    NativeTextRegistration {
+        id: egui::Id::new(id),
+        multiline: true,
+        rect,
+        text_rect: rect.shrink2(egui::vec2(4.0, 2.0)),
+        clip: egui::Rect::EVERYTHING,
+        galley: empty_galley(),
+        galley_pos: rect.min,
+        family: NativeFont::Proportional,
+        font_size: 17.0,
+        line_height: 21.0,
+        text: egui::Color32::from_rgb(240, 240, 240),
+        caret: egui::Color32::from_rgb(90, 160, 255),
+        selection: egui::Color32::from_rgba_unmultiplied(90, 160, 255, 128),
+        placeholder: egui::Color32::from_rgb(140, 140, 140),
+        hint: "Message".to_owned(),
+        spellcheck: true,
+    }
+}
+
+fn composer_update(id: &str) -> TreeUpdate {
+    let mut field = node(Role::MultilineTextInput, &[]);
+    field.set_label("Message");
+    field.set_author_id("chat.draft");
+    bounds(&mut field, 10.0, 200.0, 210.0, 240.0);
+    let mut other = node(Role::TextInput, &[]);
+    other.set_label("Search");
+    bounds(&mut other, 10.0, 10.0, 210.0, 30.0);
+    update(
+        vec![
+            (1, node(Role::Window, &[egui::Id::new(id).value(), 3])),
+            (egui::Id::new(id).value(), field),
+            (3, other),
+        ],
+        1,
+    )
+}
+
+#[test]
+fn a_registered_field_is_marked_native_with_its_active_presentation() {
+    let tree = project_native(
+        &composer_update("draft"),
+        1.0,
+        None,
+        &[registration("draft")],
+    );
+    let field = &tree.elements["stobie-a11y:chat.draft"];
+    assert_eq!(field.tag, "textarea");
+    assert_eq!(field.attributes[NATIVE_ATTRIBUTE], "true");
+    assert_eq!(field.attributes["spellcheck"], "true");
+    assert_eq!(field.attributes["autocorrect"], "on");
+    assert_eq!(field.attributes["autocapitalize"], "sentences");
+    // Other fields are unchanged.
+    let search = tree
+        .elements
+        .values()
+        .find(|element| element.tag == "input")
+        .unwrap();
+    assert!(!search.attributes.contains_key(NATIVE_ATTRIBUTE));
+    assert_eq!(search.attributes["spellcheck"], "false");
+    assert_eq!(tree.native.len(), 1);
+
+    let native = &tree.native["stobie-a11y:chat.draft"];
+    for part in [
+        "left:10.0px;top:200.0px;width:200.0px;height:40.0px;padding:2.0px 4.0px 2.0px 4.0px;",
+        "font-family:\"Stobie Source Sans 3 Regular\",system-ui,-apple-system,sans-serif;font-size:17.0px;",
+        "line-height:21.0px;color:rgba(240,240,240,1);",
+        "caret-color:rgba(90,160,255,1);",
+        "background:transparent;",
+        "pointer-events:auto;user-select:text;",
+    ] {
+        assert!(native.style.contains(part), "{part} in {}", native.style);
+    }
+    assert!(!native.style.contains("clip-path"), "{}", native.style);
+    assert!(!native.style.contains("transform"), "{}", native.style);
+    assert_eq!(
+        native.rules,
+        "[data-stobie-native-active]::selection{background-color:rgba(90,159,255,0.502)}[data-stobie-native-active]::placeholder{color:rgba(140,140,140,1);-webkit-text-fill-color:rgba(140,140,140,1);opacity:1}"
+    );
+    assert_eq!(native.placeholder, "Message");
+
+    // A field turned out of native mode loses its marker on the next diff.
+    let plain = project(&composer_update("draft"), 1.0);
+    assert!(diff(&tree, &plain).contains(&DomOp::RemoveAttribute {
+        id: "stobie-a11y:chat.draft".to_owned(),
+        name: NATIVE_ATTRIBUTE,
+    }));
+    assert!(plain.native.is_empty());
+}
+
+#[test]
+fn a_native_field_scales_clips_and_never_zooms_the_page() {
+    // At zoom 2, 17-point text is 34 CSS pixels.
+    let tree = project_native(
+        &composer_update("draft"),
+        2.0,
+        None,
+        &[registration("draft")],
+    );
+    let native = &tree.native["stobie-a11y:chat.draft"];
+    assert!(
+        native
+            .style
+            .contains("left:20.0px;top:400.0px;width:400.0px;height:80.0px;"),
+        "{}",
+        native.style
+    );
+    assert!(native.style.contains("font-size:34.0px;"));
+
+    // Text under 16 CSS pixels is laid out at 16 and scaled down to fit.
+    let mut small = registration("draft");
+    small.font_size = 12.0;
+    small.line_height = 15.0;
+    small.spellcheck = false;
+    let tree = project_native(&composer_update("draft"), 1.0, None, &[small.clone()]);
+    let native = &tree.native["stobie-a11y:chat.draft"];
+    for part in [
+        "left:10.0px;top:200.0px;width:266.7px;height:53.3px;padding:2.7px 5.3px 2.7px 5.3px;",
+        "font-size:16.0px;",
+        "line-height:20.0px;",
+        "transform:scale(0.75);transform-origin:0 0;",
+    ] {
+        assert!(native.style.contains(part), "{part} in {}", native.style);
+    }
+    assert_eq!(
+        tree.elements["stobie-a11y:chat.draft"].attributes["autocorrect"],
+        "off"
+    );
+
+    // Only what the field's scroll area shows of it is drawn.
+    small.font_size = 17.0;
+    small.clip = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(400.0, 230.0));
+    let tree = project_native(&composer_update("draft"), 1.0, None, &[small]);
+    let native = &tree.native["stobie-a11y:chat.draft"];
+    assert!(
+        native
+            .style
+            .contains("clip-path:inset(0.0px 0.0px 10.0px 0.0px);"),
+        "{}",
+        native.style
+    );
+}

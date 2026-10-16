@@ -3,6 +3,11 @@ use crate::DesignTokens;
 pub const REGULAR_FONT_FAMILY: &str = "Stobie Source Sans 3 Regular";
 pub const SEMIBOLD_FONT_FAMILY: &str = "Stobie Source Sans 3 Semibold";
 
+/// The regular face's bytes, which the browser host also gives native text
+/// fields.
+pub(crate) const REGULAR_FONT_BYTES: &[u8] =
+    include_bytes!("../assets/fonts/SourceSans3-Regular.ttf");
+
 /// Dense instruments and application reading surfaces share semantic roles.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum TypographyProfile {
@@ -40,7 +45,7 @@ pub fn install_typography_fonts(context: &egui::Context) {
     for (name, bytes, family, proportional) in [
         (
             REGULAR_FONT_FAMILY,
-            include_bytes!("../assets/fonts/SourceSans3-Regular.ttf").as_slice(),
+            REGULAR_FONT_BYTES,
             REGULAR_FONT_FAMILY,
             true,
         ),

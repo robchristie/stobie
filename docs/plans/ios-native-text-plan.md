@@ -1,0 +1,257 @@
+# Native text input on iOS
+
+Status: active
+Next action: The owner runs the [device checklist](#device-checklist) on the iPhone and records the results here; land only after they pass.
+
+Framework work item 1 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
+the composer of a chat client must raise the keyboard on the first tap and
+edit like a native iOS field. This plan covers that item only. Message
+selection and copy, emoji and fonts, PWA output and the async event source are
+separate items in the same report.
+
+## Problem
+
+The spike's evidence, on an iPhone 12 Pro Max with iOS 26.6.2 and Safari 26.6.1
+([typing in detail](../ios-pwa-spike-report.md#typing-in-detail)):
+
+- **Two taps.** iOS raises the keyboard only for a `focus()` made while a user
+  gesture is being dispatched. eframe 0.36.1 focuses its hidden text agent in
+  `AppRunner::handle_platform_output`, in the animation frame after egui gives
+  the field focus. egui gives a text edit focus on the press. eframe's own
+  iOS workaround in its `touchend` handler blurs and refocuses the agent only
+  when the agent already has focus. That needs a frame between `touchstart`
+  and `touchend`. On the iPhone, the device log shows the first tap focusing
+  the agent once and never refocusing it, so no pass handled the press before
+  `touchend`. That is inferred from the order of focus events; touch events
+  were not logged. The second tap refocuses it, and the keyboard opens 120 ms
+  later. Chromium runs frames
+  between Playwright's `touchstart` and `touchend`, which is why emulation
+  never showed the problem.
+- **Caret, loupe and predictions.** iOS caret gestures and the loupe act on the
+  agent, a one-pixel input with a transparent caret, not on the text egui
+  draws. eframe also clears the agent's value on blur and on every input type
+  other than insertion, so iOS predicts and autocorrects without context.
+
+## Decision
+
+**A Stobie host workaround for the first tap, and an opt-in native field for
+the composer, both in the browser ARIA layer. No eframe change now.**
+
+Rationale:
+
+- At `touchend` eframe cannot tell whether the touch is over a text field.
+  egui decides that in the next pass. A correct eframe fix needs either a
+  pass inside the touch handler or a hit test of the previous pass's
+  widgets. `PlatformOutput::mutable_text_under_cursor` is the closest signal,
+  and eframe ignores it (its TODO cites egui issue 4569), but it reflects the
+  pointer of the last pass. A quick tap often ends before any pass sees the
+  press.
+- Stobie pins eframe 0.36.1 from crates.io. An upstream change helps only
+  after an egui release and a version bump. Patching eframe in Stobie would
+  make every consumer carry the patch.
+- The ARIA layer already holds, for each completed pass, every editable text
+  field's visible rectangle in egui's registration order, which is the same
+  order egui uses to decide what a click hits. The native field also needs a
+  hook at `touchend`, so both parts share one place.
+
+The cost is that the workaround works only where the layer runs: `AppHost`
+web applications that keep `Application::web_accessibility_layer` on. The
+spike's chat client is one.
+
+An upstream report is still worth making. eframe could focus its agent in
+`touchend` when the previous pass's `mutable_text_under_cursor` was set,
+which fixes taps that last longer than a frame. That is outward-facing, so it
+is the owner's call (see [Later work](#later-work)).
+
+## Design
+
+### First-tap keyboard
+
+The layer listens for `touchstart` and `touchend` in the capture phase on the
+document, so it runs before eframe's bubbling `touchend` on the document.
+
+- A **tap** is one trusted touch that ends within 6 points of where it began
+  and lasts under 0.8 s. That is inside egui's click limits, so egui will
+  treat it as a click. The listener ignores the layer's own forwarded copies,
+  which are untrusted.
+- At the end of a tap, the layer converts the touch to egui points and asks the
+  last projected tree which interactive element is topmost there
+  (`aria::text_field_at`): the last one in egui's order whose visible rectangle
+  contains the point. If that element is an enabled, editable text field, the
+  layer focuses eframe's text agent at once, with `preventScroll`, inside the
+  gesture. iOS then raises the keyboard.
+- egui focuses the field in the next pass as usual. eframe's
+  `handle_platform_output` finds the agent focused already and leaves it.
+  eframe's own `touchend` blur and refocus still runs after the layer's
+  listener and does no harm.
+- eframe's canvas `pointerup` handler focuses the canvas and runs a pass at
+  once. Where a browser sends a touch's `pointerup` after its `touchend`,
+  that would blur the field the tap has just focused, outside the gesture.
+  After a `touchend` that focused a field, the layer stops the same tap's
+  touch `pointerup` in the capture phase. egui still receives the release,
+  because eframe's `touchend` sends it too. Where `pointerup` comes first,
+  as in Chromium, eframe's pass has already focused the agent, and nothing
+  is stopped. The device log does not show which order iOS uses.
+- If egui does not focus the field, because a popup egui draws over it comes
+  earlier in the tree, eframe blurs the agent in the next pass and the
+  keyboard closes again. The layer's hit targets have the same limit.
+
+### Native composer mode
+
+`NativeTextEdit` is an opt-in recipe for a single-line or multiline field,
+used where the application would add an `egui::TextEdit`. It builds the
+`TextEdit` itself, so it knows the field's font, margin and colours. It also
+registers the field for the current pass, with a style taken from the `Ui`'s
+visuals, which Stobie derives from the design tokens. Natively, and in a
+browser until the field is activated, it is an ordinary egui field.
+
+In the browser, the layer projects a registered field as before, as a
+`textarea` or `input` in the transparent container, with
+`data-stobie-native`. It gives the field spelling, autocorrect and
+sentence capitalisation, and records the field's absolute, clipped geometry
+and its active style (`AriaTree::native`).
+
+- **Activation.** A tap on a native field (the first-tap test above) activates
+  it inside the gesture. The layer:
+  1. puts a hidden placeholder in the element's place in the layer;
+  2. adds the element's ID to the `aria-owns` of its layer parent, so the
+     accessibility tree keeps it in its region;
+  3. moves the element into a visible sibling host over the canvas;
+  4. styles it from the registered style: the application's font (Source Sans 3,
+     registered as a `FontFace` from the bytes egui uses), size, line height,
+     padding, text, caret, selection and placeholder colours, a transparent
+     background and no border;
+  5. focuses it, then asks egui to focus the field through AccessKit `Focus`.
+
+  The element is moved before it is focused, because moving a focused element
+  blurs it. iOS then owns the caret, loupe, selection, autocorrect context,
+  dictation, paste and IME composition. The element holds the whole text, so
+  predictions see the text before the caret.
+- **Leaving the container.** The host is a fixed element with the canvas's
+  geometry, `overflow: hidden` and `pointer-events: none`, outside the layer's
+  `opacity: 0`, `contain: strict`, `user-select: none` container. Only the
+  active element in it takes pointer input. The placeholder stands in for the
+  element in every placement the diff makes, so the layer's structure is
+  unchanged.
+- **Geometry.** Each pass re-reads the canvas's client rectangle and
+  writes the element's geometry and clip only when they change. While a field
+  is active, window `resize`, `scroll` and `orientationchange`, and
+  `visualViewport` `resize` and `scroll`, re-read the canvas's rectangle and
+  move the host without a pass. Keyboard and rotation also resize the canvas
+  when the page sizes it from the visual viewport, which runs a pass. Text
+  smaller than 16 CSS pixels is drawn at 16 and scaled down, because iOS
+  zooms the page to focus smaller text.
+- **Painting.** While its field is active, `NativeTextEdit` gives egui a
+  transparent text colour and hint, and turns off the caret, its blink and the
+  selection fill. egui keeps the frame, background and focus stroke, and
+  still lays out the text, so the field keeps the height egui gives it. The
+  pass after activation is the first to paint this way, so for one frame
+  egui's text is drawn beneath the element's.
+- **Editing.** Each `input` event on the element becomes an AccessKit
+  `SetValue` request with its whole text, as for any layer field. The host
+  applies it as typed input, and the application sees ordinary changes. A
+  value set by the application, such as a cleared draft after Send, reaches
+  the element through the layer's usual text update. Composition text reaches
+  egui as it is typed.
+- **Focus hand-off.**
+  - From the layer to egui: the AccessKit `Focus` request at activation. When
+    egui first reports focus on the field, the layer copies egui's cursor
+    (the tapped position) into the element's selection, because iOS places a
+    programmatic focus's caret at the end.
+  - Keys: Tab and Escape return DOM focus to the canvas and reach egui. Cmd and
+    Ctrl chords reach egui as shortcuts, as in other layer fields. Return types
+    a newline in a multiline field.
+  - Deactivation: when the element loses DOM focus, or when egui's focus
+    leaves the field after it had it. A tap elsewhere on the canvas does the
+    second, because eframe prevents the touch's default and so the element
+    keeps DOM focus. The layer then puts the element back in the container,
+    restores its layer style, focuses the canvas, so that eframe gives the
+    agent focus if egui focused another text field, and clears the active
+    state. A field that is no longer presented or no longer native
+    deactivates too.
+  - Only a tap activates. Mouse clicks, Tab and focus that egui requests
+    itself edit through eframe's agent as before. Assistive technology that
+    moves DOM focus onto a native field edits it in place in the layer, as
+    before. Desktop browsers and screen readers therefore behave as they did.
+- **Limits.** Popups that egui draws over an active field are hidden beneath
+  the element. A page that scrolls without a pass or a viewport event leaves
+  the element misaligned until the next pass. egui's caret is not updated
+  from the element's selection on deactivation; it stays at the end of the
+  text.
+
+## Acceptance
+
+- `cargo xtask verify` passes on the branch.
+- Unit tests cover:
+  - the tap test and `text_field_at`: topmost wins; read-only, disabled, clipped
+    or covered fields are excluded;
+  - the projection of native fields: the marker, absolute and clipped
+    geometry, the style from the registration and the 16-pixel guard;
+  - `NativeTextEdit`: it registers per pass, and while active egui paints no
+    visible text or caret.
+- A Chromium touch check with Record Desk, whose notes field becomes a native
+  field. During each tap it holds animation frames and keeps touch pointer
+  events from the page, so that, as on the iPhone, no egui pass handles the
+  press first. A tap on Record title focuses eframe's agent during
+  `touchend`. A
+  tap on Record notes focuses the visible element during `touchend`, over the
+  field's rectangle and outside the layer container, and the accessibility
+  tree still has one "Record notes" textbox. Inserted text reaches egui. An
+  active field presents no frames while idle. A tap elsewhere puts the
+  element back in the layer.
+- The owner's device results pass every item in the
+  [device checklist](#device-checklist).
+
+## Delivery increments
+
+| Increment | Status | Evidence |
+| --- | --- | --- |
+| Plan and decision | Complete | This plan |
+| First-tap keyboard workaround | In progress | Unit tests; Chromium touch check |
+| Native composer mode | In progress | Unit tests; Chromium touch check |
+| Device acceptance | Waiting for the owner | Device checklist results |
+
+## Device checklist
+
+Build the spike client (`/nvme/development/stobie-ios-spike`) against this
+branch, with its composer switched to `NativeTextEdit`. Serve it with
+`tools/serve-tailscale.sh`, reinstall the home-screen app, and record
+pass or fail with a note for each item. The page diagnostics log focus and
+input events.
+
+1. **First tap.** From the conversation view, one tap on the composer raises
+   the keyboard. Repeat after closing the keyboard, after an app switch and
+   after rotating.
+2. **Caret placement.** The caret lands where you tap in existing text, in the
+   middle of a word and at the end.
+3. **Loupe and caret drag.** Touch and hold, then drag. The loupe shows the
+   composer's text, and the caret follows your finger without lag or offset.
+   Try the space-bar trackpad too.
+4. **Selection.** Double-tap a word. The handles and the Cut, Copy and Paste
+   menu appear, and the selection matches the text.
+5. **Autocorrect context.** Type "teh" then a space; it becomes "the". Then type
+   the first word of a sentence and check QuickType predicts from the text
+   before the caret. Delete a word with backspace and keep typing: predictions
+   continue from the remaining text.
+6. **Dictation.** Dictate a sentence. The words appear once, in order, and
+   Send sends them.
+7. **Paste.** Paste a line copied from Notes, at the caret and over a
+   selection.
+8. **Look.** The composer's text, placeholder, caret and selection use the
+   app's font and colours in light and dark mode. Nothing doubles or shifts
+   when the field activates or deactivates. The page does not zoom.
+9. **Leaving.** Tap the transcript: the keyboard closes and egui draws the
+   draft again. Tap Send: the message sends, the composer clears and the
+   keyboard closes, because egui moves focus off a field on a press
+   elsewhere.
+10. **Geometry.** With the keyboard up, the composer stays over its frame
+    while you scroll the transcript, while the keyboard's height changes
+    (emoji keyboard, QuickType bar) and after rotation.
+
+## Later work
+
+- Report the two-tap behaviour to egui with the spike's event sequence, and
+  propose focusing the agent in `touchend` from `mutable_text_under_cursor`.
+  Remove the first-tap workaround when eframe makes it unnecessary.
+- Copy the element's selection back into egui's cursor on deactivation.
+- Hide an active field under popups that egui draws over it.

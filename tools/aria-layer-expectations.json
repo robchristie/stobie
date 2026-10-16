@@ -392,7 +392,17 @@
         },
         "text": "First line\nSecond line"
       }
-    ]
+    ],
+    "touch": {
+      "agent": {
+        "name": "Record title"
+      },
+      "native": {
+        "name": "Record notes",
+        "text": "Typed natively",
+        "parent": "region"
+      }
+    }
   },
   "gallery": {
     "application": "Stobie Component Gallery",

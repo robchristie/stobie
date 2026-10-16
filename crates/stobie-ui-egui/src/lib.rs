@@ -70,6 +70,7 @@ mod host;
 #[cfg(feature = "image-rendering")]
 mod image_rendering;
 pub mod inspection;
+mod native_text;
 mod observation;
 mod pane_content;
 mod preferences;
@@ -95,6 +96,7 @@ pub use host::*;
 #[cfg(feature = "image-rendering")]
 pub use image_rendering::*;
 pub use inspection::*;
+pub use native_text::{NativeTextEdit, native_text_active};
 pub use observation::{observe_node, observe_text, observe_visible_only};
 pub use pane_content::*;
 pub use preferences::*;
