@@ -99,7 +99,13 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "warnings",
                 ],
             )?;
-            run("python3", &["tools/test-rust.py", "workspace"])?;
+            // The checks stage installs Binaryen, so the real wasm-opt
+            // packaging test must run rather than skip.
+            run_with_environment(
+                "python3",
+                &["tools/test-rust.py", "workspace"],
+                &[("STOBIE_REQUIRE_WASM_OPT", Path::new("1"))],
+            )?;
             run("python3", &["tools/check-api-docs.py"])?;
             architecture()?;
             run("python3", &["tools/test-rust.py", "ui-no-default"])?;

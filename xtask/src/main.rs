@@ -90,7 +90,7 @@ fn build_web() -> Result<()> {
 /// Check that the wasm-bindgen CLI is the version the workspace locks, and
 /// return it. Web builds share `stobie-build` with the `stobie` CLI.
 fn ensure_wasm_bindgen() -> Result<String> {
-    let metadata = stobie_build::cargo_metadata(None)?;
+    let metadata = stobie_build::cargo_metadata(None, false)?;
     let version = stobie_build::locked_wasm_bindgen(&metadata)
         .context("the workspace must lock exactly one wasm-bindgen version")?;
     stobie_build::ensure_wasm_bindgen(&version)?;

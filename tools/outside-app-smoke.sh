@@ -15,9 +15,14 @@ EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/outside-app-evidence}/
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
 EVIDENCE_DIR="$(cd "$EVIDENCE_DIR" && pwd)"
 
+# A temporary directory this script creates is removed when it exits.
+OWN_OUTSIDE=0
+if [[ -z "${STOBIE_OUTSIDE_DIR:-}" ]]; then OWN_OUTSIDE=1; fi
 OUTSIDE="${STOBIE_OUTSIDE_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/stobie-outside-XXXXXX")}"
 mkdir -p "$OUTSIDE"
 OUTSIDE="$(cd "$OUTSIDE" && pwd -P)"
+remove_outside() { if (( OWN_OUTSIDE )); then rm -rf -- "$OUTSIDE"; fi; }
+trap remove_outside EXIT
 case "$OUTSIDE/" in
   "$(pwd -P)/"*) echo "STOBIE_OUTSIDE_DIR must be outside the checkout: $OUTSIDE" >&2; exit 2 ;;
 esac
@@ -77,7 +82,7 @@ source tools/native-smoke-lifecycle.sh
 if (( ${#UI_COMMAND[@]} )); then
   UI_COMMAND+=(--bind "$OUTSIDE" "$OUTSIDE")
 fi
-trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
+trap 'cleanup; rm -rf -- "$SMOKE_TMP"; remove_outside' EXIT
 export DISPLAY=:93 WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_HEADFUL=1
 owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/xvfb.log" 2>&1
 sleep 1

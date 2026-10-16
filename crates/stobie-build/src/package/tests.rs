@@ -235,7 +235,8 @@ fn html_needs_a_head_and_no_base() {
     assert!(add_base("a", "<head><basefont></head>", "id").is_ok());
 }
 
-/// The checks stage installs the pinned Binaryen; elsewhere set `WASM_OPT`.
+/// The checks stage installs the pinned Binaryen and sets
+/// `STOBIE_REQUIRE_WASM_OPT`, so this runs there; elsewhere set `WASM_OPT`.
 #[test]
 fn pinned_real_wasm_opt_builds_distinct_variants() {
     let wasm_opt = std::env::var_os("WASM_OPT")

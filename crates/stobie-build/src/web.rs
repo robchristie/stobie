@@ -58,8 +58,9 @@ fn cargo() -> Command {
     Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
 }
 
-/// `cargo metadata` for the wasm target, with the dependency graph.
-pub fn cargo_metadata(manifest_path: Option<&Path>) -> Result<Value, Error> {
+/// `cargo metadata` for the wasm target, with the dependency graph. With
+/// `locked`, a stale `Cargo.lock` fails instead of being rewritten.
+pub fn cargo_metadata(manifest_path: Option<&Path>, locked: bool) -> Result<Value, Error> {
     let mut command = cargo();
     command.args([
         "metadata",
@@ -68,6 +69,9 @@ pub fn cargo_metadata(manifest_path: Option<&Path>) -> Result<Value, Error> {
         "--filter-platform",
         "wasm32-unknown-unknown",
     ]);
+    if locked {
+        command.arg("--locked");
+    }
     if let Some(path) = manifest_path {
         command.arg("--manifest-path").arg(path);
     }
@@ -78,7 +82,11 @@ pub fn cargo_metadata(manifest_path: Option<&Path>) -> Result<Value, Error> {
     if !output.status.success() {
         return Err(Error::new(
             "cargo metadata failed",
-            "run it in the application's directory or pass --manifest-path",
+            if locked {
+                "run it in the application's directory or pass --manifest-path; with --locked, Cargo.lock must be up to date"
+            } else {
+                "run it in the application's directory or pass --manifest-path"
+            },
         ));
     }
     serde_json::from_slice(&output.stdout)
@@ -198,8 +206,17 @@ pub fn bindgen(wasm: &Path, output: &Path) -> Result<(), Error> {
 }
 
 /// Copy a web root's source files into `destination`, skipping hidden files,
-/// `tests`, the names builds generate and `exclude`.
+/// `tests`, and at the top level the names builds generate and `exclude`.
 pub fn stage_web(source: &Path, destination: &Path, exclude: &[&str]) -> Result<(), Error> {
+    stage_files(source, destination, true, exclude)
+}
+
+fn stage_files(
+    source: &Path,
+    destination: &Path,
+    top: bool,
+    exclude: &[&str],
+) -> Result<(), Error> {
     fs::create_dir_all(destination).map_err(io(format!("create {}", destination.display())))?;
     let entries = fs::read_dir(source).map_err(io(format!("read {}", source.display())))?;
     for entry in entries {
@@ -208,15 +225,14 @@ pub fn stage_web(source: &Path, destination: &Path, exclude: &[&str]) -> Result<
         let name = name.to_string_lossy();
         if name.starts_with('.')
             || name == "tests"
-            || GENERATED.contains(&name.as_ref())
-            || exclude.contains(&name.as_ref())
+            || (top && (GENERATED.contains(&name.as_ref()) || exclude.contains(&name.as_ref())))
         {
             continue;
         }
         let kind = entry.file_type().map_err(io(format!("inspect {name}")))?;
         let target = destination.join(entry.file_name());
         if kind.is_dir() {
-            stage_web(&entry.path(), &target, &[])?;
+            stage_files(&entry.path(), &target, false, &[])?;
         } else if kind.is_file() {
             fs::copy(entry.path(), &target).map_err(io(format!("copy {name}")))?;
         } else {
@@ -304,7 +320,7 @@ fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
 /// the startup loader beside `index.html`. With production options, also
 /// package a clean copy of it.
 pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
-    let metadata = cargo_metadata(options.manifest_path.as_deref())?;
+    let metadata = cargo_metadata(options.manifest_path.as_deref(), options.locked)?;
     let package = application(&metadata, options.package.as_deref())?.clone();
     let name = package["name"].as_str().unwrap_or_default().to_owned();
     let manifest = PathBuf::from(package["manifest_path"].as_str().unwrap_or_default());
@@ -357,9 +373,11 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
                 "rustflags": std::env::var("RUSTFLAGS").ok(),
                 "cargoEncodedRustflags": std::env::var("CARGO_ENCODED_RUSTFLAGS").ok(),
             });
+            // Package names are lower-case with hyphens; Cargo also allows
+            // `_` and upper case.
             let manifest = package::package(&package::Options {
                 apps: vec![package::App {
-                    name: name.clone(),
+                    name: name.to_ascii_lowercase().replace('_', "-"),
                     directory: staging,
                 }],
                 output: output.clone(),
@@ -381,4 +399,95 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
         wasm_bindgen: version,
         production,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `--locked` must refuse a stale lockfile rather than rewrite it.
+    #[test]
+    fn locked_metadata_refuses_a_stale_lockfile_and_leaves_it_unchanged() {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/stobie-build-tests")
+            .join(format!("locked-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        let package = |name: &str, version: &str, dependency: &str| {
+            let root = directory.join(name);
+            fs::create_dir_all(root.join("src")).unwrap();
+            fs::write(root.join("src/lib.rs"), "").unwrap();
+            fs::write(
+                root.join("Cargo.toml"),
+                format!(
+                    "[package]\nname = \"{name}\"\nversion = \"{version}\"\nedition = \"2024\"\n{}\n[dependencies]\n{dependency}\n",
+                    // Each is its own workspace, not the enclosing repository's.
+                    "[workspace]"
+                ),
+            )
+            .unwrap();
+            root.join("Cargo.toml")
+        };
+        package("dependency", "0.1.0", "");
+        let manifest = package("app", "0.1.0", "dependency = { path = \"../dependency\" }");
+        cargo_metadata(Some(&manifest), true).expect_err("no lockfile yet");
+        cargo_metadata(Some(&manifest), false).unwrap();
+        let lockfile = directory.join("app/Cargo.lock");
+        cargo_metadata(Some(&manifest), true).expect("an up-to-date lockfile");
+        let before = fs::read(&lockfile).unwrap();
+        package("dependency", "0.2.0", "");
+        cargo_metadata(Some(&manifest), true).expect_err("a stale lockfile");
+        assert_eq!(
+            fs::read(&lockfile).unwrap(),
+            before,
+            "the lockfile is unchanged"
+        );
+        // Without it, Cargo updates the lockfile: the case `--locked` refuses.
+        cargo_metadata(Some(&manifest), false).unwrap();
+        assert_ne!(fs::read(&lockfile).unwrap(), before);
+        fs::remove_dir_all(&directory).unwrap();
+    }
+
+    #[test]
+    fn staging_skips_generated_names_only_at_the_top() {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/stobie-build-tests")
+            .join(format!("stage-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        let source = directory.join("web");
+        for path in [
+            "index.html",
+            "pkg/app.js",
+            "browser-startup.js",
+            "tests/a.mjs",
+            ".hidden",
+            "assets/pkg/kept.js",
+            "worker-pkg/w.js",
+        ] {
+            let path = source.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, "x").unwrap();
+        }
+        let destination = directory.join("staged");
+        stage_web(&source, &destination, &["worker-pkg"]).unwrap();
+        let mut staged = Vec::new();
+        let mut stack = vec![destination.clone()];
+        while let Some(directory) = stack.pop() {
+            for entry in fs::read_dir(directory).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else {
+                    staged.push(
+                        path.strip_prefix(&destination)
+                            .unwrap()
+                            .to_string_lossy()
+                            .into_owned(),
+                    );
+                }
+            }
+        }
+        staged.sort();
+        assert_eq!(staged, ["assets/pkg/kept.js", "index.html"]);
+        fs::remove_dir_all(&directory).unwrap();
+    }
 }

@@ -34,7 +34,7 @@ An outside application depends on each Stobie crate it uses with
 `stobie-imaging`, `stobie-runtime`, `stobie-render-wgpu` and the UI crate's
 `image-rendering` feature for image apps. Every Stobie dependency names the
 same revision. Upgrading means changing that revision everywhere and running
-`cargo update -p stobie-core` (and the other Stobie packages).
+`cargo update`.
 
 A local checkout overrides the pin with Cargo's
 `[patch."https://github.com/robchristie/stobie"]` table, written into the

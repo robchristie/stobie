@@ -59,7 +59,11 @@ try {
 
   // Browser: `stobie serve` serves the build; Chromium exposes DevTools.
   const server = spawn(stobie, ['serve', resolve(app, 'web'), '--port', '0', '--json'], { stdio: ['ignore', 'pipe', 'inherit'] });
-  const [line] = await once(createInterface({ input: server.stdout }), 'line');
+  const [line] = await Promise.race([
+    once(createInterface({ input: server.stdout }), 'line'),
+    once(server, 'exit').then(([code]) => { throw new Error(`stobie serve exited with ${code} before listening`); }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('stobie serve did not start within 30 s')), 30000).unref()),
+  ]);
   const url = JSON.parse(line).url;
   const { chromium } = await import('playwright');
   const launch = await import('./browser-launch.mjs');

@@ -18,9 +18,21 @@ fn git(arguments: &[&str]) -> Option<String> {
 
 fn main() {
     println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
+    // Only a Stobie checkout names a Stobie revision, not, say, another
+    // repository that vendors this source.
+    let in_stobie = git(&["rev-parse", "--show-toplevel"]).is_some_and(|top| {
+        Path::new(&top)
+            .join("crates/stobie-cli/Cargo.toml")
+            .canonicalize()
+            .ok()
+            == Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("Cargo.toml")
+                .canonicalize()
+                .ok()
+    });
     let revision = std::env::var("STOBIE_SOURCE_REVISION")
         .ok()
-        .or_else(|| git(&["rev-parse", "HEAD"]));
+        .or_else(|| in_stobie.then(|| git(&["rev-parse", "HEAD"])).flatten());
     if let (Some(directory), Some(common)) = (
         git(&["rev-parse", "--absolute-git-dir"]),
         git(&["rev-parse", "--git-common-dir"]),
