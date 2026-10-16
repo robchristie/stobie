@@ -4,6 +4,7 @@
 mod args;
 mod capture;
 mod output;
+mod project;
 mod session;
 mod spec;
 
@@ -140,7 +141,7 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     if name == "--version" {
-        println!("stobie {}", env!("CARGO_PKG_VERSION"));
+        println!("{}", project::version_line());
         return ExitCode::SUCCESS;
     }
     // A program's own arguments after `--` are not stobie's.
@@ -321,6 +322,10 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
     }
     match command.name {
         "capabilities" => Ok(Output::new(String::new(), capabilities())),
+        "new" => project::new(args, positional(0, "an application NAME")?),
+        "build-web" => project::build_web(args),
+        "package-web" => project::package_web(args),
+        "serve" => match project::serve(args, args.has("--json"))? {},
         "sessions" => sessions(),
         "launch" => launch(args, positional(0, "a session NAME")?),
         "stop" => {
@@ -618,6 +623,8 @@ fn expected_positionals(command: &str) -> usize {
         "launch" | "attach" | "stop" | "query" | "discover" | "invoke" | "wait" | "receipt"
         | "cancel" => 1,
         "set-text" => 2,
+        "new" | "serve" => 1,
+        "package-web" => usize::MAX,
         _ => 0,
     }
 }
@@ -1028,6 +1035,7 @@ fn launch(args: &Args, name: &str) -> Result<Output, ClientError> {
 fn capabilities() -> serde_json::Value {
     serde_json::json!({
         "package_version": env!("CARGO_PKG_VERSION"),
+        "source_revision": project::source_revision(),
         "protocol_version": stobie_client::protocol::INSPECTION_VERSION,
         "commands": spec::COMMANDS,
         "target_flags": spec::TARGET_FLAGS,

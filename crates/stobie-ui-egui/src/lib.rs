@@ -50,6 +50,8 @@ extern crate self as stobie_ui_egui;
 #[doc(hidden)]
 pub mod __private {
     #[cfg(all(feature = "eframe", target_arch = "wasm32"))]
+    pub use crate::host::__startup_mark as startup_mark;
+    #[cfg(all(feature = "eframe", target_arch = "wasm32"))]
     pub use {js_sys, wasm_bindgen, web_sys};
 }
 

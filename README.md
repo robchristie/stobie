@@ -224,7 +224,7 @@ pinned x86_64 UI packages into `.tools/`; that path also relies on tools such as
 `STOBIE_USE_SYSTEM_UI_LIBS=1` and provision the dependencies and display as
 shown in the [Ubuntu CI setup action](.github/actions/setup-verification/action.yml).
 
-Hosted verification runs nine stages in parallel and requires all of them under
+Hosted verification runs ten stages in parallel and requires all of them under
 the final `verify` check. The local command runs the same stages sequentially.
 See [CI verification and cache ownership](docs/ci-cache.md) for the stage
 inventory, focused reproduction commands and timing limits.

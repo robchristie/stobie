@@ -3,6 +3,7 @@ members = [
     "crates/stobie-core",
     "crates/stobie-protocol",
     "crates/stobie-client",
+    "crates/stobie-build",
     "crates/stobie-cli",
     "crates/stobie-imaging",
     "crates/stobie-runtime",
@@ -52,3 +53,16 @@ wgpu = "30.0.1"
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# xtask packages production builds in its dev profile; optimise only the
+# encoders and hashing so Brotli quality 11 stays fast.
+[profile.dev.package.brotli]
+opt-level = 3
+[profile.dev.package.brotli-decompressor]
+opt-level = 3
+[profile.dev.package.alloc-no-stdlib]
+opt-level = 3
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3

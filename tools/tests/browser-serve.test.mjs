@@ -1,19 +1,40 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import test from 'node:test';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
-import { packageBrowser, sha256, WASM_OPT_VERSION } from '../browser-package.mjs';
-import { createProductionServer, negotiateEncoding } from '../browser-serve.mjs';
+import { createProductionServer, negotiateEncoding, sha256 } from '../browser-serve.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const temporaryRoot = path.join(root, 'target/browser-package-tests');
+const temporaryRoot = path.join(root, 'target/browser-serve-tests');
 mkdirSync(temporaryRoot, { recursive: true });
+
+// Packages come from the one packaging implementation, `stobie package-web`;
+// its own behaviour is tested in crates/stobie-build. These tests cover the
+// production server that serves its output.
+function stobie() {
+  if (process.env.STOBIE_BIN) return process.env.STOBIE_BIN;
+  const build = spawnSync('cargo', ['build', '--quiet', '-p', 'stobie-cli'], { cwd: root, stdio: 'inherit' });
+  assert.equal(build.status, 0, 'build the stobie CLI');
+  return path.join(process.env.CARGO_TARGET_DIR || path.join(root, 'target'), 'debug/stobie');
+}
+const binary = stobie();
+function packageBrowser({ apps, output, sourceIdentity }) {
+  const args = ['package-web', ...apps.map(app => `${app.name}=${app.directory}`), '--output', output, '--json'];
+  if (sourceIdentity) {
+    const identity = path.join(path.dirname(output), `identity-${Math.random().toString(16).slice(2)}.json`);
+    writeFileSync(identity, JSON.stringify(sourceIdentity));
+    args.push('--source-identity-file', identity);
+  }
+  const result = spawnSync(binary, args, { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout).manifest;
+}
 function fixture(t) {
   const directory = mkdtempSync(path.join(temporaryRoot, 'test-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
@@ -25,7 +46,7 @@ function fixture(t) {
   writeFileSync(path.join(input, 'pkg/app.js'), "import './snippets/helper/module.js'; export const wasm = new URL('app_bg.wasm', import.meta.url);\n");
   writeFileSync(path.join(input, 'pkg/snippets/helper/module.js'), 'export const value = 42;\n');
   writeFileSync(path.join(input, 'pkg/app_bg.wasm'), Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]));
-  const options = { apps: [{ name: 'lab', directory: input }], output, sourceIdentity: 'fixture' };
+  const options = { apps: [{ name: 'lab', directory: input }], output, sourceIdentity: { build: 'fixture' } };
   return { directory, input, output, options };
 }
 function get(server, resource, headers = {}, method = 'GET') {
@@ -46,54 +67,6 @@ async function serve(t, options, port = 0) {
   t.after(() => new Promise(resolve => server.close(resolve)));
   return server;
 }
-
-test('packaging is reproducible, preserves relative imports and round-trips every representation', t => {
-  const { options, output, input } = fixture(t);
-  const first = packageBrowser(options);
-  assert.deepEqual(packageBrowser(options), first);
-  const app = first.apps[0];
-  assert.equal(app.contentId.length, 64);
-  assert.match(readFileSync(path.join(output, app.entry.path), 'utf8'), new RegExp(`<base href="./assets/${app.contentId}/">`));
-  for (const record of [...app.assets, app.entry]) {
-    const raw = readFileSync(path.join(output, record.path));
-    const br = readFileSync(path.join(output, `${record.path}.br`));
-    const gzip = readFileSync(path.join(output, `${record.path}.gz`));
-    assert.deepEqual(brotliDecompressSync(br), raw);
-    assert.deepEqual(gunzipSync(gzip), raw);
-    for (const [kind, bytes] of [['raw', raw], ['br', br], ['gzip', gzip]]) assert.deepEqual(record[kind], { bytes: bytes.length, sha256: sha256(bytes) });
-  }
-  for (const relative of ['worker.js', 'pkg/app.js', 'pkg/snippets/helper/module.js']) assert.deepEqual(readFileSync(path.join(output, app.assetDirectory, relative)), readFileSync(path.join(input, relative)));
-  assert.notEqual(packageBrowser({ ...options, sourceIdentity: 'different-configuration' }).apps[0].contentId, app.contentId);
-  writeFileSync(path.join(input, 'bootstrap.js'), 'changed input\n');
-  const second = packageBrowser(options);
-  assert.notEqual(second.apps[0].contentId, app.contentId);
-  assert.ok(!existsSync(path.join(output, app.assetDirectory)));
-});
-
-test('missing or incompatible optimiser fails before replacing existing output', t => {
-  const { options, directory, output } = fixture(t);
-  const previous = packageBrowser(options);
-  assert.throws(() => packageBrowser({ ...options, variant: 'Oz', wasmOpt: path.join(directory, 'missing') }), /wasm-opt 131 is required/);
-  const fake = path.join(directory, 'wasm-opt');
-  writeFileSync(fake, '#!/usr/bin/env node\nconsole.log("wasm-opt version 130");\n');
-  chmodSync(fake, 0o755);
-  assert.throws(() => packageBrowser({ ...options, variant: 'O3', wasmOpt: fake }), /Incompatible wasm-opt/);
-  writeFileSync(fake, `#!/usr/bin/env node\nif(process.argv.includes('--version')) console.log('wasm-opt version ${WASM_OPT_VERSION}'); else process.exit(1);\n`);
-  assert.throws(() => packageBrowser({ ...options, variant: 'Oz', wasmOpt: fake }), /wasm-opt failed/);
-  assert.deepEqual(JSON.parse(readFileSync(path.join(output, 'manifest.json'))), previous);
-  assert.throws(() => packageBrowser({ ...options, variant: 'O4' }), /Unknown variant/);
-});
-
-test('output replacement and inputs reject unsafe locations and symlinks', t => {
-  const { options, directory, input } = fixture(t);
-  assert.throws(() => packageBrowser({ ...options, output: directory }), /isolated/);
-  assert.throws(() => packageBrowser({ ...options, output: path.join(input, 'output') }), /isolated/);
-  const unrelated = path.join(directory, 'unrelated');
-  mkdirSync(unrelated); writeFileSync(path.join(unrelated, 'keep'), 'keep');
-  assert.throws(() => packageBrowser({ ...options, output: unrelated }), /unrelated output/);
-  symlinkSync(path.join(unrelated, 'keep'), path.join(input, 'linked'));
-  assert.throws(() => packageBrowser(options), /Symlink/);
-});
 
 test('quality negotiation respects exclusions, fallback, wildcards and malformed qualities', () => {
   for (const [header, expected] of [['', 'identity'], ['br, gzip', 'br'], ['br;q=0, gzip', 'gzip'], ['gzip;q=0.8, br;q=0.5, identity;q=0', 'gzip'], ['deflate', 'identity'], ['*;q=0', null], ['br;q=0,gzip;q=0,identity;q=0', null], ['*;q=0.5,identity;q=0', 'br'], ['br;q=2,gzip;q=1', 'gzip'], ['br;q=0.4', 'identity']]) assert.equal(negotiateEncoding(header), expected, header);
@@ -182,34 +155,6 @@ test('server fails closed when a listed representation is changed or escapes the
   assert.equal((await get(server, `/${asset.path}`)).status, 500);
 });
 
-const realWasmOpt = process.env.WASM_OPT || path.join(root, '.tools/browser/binaryen-version_131/bin/wasm-opt');
-test('pinned real wasm-opt builds Oz and O3 variants with distinct configuration identities', t => {
-  const { options } = fixture(t);
-  const none = packageBrowser(options);
-  const oz = packageBrowser({ ...options, variant: 'Oz', wasmOpt: realWasmOpt });
-  const o3 = packageBrowser({ ...options, variant: 'O3', wasmOpt: realWasmOpt });
-  assert.match(oz.toolVersions.wasmOpt, /^wasm-opt version 131/);
-  assert.equal(new Set([none, oz, o3].map(value => value.apps[0].contentId)).size, 3);
-});
-
-
-test('CLI reads build configuration from a JSON identity file and includes it in versioning', t => {
-  const { options, directory, input, output } = fixture(t);
-  const identityPath = path.join(directory, 'source-identity.json');
-  const identity = { profile: 'release', browserTestApi: false, rust: 'fixture-rust', bindgen: 'fixture-bindgen', commit: 'fixture-commit' };
-  writeFileSync(identityPath, JSON.stringify(identity));
-  const result = spawnSync(process.execPath, [path.join(root, 'tools/browser-package.mjs'), '--app', `lab=${input}`, '--output', output, '--source-identity-file', identityPath], { encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr);
-  const manifest = JSON.parse(result.stdout);
-  assert.deepEqual(manifest.sourceIdentity, identity);
-  assert.equal(packageBrowser({ ...options, sourceIdentity: identity }).apps[0].contentId, manifest.apps[0].contentId);
-  assert.notEqual(packageBrowser({ ...options, sourceIdentity: { ...identity, browserTestApi: true } }).apps[0].contentId, manifest.apps[0].contentId);
-  writeFileSync(identityPath, '[]');
-  const rejected = spawnSync(process.execPath, [path.join(root, 'tools/browser-package.mjs'), '--source-identity-file', identityPath], { encoding: 'utf8' });
-  assert.equal(rejected.status, 1);
-  assert.match(rejected.stderr, /requires a JSON object/);
-});
-
 test('new publication revalidates HTML at the same origin and explicitly retains previous immutable assets', async t => {
   const { options, directory, input, output } = fixture(t);
   writeFileSync(path.join(input, 'extra.html'), '<html>old secondary page</html>');
@@ -243,7 +188,6 @@ test('new publication revalidates HTML at the same origin and explicitly retains
   const isolated = await serve(t, { directory: currentOutput });
   assert.equal((await get(isolated, `/${oldApp.assetDirectory}/bootstrap.js`)).status, 404);
 });
-
 
 test('network streaming forwards a bounded body before the source completes alongside static requests', async t => {
   const { options, output } = fixture(t);
@@ -311,17 +255,6 @@ test('network streaming abort destroys the upstream and rejects its pending tran
   assert.ok(error instanceof Error);
   assert.equal(source.destroyed, true);
 });
-
-test('build configuration changes asset identity while provenance-only changes do not', t => {
-  const { options } = fixture(t);
-  const first = packageBrowser({ ...options, sourceIdentity: { revision: 'first', dirty: true, profile: 'release' } });
-  const recorded = packageBrowser({ ...options, sourceIdentity: { revision: 'second', dirty: false, profile: 'release' } });
-  assert.equal(first.apps[0].contentId, recorded.apps[0].contentId);
-  assert.notEqual(first.sourceIdentity.revision, recorded.sourceIdentity.revision);
-  const configured = packageBrowser({ ...options, sourceIdentity: { revision: 'second', dirty: false, profile: 'different' } });
-  assert.notEqual(recorded.apps[0].contentId, configured.apps[0].contentId);
-});
-
 
 test('request evidence is disabled by default and enabled recording caps retained records and counts drops', async t => {
   const { options, output } = fixture(t);

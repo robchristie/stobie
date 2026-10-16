@@ -39,6 +39,7 @@ MARKDOWN_CONSUMERS = (
     "README.md",
     "docs/application-composition.md",
     "docs/image-application-composition.md",
+    "docs/start-a-new-app.md",
 )
 EXAMPLE = "apps/analytical-workspace-lab/examples/minimal-workspace.rs"
 VARIATION_GUIDE = "docs/image-application-composition.md"

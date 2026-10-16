@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "The `stobie` command: launch or attach to a Stobie application, read it compactly and operate it"
+description = "The `stobie` command: create and build Stobie applications, launch or attach to one, read it compactly and operate it"
 
 [[bin]]
 name = "stobie"
@@ -14,4 +14,5 @@ path = "src/main.rs"
 libc = "0.2"
 serde.workspace = true
 serde_json.workspace = true
+stobie-build = { path = "../stobie-build" }
 stobie-client = { path = "../stobie-client" }

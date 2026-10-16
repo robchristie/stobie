@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+stobie-build = { path = "../crates/stobie-build" }
 stobie-gallery = { path = "../apps/stobie-gallery" }
 stobie-ui-egui = { path = "../crates/stobie-ui-egui" }
 serde.workspace = true

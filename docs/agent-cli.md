@@ -1,17 +1,45 @@
 # The `stobie` command
 
-`stobie` lets an agent with a shell launch or attach to a Stobie application,
-natively or in a browser, read its UI compactly and operate it through the
+`stobie` creates and builds Stobie applications, and lets an agent with a
+shell launch or attach to one, natively or in a browser, read its UI
+compactly and operate it through the
 [application interface](application-interface.md). It needs no Stobie source
 or documentation at run time: `stobie --help`, `stobie COMMAND --help` and
 `stobie capabilities --json` describe every command, flag, exit status, wait
 condition and the JSON output envelope.
 
-Build it with `cargo build --release -p stobie-cli` (the binary is
-`target/release/stobie`), or install it with
-`cargo install --path crates/stobie-cli`. It is a separate package from every
-application: no application or WASM build depends on it, and
-`cargo xtask architecture` enforces that.
+Install it from a pinned commit with
+`cargo install --locked --git https://github.com/robchristie/stobie --rev COMMIT stobie-cli`,
+or from a checkout with `cargo install --path crates/stobie-cli` or
+`cargo build --release -p stobie-cli` (the binary is `target/release/stobie`).
+It records the commit it was built from: `stobie --version` prints
+`stobie VERSION (commit COMMIT)`, and `capabilities --json` reports it as
+`source_revision`. It is a separate package from every
+application: no application or WASM build depends on it or on its build
+library, `stobie-build`, and `cargo xtask architecture` enforces that.
+
+## Create and build applications
+
+- `new NAME` creates a standalone application in its own Cargo workspace,
+  depending on Stobie through git pinned to the CLI's commit
+  (`--stobie-rev COMMIT` pins another). `--imaging` adds the image layer, and
+  `--stobie-path CHECKOUT` writes `.cargo/config.toml` to build against a
+  local checkout. [Start a new app](start-a-new-app.md) walks through it.
+- `build-web` builds an application for the browser: a release
+  `wasm32-unknown-unknown` build, `wasm-bindgen` into `web/pkg/` and the
+  shared startup loader beside `index.html`. It fails, with the install
+  command, unless the `wasm-bindgen` CLI is exactly the version of the
+  `wasm-bindgen` crate the project locks. `--production` also packages the
+  build with compressed, immutable assets; see the
+  [browser startup guide](browser-startup.md).
+- `serve [DIR]` serves a built web root, or a `--production` package (its
+  applications at `/NAME/`), on `127.0.0.1` without caching, for local
+  preview; it does not negotiate compressed representations. `--port 0` picks a free port; `--json` prints its URL.
+- `package-web NAME=DIR...` packages already built web roots, such as an
+  application and its worker, into one production directory.
+
+Stobie's own `cargo xtask build-web`, its production build and Record Desk's
+`build-web.sh` use the same implementation.
 
 ## Reach an application
 
@@ -58,10 +86,12 @@ such as an X server or Xvfb.
 
 ### Browser
 
-Serve the web build, open it in a Chromium that exposes DevTools, with
-`?automation=1` in its URL, then attach. With Lantern:
+Serve the web build (`stobie serve`), open it in a Chromium that exposes
+DevTools, with `?automation=1` in its URL, then attach. Any Chromium started
+with `--remote-debugging-port=PORT` works. With Lantern:
 
 ```sh
+stobie serve web/ &                                   # http://127.0.0.1:8080/
 lantern browser start --graphics webgpu --json        # or swiftshader
 lantern browser endpoint ID                           # prints endpoint=http://127.0.0.1:PORT
 lantern open 'http://127.0.0.1:8080/?automation=1' --endpoint http://127.0.0.1:PORT

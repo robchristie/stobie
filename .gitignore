@@ -17,3 +17,4 @@ __pycache__/
 
 /consumers/record-desk/target/
 /consumers/record-desk/web/pkg/
+/consumers/record-desk/web/browser-startup.js

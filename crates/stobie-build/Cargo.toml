@@ -1,0 +1,14 @@
+[package]
+name = "stobie-build"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Build and package Stobie applications for the web: wasm-bindgen, the startup loader, compression and immutable assets"
+
+[dependencies]
+brotli = "8.0.2"
+flate2 = "1.1.9"
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10.9"
