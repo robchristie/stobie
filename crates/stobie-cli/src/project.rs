@@ -24,6 +24,15 @@ pub fn source_revision() -> Option<&'static str> {
     option_env!("STOBIE_SOURCE_REVISION")
 }
 
+/// `stobie --version`: the package version and, when known, the commit it
+/// was built from, which `stobie new` pins and consumers check.
+pub fn version_line() -> String {
+    match source_revision() {
+        Some(revision) => format!("stobie {} (commit {revision})", env!("CARGO_PKG_VERSION")),
+        None => format!("stobie {}", env!("CARGO_PKG_VERSION")),
+    }
+}
+
 fn build_error(error: stobie_build::Error) -> ClientError {
     ClientError::new("build_failed", error.message, error.hint)
 }
@@ -555,6 +564,16 @@ mod tests {
         assert!(workspace.contains("eframe = { version = \"0.36.1\""));
         assert!(workspace.contains("rust-version = \"1.97.1\""));
         assert_eq!(source_revision().map(str::len).unwrap_or(40), 40);
+    }
+
+    #[test]
+    fn the_version_names_the_build_commit() {
+        let line = version_line();
+        assert!(line.starts_with(&format!("stobie {}", env!("CARGO_PKG_VERSION"))));
+        match source_revision() {
+            Some(revision) => assert!(line.ends_with(&format!(" (commit {revision})"))),
+            None => assert!(!line.contains("commit")),
+        }
     }
 
     #[test]

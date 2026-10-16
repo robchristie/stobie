@@ -141,7 +141,7 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     if name == "--version" {
-        println!("stobie {}", env!("CARGO_PKG_VERSION"));
+        println!("{}", project::version_line());
         return ExitCode::SUCCESS;
     }
     // A program's own arguments after `--` are not stobie's.
@@ -1035,6 +1035,7 @@ fn launch(args: &Args, name: &str) -> Result<Output, ClientError> {
 fn capabilities() -> serde_json::Value {
     serde_json::json!({
         "package_version": env!("CARGO_PKG_VERSION"),
+        "source_revision": project::source_revision(),
         "protocol_version": stobie_client::protocol::INSPECTION_VERSION,
         "commands": spec::COMMANDS,
         "target_flags": spec::TARGET_FLAGS,

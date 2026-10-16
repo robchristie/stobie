@@ -12,7 +12,9 @@ Install it from a pinned commit with
 `cargo install --locked --git https://github.com/robchristie/stobie --rev COMMIT stobie-cli`,
 or from a checkout with `cargo install --path crates/stobie-cli` or
 `cargo build --release -p stobie-cli` (the binary is `target/release/stobie`).
-It records the commit it was built from. It is a separate package from every
+It records the commit it was built from: `stobie --version` prints
+`stobie VERSION (commit COMMIT)`, and `capabilities --json` reports it as
+`source_revision`. It is a separate package from every
 application: no application or WASM build depends on it or on its build
 library, `stobie-build`, and `cargo xtask architecture` enforces that.
 
