@@ -214,8 +214,8 @@ impl BrowserTransport {
 }
 
 /// The error for a page without a dispatcher: not opened with
-/// `?automation=1`, still starting, or failed to start, as the page's startup
-/// report says.
+/// `?automation=1`, or still starting or failed to start, as the startup
+/// report of the shared loader (`browser-startup.js`) says.
 fn missing_dispatcher(socket: &mut CdpWebSocket) -> ClientError {
     let state = socket
         .call(
@@ -238,7 +238,9 @@ fn missing_dispatcher(socket: &mut CdpWebSocket) -> ClientError {
              --use-angle=swiftshader --enable-unsafe-swiftshader for WebGL2",
         );
     }
-    if state["automation"] == true {
+    // Only the shared startup loader reports that it is still starting; a
+    // page without that report keeps the immediate error.
+    if state["automation"] == true && state["status"] == "starting" {
         return ClientError::connection(
             NOT_STARTED,
             "wait for the page to finish loading and retry; `stobie attach` waits for it",
