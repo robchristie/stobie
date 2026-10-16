@@ -4,7 +4,9 @@ The additive `regional` modules in the imaging crate, runtime and renderer provi
 parent-image demands, bounded external worker scheduling and integer GPU display.
 The Analytical Workspace Lab continues to use its existing synthetic tile path.
 These contracts are a foundation; they do not qualify a real codec, transport,
-large-image viewer or browser worker journey.
+large-image viewer or browser worker journey. The
+[Emuella viewer](https://github.com/robchristie/emuella-viewer), in its own
+repository, is the consumer that composes them with a real codec and JPIP.
 
 ## Identity and demand
 

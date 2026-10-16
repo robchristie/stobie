@@ -75,14 +75,9 @@ const failureSpecs = {
     query: '?renderer=webgpu', phase: 'framework_start', cleanup: 'destroyed',
     message: /^No supported renderer: WebGPU is unavailable \(no navigator\.gpu\); WebGL2 was not tried \(forced by \?renderer=webgpu\)$/,
   },
-  // The viewer is not on AppHost and still requires WebGPU.
-  webgpu: {
-    init: () => Object.defineProperty(navigator, 'gpu', { value: undefined }),
-    phase: 'framework_start', cleanup: 'not_constructed', message: /WebGPU is unavailable/,
-  },
   worker: { phase: 'worker', cleanup: 'destroyed', message: /./ },
 };
-const failureCases = { lab: ['neither', 'worker'], gallery: ['neither', 'override', 'forced-webgpu'], viewer: ['webgpu', 'worker'] };
+const failureCases = { lab: ['neither', 'worker'], gallery: ['neither', 'override', 'forced-webgpu'] };
 
 // The Gallery and the Lab, image panes included, render the same pixels on both
 // backends: both use an Rgba8Unorm surface with egui's own gamma. Allow a little

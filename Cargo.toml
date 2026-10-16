@@ -13,9 +13,6 @@ members = [
     "apps/analytical-workspace-lab",
     "apps/stobie-gallery",
     "apps/tile-worker",
-    "apps/emuella-viewer",
-    "crates/emuella-viewer-source",
-    "apps/emuella-viewer-tools",
     "xtask",
 ]
 exclude = ["consumers/record-desk"]

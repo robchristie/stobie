@@ -8,11 +8,13 @@ and `cargo xtask build-web`, `cargo xtask build-browser-production` and
 Record Desk's `build-web.sh` here. Every build writes the same startup loader,
 `browser-startup.js`, beside `index.html`; its source is
 `crates/stobie-build/web/browser-startup.js`, embedded in the CLI, and nothing
-copies it by hand. The Lab, Gallery and viewer use it.
+copies it by hand. The Lab and Gallery use it.
 The production default retains unprocessed bindgen WASM and adds compressed,
 versioned delivery. Pinned `wasm-opt` variants remain explicit measurement options;
-neither passed every finalist gate. Native release settings and the viewer's
-image/JPIP contracts are unchanged.
+neither passed every finalist gate. Native release settings are unchanged.
+The Emuella viewer, measured here before it moved to
+[its own repository](https://github.com/robchristie/emuella-viewer), packages
+itself with `stobie build-web --production`.
 
 ## Build and serve
 
@@ -27,10 +29,7 @@ cargo xtask build-browser-production
 node tools/browser-serve.mjs --directory target/browser-production --port 4173
 ```
 
-Open `/lab/`, `/gallery/` or `/viewer/`. The viewer also requires its existing
-same-origin catalogue/descriptor/mask/JPIP service; the static server does not
-publish imagery. The benchmark's optional `--viewer-upstream` forwards only those
-existing data routes to a loopback fixture service with its original headers.
+Open `/lab/` or `/gallery/`.
 
 The repository-local installer verifies a pinned archive SHA-256. On other
 platforms install the corresponding [Binaryen 131 release](https://github.com/WebAssembly/binaryen/releases/tag/version_131)
@@ -54,8 +53,7 @@ browser reloads. It does not alter production packaging or its cache policies.
 
 Production starts with clean bindgen staging (each web root's own files, a
 fresh loader and fresh bindgen output, never a development build's), optionally
-post-processes WASM, compresses assets and validates the **final** viewer WASM
-response adapter. Output contains:
+post-processes WASM and compresses assets. Output contains:
 
 ```text
 target/browser-production/
@@ -64,8 +62,6 @@ target/browser-production/
   lab/assets/<content-sha256>/       coherent JS/WASM/CSS/helper/worker package
   gallery/index.html
   gallery/assets/<content-sha256>/
-  viewer/index.html
-  viewer/assets/<content-sha256>/
 ```
 
 Every asset has deterministic Brotli quality 11 and gzip level 9 representations,
@@ -150,9 +146,10 @@ Rasterisers can differ by a few levels per channel; the startup smoke checks
 the stated tolerance. Software WebGL2 through ANGLE and SwiftShader is slower than
 hardware, and WebGL2 offers no GPU timing. The Lab's scalar image renderer
 runs on both backends unchanged; see the
-[image composition guide](image-application-composition.md). The Emuella viewer is not on
-`AppHost`: its bootstrap passes `requireWebGpu` to `startApplication` and
-still fails without `navigator.gpu`.
+[image composition guide](image-application-composition.md). An application
+with its own WebGPU renderer off `AppHost` can pass `requireWebGpu` to
+`startApplication`, which then fails without `navigator.gpu`; the Emuella viewer
+does.
 
 ## Firefox
 
@@ -184,9 +181,9 @@ never compare unnormalised page and worker `performance.now()` values.
 | `workspace_ui_complete` | First application UI frame handed back to eframe on the CPU. |
 | `workspace_frame_submitted` | First observed `GPUQueue.submit` after that UI handoff. Unavailable on WebGL2, which has no `GPUQueue`, and when the temporary hook cannot be installed; `submissionObservation` says which. |
 | `rendering_opportunity_proxy` | One subsequent requestAnimationFrame callback; a rendering opportunity only. |
-| `worker_ready` | Main realm receipt of worker initialisation readiness; viewer still fetches its catalogue afterwards. |
-| `first_useful_content` | Lab observes actual renderer draws plus resident image bytes; Gallery has constructed its component content; viewer has prepared nonzero rendered regions. |
-| `failure` | Terminal phase-labelled initialisation failure, including no supported renderer (or unavailable WebGPU for the viewer), an invalid renderer override, worker/init/transport failures and the bounded timeout. |
+| `worker_ready` | Main realm receipt of worker initialisation readiness. |
+| `first_useful_content` | Lab observes actual renderer draws plus resident image bytes; Gallery has constructed its component content. |
+| `failure` | Terminal phase-labelled initialisation failure, including no supported renderer (or unavailable WebGPU with `requireWebGpu`), an invalid renderer override, worker/init/transport failures and the bounded timeout. |
 
 No milestone proves GPU completion or physical presentation. The report does not
 subtract transfer duration from streaming init and call the remainder compile
@@ -266,7 +263,6 @@ Startup failures cover:
   apps;
 - an invalid override, and a forced WebGPU without `navigator.gpu`, for the
   Gallery;
-- the viewer's WebGPU requirement;
 - worker failures.
 
 Each cold visit starts a new Chromium process/profile. Its repeat revisits the
@@ -275,16 +271,14 @@ application storage before both visits without clearing HTTP caches, disabling
 caches, interception or query cache-busting. This does not reset OS/GPU caches
 or guarantee compiled-code cache state. The two profiles are unthrottled local
 delivery and a shared 10 Mbit/s response-body budget with 40 ms response latency.
-The budget covers page, worker and proxied fixture responses. This is a documented
+The budget covers page and worker responses. This is a documented
 local network model, not a claim about a particular WAN connection.
 
 Raw `results.json` contains all samples; medians and min/max describe spread,
 without small-sample tail claims. Real input and its expected rendered response,
 screenshots/readback and runtime checks happen outside the startup timing path.
 Use `--encoding identity` against the same package to isolate compression/delivery
-from binary changes. Viewer evidence uses `--apps viewer --viewer-upstream
-http://127.0.0.1:8123` with an **existing** deterministic fixture service; no dataset
-regeneration is part of this command. Timings are opt-in evidence, never CI
+from binary changes. Timings are opt-in evidence, never CI
 wall-clock gates. CI checks completion, failures, package contracts and input.
 
 ## Consuming applications

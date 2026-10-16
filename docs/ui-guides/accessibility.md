@@ -36,7 +36,9 @@ the pair on an aggregate container; interactive chrome owns its painted text.
 In the browser, `WebHost` mirrors each completed pass's AccessKit tree into
 hidden DOM elements with ARIA semantics. Every `AppHost` web application gets
 it without application code. `Application::web_accessibility_layer` opts out.
-The Emuella viewer is not hosted by `AppHost` and has no layer. The
+An application that runs its own eframe loop instead of `AppHost`, such as
+the [Emuella viewer](https://github.com/robchristie/emuella-viewer), has no
+layer. The
 [plan](../aria-mirror-plan.md) records why AccessKit, not the semantic
 snapshot, is the source.
 

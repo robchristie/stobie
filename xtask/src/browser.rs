@@ -67,8 +67,6 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             "stobie-gallery",
             "-p",
             "stobie-tile-worker",
-            "-p",
-            "emuella-viewer",
         ],
     )?;
     let mut apps = Vec::new();
@@ -79,7 +77,6 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             "analytical_workspace_lab",
         ),
         ("gallery", "stobie-gallery", "stobie_gallery"),
-        ("viewer", "emuella-viewer", "emuella_viewer"),
     ] {
         let destination = staging.join(name);
         // The web root's sources only; a development build's generated
@@ -116,27 +113,13 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
         serde_json::to_vec_pretty(&identity)?,
     )?;
     println!("+ package {} into {output}", staging.display());
-    let manifest = package::package(&package::Options {
+    package::package(&package::Options {
         apps,
         output: output.clone().into(),
         variant,
         wasm_opt: wasm_opt(),
         source_identity: identity,
     })?;
-    // Validation targets the post-processed artifact, never a pre-optimisation build.
-    let viewer = manifest
-        .apps
-        .iter()
-        .find(|app| app.name == "viewer")
-        .context("packaged viewer")?;
-    let viewer_root = Path::new(&output).join(&viewer.asset_directory);
-    super::run(
-        "node",
-        &[
-            "tools/viewer-response-headers.mjs",
-            viewer_root.to_str().context("UTF-8 viewer root")?,
-        ],
-    )?;
     Ok(())
 }
 

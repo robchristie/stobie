@@ -12,8 +12,7 @@ captures live in the append-only
 
 - Markdown reports and summaries, including those under `docs/*-evidence/`.
 - Small qualification protocols, build receipts and result summaries that
-  tools read or write at fixed paths or reports cite, such as
-  `docs/viewer-acceptance-*.json`.
+  tools read or write at fixed paths or reports cite.
 - Reviewed binary sources: UI baselines in `tests/ui-snapshots/expected/`,
   documentation images in `docs/images/` and bundled fonts.
 
@@ -59,7 +58,9 @@ Other files moved within this repository at the same time:
 
 - The synthetic viewer input catalogue moved to
   `apps/emuella-viewer/qualification/synthetic-input-catalogue.json`, beside its
-  preparation thresholds.
+  preparation thresholds. It is now in the
+  [emuella-viewer](https://github.com/robchristie/emuella-viewer) repository at
+  the same path.
 - The UI baselines moved from `docs/ui-snapshots/` to `tests/ui-snapshots/`.
 - The README image became a lossless WebP in `docs/images/`.
 
@@ -73,11 +74,11 @@ Append a path from the first column to browse that directory.
 | `application-interface-evidence/` | 5 | [Application interface evidence](application-interface-evidence.md) |
 | `browser-startup-evidence/` | 24 | [Browser startup results](browser-startup-results.md) |
 | `design-agent-loop-evidence/` | 28 | [Design-system evidence](design-agent-loop-evidence/README.md) |
-| `emuella-viewer-evidence/` | 452 | [Emuella viewer qualification](emuella-viewer-qualification.md) |
+| `emuella-viewer-evidence/` | 452 | [Emuella viewer qualification](https://github.com/robchristie/emuella-viewer/blob/main/docs/emuella-viewer-qualification.md), now in the viewer's repository |
 | `navigation-browser-focus-evidence/` | 5 | [Navigation focus evidence](navigation-browser-focus-evidence/README.md) |
 | `navigation-item-evidence/` | 11 | [Navigation item evidence](navigation-item-evidence.md) |
 | `presentation-context-evidence/` | 4 | None. These are captures from [PR 34](https://github.com/robchristie/stobie/pull/34) and [PR 35](https://github.com/robchristie/stobie/pull/35). |
-| `real-scene-viewing-*evidence.json` | 3 | [Real-scene viewing](real-scene-viewing.md) |
+| `real-scene-viewing-*evidence.json` | 3 | [Real-scene viewing](https://github.com/robchristie/emuella-viewer/blob/main/docs/real-scene-viewing.md), now in the viewer's repository |
 | `record-desk-evidence/` | 7 | [Record Desk evidence](record-desk-evidence.md) |
 | `rust-1-99-0-evidence/` | 13 | [Rust 1.99.0 evidence](rust-1-99-0-evidence/README.md) |
 | `rust-toolchain-evidence/` | 7 | [Rust toolchain evidence](rust-toolchain-evidence/README.md) |
@@ -85,6 +86,13 @@ Append a path from the first column to browse that directory.
 | `text-hierarchy-evidence/` | 8 | [Text hierarchy evidence](text-hierarchy-evidence/README.md) |
 | `typed-icons-evidence/` | 16 | [Typed icons evidence](typed-icons-evidence/README.md) |
 | `vertical-slice-evidence/` | 22 | [Vertical-slice report](vertical-slice-report.md) |
+
+The Emuella viewer moved to
+[its own repository](https://github.com/robchristie/emuella-viewer) on
+2026-10-16, with its reports and the small tracked receipts they cite. Its
+archived raw evidence stays here, in stobie-evidence, unchanged: the
+permalinks above and in its reports remain valid, and the archive table and
+`evidence-archive.sha256` still list it.
 
 To fetch and check the complete archive:
 
