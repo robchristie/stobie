@@ -1,7 +1,7 @@
 # Apps outside the repository, the viewer's own repository and the front door
 
-Status: active
-Next action: Land increment 3 (README and front-door documents, the fresh-agent probe and its fixes) and close this plan.
+Status: complete
+Delivery: [PR #88](https://github.com/robchristie/stobie/pull/88) completes the plan; increments landed in [PR #86](https://github.com/robchristie/stobie/pull/86), [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1), [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) and [PR #87](https://github.com/robchristie/stobie/pull/87).
 
 ## Outcome and boundaries
 
@@ -161,6 +161,19 @@ It needed about 11 minutes and finished every step. Its gaps and their fixes:
   generated presentation IDs can differ between hosts. Now documented: publish
   facts, and address controls by capability or semantic IDs.
 
+A second fresh agent then tried the fixes. It used the README and a CLI built
+from this branch (`bd60565`), and its own choice of argument: a number limit
+with a slider. It finished every step in about 5 minutes, with no rustdoc and
+no crate sources. It hit three compile errors, from details the README left
+out for number arguments:
+- `as_number()` returns an `Option`;
+- a number is triggered with `ActionArgument::Number`;
+- `range_control` takes an `f32` value and range.
+
+Those details are now in the README, the generated README and the guide, along
+with the software-rendering flags. The second probe also found that a slider's
+value is not observed; that is recorded below.
+
 ## Later work
 
 Found by the probe and not changed here, because each changes observations or
@@ -174,6 +187,10 @@ components the remaining applications and baselines rely on:
   - Its open popup's options are not observed.
 - **Presentation IDs.** Generated presentation IDs differ between native and
   browser hosts for the same control.
+- **Sliders.**
+  - A `range_control` slider publishes no value to agents, so its value
+    must be published as a fact.
+  - It shows no number on screen.
 
 ## Delivery
 
@@ -183,7 +200,7 @@ components the remaining applications and baselines rely on:
 | 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Landed: import [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77) pinned to `8bfcdd6`, and the carried-over guards in [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1) (`f2ef8b1`) |
 | 2b. Register the viewer repository | stobie-workspace | Landed in [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) (`168baf2`) |
 | 2c. Remove the viewer from Stobie | stobie | Landed in [PR #87](https://github.com/robchristie/stobie/pull/87) (`b9f5a6c`) |
-| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Planned |
+| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Complete in [PR #88](https://github.com/robchristie/stobie/pull/88) |
 
 ## Evidence
 

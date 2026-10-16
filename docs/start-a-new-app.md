@@ -112,7 +112,7 @@ impl ChoiceArgument for SortOrder {
 
 Handle it in `Application::perform_with`, which receives the validated value,
 and pass every other action on to `perform`. `perform` must still match the
-variant; reject it there, because it always arrives with a value:
+variant; return an error there, because it always arrives with a value:
 
 ```text
 fn perform_with(&mut self, target: ActionTarget<NoteAction>, argument: ActionArgument,
@@ -145,7 +145,11 @@ if sort != self.sort {
 }
 ```
 
-`range_control` is the counterpart for a number. A text value usually comes
+`range_control(ui, id, parent, label, &mut value_f32, minimum..=maximum,
+action, p.tokens())` is the counterpart for a number: declare it
+`argument = "number", minimum = 1, maximum = 20, integer = true` and trigger
+`ActionArgument::Number(f64::from(value))`. `ActionArgument::Text(..)` and
+`ActionArgument::Boolean(..)` carry the other kinds. A text value usually comes
 from a text field instead: agents fill it with `stobie set-text` and invoke a
 plain action, as the template's draft and Add do. Clicks and agents then take
 the same route, and `stobie discover my-app.sort` shows the contract:

@@ -94,10 +94,14 @@ stobie_ui_egui::choice_control(ui, SemanticUiId::new("my-app.sort"), SemanticUiI
 if sort != self.sort { frame.trigger_with(NoteAction::Sort, ActionArgument::choice(sort)); }
 ```
 
-An action with an argument has no shortcut. Use `as_text()`, `as_boolean()`
-or `as_number()` for the other kinds, and `range_control` for a number; a text
-value usually comes from a text field that agents fill with `stobie
-set-text`. Then `stobie invoke my-app.sort --value alphabetical` takes the
+An action with an argument has no shortcut, and its `perform` arm returns an
+error. For the other kinds, `as_text()`, `as_boolean()` and `as_number()` each
+return an `Option`, and controls trigger `ActionArgument::Text(..)`,
+`ActionArgument::Boolean(..)` or `ActionArgument::Number(f64)`. A number is
+declared `argument = "number", minimum = 1, maximum = 20, integer = true`
+and presented with `range_control(ui, id, parent, label, &mut value_f32,
+1.0..=20.0, action, p.tokens())`. A text value usually comes from a text field
+that agents fill with `stobie set-text`. Then `stobie invoke my-app.sort --value alphabetical` takes the
 option's ID or label.
 [Add an action with an argument](docs/start-a-new-app.md#add-an-action-with-an-argument)
 explains each step. The [composition guide](docs/application-composition.md) explains the four
@@ -116,7 +120,9 @@ stobie stop app
 ```
 
 In the browser, open the page with `?automation=1` in a Chromium that exposes
-DevTools, then `stobie attach`. `stobie --help` and `stobie capabilities --json`
+DevTools, then `stobie attach`. On a machine without GPU acceleration, start
+Chromium with `--use-angle=swiftshader --enable-unsafe-swiftshader` for
+software WebGL2. `stobie --help` and `stobie capabilities --json`
 describe every command and the JSON output. [The `stobie` command](docs/agent-cli.md)
 and the [application interface](docs/application-interface.md) give the
 details.

@@ -88,10 +88,14 @@ stobie_ui_egui::choice_control(ui, SemanticUiId::new("{{name}}.sort"), SemanticU
 if sort != self.sort { frame.trigger_with(NoteAction::Sort, ActionArgument::choice(sort)); }
 ```
 
-An action with an argument has no shortcut. Use `as_text()`, `as_boolean()`
-or `as_number()` for the other kinds, and `range_control` for a number; a text
-value usually comes from a text field that agents fill with `stobie
-set-text`. Publish the value as a fact in `observe` so agents can wait for
+An action with an argument has no shortcut, and its `perform` arm returns an
+error. For the other kinds, `as_text()`, `as_boolean()` and `as_number()` each
+return an `Option`, and controls trigger `ActionArgument::Text(..)`,
+`ActionArgument::Boolean(..)` or `ActionArgument::Number(f64)`. A number is
+declared `argument = "number", minimum = 1, maximum = 20, integer = true`
+and presented with `range_control(ui, id, parent, label, &mut value_f32,
+1.0..=20.0, action, p.tokens())`. A text value usually comes from a text field
+that agents fill with `stobie set-text`. Publish the value as a fact in `observe` so agents can wait for
 it, then run `stobie invoke {{name}}.sort --value alphabetical`. The
 [guide](https://github.com/robchristie/stobie/blob/{{stobie_rev}}/docs/start-a-new-app.md#add-an-action-with-an-argument)
 explains each step.
