@@ -46,6 +46,56 @@ In the browser, open the page with `?automation=1` in a Chromium started with
 `stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'`.
 `stobie --help` describes every command.
 
+## Add an action with an argument
+
+An action can take a value that its control or an agent supplies. In outline,
+for a choice (add `ActionArgument` and `ChoiceArgument` to the
+`stobie_ui_egui` imports in `src/lib.rs`):
+
+```text
+// 1. Declare it: the variant carries no data. Arguments are "text" (max_length),
+//    "boolean", "number" (minimum, maximum, integer) or "choice" (choices = Type).
+#[action(label = "Sort notes", description = "Choose the order of the notes",
+         argument = "choice", choices = SortOrder)]
+Sort,
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum SortOrder { #[default] Oldest, Newest, Alphabetical }
+impl ChoiceArgument for SortOrder {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Oldest, "oldest", "Oldest first"),
+        (Self::Newest, "newest", "Newest first"),
+        (Self::Alphabetical, "alphabetical", "A to Z"),
+    ];
+}
+
+// 2. Handle the value in Application::perform_with; `perform` still matches
+//    the variant but never receives it without a value.
+fn perform_with(&mut self, target: ActionTarget<NoteAction>, argument: ActionArgument,
+                state: &mut ()) -> Result<bool, String> {
+    match target.action {
+        NoteAction::Sort => { self.sort = argument.as_choice()?; Ok(true) }
+        _ => self.perform(target, state),
+    }
+}
+
+// 3. Present a control in the pane and trigger the action with its value.
+let mut sort = self.sort;
+let options: Vec<(SortOrder, &'static str)> =
+    SortOrder::CHOICES.iter().map(|(value, _, label)| (*value, *label)).collect();
+stobie_ui_egui::choice_control(ui, SemanticUiId::new("{{name}}.sort"), SemanticUiId::pane(pane),
+    "Sort", &mut sort, &options, NoteAction::Sort, p.tokens());
+if sort != self.sort { frame.trigger_with(NoteAction::Sort, ActionArgument::choice(sort)); }
+```
+
+An action with an argument has no shortcut. Use `as_text()`, `as_boolean()`
+or `as_number()` for the other kinds, and `range_control` for a number; a text
+value usually comes from a text field that agents fill with `stobie
+set-text`. Publish the value as a fact in `observe` so agents can wait for
+it, then run `stobie invoke {{name}}.sort --value alphabetical`. The
+[guide](https://github.com/robchristie/stobie/blob/{{stobie_rev}}/docs/start-a-new-app.md#add-an-action-with-an-argument)
+explains each step.
+
 ## Test
 
 ```sh
