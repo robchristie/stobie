@@ -46,7 +46,7 @@ mixed within the declared tolerances; no universal local speedup is claimed.
 Oz/O3, Lab test-export gating and the single worker-preparation overlap candidate
 were rejected against predeclared gates. No structural change remains. Final
 root/subpath, failure cleanup, normal revisit, real-input and viewer output/bound
-checks are recorded in [the compact report](browser-startup-results.md) and
+checks are recorded in [the compact report](../browser-startup-results.md) and
 `browser-startup-evidence/`. Exact-head review, canonical/CI qualification and
 merge/cleanup evidence remain on the delivery PR under the existing workflow.
 

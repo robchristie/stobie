@@ -1,6 +1,6 @@
 # Record Desk consumer evidence
 
-The [execution plan](record-desk-plan.md) owns acceptance and the short design
+The [execution plan](plans/record-desk-plan.md) owns acceptance and the short design
 contract. The [consumer README](../consumers/record-desk/README.md) owns executable
 commands, lifecycle, extension and persistence. Detailed generated logs,
 metadata, step snapshots and captures stay in ignored runtime evidence.

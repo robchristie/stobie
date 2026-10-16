@@ -55,7 +55,7 @@ fixtures/assertions stay unchanged. Baseline acceptance is separate.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Production recipe and scoped API | Complete | Nine focused regressions and compiled consumer mapping |
-| Gallery, documentation and physical evidence | Complete | [UI evidence](status-chip-evidence.md), physical journeys and three inspected baselines |
+| Gallery, documentation and physical evidence | Complete | [UI evidence](../status-chip-evidence.md), physical journeys and three inspected baselines |
 | Candidate qualification | Complete | cargo xtask verify at dd10a1253f86778dd0c3b2f3adedb0a3f914be96; review, CI and merge retained in the PR |
 
 ## Closeout

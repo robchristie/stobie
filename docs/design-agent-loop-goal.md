@@ -27,7 +27,7 @@ The goal includes:
 
 The detailed acceptance checklist in this file is the durable repository
 summary of the user-provided specification. The active campaign state belongs
-in [design-agent-loop-plan.md](design-agent-loop-plan.md); detailed final proof
+in [design-agent-loop-plan.md](plans/design-agent-loop-plan.md); detailed final proof
 belongs in `docs/design-agent-loop-report.md`.
 
 ## Visual thesis

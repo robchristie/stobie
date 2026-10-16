@@ -1,6 +1,6 @@
 # Typed icon qualification
 
-The [implementation/UI contract](../typed-icons-plan.md) owns the bounded scope.
+The [implementation/UI contract](../plans/typed-icons-plan.md) owns the bounded scope.
 Artwork and licensing live with the [SVG source](../../crates/stobie-ui-egui/assets/icons/README.md);
 [component documentation](../ui-guides/components.md#typed-icons-and-action-presentations)
 owns the public API and compiled consumer example.

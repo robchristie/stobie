@@ -3,7 +3,29 @@ use std::{fs, path::Path};
 use anyhow::{Context, Result, bail};
 
 pub(crate) fn check(root: &Path) -> Result<()> {
-    let mut paths = fs::read_dir(root.join("docs"))?
+    // Plans live in docs/plans/. A plan left in docs/ would escape this check.
+    let stray = plan_files(&root.join("docs"))?;
+    if let Some(path) = stray.first() {
+        bail!(
+            "plan outside docs/plans/: {}; move it into docs/plans/",
+            path.display()
+        );
+    }
+    let paths = plan_files(&root.join("docs/plans"))?;
+    if paths.is_empty() {
+        bail!("no docs/plans/*-plan.md files found");
+    }
+    for path in &paths {
+        validate(&fs::read_to_string(path)?)
+            .with_context(|| format!("plan lifecycle: {}", path.display()))?;
+    }
+    println!("plan lifecycle passed: {} plans", paths.len());
+    Ok(())
+}
+
+fn plan_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
+    let mut paths = fs::read_dir(dir)
+        .with_context(|| format!("reading {}", dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
         .collect::<std::io::Result<Vec<_>>>()?;
     paths.retain(|path| {
@@ -14,15 +36,7 @@ pub(crate) fn check(root: &Path) -> Result<()> {
                 .is_some_and(|name| name.ends_with("-plan.md"))
     });
     paths.sort();
-    if paths.is_empty() {
-        bail!("no docs/*-plan.md files found");
-    }
-    for path in &paths {
-        validate(&fs::read_to_string(path)?)
-            .with_context(|| format!("plan lifecycle: {}", path.display()))?;
-    }
-    println!("plan lifecycle passed: {} plans", paths.len());
-    Ok(())
+    Ok(paths)
 }
 
 fn field<'a>(source: &'a str, prefix: &str) -> Result<&'a str> {
@@ -198,6 +212,19 @@ mod tests {
     fn discovers_repository_plans() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         check(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_a_plan_outside_the_plans_directory() {
+        let root = std::env::temp_dir().join(format!("stobie-plans-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("docs/plans")).unwrap();
+        std::fs::write(root.join("docs/plans/kept-plan.md"), COMPLETE).unwrap();
+        check(&root).unwrap();
+        std::fs::write(root.join("docs/stray-plan.md"), COMPLETE).unwrap();
+        let error = check(&root).unwrap_err().to_string();
+        std::fs::remove_dir_all(&root).unwrap();
+        assert!(error.contains("plan outside docs/plans/"), "{error}");
     }
 
     use std::path::Path;

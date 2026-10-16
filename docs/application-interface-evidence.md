@@ -1,7 +1,7 @@
 # Application interface qualification
 
 The [public adoption guide](application-interface.md) owns connection, protocol,
-integration and failure semantics. The [execution plan](application-interface-plan.md)
+integration and failure semantics. The [execution plan](plans/application-interface-plan.md)
 owns package acceptance. Detailed generated observations, receipts, command logs
 and capture metadata stay under ignored `.tools/runtime/`.
 

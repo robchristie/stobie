@@ -361,6 +361,9 @@ does not update them automatically.
 
 ## Documentation
 
+The [documentation index](docs/README.md) separates current guides from plans,
+reports and evidence. The main guides:
+
 - [Start a new app](docs/start-a-new-app.md): `stobie new`, the generated
   application, web builds, upgrading the Stobie pin and local checkouts.
 - [Application composition](docs/application-composition.md): the hosted

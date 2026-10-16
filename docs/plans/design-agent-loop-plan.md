@@ -7,7 +7,7 @@ Delivery: [PR #17](https://github.com/robchristie/stobie/pull/17) landed.
 
 Baseline revision: `b8c66317aaa9284c45e712278010bc9cd285c01b`
 
-Normative outcome: [design-agent-loop-goal.md](design-agent-loop-goal.md)
+Normative outcome: [design-agent-loop-goal.md](../design-agent-loop-goal.md)
 
 Reorientation budget: 200 lines. Detailed implementation, review and evidence
 belong with the semantic owner or pull request rather than in this plan.
@@ -75,14 +75,14 @@ now publishes that ignored evidence only when CI fails.
 | Increment | Outcome | Depends on | Status | Durable evidence |
 | --- | --- | --- | --- | --- |
 | 1 | Baseline, audit, goal and campaign control plane | — | Landed | PR #9, this plan and baseline gate |
-| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](design-agent-loop-evidence/README.md) |
+| 2 | Visual language, token compiler, generated themes, preferences seed | 1 | Landed | PR #10, token tests, generated Rust, design language and [capture](../design-agent-loop-evidence/README.md) |
 | 3 | Measured text roles, overflow, observations and layout audit | 2 | Landed | PR #11, text fixtures, exported tab observations and empty audit |
 | 4 | Reusable AccessKit-semantic shell components and keyboard focus | 2–3 | Landed | PR #12, 31 focused UI tests, AccessKit tree checks and native physical smoke |
 | 5 | Native/browser gallery, stories and reference scenes | 3–4 | Landed | PR #13, 18-story manifest, matrix tests and selected gallery captures |
 | 6 | Action registry and reusable semantic snapshot | 4–5 | Landed | PR #14, registry, parity/kittest coverage and bounded semantic snapshots |
 | 7 | `xtask ui`, snapshot artefacts, CI, guides and eval seed | 3–6 | Landed | PR #15 and [Increment 7 evidence](https://github.com/robchristie/stobie-evidence/blob/0d0d782fee9970d6740bc409fa3a350cf2fe9e00/docs/design-agent-loop-evidence/increment-7-ui-verification.json) |
-| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Landed | PR #16 and [Increment 8 evidence](design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
-| 9 | Final performance/idle/native/browser hardening and report | 8 | Landed | PR #17 and [final report](design-agent-loop-report.md) |
+| 8 | Full Analytical Workspace Lab migration and visual selection | 2–7 | Landed | PR #16 and [Increment 8 evidence](../design-agent-loop-evidence/README.md#increment-8-complete-application-migration) |
+| 9 | Final performance/idle/native/browser hardening and report | 8 | Landed | PR #17 and [final report](../design-agent-loop-report.md) |
 
 The graph may be refined only at phase boundaries when evidence reveals a
 better coherent dependency boundary. Every increment must leave the workspace

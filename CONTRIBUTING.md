@@ -1,7 +1,9 @@
 # Contributing to Stobie
 
 These rules apply to every change to Stobie. `cargo xtask architecture` and the
-test suite enforce part of them; review covers the rest.
+test suite enforce part of them; review covers the rest. The
+[documentation index](docs/README.md) lists the guides, and execution plans live
+in [docs/plans/](docs/plans/).
 
 ## Crate boundaries
 
@@ -47,7 +49,7 @@ test suite enforce part of them; review covers the rest.
   tests, release native build, WASM build, architecture checks and browser smoke.
 - Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 
-For ordinary README, plan lifecycle prose and `docs/*-plan.md` closeout changes,
+For ordinary README, plan lifecycle prose and `docs/plans/*-plan.md` closeout changes,
 `python3 tools/verify.py --base <comparison-commit>` is the scoped alternative.
 It derives committed, staged, unstaged and untracked scope from Git, checks
 whitespace, runs classifier and plan lifecycle regressions, and checks all plan

@@ -16,7 +16,7 @@ PROSE = {"README.md", "docs/plan-lifecycle.md"}
 
 
 def prose_path(path):
-    return path in PROSE or re.fullmatch(r"docs/[a-z0-9][a-z0-9.-]*-plan\.md", path) is not None
+    return path in PROSE or re.fullmatch(r"docs/plans/[a-z0-9][a-z0-9.-]*-plan\.md", path) is not None
 
 
 def git(root, *args):

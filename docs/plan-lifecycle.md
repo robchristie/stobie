@@ -1,7 +1,7 @@
 # Plan lifecycle
 
-Every `docs/*-plan.md` declares exactly one `Status: active` or
-`Status: complete`. An active plan has one non-empty `Next action:` field and
+Plans live in `docs/plans/`. Every `docs/plans/*-plan.md` declares exactly one
+`Status: active` or `Status: complete`. An active plan has one non-empty `Next action:` field and
 keeps current phase and increment evidence concise. A completed plan has a
 `Delivery:` field linking to its owning Stobie pull request and a short
 closeout where useful. An optional `Landed commit:` field contains a full
@@ -20,14 +20,15 @@ waive missing acceptance proof; it must match the agreed scope and retained
 evidence.
 
 `cargo xtask plans` checks those local lifecycle fields and completed-plan
-contradictions without network access. Its regression tests and the check run
+contradictions without network access, and rejects a plan left in `docs/`
+outside `docs/plans/`. Its regression tests and the check run
 through `cargo xtask verify`. It does not establish that a commit landed,
 verify remote review or CI, or infer stale active status from GitHub; the
 conductor still reconciles those facts when closing the work package.
 
 For a prose-only closeout, run `python3 tools/verify.py --base <comparison-commit>`.
-The narrow allowlist covers `README.md`, this lifecycle guide and top-level
-`docs/*-plan.md` files. The guard checks both sides of renames and deletions and
+The narrow allowlist covers `README.md`, this lifecycle guide and
+`docs/plans/*-plan.md` files. The guard checks both sides of renames and deletions and
 all committed, staged, unstaged and untracked changes. Any other path (including
 contributor guidance, tooling, workflows, dependencies, qualification reports,
 UI contracts, snapshots and evidence), unsupported file mode, unresolved index,

@@ -54,7 +54,7 @@ Base: `57e5d906fe7f40521049560d20605d47cbc6d724` (PR #47).
 Existing evidence informs design but cannot qualify changed code. Canonical
 verification remains `cargo xtask verify`, GitHub-hosted for this public repo.
 Independent architecture advice is read-only and separate from final review.
-The [evidence report](application-interface-evidence.md) retains calibration and
+The [evidence report](../application-interface-evidence.md) retains calibration and
 fresh-context usability; all four representative host slices passed. The fresh
 agent completed both native tasks using only the public guide/common CLI and
 exposed a visibility/queued-receipt documentation gap, now repaired. Canonical

@@ -48,8 +48,8 @@ Frozen evaluation seeds stay unchanged. Baselines are reviewed separately.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Production recipe and scoped API | Complete | Navigation regressions and executable consumer example |
-| Gallery, consumer documentation and physical evidence | Complete | [UI evidence](navigation-item-evidence.md), physical journeys and 3 inspected baselines |
-| Candidate qualification | Complete | cargo xtask verify and [qualification evidence](navigation-item-evidence.md); review, CI and merge recorded in the PR |
+| Gallery, consumer documentation and physical evidence | Complete | [UI evidence](../navigation-item-evidence.md), physical journeys and 3 inspected baselines |
+| Candidate qualification | Complete | cargo xtask verify and [qualification evidence](../navigation-item-evidence.md); review, CI and merge recorded in the PR |
 
 ## Closeout
 

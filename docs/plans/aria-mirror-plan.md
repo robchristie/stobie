@@ -254,7 +254,7 @@ rootless Arch container with Chrome for Testing 151 on Xvfb. Orca announced:
 
 There was no audio device and the journey was short, so this is observed
 speech generation, not a qualification. The
-[integration evidence](accessibility-integration-report.md#browser-aria-layer-with-orca)
+[integration evidence](../accessibility-integration-report.md#browser-aria-layer-with-orca)
 records the transcript and limits.
 
 ## Closeout
