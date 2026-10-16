@@ -213,7 +213,7 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "serve",
         usage: "stobie serve [DIR] [--port N] [--json]",
-        summary: "Serve a built web root on 127.0.0.1 for local preview, without caching, until interrupted (default DIR: web/)",
+        summary: "Serve a built web root, or a --production package, on 127.0.0.1 for local preview, without caching, until interrupted (default DIR: web/)",
         connects: false,
         flags: &[
             flag(

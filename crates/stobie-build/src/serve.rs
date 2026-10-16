@@ -128,12 +128,17 @@ fn handle(root: &Path, mut stream: TcpStream) {
     }
 }
 
-/// Bind `address` for `root`, failing early when it has no `index.html`.
+/// Bind `address` for `root`, failing early unless it is a web root (with
+/// `index.html`) or a production package (with `manifest.json`, whose
+/// applications are under `/NAME/`).
 pub fn bind(root: &Path, address: SocketAddr) -> Result<TcpListener, Error> {
-    if !root.join("index.html").is_file() {
+    if !root.join("index.html").is_file() && !root.join("manifest.json").is_file() {
         return Err(Error::new(
-            format!("{} has no index.html", root.display()),
-            "run `stobie build-web` first, or pass the web root to serve",
+            format!(
+                "{} has no index.html or package manifest.json",
+                root.display()
+            ),
+            "run `stobie build-web` first, or pass the web root or production package to serve",
         ));
     }
     TcpListener::bind(address).map_err(|error| {
@@ -211,6 +216,14 @@ mod tests {
         assert!(get("GET /missing.js HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 404"));
         assert!(get("GET /../x HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 400"));
         assert!(get("POST / HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 405"));
+        // A production package is served from its root; an empty directory is not.
+        let package = directory.join("package");
+        fs::create_dir_all(package.join("app")).unwrap();
+        fs::write(package.join("manifest.json"), "{}").unwrap();
+        assert!(bind(&package, "127.0.0.1:0".parse().unwrap()).is_ok());
+        let empty = directory.join("empty");
+        fs::create_dir_all(&empty).unwrap();
+        assert!(bind(&empty, "127.0.0.1:0".parse().unwrap()).is_err());
         fs::remove_dir_all(&directory).unwrap();
     }
 }
