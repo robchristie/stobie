@@ -23,7 +23,7 @@ ranked [below](#framework-work).
 | Browsers | Safari 26.6.1 as a home-screen web app (its user agent reports `iPhone OS 18_7`); Chrome for iOS 155 in a tab for comparison |
 | Renderer | WebGPU on every device session: adapter `apple`, selection `preferred`. No WebGPU device loss or WebGL context loss was logged |
 | Stobie | `d1b35b385cdc510accbc515a8d00142a58224b48`, through `stobie new`, `stobie build-web --production` and wasm-bindgen 0.2.127 |
-| Serving | One small Python server on loopback for the production package, PWA files and a log collector, published with `tailscale serve` (tailnet only, Funnel off) for a publicly trusted HTTPS certificate. Default build on port 443, CJK build on 8443 |
+| Serving | A small Python server on loopback, one instance per build, serving the production package, the PWA files and a log collector. Published with `tailscale serve` (tailnet only, Funnel off) for a publicly trusted HTTPS certificate. Default build on port 443, CJK build on 8443 |
 | Dates | 16 and 17 October 2026 |
 
 Raw evidence: [stobie-evidence `f78d18b`, `docs/ios-pwa-spike-evidence/`](https://github.com/robchristie/stobie-evidence/tree/f78d18bda40b4c18c25ad68c14dd66afada0ea96/docs/ios-pwa-spike-evidence).
@@ -76,11 +76,11 @@ A throwaway application made with `stobie new`, outside the repository:
 | Checklist item | Result | Evidence |
 | --- | --- | --- |
 | 1. Install and launch | **Works** | Both builds installed and launched standalone, including offline in Aeroplane Mode. The first standalone launch transferred the full package; later launches were served by the service worker (300–1,200 bytes, the HTML revalidation) |
-| 2. Typing | **Works with caveats** | English with autocorrect and predictive text, capitals, punctuation, emoji, dictation, newlines, paste, select all and delete all worked. Each focus needs **two taps** before the keyboard appears. Caret movement and the loupe work but "don't quite feel right". Some emoji show as boxes. Pinyin was not tried |
-| 3. Keyboard and layout | **Works** | The composer stayed visible above the keyboard and the layout recovered when it closed. Safe areas (47 points top, 34 bottom) and rotation were correct |
+| 2. Typing | **Works with caveats** | The owner reported that typing "mostly works". The logs show QuickType words, emoji, dictation, Return, backspace and a paste. Each focus needs **two taps** before the keyboard appears. Caret movement and the loupe work but "don't quite feel right". Some emoji show as boxes. Pinyin was not tried |
+| 3. Keyboard and layout | **Works** | The composer stayed visible above the keyboard and the layout recovered when it closed. Safe areas and rotation were correct. Insets read 47 points top and 34 bottom, but 5 of 9 standalone launches read 0 when measured at load |
 | 4. Scrolling and touch | **Works** | Momentum, scrolling while a reply streams, small targets, and no accidental zoom, selection, pull-to-refresh or edge-swipe trouble |
-| 5. Reading | **Fails** for selection; text and dark mode work | Bot message text cannot be selected or copied. Text is sharp and dark mode follows the system |
-| 6. Lifecycle | **Works** | App switches, lock and unlock, and up to 934 s (15.5 min) hidden: state survived and every return drew on WebGPU without loss events |
+| 5. Reading | **Fails** (selection) | Bot message text cannot be selected or copied. Sharpness, switching dark mode and a larger iOS Text Size were not reported; every session loaded in dark mode, and the logs record the scheme only at load. A canvas app is not expected to follow Text Size |
+| 6. Lifecycle | **Works** | App switches, lock and unlock, and up to 934 s (15.6 min) hidden: state survived and every return drew on WebGPU without loss events |
 | 7. Idle cost | **Works** | 580 s in the foreground untouched: zero paints, no perceptible battery use or heat. See [Idle cost](#idle-cost) |
 | 8. VoiceOver | **Works** in a quick pass | The owner reached the bot list and composer and sent a message. This is one observation, not a screen-reader qualification under the [accessibility guide](ui-guides/accessibility.md#qualification-evidence): no speech output was retained |
 
@@ -102,28 +102,35 @@ The causes of the caveats:
   a `focus()` inside the user's touch gesture. eframe focuses its agent
   afterwards, from the frame in which egui gives the field focus.
 - **Caret, loupe and predictions.** The loupe and caret gestures act on the
-  hidden one-pixel input, not on egui's text, so egui's caret moves at one
-  remove. eframe also clears the agent's value on blur and on any input type
+  hidden one-pixel input, not on egui's text. The likely result, inferred
+  rather than measured, is that egui's caret follows at one remove. eframe
+  also clears the agent's value on blur and on any input type
   other than insertion, such as backspace. iOS therefore predicts and
   autocorrects without the text before the caret.
-- **Emoji.** egui's bundled emoji font is monochrome and lacks recent emoji:
-  🫣 and 🪿 showed as boxes. Family, skin-tone and flag sequences render as
-  separate glyphs instead of one ([screenshot](https://github.com/robchristie/stobie-evidence/blob/f78d18bda40b4c18c25ad68c14dd66afada0ea96/docs/ios-pwa-spike-evidence/precheck/chromium-webgpu/01-list.png)).
+- **Emoji.** egui's bundled emoji font is monochrome and covers only part of
+  the emoji set. Of the 16 distinct emoji typed on the device, 7 have no glyph
+  in any bundled font, including some from Unicode 7 to 10: 🧠 🤗 🫣 🛑 🤣 🪿
+  🌧. Family, skin-tone and flag sequences render as separate glyphs instead of
+  one ([screenshot](https://github.com/robchristie/stobie-evidence/blob/f78d18bda40b4c18c25ad68c14dd66afada0ea96/docs/ios-pwa-spike-evidence/precheck/chromium-webgpu/01-list.png)).
 - **Selection.** Bot messages are selectable egui labels, but on touch a drag
-  scrolls. egui has no long-press selection, and the ARIA layer's text is
-  transparent, so nothing reaches the iOS selection and copy menu.
+  scrolls. egui has no long-press selection, and the ARIA layer is
+  `pointer-events: none` and `user-select: none`, so nothing reaches the iOS
+  selection and copy menu.
 
 ### Native DOM text fields
 
 Overlaying a native text field on the canvas is the right fallback for the
 composer, and it reuses an existing route. The ARIA layer already mirrors each
-egui text field as a hidden `textarea`. It also turns that element's `input`
+egui multiline text field as a hidden `textarea` (single-line fields become
+`input`). It also turns that element's `input`
 events into AccessKit `SetValue` edits that egui applies as typed input. A
 composer mode that makes the layer's element visible and interactive over the
 field's rectangle, with the app's font and colours, would give native focus on
 the first tap, iOS caret, loupe, selection, autocorrect context, dictation and
 IME composition. egui would keep the text and the actions. The costs:
 
+- moving the element out of the layer's transparent, `contain: strict`
+  container while it is active;
 - keeping its geometry in step on scroll, keyboard and rotation;
 - drawing nothing beneath it in egui while it is active;
 - defining focus hand-off with egui;
@@ -137,14 +144,18 @@ interim. Real selection needs a DOM text layer as well.
 Production packages without `wasm-opt` (`--variant none`), as `build-web
 --production` writes them:
 
+"All assets" means `index.html`, the bootstrap and startup scripts, the
+spike's diagnostics script, the bindgen JavaScript and the WASM. The manifest,
+service worker and icons add a few kilobytes.
+
 | Build | WASM raw | WASM Brotli | All assets Brotli | All assets gzip |
 | --- | ---: | ---: | ---: | ---: |
 | Default | 10,278,929 | 2,649,933 | 2,679,127 | 3,717,068 |
 | CJK font | 12,074,198 | 3,834,604 | 3,863,794 | 5,148,803 |
 
 The CJK subset adds 1.18 MB of Brotli. Binaryen 131 `-Oz` reduced the default
-WASM to 8,110,180 bytes raw and 2,551,718 Brotli (−3.7%); it was not
-start-timed.
+WASM to 8,110,180 bytes raw and 2,551,718 Brotli (−3.7%), measured locally
+and not archived; it was not start-timed.
 
 Start times on the device, in navigation-relative milliseconds from
 `window.__STOBIE_STARTUP` ("first frame" is `workspace_frame_submitted`;
@@ -161,8 +172,9 @@ not a benchmark:
 | Default, Chrome for iOS tab, first visit | 2,684,297 | 591 | 669 | 680 |
 | CJK, Chrome for iOS tab, first visit | 3,869,607 | 690 | 1,218 | 1,287 |
 
-One CJK launch hid during startup and reached its first frame after 72 s; it
-is excluded. The CJK build's first frame on a cold launch took 157 ms after
+Two CJK launches began hidden, apparently prelaunched by iOS, and are
+excluded. One reached its first frame after 72 s; the other never became
+visible and has no startup record. The CJK build's first frame on a cold launch took 157 ms after
 the UI pass, against 18 ms for the default build, while the glyph atlas grew.
 Warm CJK launches show no such gap.
 
@@ -180,8 +192,9 @@ transcript lays out all 200 messages every frame with no virtualisation. The
 In 580 s untouched in the foreground the app painted nothing, and the owner
 noticed no battery use or heat. eframe's `requestAnimationFrame` loop still
 ran: 34,912 ticks (60 Hz), each taking at most 4 ms of callback time and
-usually under 1 ms. Hidden, the loop stops. In the pre-checks a streamed reply painted about 24
-frames a second: one per token, plus layout passes.
+usually under 1 ms. While the page is hidden no frame windows were logged.
+In the pre-checks a streamed reply painted 22–24 frames a second: one per
+token, plus layout passes.
 
 ## Automated pre-checks
 
@@ -233,14 +246,16 @@ client. Sizes are rough: small is days, medium one to two weeks, large more.
 2. **Message content: selection, copy and readable observation** (confirmed;
    medium). Rich text or Markdown with semantics and selection is the full
    form. A Copy message action and a DOM text layer for selection come first.
-   `stobie observe` exports no page content, so the spike published a
+   `stobie observe` exports no message text, only labels such as the bot
+   rows' previews, so the spike published a
    `last_message` fact by hand; agents need a bounded, addressable excerpt of
    message text. Evidence: checklist item 5, the CLI transcript.
 3. **An async event source that wakes the host** (confirmed; medium). The
    simulation needed only `Frame::request_repaint_after`, but a socket
    delivers data outside a pass. `WebHost::with_host_mut` and
-   `AppHost::submit` can apply an intent and request a repaint. `web_handle!`
-   exposes neither, so the application must write its own handle. Natively it
+   `AppHost::submit` can apply an intent and request a repaint. The generated
+   handle does not expose them, so the application adds its own
+   `#[wasm_bindgen] impl WebHandle` block that calls them. Natively it
    needs its own thread and context handle. `PassContext` also has no
    delayed repaint, so timed work in `prepare` must schedule its wake-up from
    `ui`. A channel of intents that the host drains in `prepare`, with a waker
@@ -268,7 +283,8 @@ client. Sizes are rough: small is days, medium one to two weeks, large more.
 7. **A responsive navigation pattern** (confirmed but low; small). The
    hand-built split and stack at 640 points, Back and rotation all worked; a
    recipe would save repeating it.
-8. **Variable-height virtualised lists with bottom pinning** (deferred). egui's
+8. **Variable-height virtualised lists with bottom pinning** (rejected for
+   now). egui's
    `stick_to_bottom` kept 200 unvirtualised messages pinned through streaming
    and released the pin when scrolled up, within the frame times above. Revisit
    with measurements of long histories. Two traps for the recipe: an explicit
@@ -288,8 +304,9 @@ Smaller observations:
 ## Limits
 
 - One device, one iOS version and one network. Results are single samples.
-- Pinyin, the 2,000-message history on the device, and screen-reader speech
-  output were not tested.
+- Pinyin, the 2,000-message history on the device, a larger iOS Text Size,
+  dark-mode switching and screen-reader speech output were not tested or not
+  reported.
 - The two-tap explanation comes from the event sequence and WebKit's rule
   that the keyboard opens only for focus inside a user gesture; no eframe
   change was tried.
