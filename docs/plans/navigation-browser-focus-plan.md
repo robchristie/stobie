@@ -79,7 +79,7 @@ selection/activation/disabled/pointer/audit/idle predicates and bounds are retai
 The focused capture was opened; this is functional proof on the recorded software
 browser route, not a new platform or performance qualification. The complete
 owner contract now passes on the exact committed repair. The
-[indexed evidence](navigation-browser-focus-evidence/README.md) retains the failed
+[indexed evidence](../navigation-browser-focus-evidence/README.md) retains the failed
 merge trajectory, before/after source attribution and all limits. No renewed
 minimum-compiler run or complete Mac pilot is claimed; prior private-preview
 and performance limits remain visible in the original qualification receipt.

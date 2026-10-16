@@ -9,7 +9,7 @@ enabled local Unix socket or browser page. Rust types in
 authoritative, and `stobie-ui-egui` re-exports them; the JavaScript client
 does not maintain a separate action registry or schema.
 
-The [execution plan](application-interface-plan.md) and
+The [execution plan](plans/application-interface-plan.md) and
 [qualification evidence](application-interface-evidence.md) own the current
 delivery state and exercised environments. Host examples below describe the
 shared client; application startup, persistence and prerequisites remain in the

@@ -73,7 +73,7 @@ revision `4e6c6f2593cf10f14e561710f78e335d8238ecba`, including eight zero-tolera
 snapshot fixtures and the production browser/native smokes. The original five
 fixtures retain their pixels, semantics and measured observations; only their
 honest catalogue coverage count changes. See the
-[qualification record](typed-icons-evidence/README.md).
+[qualification record](../typed-icons-evidence/README.md).
 
 The plan records the verified product state. Independent review, required CI,
 eventual squash identity and cleanup are retained on the owning PR. Private

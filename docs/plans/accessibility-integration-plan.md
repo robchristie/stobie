@@ -28,7 +28,7 @@ session, selection and application `ActionKey` paths remain authoritative.
 Ordinary code, tests, documentation and CI changes may land after canonical
 verification and exact-head independent review. Claims require actual
 assistive-technology evidence under the
-[qualification contract](ui-guides/accessibility.md#qualification-evidence).
+[qualification contract](../ui-guides/accessibility.md#qualification-evidence).
 Investigate missing proof safely within existing authority and retain an
 unqualified result until it is proved; automation alone does not require a
 human operator. Live release, deployment, breaking-compatibility, rights,

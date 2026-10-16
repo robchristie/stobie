@@ -21,7 +21,7 @@ database or gardener runtime operation is included.
 
 | Increment | Owner revision | Consumer revision | Aggregate result | Status | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| Library typography/layout/diagnostics | `d10b6864ef278fe98fa927111f97d6d142344aab` | — | Full canonical verification; four visible hierarchy probes; independent PASS; PR CI passed; reviewed/landed trees equal | Landed | [Stobie #30](https://github.com/robchristie/stobie/pull/30), [owner evidence](text-hierarchy-evidence/README.md) |
+| Library typography/layout/diagnostics | `d10b6864ef278fe98fa927111f97d6d142344aab` | — | Full canonical verification; four visible hierarchy probes; independent PASS; PR CI passed; reviewed/landed trees equal | Landed | [Stobie #30](https://github.com/robchristie/stobie/pull/30), [owner evidence](../text-hierarchy-evidence/README.md) |
 | Attention composition and evidence | `d10b6864ef278fe98fa927111f97d6d142344aab` | `35a5a0df9eee13ea39a41f216446e120e071e858` | Locked backend/UI checks; 42 UI tests; seven browser journeys; native smoke; independent PASS; all PR CI passed; reviewed/landed trees equal | Landed | [Bokkie #17](https://github.com/robchristie/bokkie/pull/17), [consumer evidence](https://github.com/robchristie/bokkie/blob/35a5a0df9eee13ea39a41f216446e120e071e858/docs/text-hierarchy-evidence/README.md) |
 
 ## Acceptance and calibration decisions

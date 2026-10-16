@@ -1,27 +1,48 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result, bail};
 
 pub(crate) fn check(root: &Path) -> Result<()> {
-    let mut paths = fs::read_dir(root.join("docs"))?
-        .map(|entry| entry.map(|entry| entry.path()))
-        .collect::<std::io::Result<Vec<_>>>()?;
-    paths.retain(|path| {
-        path.is_file()
-            && path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.ends_with("-plan.md"))
-    });
+    // Plans live directly in docs/plans/. A plan anywhere else under docs/
+    // would escape this check.
+    let plans_dir = root.join("docs/plans");
+    let mut paths = Vec::new();
+    plan_files(&root.join("docs"), &mut paths)?;
     paths.sort();
+    if let Some(path) = paths.iter().find(|path| path.parent() != Some(&plans_dir)) {
+        bail!(
+            "plan outside docs/plans/: {}; move it into docs/plans/",
+            path.display()
+        );
+    }
     if paths.is_empty() {
-        bail!("no docs/*-plan.md files found");
+        bail!("no docs/plans/*-plan.md files found");
     }
     for path in &paths {
         validate(&fs::read_to_string(path)?)
             .with_context(|| format!("plan lifecycle: {}", path.display()))?;
     }
     println!("plan lifecycle passed: {} plans", paths.len());
+    Ok(())
+}
+
+/// Collect every `*-plan.md` file under `dir`, recursively.
+fn plan_files(dir: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
+        let path = entry?.path();
+        if path.is_dir() {
+            plan_files(&path, paths)?;
+        } else if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with("-plan.md"))
+        {
+            paths.push(path);
+        }
+    }
     Ok(())
 }
 
@@ -198,6 +219,41 @@ mod tests {
     fn discovers_repository_plans() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         check(root).unwrap();
+    }
+
+    /// Removes its directory when dropped, including after a failed assertion.
+    struct TempRoot(std::path::PathBuf);
+
+    impl Drop for TempRoot {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn rejects_a_plan_outside_the_plans_directory() {
+        let root =
+            TempRoot(std::env::temp_dir().join(format!("stobie-plans-{}", std::process::id())));
+        let _ = std::fs::remove_dir_all(&root.0);
+        std::fs::create_dir_all(root.0.join("docs/plans")).unwrap();
+        std::fs::write(root.0.join("docs/plans/kept-plan.md"), COMPLETE).unwrap();
+        check(&root.0).unwrap();
+        for stray in [
+            "docs/stray-plan.md",
+            "docs/plans/nested/deep-plan.md",
+            "docs/guides/other-plan.md",
+        ] {
+            let path = root.0.join(stray);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, COMPLETE).unwrap();
+            let error = check(&root.0).unwrap_err().to_string();
+            assert!(
+                error.contains("plan outside docs/plans/"),
+                "{stray}: {error}"
+            );
+            std::fs::remove_file(&path).unwrap();
+        }
+        check(&root.0).unwrap();
     }
 
     use std::path::Path;

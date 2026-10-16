@@ -5,7 +5,7 @@ The bounded public composition journeys are qualified on executable candidate
 `91192c067c08ffc7686ce7e1c85b47f0c4dc199a`, based on
 `abbe2162ffbbbd2570f4534bb94e2ebf415b898d`. The
 [composition guide](application-composition.md) owns public instructions; the
-[plan](api-documentation-plan.md) retains the frozen P1–P3 supporting map.
+[plan](plans/api-documentation-plan.md) retains the frozen P1–P3 supporting map.
 Independent public fresh-reader acceptance also succeeds on
 `34a6cfc533ca85647761b7d72f413fa9e4d2e439`, tree
 `8eff8f7c930cac04c2da8c44f1fd75a9f6913a1e`; its executable inputs are unchanged.

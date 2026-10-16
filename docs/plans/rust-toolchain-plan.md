@@ -59,7 +59,7 @@ Stobie owns every product write and long-running check/CI watcher.
 | Necessary compiler repairs | Complete | Fixed-array chunk iteration satisfies new Clippy lint without changing remainder behaviour |
 | Full owner acceptance and retained minimum | Complete | Clean committed source `50a14dc5650b15cea569da8caa7e92947e5314ee` passes complete `cargo xtask verify`; locked 1.97.1 native/WASM checks and all 13 viewer-source tests pass |
 | Shared viewer adapter and consumer journeys | Complete | Ceiling request offsets match the codec's reduced sample grid; strict admission retained; native nine-input/30-stage and ordinary browser nine-input/16-state journeys pass; complete unchanged six-input browser pressure gate passes |
-| Durable P1 disposition | Complete | Full positive/negative observations, input/compiler/build identities and bounded qualification are retained in [owner evidence](rust-toolchain-evidence/README.md); PR #43 owns independent review, CI, merge and cleanup |
+| Durable P1 disposition | Complete | Full positive/negative observations, input/compiler/build identities and bounded qualification are retained in [owner evidence](../rust-toolchain-evidence/README.md); PR #43 owns independent review, CI, merge and cleanup |
 
 P1 has achieved its bounded product outcome. Normal selection is exact 1.98.1;
 the previous minimum, optional declaration omissions, API/dependency/lint policy
@@ -88,7 +88,7 @@ interrupted real JPP transfer, no errors and all caps respected. This proves
 bounded six-input browser pressure coverage; native nine-input and ordinary
 browser nine-input observations remain separately attributed.
 
-[Retained receipts and complete observations](rust-toolchain-evidence/README.md)
+[Retained receipts and complete observations](../rust-toolchain-evidence/README.md)
 identify actual source `50a14dc5650b15cea569da8caa7e92947e5314ee`, tree
 `9f56909a825554a28e3dc3b6669627956e918240`, compiler dispatch, dependencies,
 commands, environment and input hashes. Later plan/evidence-only commits reuse

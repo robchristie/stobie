@@ -39,7 +39,7 @@ it without application code. `Application::web_accessibility_layer` opts out.
 An application that runs its own eframe loop instead of `AppHost`, such as
 the [Emuella viewer](https://github.com/robchristie/emuella-viewer), has no
 layer. The
-[plan](../aria-mirror-plan.md) records why AccessKit, not the semantic
+[plan](../plans/aria-mirror-plan.md) records why AccessKit, not the semantic
 snapshot, is the source.
 
 - **Source.** An egui plugin takes `platform_output.accesskit_update` in its

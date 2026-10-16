@@ -42,7 +42,7 @@ class ScopeTests(unittest.TestCase):
         self.git("add", ".")
         self.assertTrue(self.scoped())
         self.git("commit", "-qm", "Prose")
-        self.write("docs/closeout-plan.md")
+        self.write("docs/plans/closeout-plan.md")
         self.assertTrue(self.scoped())
 
     def test_clean_scope_without_hidden_index_flags(self):
@@ -85,19 +85,20 @@ class ScopeTests(unittest.TestCase):
         for path in ("AGENTS.md", "docs/AGENTS.md", "Cargo.lock", "tools/check.py",
                      ".github/workflows/verify.yml", "tests/ui-snapshots/README.md",
                      "docs/example-evidence/result.md", "docs/qualification-report.md",
-                     "new.rs", "docs/ui-evaluation-seed.md"):
+                     "new.rs", "docs/ui-evaluation-seed.md", "docs/stray-plan.md",
+                     "docs/plans/nested/deep-plan.md", "docs/plans/README.md"):
             with self.subTest(path=path):
                 self.write(path)
                 self.assertFalse(self.scoped())
                 (self.root / path).unlink()
 
     def test_rename_checks_both_paths(self):
-        (self.root / "docs").mkdir()
-        self.git("mv", "src/main.rs", "docs/moved-plan.md")
+        (self.root / "docs/plans").mkdir(parents=True)
+        self.git("mv", "src/main.rs", "docs/plans/moved-plan.md")
         self.assertFalse(self.scoped())
         self.git("reset", "--hard", "-q")
-        (self.root / "docs").mkdir(exist_ok=True)
-        self.git("mv", "README.md", "docs/readme-plan.md")
+        (self.root / "docs/plans").mkdir(parents=True, exist_ok=True)
+        self.git("mv", "README.md", "docs/plans/readme-plan.md")
         self.assertTrue(self.scoped())
 
     def test_deletions(self):
@@ -119,8 +120,8 @@ class ScopeTests(unittest.TestCase):
         self.assertFalse(self.scoped())
 
     def test_untracked_executable_prose(self):
-        self.write("docs/new-plan.md")
-        (self.root / "docs/new-plan.md").chmod(0o755)
+        self.write("docs/plans/new-plan.md")
+        (self.root / "docs/plans/new-plan.md").chmod(0o755)
         self.assertFalse(self.scoped())
 
     def test_ci_event_comparison_bases(self):

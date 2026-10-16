@@ -43,7 +43,7 @@ There is no demonstrated dependency/API change: the existing codec pin
    candidate, pass public CI, then squash-merge and await actual post-merge CI.
    The owning PR retains review, merge identities and four-state/scratch cleanup.
 
-The [previous compiler evidence](rust-toolchain-evidence/README.md) supplies
+The [previous compiler evidence](../rust-toolchain-evidence/README.md) supplies
 applicable fixture recipes and environment knowledge. Its Rust 1.98.1 binaries
 and acceptance results are historical. Existing representative/performance and
 protected-image plans retain their original limits and incomplete outcomes;
@@ -59,7 +59,7 @@ this package makes only the bounded public functional claim.
 | CI verification repair | Complete | Explicit ripgrep, three fail-closed log guards and semantic navigation focus progress; twenty-one controlled cases and complete physical navigation retain every original predicate and bound |
 | Immutable viewer consumer proof | Complete | All 754 immutable hashes reproduced; nine-input native/30-stage and frozen six-input ordinary/pressure browser gate pass on unchanged application/binary/input/environment/predicate identities |
 | Private preview observations | Complete for bounded rendering and cleanup | Current approved Mac assets/rendering/linked pan observed; incomplete Thumbnails predicate and unavailable transport follow-up retained; both owned generations stopped |
-| Durable qualification | Complete | [Owner evidence](rust-1-99-0-evidence/README.md) retains source boundaries, indexed archives, successes and both failed CI trajectories; the owning PR retains renewed review, CI, actual merge and cleanup |
+| Durable qualification | Complete | [Owner evidence](../rust-1-99-0-evidence/README.md) retains source boundaries, indexed archives, successes and both failed CI trajectories; the owning PR retains renewed review, CI, actual merge and cleanup |
 
 ## Verification repair trajectory
 
@@ -98,7 +98,7 @@ empty-focus, transient selection/activation, single deadline and forty-action
 boundaries. Fourteen navigation plus seven scanner cases pass. Complete physical
 navigation passes all eight states and idle with Home/action 37 and Tasks/action
 38. Clean committed `9497023f30a959733ced5028599299d8b9e2670f` then passes the
-complete canonical contract. [All detailed observations](rust-1-99-0-evidence/README.md#semantic-focus-progress)
+complete canonical contract. [All detailed observations](../rust-1-99-0-evidence/README.md#semantic-focus-progress)
 retain actual commands, source hashes, captures, transitions and both failed runs.
 
 ## Provenance and limits

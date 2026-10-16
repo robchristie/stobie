@@ -140,7 +140,7 @@ It needed about 11 minutes and finished every step. Its gaps and their fixes:
 - **Argument actions.** The README, the CLI and the template never showed
   how to declare an action with an argument; the agent found the derive's
   `argument` keys, `perform_with`, `trigger_with` and `choice_control` in
-  rustdoc. Fixed: [Start a new app](start-a-new-app.md#add-an-action-with-an-argument)
+  rustdoc. Fixed: [Start a new app](../start-a-new-app.md#add-an-action-with-an-argument)
   shows the complete pattern, the README links it and the template points to
   it.
 - **Generated code formatting.** It was not `rustfmt`-clean. Fixed: a test
@@ -220,4 +220,4 @@ components the remaining applications and baselines rely on:
     files.
 
   After the removal, `docs/` holds 68 entries (75 files, including the pointer
-  [emuella-viewer.md](emuella-viewer.md)) and `tools/` holds 61 (87 files).
+  [emuella-viewer.md](../emuella-viewer.md)) and `tools/` holds 61 (87 files).

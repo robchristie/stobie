@@ -74,7 +74,7 @@ including filtering a stable selection, one Apply transaction, undo/redo,
 persisted layout/records after restart/reload and visible storage failures.
 Ordinary and 390-point narrow images have been opened and judged. The fresh
 authoring probe added Reset filters with four passing UI tests using public
-source/documentation. [Evidence and decisions](record-desk-evidence.md) own the
+source/documentation. [Evidence and decisions](../record-desk-evidence.md) own the
 details. Full local `cargo xtask verify` passes, including preserved existing
 applications, production startup, UI snapshots and both consumer journeys.
 Qualification harnesses retain bounded idle observations and parsed native

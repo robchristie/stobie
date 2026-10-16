@@ -249,7 +249,7 @@ Each increment lands through review in order, rebased on the previous merge.
 ## Size and startup
 
 Production builds, Brotli quality 11, against `3e90693` (PR #77; `b3abff7` before the
-[second history rewrite](evidence-archive.md#second-rewrite-2026-10-15)). Startup is one
+[second history rewrite](../evidence-archive.md#second-rewrite-2026-10-15)). Startup is one
 local pair from `cargo xtask verify`, so it shows only that the gates pass.
 
 | Increment | Lab WASM (Brotli) | Gallery WASM (Brotli) | Lab cold / repeat content | Gallery cold / repeat content |
