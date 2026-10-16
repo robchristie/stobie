@@ -1,40 +1,111 @@
 # Stobie
 
-Previously named Polyorama. See the [rename and saved-state migration guide](docs/project-rename.md)
-for current development names and the attribution of historical evidence.
+Stobie is an agent-friendly, immediate-mode application framework in Rust for
+native-style applications on the desktop and in the browser. An application
+declares its state, its actions, its UI and how it applies changes. The
+framework host owns everything else: lifecycle, shortcuts, availability,
+repaint, semantic observation and agent operation. The same code runs natively
+and in the browser, rendering with WebGPU and falling back to WebGL2. It is
+built on **egui**, **eframe** and **wgpu**.
 
-Stobie is an experimental Rust framework layer for building GPU-driven
-analytical workspaces on native desktop and in browsers with WebGPU or WebGL2. It brings
-together dockable panes, large tiled images, linked views, annotations and
-virtualised collections above **egui**, **eframe** and **wgpu**.
+Agents can operate every Stobie application with no inspection code in the
+application. The `stobie` command launches or attaches to it, natively or in
+a browser, then reads its UI compactly and invokes its declared actions. In the
+browser, a hidden ARIA layer mirrors the accessibility tree, so screen readers
+and accessibility-tree browser agents can read it too.
 
-The repository contains reusable framework crates, an independent consumer and
-two runnable applications:
-**Analytical Workspace Lab** exercises an analytical workflow and **Stobie
-Gallery** demonstrates the UI components. They run natively and in the browser
-from Rust application code. The
-[Emuella image viewer](https://github.com/robchristie/emuella-viewer), which
-composes indexed JPEG 2000 regional delivery on Stobie's image layer, lives in
-its own repository.
+Stobie is **experimental and pre-1.0**. Its APIs change between commits. It is
+not on crates.io and has no releases: applications depend on it through git,
+pinned to an exact commit. See [Current limits](#current-limits).
 
-The project is under active development. Its APIs remain concrete and driven
-by the example applications; it is not yet a stable general-purpose framework.
+Previously named Polyorama; see the [rename guide](docs/project-rename.md).
 
-For a first application, start with the
-[composition guide](docs/application-composition.md) and its compiled `notes`
-example: an application declares state, actions, UI and intent handling, and
-the framework host owns observation, shortcuts, agent inspection and repaint.
-[Record Desk](consumers/record-desk/README.md) is the larger reference
-consumer, in its own Cargo workspace: find/edit/review synthetic records, Apply
-one validated transaction, undo/redo and save committed records/layout across
-native restarts and browser reloads. It imports only public core/UI APIs and
-owns its domain rules.
+## Start a new app
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install --locked --git https://github.com/robchristie/stobie --rev COMMIT stobie-cli
+cargo install --locked wasm-bindgen-cli --version 0.2.127
+
+stobie new my-app
+cd my-app
+cargo run --release           # native
+stobie build-web              # browser: wasm build, wasm-bindgen and the startup loader
+stobie serve                  # http://127.0.0.1:8080/
+```
+
+`COMMIT` is the full Stobie commit to build on, such as the head of `main`;
+`stobie new` pins the new application to it. The application lives in its own
+Cargo workspace: a small notes app, with its native and web entry points and
+tests. [Start a new app](docs/start-a-new-app.md) explains each file, the
+production build, upgrading the pin and building against a local Stobie
+checkout.
+
+An application declares each action once. The derive gives it a stable ID
+(here `my-app.add`), and one availability rule serves buttons, shortcuts and
+agents:
+
+```text
+#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[action(prefix = "my-app")]
+pub enum NoteAction {
+    #[action(label = "Add note", description = "Add the draft as a note", shortcut = "Cmd+Enter")]
+    Add,
+}
+```
+
+The [composition guide](docs/application-composition.md) explains the four
+parts and the host's contract, with the compiled
+[`notes` example](crates/stobie-ui-egui/examples/notes.rs), which adds undo and
+redo.
+
+## Operate it with `stobie`
+
+```sh
+stobie launch app --manifest-path Cargo.toml
+stobie observe                       # role "name" state #ID [capabilities], compactly
+stobie set-text my-app.draft 'Buy stamps'
+stobie invoke my-app.add             # waits for the effect and reports what changed
+stobie stop app
+```
+
+In the browser, open the page with `?automation=1` in a Chromium that exposes
+DevTools, then `stobie attach`. `stobie --help` and `stobie capabilities --json`
+describe every command and the JSON output. [The `stobie` command](docs/agent-cli.md)
+and the [application interface](docs/application-interface.md) give the
+details.
+
+## Examples
+
+- **[`notes`](crates/stobie-ui-egui/examples/notes.rs)**: the complete hosted
+  application in one file, with undo and redo:
+  `cargo run -p stobie-ui-egui --example notes`.
+- **[Record Desk](consumers/record-desk/README.md)**: a two-pane record
+  workflow in its own Cargo workspace. It finds, edits and reviews synthetic
+  records, applies one validated transaction, undoes and redoes, and saves
+  across native restarts and browser reloads. It uses only the core and UI
+  crates.
+- **Analytical Workspace Lab** and **Stobie Gallery**, below: the optional
+  image layer under load, and the shared design system's components.
+- **[Emuella image viewer](https://github.com/robchristie/emuella-viewer)**, in
+  its own repository: regional JPEG 2000 and NITF viewing on the image layer,
+  built with the route above.
+
+## The optional image layer
+
+Most applications need only `stobie-core` and `stobie-ui-egui`. Image
+applications add `stobie-imaging` (documents, sessions, cameras and image
+commands), `stobie-runtime` (demand reconciliation and bounded workers),
+`stobie-render-wgpu` (persistent GPU image resources) and the UI crate's
+`image-rendering` feature; `stobie new --imaging` sets this up. The scalar
+image renderer runs on WebGPU and WebGL2. See
+[Compose an image application](docs/image-application-composition.md).
 
 ![Analytical Workspace Lab with four GPU image panes, results and an inspector](docs/images/analytical-workspace-lab-dark.webp)
 
 *Browser capture from the [design-system verification evidence](docs/design-agent-loop-evidence/README.md).*
 
-## What you can explore
+## The applications in this repository
 
 ### Analytical Workspace Lab
 
@@ -74,9 +145,11 @@ and application chrome across normal, narrow, long-text, loading and error
 states. It also exposes semantic snapshots and text-layout observations for
 repeatable UI inspection and verification.
 
-## Run locally
+## Run this repository
 
-Run these commands from the repository root.
+Run these commands from the repository root to build the framework, the Lab and
+the Gallery. An application of your own needs only the tools in
+[Start a new app](#start-a-new-app).
 
 ### Prerequisites
 
@@ -90,7 +163,6 @@ Run these commands from the repository root.
   supported by wgpu. Linux builds enable X11 and Wayland support.
 - For browser builds, the `wasm32-unknown-unknown` target,
   **wasm-bindgen-cli 0.2.127**, and a browser with WebGPU or WebGL2.
-- Python 3 for the optional local HTTP server shown below.
 - Node.js and npm for automated browser/UI verification. CI currently uses
   Node.js **25.8.2**; Playwright is pinned in `package-lock.json`.
 
@@ -128,14 +200,14 @@ Build both applications and the tile Web Worker, then serve the Lab:
 
 ```sh
 cargo xtask build-web
-python3 -m http.server 8080 --bind 127.0.0.1 --directory apps/analytical-workspace-lab/web
+cargo run --release -p stobie-cli -- serve apps/analytical-workspace-lab/web
 ```
 
 Open [Analytical Workspace Lab](http://localhost:8080). To run the gallery in
 another terminal:
 
 ```sh
-python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/stobie-gallery/web
+cargo run --release -p stobie-cli -- serve apps/stobie-gallery/web --port 8081
 ```
 
 Open [Stobie Gallery](http://localhost:8081). Serve the files over HTTP rather
@@ -162,6 +234,8 @@ presentation so each has a clear owner.
 | [`stobie-imaging`](crates/stobie-imaging) | The image domain that image applications opt into: documents, sessions, cameras, image intents and commands, and renderer-independent tile and regional demands. |
 | [`stobie-runtime`](crates/stobie-runtime) | Demand reconciliation, bounded worker scheduling and completion state for image tiles and regions. Independent of egui and wgpu. |
 | [`stobie-render-wgpu`](crates/stobie-render-wgpu) | Persistent GPU resources, tile residency and typed render requests shared across viewports. |
+| [`stobie-client`](crates/stobie-client) and [`stobie-cli`](crates/stobie-cli) | The client for the application interface and the `stobie` command built on it: create, build and serve applications, launch or attach to them, read and operate them. No application depends on them. |
+| [`stobie-build`](crates/stobie-build) | The one web build and packaging implementation, shared by `stobie build-web` and this repository's `xtask`: wasm-bindgen with its version check, the embedded startup loader, compression and immutable assets. |
 | [`stobie-ui-egui`](crates/stobie-ui-egui) | The framework's egui integration: the application host, dock presentation, measured components, typed design tokens and semantic UI observations. Its optional `image-rendering` feature adds GPU image presentation. |
 | [`record-desk`](consumers/record-desk) | Independent native/browser record workflow with its own manifest, dependencies and lockfile; no image renderer/runtime or application-package dependency. |
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
@@ -233,7 +307,8 @@ does not update them automatically.
 
 ## Documentation
 
-- [Contributing](CONTRIBUTING.md): architectural boundaries, verification and contribution expectations.
+- [Start a new app](docs/start-a-new-app.md): `stobie new`, the generated
+  application, web builds, upgrading the Stobie pin and local checkouts.
 - [Application composition](docs/application-composition.md): the hosted
   application path, derived actions, panes, browser entry and local rustdoc.
 - [Image application composition](docs/image-application-composition.md): the
@@ -244,6 +319,8 @@ does not update them automatically.
 - [The `stobie` command](docs/agent-cli.md): launch or attach to an
   application natively or in a browser, read it compactly and operate it from
   a shell.
+- [Browser builds and startup](docs/browser-startup.md): packaging,
+  hosting, the WebGPU and WebGL2 backends and startup measurement.
 - [UI guides](docs/ui-guides/README.md): entry point for component, pane,
   interaction, accessibility and UI review work.
 - [Design language](docs/design-language.md): visual and semantic contracts,
@@ -260,8 +337,19 @@ does not update them automatically.
 - [Accessibility integration evidence](docs/accessibility-integration-report.md):
   adapter decisions, automated proof and the exact assistive-technology
   qualification matrix.
+- [Contributing](CONTRIBUTING.md): architectural boundaries, verification and
+  contribution expectations for changes to Stobie itself.
 
 ## Current limits
+
+- **Experimental, pre-1.0.** Public APIs are concrete and still driven by the
+  example applications, and they change between commits without deprecation.
+- **Git-pinned, not published.** No crate is on crates.io and there are no
+  releases or version tags. Applications pin an exact commit and should install
+  the `stobie` CLI from the same commit.
+- **Browsers.** WebGPU is preferred and WebGL2 is the fallback; at least one
+  must be available. CI automates Chromium on both. A scripted Firefox check of
+  one Record Desk journey on WebGL2 runs outside CI.
 
 Stobie compiles eframe's native AccessKit adapter and is
 **AccessKit-semantic and keyboard-tested**. Its tests cover roles, names,

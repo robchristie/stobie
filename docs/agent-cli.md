@@ -33,8 +33,9 @@ library, `stobie-build`, and `cargo xtask architecture` enforces that.
   build with compressed, immutable assets; see the
   [browser startup guide](browser-startup.md).
 - `serve [DIR]` serves a built web root, or a `--production` package (its
-  applications at `/NAME/`), on `127.0.0.1` without caching, for local
-  preview; it does not negotiate compressed representations. `--port 0` picks a free port; `--json` prints its URL.
+  applications at `/NAME/`; `/NAME` redirects there), on `127.0.0.1` without
+  caching, for local preview; it does not negotiate compressed
+  representations. `--port 0` picks a free port; `--json` prints its URL.
 - `package-web NAME=DIR...` packages already built web roots, such as an
   application and its worker, into one production directory.
 
