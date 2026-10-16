@@ -2,7 +2,7 @@
 
 Status: complete
 Delivery: [PR #81](https://github.com/robchristie/stobie/pull/81) completes the plan; increments 0 to 3 landed in PRs #77 to #80.
-Landed commit: a3f06c353d8f89b1cce981ee9ba900b7382eb9b9
+Landed commit: 0d9f318f08b7afd344d3ad606e4d137f0fc9bd7f
 
 ## Outcome and boundaries
 
@@ -248,12 +248,13 @@ Each increment lands through review in order, rebased on the previous merge.
 
 ## Size and startup
 
-Production builds, Brotli quality 11, against `b3abff7`. Startup is one
+Production builds, Brotli quality 11, against `3e90693` (PR #77; `b3abff7` before the
+[second history rewrite](evidence-archive.md#second-rewrite-2026-10-15)). Startup is one
 local pair from `cargo xtask verify`, so it shows only that the gates pass.
 
 | Increment | Lab WASM (Brotli) | Gallery WASM (Brotli) | Lab cold / repeat content | Gallery cold / repeat content |
 | --- | --- | --- | --- | --- |
-| Baseline `b3abff7` | 2,960,391 B | 2,834,735 B | 171.1 / 125.4 ms | 94.2 / 66.0 ms |
+| Baseline `3e90693` | 2,960,391 B | 2,834,735 B | 171.1 / 125.4 ms | 94.2 / 66.0 ms |
 | 1. Arguments and set text (first candidate) | 2,968,398 B (+0.27%) | 2,842,978 B (+0.29%) | 179.1 / 120.8 ms | 86.0 / 54.6 ms |
 | 2. Plain click and agreement, on 1 as landed | 2,971,329 B (+0.37%) | 2,846,395 B (+0.41%) | 171.2 / 126.7 ms | 98.6 / 66.4 ms |
 | 3. Protocol crate, on 2 as landed | 2,974,065 B (+0.46%) | 2,848,476 B (+0.48%) | 168.5 / 113.7 ms | 100.6 / 53.8 ms |

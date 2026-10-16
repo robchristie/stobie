@@ -56,6 +56,16 @@ Keep qualification reports, snapshots and evidence on the full surface. CI uses
 the same guard for pull requests and main pushes under the required `verify`
 check. Scope selection does not establish review, merge or acceptance evidence.
 
+## Git history
+
+Never rewrite the history of `main`: no force-push, and no filtering, amending
+or rebasing of merged commits. Applications made with `stobie new`, the
+[emuella-viewer](https://github.com/robchristie/emuella-viewer) repository and
+other consumers pin exact Stobie commits. A rewrite leaves those commits
+unreachable from any branch, so their builds eventually fail. The two earlier
+rewrites and their commit maps are recorded in
+[docs/evidence-archive.md](docs/evidence-archive.md#history).
+
 ## Evidence and captures
 
 Never commit raw captures such as screenshots, logs or runtime observation
