@@ -10,6 +10,13 @@ impl<A: Application> eframe::App for AppHost<A> {
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.present(ui);
+        #[cfg(target_arch = "wasm32")]
+        if !self.startup_reported {
+            // The first pass's UI is complete on the CPU; the page's startup
+            // loader, when present, records it once and removes its overlay.
+            self.startup_reported = true;
+            web::startup_mark("workspace_ui_complete");
+        }
         if self.app.take_save_request()
             && let Some(storage) = frame.storage_mut()
         {
@@ -48,6 +55,10 @@ pub fn run_native<A: Application>(
 
 #[cfg(target_arch = "wasm32")]
 pub use web::WebHost;
+
+#[cfg(target_arch = "wasm32")]
+#[doc(hidden)]
+pub use web::startup_mark as __startup_mark;
 
 #[cfg(target_arch = "wasm32")]
 #[path = "aria_dom.rs"]
@@ -298,6 +309,19 @@ mod web {
             .unwrap_or_default()
     }
 
+    /// Report a startup milestone to the shared startup loader
+    /// (`browser-startup.js`) when the page installed it. Its marks are
+    /// one-shot, so an application that marks a milestone itself keeps its own
+    /// earlier mark.
+    pub fn startup_mark(name: &str) {
+        let global = js_sys::global();
+        if let Ok(mark) = js_sys::Reflect::get(&global, &JsValue::from_str("__stobieStartupMark"))
+            && let Some(mark) = mark.dyn_ref::<js_sys::Function>()
+        {
+            let _ = mark.call1(&JsValue::NULL, &JsValue::from_str(name));
+        }
+    }
+
     fn navigator_has_gpu() -> bool {
         web_sys::window().is_some_and(|window| {
             js_sys::Reflect::get(&window.navigator(), &JsValue::from_str("gpu"))
@@ -350,7 +374,9 @@ mod web {
 /// its bindgen CLI, because the generated bindings name it.
 ///
 /// The handle offers `new()`, `start(canvas)`, `enable_automation(instance)`,
-/// `automation_request(json)` and `destroy()`. Add application-specific
+/// `automation_request(json)` and `destroy()`. With the shared startup loader
+/// on the page, the handle and host report construction and the first
+/// complete UI pass to it. Add application-specific
 /// read-only methods in another `#[wasm_bindgen] impl WebHandle` block, using
 /// `self.host.with_host(...)`.
 ///
@@ -380,7 +406,12 @@ macro_rules! web_handle {
                 &self,
                 canvas: $crate::__private::web_sys::HtmlCanvasElement,
             ) -> $crate::__private::js_sys::Promise {
-                self.host.start(canvas, $create)
+                self.host.start(canvas, |creation| {
+                    $crate::__private::startup_mark("application_construct_begin");
+                    let application = ($create)(creation);
+                    $crate::__private::startup_mark("application_construct_end");
+                    application
+                })
             }
 
             /// Enable the fixed, versioned automation dispatcher.

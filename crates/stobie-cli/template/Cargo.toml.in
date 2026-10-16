@@ -1,0 +1,29 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+publish = false
+
+# A standalone workspace: nothing is inherited from an enclosing one.
+[workspace]
+resolver = "3"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Stobie is not on crates.io. Every Stobie dependency names the same pinned
+# revision; to upgrade, change it everywhere and run `cargo update`.
+# `.cargo/config.toml` can override it with a local checkout (see README.md).
+[dependencies]
+{{stobie_dependencies}}eframe = { version = "=0.36.1", default-features = false, features = ["accesskit", "default_fonts", "wgpu", "x11", "wayland"] }
+egui = "=0.36.1"
+serde = { version = "1.0.229", features = ["derive"] }
+
+# The wasm-bindgen CLI must be exactly this version; `stobie build-web` checks.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "={{wasm_bindgen}}"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

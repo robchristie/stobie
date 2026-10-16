@@ -130,6 +130,136 @@ pub const COMMANDS: &[Command] = &[
         output_schema_version: SCHEMA_VERSION,
     },
     Command {
+        name: "new",
+        usage: "stobie new NAME [--path DIR] [--imaging] [--stobie-rev COMMIT] [--stobie-path CHECKOUT] [--json]",
+        summary: "Create a standalone application in its own Cargo workspace, native and web, depending on Stobie through git pinned to this CLI's revision",
+        connects: false,
+        flags: &[
+            flag(
+                "--path",
+                Some("DIR"),
+                "Where to create it (default: ./NAME); must be new or empty",
+            ),
+            flag(
+                "--imaging",
+                None,
+                "Add the image layer: stobie-imaging, stobie-runtime, stobie-render-wgpu and the UI crate's image-rendering feature",
+            ),
+            flag(
+                "--stobie-rev",
+                Some("COMMIT"),
+                "Pin this full Stobie commit instead of the one this CLI was built from",
+            ),
+            flag(
+                "--stobie-path",
+                Some("CHECKOUT"),
+                "Also write .cargo/config.toml patching Stobie to a local checkout, to test unmerged changes",
+            ),
+            flag("--json", None, "Emit one JSON object instead of text"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "build-web",
+        usage: "stobie build-web [--manifest-path PATH] [--package PKG] [--web-dir DIR] [--debug] [--locked] [--production [--output DIR] [--variant none|Oz|O3] [--wasm-opt PATH]] [--json]",
+        summary: "Build an application for the browser: wasm32 release build, wasm-bindgen into WEB/pkg (the CLI must match the project's wasm-bindgen crate) and the startup loader; --production also packages compressed, immutable assets",
+        connects: false,
+        flags: &[
+            flag(
+                "--manifest-path",
+                Some("PATH"),
+                "The application's Cargo.toml (default: the current directory's)",
+            ),
+            flag(
+                "--package",
+                Some("PKG"),
+                "The package, in a workspace with several",
+            ),
+            flag(
+                "--web-dir",
+                Some("DIR"),
+                "The web root with index.html and bootstrap.js (default: web/ beside Cargo.toml)",
+            ),
+            flag(
+                "--debug",
+                None,
+                "Build with the dev profile instead of release",
+            ),
+            flag("--locked", None, "Require Cargo.lock to be up to date"),
+            flag(
+                "--production",
+                None,
+                "Also package a clean copy with Brotli and gzip representations and content-addressed assets",
+            ),
+            flag(
+                "--output",
+                Some("DIR"),
+                "With --production: the package directory (default: TARGET/web-production)",
+            ),
+            flag(
+                "--variant",
+                Some("VARIANT"),
+                "With --production: none (default), Oz or O3, which run Binaryen 131's wasm-opt",
+            ),
+            flag(
+                "--wasm-opt",
+                Some("PATH"),
+                "With --production: the wasm-opt executable (default: $WASM_OPT or wasm-opt)",
+            ),
+            flag("--json", None, "Emit one JSON object instead of text"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "serve",
+        usage: "stobie serve [DIR] [--port N] [--json]",
+        summary: "Serve a built web root on 127.0.0.1 for local preview, without caching, until interrupted (default DIR: web/)",
+        connects: false,
+        flags: &[
+            flag(
+                "--port",
+                Some("N"),
+                "The port, or 0 for any free one (default 8080)",
+            ),
+            flag(
+                "--json",
+                None,
+                "Print the URL as one JSON object once listening",
+            ),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
+        name: "package-web",
+        usage: "stobie package-web NAME=DIR... --output DIR [--variant none|Oz|O3] [--wasm-opt PATH] [--source-identity-file JSON] [--json]",
+        summary: "Package already built web roots, such as an application and its worker, into one production directory with a manifest",
+        connects: false,
+        flags: &[
+            flag(
+                "--output",
+                Some("DIR"),
+                "The package directory; replaced only by a previous package",
+            ),
+            flag(
+                "--variant",
+                Some("VARIANT"),
+                "none (default), Oz or O3, which run Binaryen 131's wasm-opt",
+            ),
+            flag(
+                "--wasm-opt",
+                Some("PATH"),
+                "The wasm-opt executable (default: $WASM_OPT or wasm-opt)",
+            ),
+            flag(
+                "--source-identity-file",
+                Some("JSON"),
+                "A JSON object recording the build configuration; all but revision and dirty change asset identity",
+            ),
+            flag("--json", None, "Emit one JSON object instead of text"),
+        ],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
         name: "launch",
         usage: "stobie launch NAME (--manifest-path PATH | --package PKG | -- PROGRAM [ARGS...]) [--bin NAME | --example NAME] [--debug]",
         summary: "Build if needed and start a native application with a fresh private automation socket, record it as session NAME and wait until it answers",
@@ -383,7 +513,7 @@ fn flags_help(flags: &[Flag]) -> String {
 
 pub fn help() -> String {
     let mut text = String::from(
-        "stobie: launch or attach to a Stobie application, read its UI compactly and operate it.\n\n\
+        "stobie: create and build Stobie applications, then launch or attach to one, read its UI compactly and operate it.\n\n\
          Usage: stobie COMMAND [ARGS] [FLAGS]   (stobie COMMAND --help for details)\n\nCommands:\n",
     );
     for command in COMMANDS {
@@ -400,6 +530,10 @@ pub fn help() -> String {
     text.push_str(
         "\nTypical browser session (serve the app, open it with ?automation=1):\n  \
          stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'\n\
+         \nA new application:\n  \
+         stobie new my-app && cd my-app\n  \
+         cargo run --release                  # native\n  \
+         stobie build-web && stobie serve     # browser, at http://127.0.0.1:8080/\n\
          \nTypical native session:\n  \
          stobie launch app --manifest-path path/to/Cargo.toml   (or: stobie launch app -- ./program)\n  \
          stobie observe                       # outline: role \"name\" state #ID [capabilities]\n  \

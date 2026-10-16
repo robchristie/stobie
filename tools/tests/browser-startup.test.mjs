@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installStartup, installWorkerStartup, startApplication } from '../browser-startup.js';
+import { installStartup, installWorkerStartup, startApplication } from '../../crates/stobie-build/web/browser-startup.js';
 
 function environment() {
   let now = 10, next = 0;

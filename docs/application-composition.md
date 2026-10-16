@@ -6,7 +6,9 @@ semantic observation and audits, shortcuts, availability checks, agent
 inspection and invocation, and repaint decisions. The same code runs natively
 and in the browser.
 
-The complete example is [`notes.rs`](../crates/stobie-ui-egui/examples/notes.rs),
+To start an application in its own repository, run `stobie new`; see
+[Start a new app](start-a-new-app.md). This guide explains the parts it
+generates. The complete example is [`notes.rs`](../crates/stobie-ui-egui/examples/notes.rs),
 about 350 lines plus tests of its undo and redo, with no inspection code.
 Run it from the repository root with the native
 [prerequisites](../README.md#prerequisites):
@@ -283,8 +285,10 @@ stobie_ui_egui::web_handle!(Notes, |_| Notes::new());
 The page creates `new WebHandle()` and awaits `start(canvas)`. With
 `?automation=1` in its URL, it calls `enable_automation(crypto.randomUUID())`
 and exposes `automation_request` as `window.__STOBIE_AUTOMATION.request`.
-Record Desk's [`web/bootstrap.js`](../consumers/record-desk/web/bootstrap.js)
-and `build-web.sh` are a working template. For page hooks beyond these, write
+`stobie new` generates such a page: its `web/bootstrap.js` starts the handle
+through the shared startup loader, which shows loading and failure states and
+records startup milestones. `stobie build-web` builds the library, runs
+`wasm-bindgen` into `web/pkg/` and writes the loader. For page hooks beyond these, write
 the handle around `WebHost` yourself: `with_host` reads the running host and
 `with_host_mut(|host| host.submit(intent))` sends an intent through `apply`.
 The component Gallery's `lib.rs` is an example. The
@@ -307,7 +311,9 @@ out.
 ## Choose dependencies
 
 Depend on `stobie-core`, `stobie-ui-egui` and `eframe` with its `wgpu`
-feature. The UI crate's default `eframe` feature provides the native and
+feature. Outside this repository, Stobie crates are git dependencies pinned
+to one exact revision, as [Start a new app](start-a-new-app.md#upgrade-stobie)
+describes. The UI crate's default `eframe` feature provides the native and
 browser entry points but leaves GPU backends to the application, which gets
 them from eframe's `wgpu` feature. In the browser that feature compiles both
 wgpu's WebGPU and WebGL2 backends. Record Desk's

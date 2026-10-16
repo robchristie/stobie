@@ -3,7 +3,7 @@ use super::*;
 use std::time::Instant;
 
 const STAGES: &str = include_str!("../../tools/verification-stages.json");
-const NAMES: [&str; 9] = [
+const NAMES: [&str; 10] = [
     "checks",
     "native-lab",
     "native-other",
@@ -13,6 +13,7 @@ const NAMES: [&str; 9] = [
     "ui",
     "record-desk",
     "webgl2",
+    "outside-app",
 ];
 
 fn configured_names(configuration: &serde_json::Value) -> Result<Vec<&str>> {
@@ -39,7 +40,7 @@ pub fn all() -> Result<()> {
         run_stage(name)?;
     }
     println!(
-        "Stobie verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke"
+        "Stobie verification passed: plans, format, lint, tests, architecture, release native, release WASM, deterministic UI snapshots, browser and native runtime smoke, and an application built outside the repository"
     );
     Ok(())
 }
@@ -120,7 +121,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "tools/tests/application-client.test.mjs",
                     "tools/tests/application-interface-selection.test.mjs",
                     "tools/tests/lab-result-selection.test.mjs",
-                    "tools/tests/browser-package.test.mjs",
+                    "tools/tests/browser-serve.test.mjs",
                 ],
             )?;
         }
@@ -339,6 +340,21 @@ pub fn run_stage(name: &str) -> Result<()> {
                 )?;
             }
         }
+        "outside-app" => {
+            // `stobie new` creates an application outside the checkout that
+            // builds against this source; it is built natively and with
+            // `stobie build-web`, then started natively and on WebGPU and
+            // WebGL2 and operated only through `stobie`.
+            run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
+            prepare_browser()?;
+            if cfg!(target_os = "linux") {
+                run_with_environment(
+                    "bash",
+                    &["tools/outside-app-smoke.sh"],
+                    &evidence_environment,
+                )?;
+            }
+        }
         "webgl2" => {
             // The Lab, the Gallery and Record Desk repeat their browser checks
             // on WebGL2: WebGPU flags are withheld and pages open with
@@ -412,11 +428,8 @@ pub fn run_stage(name: &str) -> Result<()> {
 }
 
 fn build_gallery_web() -> Result<()> {
-    fs::copy(
-        "tools/browser-startup.js",
-        "apps/stobie-gallery/web/browser-startup.js",
-    )?;
-    ensure_wasm_bindgen_version("0.2.127")?;
+    stobie_build::write_startup_loader(Path::new("apps/stobie-gallery/web"))?;
+    ensure_wasm_bindgen()?;
     run(
         "cargo",
         &[
@@ -428,17 +441,10 @@ fn build_gallery_web() -> Result<()> {
             "stobie-gallery",
         ],
     )?;
-    run(
-        "wasm-bindgen",
-        &[
-            "--target",
-            "web",
-            "--out-dir",
-            "apps/stobie-gallery/web/pkg",
-            "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
-        ],
-    )?;
-    Ok(())
+    bindgen(
+        "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
+        "apps/stobie-gallery/web/pkg",
+    )
 }
 
 fn prepare_browser() -> Result<()> {
@@ -475,7 +481,8 @@ mod tests {
                 "production",
                 "ui",
                 "record-desk",
-                "webgl2"
+                "webgl2",
+                "outside-app"
             ])
         );
     }

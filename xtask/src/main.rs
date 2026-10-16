@@ -53,12 +53,9 @@ fn main() -> Result<()> {
 
 fn build_web() -> Result<()> {
     for app in ["analytical-workspace-lab", "stobie-gallery"] {
-        fs::copy(
-            "tools/browser-startup.js",
-            format!("apps/{app}/web/browser-startup.js"),
-        )?;
+        stobie_build::write_startup_loader(Path::new(&format!("apps/{app}/web")))?;
     }
-    ensure_wasm_bindgen_version("0.2.127")?;
+    ensure_wasm_bindgen()?;
     run(
         "cargo",
         &[
@@ -74,37 +71,40 @@ fn build_web() -> Result<()> {
             "stobie-tile-worker",
         ],
     )?;
-    run(
-        "wasm-bindgen",
-        &[
-            "--target",
-            "web",
-            "--out-dir",
-            "apps/analytical-workspace-lab/web/pkg",
-            "target/wasm32-unknown-unknown/release/analytical_workspace_lab.wasm",
-        ],
+    bindgen(
+        "target/wasm32-unknown-unknown/release/analytical_workspace_lab.wasm",
+        "apps/analytical-workspace-lab/web/pkg",
     )?;
-    run(
-        "wasm-bindgen",
-        &[
-            "--target",
-            "web",
-            "--out-dir",
-            "apps/stobie-gallery/web/pkg",
-            "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
-        ],
+    bindgen(
+        "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
+        "apps/stobie-gallery/web/pkg",
     )?;
-    run(
-        "wasm-bindgen",
-        &[
-            "--target",
-            "web",
-            "--out-dir",
-            "apps/analytical-workspace-lab/web/worker-pkg",
-            "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
-        ],
+    bindgen(
+        "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
+        "apps/analytical-workspace-lab/web/worker-pkg",
     )?;
     build_viewer_web()?;
+    Ok(())
+}
+
+/// Check that the wasm-bindgen CLI is the version the workspace locks, and
+/// return it. Web builds share `stobie-build` with the `stobie` CLI.
+fn ensure_wasm_bindgen() -> Result<String> {
+    let metadata = stobie_build::cargo_metadata(None)?;
+    let version = stobie_build::locked_wasm_bindgen(&metadata)
+        .context("the workspace must lock exactly one wasm-bindgen version")?;
+    stobie_build::ensure_wasm_bindgen(&version)?;
+    Ok(version)
+}
+
+/// Run wasm-bindgen for the web into a fresh `output`.
+fn bindgen(wasm: &str, output: impl AsRef<Path>) -> Result<()> {
+    let output = output.as_ref();
+    println!(
+        "+ wasm-bindgen --target web --out-dir {} {wasm}",
+        output.display()
+    );
+    stobie_build::bindgen(Path::new(wasm), output)?;
     Ok(())
 }
 
@@ -469,9 +469,10 @@ fn collect_rust_sources(directory: &Path, output: &mut Vec<std::path::PathBuf>) 
 /// The image layer, which only image applications may resolve.
 const IMAGE_LAYER: &[&str] = &["stobie-imaging", "stobie-runtime", "stobie-render-wgpu"];
 
-/// The CLI, its client and their transport dependencies.
+/// The CLI, its build library, its client and their transport dependencies.
 const AGENT_TOOLING: &[&str] = &[
     "stobie-cli",
+    "stobie-build",
     "stobie-client",
     "lantern-core",
     "tungstenite",
@@ -630,20 +631,6 @@ fn direct_dependents(tree: &str) -> Vec<&str> {
         .collect()
 }
 
-fn ensure_wasm_bindgen_version(expected: &str) -> Result<()> {
-    let output = Command::new("wasm-bindgen")
-        .arg("--version")
-        .output()
-        .context("wasm-bindgen CLI is required")?;
-    let version = String::from_utf8(output.stdout)?;
-    if !output.status.success() || !version.contains(expected) {
-        bail!(
-            "wasm-bindgen CLI {expected} is required; run `cargo install -f wasm-bindgen-cli --version {expected}` (observed {version:?})"
-        );
-    }
-    Ok(())
-}
-
 fn run(program: &str, arguments: &[&str]) -> Result<()> {
     run_with_environment(program, arguments, &[])
 }
@@ -683,7 +670,7 @@ fn run_with_environment(
 }
 
 fn build_viewer_web() -> Result<()> {
-    ensure_wasm_bindgen_version("0.2.127")?;
+    ensure_wasm_bindgen()?;
     run(
         "cargo",
         &[
@@ -697,29 +684,15 @@ fn build_viewer_web() -> Result<()> {
     )?;
     let output =
         env::var("STOBIE_VIEWER_WEB_DIR").unwrap_or_else(|_| ".tools/runtime/viewer-web".into());
-    fs::create_dir_all(&output)?;
-    for asset in ["index.html", "bootstrap.js", "worker.js", "response.js"] {
-        fs::copy(
-            Path::new("apps/emuella-viewer/web").join(asset),
-            Path::new(&output).join(asset),
-        )?;
-    }
-    fs::copy(
-        "tools/browser-startup.js",
-        Path::new(&output).join("browser-startup.js"),
+    let output = Path::new(&output);
+    stobie_build::stage_web(Path::new("apps/emuella-viewer/web"), output, &[])?;
+    stobie_build::write_startup_loader(output)?;
+    bindgen(
+        "target/wasm32-unknown-unknown/release/emuella_viewer.wasm",
+        output.join("pkg"),
     )?;
-    let package = Path::new(&output).join("pkg");
-    run(
-        "wasm-bindgen",
-        &[
-            "--target",
-            "web",
-            "--out-dir",
-            package.to_str().context("UTF-8 web output path")?,
-            "target/wasm32-unknown-unknown/release/emuella_viewer.wasm",
-        ],
-    )?;
-    run("node", &["tools/viewer-response-headers.mjs", &output])?;
+    let output = output.to_str().context("UTF-8 web output path")?;
+    run("node", &["tools/viewer-response-headers.mjs", output])?;
     println!("Serve the viewer's complete static root: {output}");
     Ok(())
 }

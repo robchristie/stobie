@@ -1,7 +1,14 @@
 # Production browser builds and startup measurement
 
 Stobie's browser packaging is a small post-`wasm-bindgen` step, usable without
-a frontend bundler. The Lab, Gallery and viewer use the same host startup helper.
+a frontend bundler. One implementation, the `stobie-build` crate, does it for
+every application: `stobie build-web` and `stobie package-web` for
+applications in their own repositories (see [Start a new app](start-a-new-app.md)),
+and `cargo xtask build-web`, `cargo xtask build-browser-production` and
+Record Desk's `build-web.sh` here. Every build writes the same startup loader,
+`browser-startup.js`, beside `index.html`; its source is
+`crates/stobie-build/web/browser-startup.js`, embedded in the CLI, and nothing
+copies it by hand. The Lab, Gallery and viewer use it.
 The production default retains unprocessed bindgen WASM and adds compressed,
 versioned delivery. Pinned `wasm-opt` variants remain explicit measurement options;
 neither passed every finalist gate. Native release settings and the viewer's
@@ -45,8 +52,10 @@ The Lab's [managed private development preview](private-preview.md) serves that
 development output through an inherited gateway socket with `no-store` and
 browser reloads. It does not alter production packaging or its cache policies.
 
-Production starts with clean bindgen staging, optionally post-processes WASM, compresses
-assets and validates the **final** viewer WASM response adapter. Output contains:
+Production starts with clean bindgen staging (each web root's own files, a
+fresh loader and fresh bindgen output, never a development build's), optionally
+post-processes WASM, compresses assets and validates the **final** viewer WASM
+response adapter. Output contains:
 
 ```text
 target/browser-production/
@@ -61,7 +70,8 @@ target/browser-production/
 
 Every asset has deterministic Brotli quality 11 and gzip level 9 representations,
 verified by decompression round trips. The manifest records source/configuration,
-tools, input hashes and final raw/compressed hashes and sizes. Identity includes
+tools (the packager's version, which fixes its Brotli and gzip encoders, and
+`wasm-opt` when used), input hashes and final raw/compressed hashes and sizes. Identity includes
 final contents and configuration; a source commit alone is insufficient. Glue
 imports are preserved; HTML's relative base and bootstrap-resolved worker URL
 keep all references within a single version under root or subpath hosting.
@@ -280,14 +290,21 @@ wall-clock gates. CI checks completion, failures, package contracts and input.
 ## Consuming applications
 
 Configure profiles in the **consuming workspace**: dependency Cargo profile
-settings are not inherited. Start with release/thin-LTO/one-codegen-unit and the
-same pinned post-bindgen steps; benchmark your actual decoder and workload before
-choosing optimisation flags. Do not apply blanket size tuning to compute code.
+settings are not inherited. Start with release/thin-LTO/one-codegen-unit, as
+`stobie new` does, and the same pinned post-bindgen steps; benchmark your
+actual decoder and workload before choosing optimisation flags. Do not apply
+blanket size tuning to compute code.
 
-`packageBrowser({apps:[{name,directory}],output,variant,sourceIdentity})` in
-`tools/browser-package.mjs` accepts complete bindgen web roots. The companion
-`createProductionServer` and `tools/browser-startup.js` are independent of Lab
-state. Copy or adapt these host/build tools and their tests into the consuming
-application, record its own tool/configuration identity, and add constructor,
-first-workspace and meaningful-content hooks at its application boundary. Keep
-workers, data/transport policy and framework dependencies outside Stobie core.
+`stobie build-web --production [--variant none|Oz|O3] [--output DIR]` packages
+one application. `stobie package-web NAME=DIR... --output DIR` packages
+complete bindgen web roots built some other way, such as an application and a
+worker built from separate crates, with an optional
+`--source-identity-file` recording the build configuration. Both write the
+manifest and layout above. `tools/browser-serve.mjs` (`createProductionServer`)
+is independent of Lab state; copy or adapt it with its tests when you need a
+reference production server. Add constructor, first-workspace and
+meaningful-content hooks at your application boundary: an application on
+`AppHost` reports construction and its first complete UI pass to the loader
+without code, and can call `window.__stobieStartupMark('first_useful_content')`
+itself. Keep workers, data/transport policy and framework dependencies outside
+Stobie core.

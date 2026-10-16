@@ -677,6 +677,9 @@ pub struct AppHost<A: Application> {
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
+    /// Whether the first complete pass was reported to the startup loader.
+    #[cfg(target_arch = "wasm32")]
+    startup_reported: bool,
 }
 
 /// One queued set-text edit.
@@ -726,6 +729,8 @@ impl<A: Application> AppHost<A> {
             edit_focus: None,
             completing: None,
             fields_stale: false,
+            #[cfg(target_arch = "wasm32")]
+            startup_reported: false,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();

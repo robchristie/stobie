@@ -54,6 +54,12 @@
       "browser": true,
       "ui": true,
       "consumer": true
+    },
+    {
+      "name": "outside-app",
+      "browser": true,
+      "ui": true,
+      "consumer": false
     }
   ]
 }

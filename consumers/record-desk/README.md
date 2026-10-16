@@ -25,9 +25,11 @@ For browser development, install the WASM target and matching bindgen CLI once:
 rustup target add wasm32-unknown-unknown
 cargo install --locked wasm-bindgen-cli --version 0.2.127
 bash build-web.sh
-python3 -m http.server 8090 --bind 127.0.0.1 --directory web
+cargo run --release --manifest-path ../../Cargo.toml -p stobie-cli -- serve web --port 8090
 ```
 
+`build-web.sh` runs `stobie build-web --locked` from this checkout: a release
+WASM build, `wasm-bindgen` into `web/pkg/` and the shared startup loader.
 Open [Record Desk](http://localhost:8090) in a browser with WebGPU or WebGL2.
 Serve over HTTP, then rebuild and reload after Rust changes. No worker or data service is
 needed. For a configured private HTTPS development gateway:
@@ -42,6 +44,31 @@ Launcher readiness is separate from browser workflow verification. The framework
 [browser startup guide](../../docs/browser-startup.md) covers production
 packaging; this consumer supplies a small development launcher with visible
 startup failure reporting, not production hosting.
+
+## What is specific to this repository
+
+Record Desk is set up like any application in its own repository, except
+where it must test the framework in this checkout:
+
+- **Dependencies.** `Cargo.toml` uses `path` dependencies on
+  `../../crates/...`, so every framework change is built and tested against
+  it. An application elsewhere uses git dependencies pinned to one revision,
+  as [Start a new app](../../docs/start-a-new-app.md) describes and
+  `stobie new` generates.
+- **Toolchain.** It has no `rust-toolchain.toml`; it uses the repository's.
+- **Web build.** `build-web.sh` runs this checkout's `stobie` with
+  `cargo run`; elsewhere, run an installed `stobie build-web`. Its
+  `web/bootstrap.js` is hand-written and starts the handle directly rather
+  than through the shared startup loader that `stobie new` uses, and it adds
+  the shortcut reservation described under [Keyboard](#keyboard).
+- **Verification.** `tools/check-record-desk.py`, `tools/test-rust.py
+  record-desk`, the smokes under `../../tools/` and `dev-preview` are this
+  repository's tooling. `check-record-desk.py` also checks that Record Desk
+  stays independent: its own workspace, no inherited settings, and no Stobie
+  package beyond the core and UI crates.
+
+Everything else, from `src/` to `web/index.html`, is what an application of
+its own would contain.
 
 ## Workflow and state ownership
 

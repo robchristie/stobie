@@ -1,6 +1,6 @@
 # CI verification and cache ownership
 
-The required `verify` check aggregates nine parallel qualification stages. The
+The required `verify` check aggregates ten parallel qualification stages. The
 closed inventory in `tools/verification-stages.json` is shared with
 `cargo xtask verify`, which runs the same stages sequentially locally. A stage
 can be reproduced with `cargo xtask verify-stage <name>`.
@@ -16,6 +16,7 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 | `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
 | `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
 | `webgl2` | Development Lab/Gallery/Worker/Viewer and Record Desk release WASM/bindgen packages; forced onto WebGL2, the Lab, Gallery, icon, navigation, status-chip and Record Desk browser smokes, the three ARIA layer checks, the Lab/browser interface journey and Record Desk's browser CLI parity |
+| `outside-app` | Release `stobie` CLI; `stobie new` into a directory outside the checkout, patched to the source under test; the generated application's tests, Clippy, release native build, `stobie build-web` and `--production`; an `--imaging` application checked natively and for WASM; the application launched natively and opened in Chromium on WebGPU and forced WebGL2, each observed and operated only through `stobie` |
 
 The two native package selections cover the previous workspace release targets.
 The Lab's example is selected with its normal library and binary to avoid a
@@ -24,7 +25,7 @@ workspace and dependency boundary. Product release settings remain ThinLTO with
 one codegen unit; parallel qualification does not substitute a faster profile.
 
 `tools/verify.py` remains the Git-derived scope guard. Only a successful docs
-classification may select documentation verification instead of the nine
+classification may select documentation verification instead of the ten
 stages. The final job runs even after failure and cancellation; it requires the
 selected route to succeed and rejects missing, failed, cancelled or unexpected
 job results. Full qualification also checks the observed four app/host interface
@@ -54,7 +55,9 @@ input frame move egui focus only once.
 `Swatinem/rust-cache@v2` owns the Cargo registry and dependency build artefacts.
 Each build workload has its own key and caches only target directories created
 by its commands; only the Record Desk and WebGL2 stages include the independent
-consumer target. The docs
+consumer target. The outside-app stage builds its generated applications into
+`target/outside-app`, inside the root target its archive already covers, while
+their sources stay in a temporary directory outside the checkout. The docs
 route can restore the checks-stage cache. `gallery-browser` restores the UI
 archive and is never a writer: both lanes invoke the exact same Gallery Cargo
 and bindgen builder, and the Gallery smokes add no Cargo builds. UI owns that

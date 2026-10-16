@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
+# Build Record Desk for the browser with `stobie build-web`, the packaging path
+# every Stobie application uses: a locked release wasm build, wasm-bindgen into
+# web/pkg (checked against the locked wasm-bindgen crate) and the startup
+# loader. In this repository it runs the checkout's own CLI; set STOBIE to use
+# another, such as an installed `stobie`.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
-[[ "$(wasm-bindgen --version)" == 'wasm-bindgen 0.2.127' ]] || {
-  echo 'Install wasm-bindgen-cli 0.2.127 before building Record Desk.' >&2; exit 1;
-}
-cargo build --locked --release --target wasm32-unknown-unknown --lib
-wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/record_desk.wasm
+if [[ -n "${STOBIE:-}" ]]; then
+  exec "$STOBIE" build-web --locked "$@"
+fi
+exec cargo run --quiet --locked --release --manifest-path ../../Cargo.toml -p stobie-cli -- build-web --locked "$@"
