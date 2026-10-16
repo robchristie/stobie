@@ -33,8 +33,9 @@ library, `stobie-build`, and `cargo xtask architecture` enforces that.
   build with compressed, immutable assets; see the
   [browser startup guide](browser-startup.md).
 - `serve [DIR]` serves a built web root, or a `--production` package (its
-  applications at `/NAME/`), on `127.0.0.1` without caching, for local
-  preview; it does not negotiate compressed representations. `--port 0` picks a free port; `--json` prints its URL.
+  applications at `/NAME/`; `/NAME` redirects there), on `127.0.0.1` without
+  caching, for local preview; it does not negotiate compressed
+  representations. `--port 0` picks a free port; `--json` prints its URL.
 - `package-web NAME=DIR...` packages already built web roots, such as an
   application and its worker, into one production directory.
 
@@ -104,7 +105,13 @@ that, the only page whose URL starts with it; `stobie` does not add
 `?automation=1`, so the URL must already carry it. `--target ID` names a DevTools
 target. Each request evaluates only the page's fixed dispatcher,
 `window.__STOBIE_AUTOMATION.request`, with `Runtime.evaluate`. A page opened
-without `?automation=1` has no dispatcher, and `stobie` says so. The DevTools
+without `?automation=1` has no dispatcher, and `stobie` says so. On a page
+that starts through the shared startup loader, as `stobie new` generates,
+`attach` waits for the dispatcher until `--timeout` while the page loads and
+the application starts, and other commands say that it has not started yet. When its
+startup failed, both report the failure, for example "No supported
+renderer". Without GPU acceleration, Chromium may need
+`--use-angle=swiftshader --enable-unsafe-swiftshader` for WebGL2. The DevTools
 client is Lantern's `lantern-core`, pinned to an exact revision.
 
 ## Selectors

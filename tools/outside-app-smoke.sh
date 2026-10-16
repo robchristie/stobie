@@ -45,6 +45,7 @@ rm -rf "$APP" "$OUTSIDE/outside-imaging"
 "$STOBIE" new outside-notes --path "$APP" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" --json >"$EVIDENCE_DIR/new.json"
 (
   cd "$APP"
+  cargo fmt --check
   cargo test
   cargo clippy --all-targets -- -D warnings
   cargo build --release

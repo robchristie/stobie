@@ -596,9 +596,22 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
                 page: args.value("--page").map(ToOwned::to_owned),
                 target: args.value("--target").map(ToOwned::to_owned),
             };
-            let mut client = Client::new(transport(&target)?)
-                .with_timeout(timeout(args, stobie_client::DEFAULT_TIMEOUT)?);
-            let hello = client.hello()?;
+            let deadline = timeout(args, stobie_client::DEFAULT_TIMEOUT)?;
+            let mut client = Client::new(transport(&target)?).with_timeout(deadline);
+            // A page opened with ?automation=1 may still be loading its
+            // application; wait for it rather than failing at once.
+            let started = std::time::Instant::now();
+            let hello = loop {
+                match client.hello() {
+                    Err(error)
+                        if error.message == stobie_client::NOT_STARTED
+                            && started.elapsed() < deadline =>
+                    {
+                        std::thread::sleep(Duration::from_millis(250));
+                    }
+                    result => break result?,
+                }
+            };
             let session = Session {
                 name: name.into(),
                 target,

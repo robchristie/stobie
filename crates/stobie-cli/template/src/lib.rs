@@ -11,9 +11,15 @@ use stobie_ui_egui::{
 };
 
 const NOTES_PANE: PaneId = PaneId(1);
+/// The draft field's stable ID; `stobie set-text` addresses it.
+const DRAFT_ID: &str = "{{name}}.draft";
 
 /// Every user action, declared once. Buttons, shortcuts and agents share
 /// them; IDs are `{{name}}.<kebab-case variant>`, such as `{{name}}.add`.
+/// An action can also take a value (text, a boolean, a number or a choice)
+/// with `argument = "..."`, handled in `Application::perform_with`; see
+/// "Add an action with an argument" in
+/// <https://github.com/robchristie/stobie/blob/{{stobie_rev}}/docs/start-a-new-app.md>.
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[action(prefix = "{{name}}")]
 pub enum NoteAction {
@@ -193,7 +199,7 @@ impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
         });
         // Observed as a text input, the field accepts `stobie set-text {{name}}.draft TEXT`.
         let mut node = UiNode::container(
-            SemanticUiId::new("{{name}}.draft"),
+            SemanticUiId::new(DRAFT_ID),
             Some(SemanticUiId::pane(pane)),
             UiRole::TextInput,
             field.rect.into(),
@@ -231,7 +237,10 @@ mod tests {
     use super::*;
 
     fn run(app: &mut App, action: NoteAction) {
-        assert!(app.availability(ActionTarget::application(action)).enabled());
+        assert!(
+            app.availability(ActionTarget::application(action))
+                .enabled()
+        );
         app.perform(ActionTarget::application(action), &mut ())
             .unwrap();
     }

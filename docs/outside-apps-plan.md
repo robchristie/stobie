@@ -1,7 +1,7 @@
 # Apps outside the repository, the viewer's own repository and the front door
 
-Status: active
-Next action: Land increment 2c (remove the viewer from Stobie) after the viewer repository is green and registered, then increment 3 (README and front-door documents, the fresh-agent probe and closeout).
+Status: complete
+Delivery: [PR #88](https://github.com/robchristie/stobie/pull/88) completes the plan; increments landed in [PR #86](https://github.com/robchristie/stobie/pull/86), [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1), [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) and [PR #87](https://github.com/robchristie/stobie/pull/87).
 
 ## Outcome and boundaries
 
@@ -124,15 +124,83 @@ cases in the startup smoke and benchmark; the forbidden-package entries in
 `docs/evidence-archive.md` keeps its archive table and permalinks and points
 viewer readers to the new repository.
 
+## Fresh-agent probe
+
+On 2026-10-16 a fresh agent had only the README from this increment and a
+`stobie` CLI installed with `cargo install --git … --rev 8bfcdd6`. It had no
+Stobie checkout or documentation. Working outside any repository, it:
+
+- created an application;
+- added a `sort` action with a choice argument and a combo box;
+- built it natively and for the web;
+- drove it with `stobie`, natively and in Chromium.
+
+It needed about 11 minutes and finished every step. Its gaps and their fixes:
+
+- **Argument actions.** The README, the CLI and the template never showed
+  how to declare an action with an argument; the agent found the derive's
+  `argument` keys, `perform_with`, `trigger_with` and `choice_control` in
+  rustdoc. Fixed: [Start a new app](start-a-new-app.md#add-an-action-with-an-argument)
+  shows the complete pattern, the README links it and the template points to
+  it.
+- **Generated code formatting.** It was not `rustfmt`-clean. Fixed: a test
+  checks it for any name length, and the outside-app stage runs `cargo fmt
+  --check`.
+- **Attaching to a loading page.** Attaching before the application started
+  failed. When startup failed, attach said only "no dispatcher". Fixed: attach
+  waits, and both cases report the page's own startup state or failure. The
+  outside-app stage checks both.
+- **Help text.**
+  - `attach --help` named an undefined `lantern` tool; it now describes the
+    DevTools endpoint.
+  - `capture --help` now names its native X11 requirements: `xdotool` and
+    ImageMagick.
+- **Software-only hosts.** Chromium needs SwiftShader flags for WebGL2, and
+  natives may need `WGPU_BACKEND=gl`. Both are now documented.
+- **What agents can read.** Content text and geometry are not exported, and
+  generated presentation IDs can differ between hosts. Now documented: publish
+  facts, and address controls by capability or semantic IDs.
+
+A second fresh agent then tried the fixes. It used the README and a CLI built
+from this branch (`bd60565`), and its own choice of argument: a number limit
+with a slider. It finished every step in about 5 minutes, with no rustdoc and
+no crate sources. It hit three compile errors, from details the README left
+out for number arguments:
+- `as_number()` returns an `Option`;
+- a number is triggered with `ActionArgument::Number`;
+- `range_control` takes an `f32` value and range.
+
+Those details are now in the README, the generated README and the guide, along
+with the software-rendering flags. The second probe also found that a slider's
+value is not observed; that is recorded below.
+
+## Later work
+
+Found by the probe and not changed here, because each changes observations or
+components the remaining applications and baselines rely on:
+
+- **Text arguments.** A text argument has no ready-made control recipe;
+  `choice_control` and `range_control` cover choices and numbers.
+- **Combo-box observations.**
+  - A `choice_control` is observed above controls it is drawn below.
+  - Its label is only its accessible name.
+  - Its open popup's options are not observed.
+- **Presentation IDs.** Generated presentation IDs differ between native and
+  browser hosts for the same control.
+- **Sliders.**
+  - A `range_control` slider publishes no value to agents, so its value
+    must be published as a fact.
+  - It shows no number on screen.
+
 ## Delivery
 
-| Increment | Repository | Status |
-| --- | --- | --- |
-| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | Landed in [PR #86](https://github.com/robchristie/stobie/pull/86) (`8bfcdd6`) |
-| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Imported in [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77), pinned to `8bfcdd6` |
-| 2b. Register the viewer repository | stobie-workspace | In progress |
-| 2c. Remove the viewer from Stobie | stobie | In progress |
-| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Planned |
+| Increment | Repository | Status | Delivery |
+| --- | --- | --- | --- |
+| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | Landed | [PR #86](https://github.com/robchristie/stobie/pull/86) (`8bfcdd6`) |
+| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Landed | Import [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77) pinned to `8bfcdd6`; carried-over guards in [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1) (`f2ef8b1`) |
+| 2b. Register the viewer repository | stobie-workspace | Landed | [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) (`168baf2`) |
+| 2c. Remove the viewer from Stobie | stobie | Landed | [PR #87](https://github.com/robchristie/stobie/pull/87) (`b9f5a6c`) |
+| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Complete | [PR #88](https://github.com/robchristie/stobie/pull/88) |
 
 ## Evidence
 

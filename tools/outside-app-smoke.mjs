@@ -78,16 +78,26 @@ try {
         const errors = [];
         page.on('pageerror', error => errors.push(String(error)));
         const pageUrl = launch.rendererUrl(`${url}?automation=1`, renderer);
-        await page.goto(pageUrl);
-        await page.waitForFunction(() => window.__STOBIE_AUTOMATION && window.__STOBIE_STARTUP?.status === 'ready', null, { timeout: 60000 });
-        await launch.assertBrowserRenderer(page, '#app-canvas', renderer);
+        // Attach as soon as the page opens: attach waits for the application.
+        await page.goto(pageUrl, { waitUntil: 'commit' });
         const session = `outside-${renderer}`;
         const attached = ok(['attach', session, '--cdp', `http://127.0.0.1:${port}`, '--page', pageUrl]);
+        await launch.assertBrowserRenderer(page, '#app-canvas', renderer);
         const hello = ok(['hello', '--session', session]);
         assert.equal(hello.renderer?.backend, renderer, 'hello reports the running backend');
         report.browser[renderer] = { renderer: hello.renderer, application: attached.application.name, ...journey(session) };
         ok(['stop', session]);
         assert.deepEqual(errors, [], 'no page errors');
+        if (renderer === 'webgl2') {
+          // A page whose application fails to start says why through attach.
+          const failing = `${url}?automation=1&renderer=bogus`;
+          await page.goto(failing);
+          await page.waitForFunction(() => window.__STOBIE_STARTUP?.status === 'failed', null, { timeout: 60000 });
+          const refused = cli(['attach', 'outside-failed', '--cdp', `http://127.0.0.1:${port}`, '--page', failing]);
+          assert.equal(refused.status, 3, refused.stderr);
+          assert.match(refused.body.error.message, /failed to start \(framework_start: .*unknown renderer override "bogus"/);
+          report.browser.startupFailure = refused.body.error.message;
+        }
       } finally {
         await browser.close();
       }

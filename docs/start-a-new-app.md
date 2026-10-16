@@ -79,6 +79,112 @@ in the browser, without inspection code. In the browser, open the page with
 `?automation=1` in a Chromium that exposes DevTools, then `stobie attach`.
 [The `stobie` command](agent-cli.md) describes both.
 
+## Add an action with an argument
+
+An action can take a value that its control or an agent supplies: text, a
+boolean, a number or a choice. Declare it on the variant; the variant itself
+carries no data:
+
+```text
+#[action(label = "Sort notes", description = "Choose the order of the notes",
+         argument = "choice", choices = SortOrder)]
+Sort,
+```
+
+The argument is `"text"` (with an optional `max_length`), `"boolean"`,
+`"number"` (with `minimum` and `maximum`, and `integer = true` for whole
+numbers) or `"choice"` (with `choices = Type`). An action with an argument
+cannot have a shortcut, because a key press supplies no value. A choice type
+lists its options once, with a stable ID and a label for each:
+
+```text
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum SortOrder { #[default] Oldest, Newest, Alphabetical }
+
+impl ChoiceArgument for SortOrder {
+    const CHOICES: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Oldest, "oldest", "Oldest first"),
+        (Self::Newest, "newest", "Newest first"),
+        (Self::Alphabetical, "alphabetical", "A to Z"),
+    ];
+}
+```
+
+Handle it in `Application::perform_with`, which receives the validated value,
+and pass every other action on to `perform`. `perform` must still match the
+variant; return an error there, because it always arrives with a value:
+
+```text
+fn perform_with(&mut self, target: ActionTarget<NoteAction>, argument: ActionArgument,
+                state: &mut ()) -> Result<bool, String> {
+    match target.action {
+        NoteAction::Sort => {
+            // Other kinds: as_text(), as_boolean(), as_number(), each an Option.
+            let order: SortOrder = argument.as_choice()?;
+            let changed = order != self.sort;
+            self.sort = order;
+            Ok(changed)
+        }
+        _ => self.perform(target, state),
+    }
+}
+```
+
+In the pane, present the control for the current value and trigger the action
+with the value the user chose. `ui` borrows the application immutably, so the
+control edits a copy:
+
+```text
+let mut sort = self.sort;
+let options: Vec<(SortOrder, &'static str)> =
+    SortOrder::CHOICES.iter().map(|(value, _, label)| (*value, *label)).collect();
+stobie_ui_egui::choice_control(ui, SemanticUiId::new("my-app.sort"), SemanticUiId::pane(pane),
+    "Sort", &mut sort, &options, NoteAction::Sort, p.tokens());
+if sort != self.sort {
+    frame.trigger_with(NoteAction::Sort, ActionArgument::choice(sort));
+}
+```
+
+`range_control(ui, id, parent, label, &mut value_f32, minimum..=maximum,
+action, p.tokens())` is the counterpart for a number: declare it
+`argument = "number", minimum = 1, maximum = 20, integer = true` and trigger
+`ActionArgument::Number(f64::from(value))`. `ActionArgument::Text(..)` and
+`ActionArgument::Boolean(..)` carry the other kinds. A text value usually comes
+from a text field instead: agents fill it with `stobie set-text` and invoke a
+plain action, as the template's draft and Add do. Clicks and agents then take
+the same route, and `stobie discover my-app.sort` shows the contract:
+
+```sh
+stobie invoke my-app.sort --value alphabetical    # the option's ID or its label
+```
+
+Publish the value as a fact in `observe` (`observation.fact("sort",
+self.sort.choice_id())`) so that agents can wait for it. The `Action` derive's
+and `Application`'s rustdoc (`cargo doc --open` in your application) give the
+exact contracts.
+
+## What agents can read
+
+`stobie observe` lists each control's role, name, state and value and the
+facts your application publishes. It does not export page content such as
+headings or note text, and it leaves out geometry. To let an agent confirm an
+effect, publish a bounded fact for it in `Application::observe`.
+
+Address controls by their capability IDs (`my-app.add`) or by the semantic
+IDs you give them (`my-app.draft`). Generated presentation IDs, such as
+`#presentation.300df68a0e3a837e`, can differ between native and browser
+hosts.
+
+## Without GPU acceleration
+
+On a machine with no usable GPU, such as a virtual machine or a CI runner,
+Chromium may block WebGL2 as well as WebGPU, and the page then reports "No
+supported renderer". Start Chromium with
+`--use-angle=swiftshader --enable-unsafe-swiftshader` for software WebGL2. A
+native application on a software-only X server may need `WGPU_BACKEND=gl`.
+`stobie attach` waits for a page that is still loading its application, and
+reports the page's own startup failure when it fails.
+
 ## Upgrade Stobie
 
 Every Stobie dependency in `Cargo.toml` names the same `rev`. To upgrade,

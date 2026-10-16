@@ -213,6 +213,59 @@ impl BrowserTransport {
     }
 }
 
+/// The error for a page without a dispatcher: not opened with
+/// `?automation=1`, or still starting or failed to start, as the page and the
+/// startup report of the shared loader (`browser-startup.js`) say.
+fn missing_dispatcher(socket: &mut CdpWebSocket) -> ClientError {
+    let state = socket
+        .call(
+            "Runtime.evaluate",
+            Some(json!({
+                "expression": "(() => { const s = window.__STOBIE_STARTUP; return { \
+                    automation: new URL(location.href).searchParams.get('automation') === '1', \
+                    loaded: document.readyState === 'complete', \
+                    status: s?.status ?? null, \
+                    failure: s?.failure ? `${s.failure.phase}: ${s.failure.message}` : null }; })()",
+                "returnByValue": true,
+            })),
+        )
+        .ok()
+        .map(|reply| reply["result"]["value"].clone())
+        .unwrap_or_default();
+    classify_missing(&state)
+}
+
+/// Classify a page without a dispatcher from its evaluated state.
+fn classify_missing(state: &serde_json::Value) -> ClientError {
+    if let Some(failure) = state["failure"].as_str() {
+        return ClientError::connection(
+            format!("the application on the page failed to start ({failure})"),
+            "fix the failure the page shows; without GPU acceleration, Chromium may need \
+             --use-angle=swiftshader --enable-unsafe-swiftshader for WebGL2",
+        );
+    }
+    // A page opened for automation is still starting while the shared loader
+    // says so, or, before the loader has run, while the document loads. A
+    // loaded page with no report or a ready one keeps the immediate error.
+    let starting =
+        state["status"] == "starting" || (state["status"].is_null() && state["loaded"] == false);
+    if state["automation"] == true && starting {
+        return ClientError::connection(
+            NOT_STARTED,
+            "wait for the page to finish loading and retry; `stobie attach` waits for it",
+        );
+    }
+    ClientError::connection(
+        "the page has no Stobie automation dispatcher",
+        "open the application with ?automation=1 in its URL; if it has that, the \
+         application has not started yet or failed to start (see the browser console)",
+    )
+}
+
+/// A page opened with `?automation=1` whose application has not yet
+/// installed its dispatcher.
+pub const NOT_STARTED: &str = "the application on the page has not started yet";
+
 impl Transport for BrowserTransport {
     fn request(&mut self, body: &str, deadline: Instant) -> Result<String, ClientError> {
         if body.len() > INSPECTION_REQUEST_BYTES {
@@ -250,11 +303,7 @@ impl Transport for BrowserTransport {
                     "reload the page; if it persists, report this application",
                 ));
             }
-            return Err(ClientError::connection(
-                "the page has no Stobie automation dispatcher",
-                "open the application with ?automation=1 in its URL; if it has that, the \
-                 application has not started yet or failed to start (see the browser console)",
-            ));
+            return Err(missing_dispatcher(&mut socket));
         }
         reply["result"]["value"]
             .as_str()
@@ -275,5 +324,47 @@ impl Transport for BrowserTransport {
             PageSelector::Only => "(the only page)".into(),
         };
         format!("browser {} page {page}", self.endpoint)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn classify(state: serde_json::Value) -> String {
+        classify_missing(&state).message
+    }
+
+    #[test]
+    fn a_page_without_a_dispatcher_is_starting_failed_or_not_automated() {
+        let no_dispatcher = "the page has no Stobie automation dispatcher";
+        // Before the loader has run: no report while the document loads.
+        assert_eq!(
+            classify(json!({"automation": true, "loaded": false, "status": null})),
+            NOT_STARTED
+        );
+        // The loader reports that it is starting, loaded or not.
+        assert_eq!(
+            classify(json!({"automation": true, "loaded": true, "status": "starting"})),
+            NOT_STARTED
+        );
+        // A failed start says why, whatever else holds.
+        assert!(
+            classify(
+                json!({"automation": true, "loaded": true, "status": "failed",
+                "failure": "framework_start: No supported renderer"})
+            )
+            .contains("failed to start (framework_start: No supported renderer)")
+        );
+        // Loaded without a report (a bootstrap without the loader), ready
+        // without a dispatcher, or not opened with ?automation=1.
+        for state in [
+            json!({"automation": true, "loaded": true, "status": null}),
+            json!({"automation": true, "loaded": true, "status": "ready"}),
+            json!({"automation": false, "loaded": false, "status": "starting"}),
+            json!(null),
+        ] {
+            assert_eq!(classify(state.clone()), no_dispatcher, "{state}");
+        }
     }
 }

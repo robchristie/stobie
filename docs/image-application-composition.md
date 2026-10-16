@@ -1,9 +1,11 @@
 # Compose an image application
 
-This guide covers the analytical image path: the `stobie-imaging` domain
+This guide covers the optional image layer: the `stobie-imaging` domain
 crate, the asynchronous tile runtime and the GPU scalar renderer. Most applications
 need none of it; start with the [composition guide](application-composition.md),
-whose hosted path owns the per-pass plumbing. The Analytical Workspace Lab runs
+whose hosted path owns the per-pass plumbing. `stobie new --imaging` creates an
+application that already depends on these crates and the UI crate's
+`image-rendering` feature; see [Start a new app](start-a-new-app.md). The Analytical Workspace Lab runs
 these types on that path; [Host an image application](#host-an-image-application)
 shows how. The triangle example below still wires its pass by hand with
 `dock_workspace` and image commands.

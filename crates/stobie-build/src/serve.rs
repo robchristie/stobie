@@ -50,6 +50,31 @@ pub fn resolve(root: &Path, target: &str) -> Option<PathBuf> {
     Some(resolved)
 }
 
+/// The location to redirect a directory request without its trailing slash to.
+fn directory_redirect(root: &Path, target: &str) -> Option<String> {
+    let (path, query) = match target.split_once('?') {
+        Some((path, query)) => (path, Some(query)),
+        None => (target, None),
+    };
+    if path.ends_with('/') {
+        return None;
+    }
+    let mut resolved = root.to_path_buf();
+    for component in Path::new(percent_decode(path)?.strip_prefix('/')?).components() {
+        match component {
+            Component::Normal(part) => resolved.push(part),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+    resolved.is_dir().then(|| {
+        format!(
+            "{path}/{}",
+            query.map(|query| format!("?{query}")).unwrap_or_default()
+        )
+    })
+}
+
 fn percent_decode(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut output = Vec::with_capacity(bytes.len());
@@ -104,6 +129,15 @@ fn handle(root: &Path, mut stream: TcpStream) {
             b"",
             head,
         );
+        return;
+    }
+    // A directory's relative URLs resolve only below a trailing slash, so
+    // `/app` redirects to `/app/` (keeping the query) before serving its index.
+    if let Some(location) = directory_redirect(root, target) {
+        let header = format!(
+            "HTTP/1.1 308 Permanent Redirect\r\nLocation: {location}\r\nContent-Length: 0\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n"
+        );
+        let _ = stream.write_all(header.as_bytes());
         return;
     }
     let Some(path) = resolve(root, target) else {
@@ -216,6 +250,12 @@ mod tests {
         assert!(get("GET /missing.js HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 404"));
         assert!(get("GET /../x HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 400"));
         assert!(get("POST / HTTP/1.1\r\n\r\n").starts_with("HTTP/1.1 405"));
+        fs::create_dir_all(directory.join("app")).unwrap();
+        fs::write(directory.join("app/index.html"), "app").unwrap();
+        let redirect = get("GET /app?automation=1 HTTP/1.1\r\n\r\n");
+        assert!(redirect.starts_with("HTTP/1.1 308"), "{redirect}");
+        assert!(redirect.contains("Location: /app/?automation=1\r\n"));
+        assert!(get("GET /app/ HTTP/1.1\r\n\r\n").ends_with("app"));
         // A production package is served from its root; an empty directory is not.
         let package = directory.join("package");
         fs::create_dir_all(package.join("app")).unwrap();

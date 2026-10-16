@@ -298,13 +298,13 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "attach",
         usage: "stobie attach NAME --cdp URL [--page URL | --target ID]",
-        summary: "Record session NAME for a browser page opened with ?automation=1, after checking it answers",
+        summary: "Record session NAME for a browser page opened with ?automation=1, once its application has started and answers",
         connects: false,
         flags: &[
             flag(
                 "--cdp",
                 Some("URL"),
-                "The browser's DevTools HTTP endpoint, as `lantern browser endpoint` prints it",
+                "The browser's DevTools HTTP endpoint, such as http://127.0.0.1:9222 for a Chromium started with --remote-debugging-port=9222",
             ),
             flag(
                 "--page",
@@ -315,7 +315,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--timeout",
                 Some("MS"),
-                "How long to wait for the page to answer (default 15000)",
+                "How long to wait for the page's application to start and answer (default 15000)",
             ),
             flag("--json", None, "Emit one JSON object instead of text"),
         ],
@@ -441,7 +441,7 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "capture",
         usage: "stobie capture --output PNG [TARGET FLAGS]",
-        summary: "Screenshot the application, bracketed by observations before and after",
+        summary: "Screenshot the application, bracketed by observations before and after: a browser canvas through DevTools, or a launched native window on X11 (needs xdotool and ImageMagick's import)",
         connects: true,
         flags: &[flag(
             "--output",

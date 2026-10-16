@@ -174,7 +174,7 @@ pub fn valid_name(name: &str) -> Result<(), ClientError> {
         && !name.contains("--");
     if !shaped || RESERVED.contains(&name) || name.len() > 64 {
         return Err(ClientError::usage(format!(
-            "{name:?} cannot name an application: use lower-case letters, digits and single hyphens, starting with a letter, such as my-notes"
+            "{name:?} cannot name an application: use at most 64 lower-case letters, digits and single hyphens, starting with a letter, such as my-notes"
         )));
     }
     Ok(())
@@ -573,6 +573,50 @@ mod tests {
         match source_revision() {
             Some(revision) => assert!(line.ends_with(&format!(" (commit {revision})"))),
             None => assert!(!line.contains("commit")),
+        }
+    }
+
+    /// Generated sources pass `cargo fmt --check` whatever the name's length.
+    /// Skipped where rustfmt is not installed; CI has it.
+    #[test]
+    fn generated_sources_are_rustfmt_clean() {
+        use std::io::Write as _;
+        use std::process::{Command, Stdio};
+        if Command::new("rustfmt").arg("--version").output().is_err() {
+            return;
+        }
+        for name in ["a", "field-notes", &format!("a{}", "-b".repeat(31))] {
+            assert!(valid_name(name).is_ok(), "{name}");
+            let app = NewApp {
+                name: name.to_owned(),
+                revision: "0123456789abcdef0123456789abcdef01234567".into(),
+                imaging: false,
+            };
+            for (path, text) in app.files() {
+                if !path.ends_with(".rs") {
+                    continue;
+                }
+                // `--check` on standard input always succeeds, so compare.
+                let mut child = Command::new("rustfmt")
+                    .args(["--edition", "2024", "--emit", "stdout"])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .unwrap();
+                child
+                    .stdin
+                    .take()
+                    .unwrap()
+                    .write_all(text.as_bytes())
+                    .unwrap();
+                let output = child.wait_with_output().unwrap();
+                assert!(output.status.success(), "{name}: rustfmt failed on {path}");
+                assert_eq!(
+                    String::from_utf8_lossy(&output.stdout),
+                    text,
+                    "{name}: {path} is not rustfmt-clean"
+                );
+            }
         }
     }
 
