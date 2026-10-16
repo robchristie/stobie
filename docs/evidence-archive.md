@@ -51,8 +51,8 @@ captures. Each was copied byte for byte from source commit
 [History](#history)) to stobie-evidence commit
 [`0d0d782`](https://github.com/robchristie/stobie-evidence/tree/0d0d782fee9970d6740bc409fa3a350cf2fe9e00).
 [`evidence-archive.sha256`](evidence-archive.sha256) lists each file's
-SHA-256 and is byte-identical to the archive's manifest. Report links point to
-that commit.
+SHA-256 and is byte-identical to the archive's manifest at that commit. Report
+links point to that commit.
 
 Other files moved within this repository at the same time:
 
@@ -94,13 +94,23 @@ archived raw evidence stays here, in stobie-evidence, unchanged: the
 permalinks above and in its reports remain valid, and the archive table and
 `evidence-archive.sha256` still list it.
 
-To fetch and check the complete archive:
+Later reports archive their raw evidence in their own stobie-evidence
+commits and append to the same manifest:
+
+| Archived path | Files | Commit | Interpreting report |
+| --- | ---: | --- | --- |
+| `ios-pwa-spike-evidence/` | 19 | [`f78d18b`](https://github.com/robchristie/stobie-evidence/tree/f78d18bda40b4c18c25ad68c14dd66afada0ea96/docs/ios-pwa-spike-evidence) | [iOS PWA spike](ios-pwa-spike-report.md) |
+
+To fetch and check the complete archive, including later additions:
 
 ```sh
 git clone https://github.com/robchristie/stobie-evidence.git
-cd stobie-evidence && git checkout 0d0d782fee9970d6740bc409fa3a350cf2fe9e00
+cd stobie-evidence
 sha256sum --check --quiet evidence-archive.sha256
 ```
+
+Check out `0d0d782fee9970d6740bc409fa3a350cf2fe9e00` instead to check only
+the 2026-10-13 archive against this repository's copy of its manifest.
 
 ## History
 
