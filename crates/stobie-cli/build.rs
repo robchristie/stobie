@@ -1,11 +1,12 @@
 //! Record the Stobie revision this CLI is built from, which `stobie new` pins
 //! new applications to. `STOBIE_SOURCE_REVISION` overrides Git.
 //!
-//! Cargo's hashes for a git package ignore its revision, so a target
-//! directory shared between `cargo install --git` runs keeps this script and
-//! its output across revisions. The script therefore reads its directory at
-//! run time, and watches Git's files through paths relative to the package,
-//! which Cargo resolves against the current checkout.
+//! Cargo's build-script hashes ignore a git package's revision, and once a
+//! script emits `rerun-if-changed`, Cargo checks only those paths, even when a
+//! later `cargo install --git` reuses the target directory with a new checkout.
+//! In a Cargo git checkout (marked by `.cargo-ok`) the script therefore emits
+//! no `rerun-if` directive, and Cargo reruns it for each new revision. In a development checkout
+//! it watches Git's HEAD and branch. It reads its directory at run time.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -23,7 +24,6 @@ fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
 }
 
 fn main() {
-    println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
     let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("set by Cargo"));
     // Only a Stobie checkout names a Stobie revision, not, say, another
     // repository that vendors this source.
@@ -36,7 +36,15 @@ fn main() {
     let revision = std::env::var("STOBIE_SOURCE_REVISION")
         .ok()
         .or_else(|| top.as_ref().and(git(&manifest, &["rev-parse", "HEAD"])));
-    if let (Some(directory), Some(common)) = (
+    let cargo_checkout = top
+        .as_ref()
+        .is_some_and(|top| top.join(".cargo-ok").exists());
+    // Any `rerun-if` directive replaces Cargo's own freshness rule.
+    if !cargo_checkout {
+        println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
+    }
+    if let (false, Some(directory), Some(common)) = (
+        cargo_checkout,
         git(&manifest, &["rev-parse", "--absolute-git-dir"]),
         git(&manifest, &["rev-parse", "--git-common-dir"]),
     ) {
@@ -49,12 +57,8 @@ fn main() {
             watched.push(common.join(reference));
         }
         // A missing path would rerun the script on every build.
-        for path in watched.iter().filter_map(|path| path.canonicalize().ok()) {
-            // This crate is `crates/stobie-cli` below the checkout's top level.
-            match top.as_ref().and_then(|top| path.strip_prefix(top).ok()) {
-                Some(inside) => println!("cargo:rerun-if-changed=../../{}", inside.display()),
-                None => println!("cargo:rerun-if-changed={}", path.display()),
-            }
+        for path in watched.iter().filter(|path| path.exists()) {
+            println!("cargo:rerun-if-changed={}", path.display());
         }
     }
     if let Some(revision) = revision.filter(|revision| {
