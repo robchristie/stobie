@@ -194,13 +194,13 @@ components the remaining applications and baselines rely on:
 
 ## Delivery
 
-| Increment | Repository | Status |
-| --- | --- | --- |
-| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | Landed in [PR #86](https://github.com/robchristie/stobie/pull/86) (`8bfcdd6`) |
-| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Landed: import [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77) pinned to `8bfcdd6`, and the carried-over guards in [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1) (`f2ef8b1`) |
-| 2b. Register the viewer repository | stobie-workspace | Landed in [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) (`168baf2`) |
-| 2c. Remove the viewer from Stobie | stobie | Landed in [PR #87](https://github.com/robchristie/stobie/pull/87) (`b9f5a6c`) |
-| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Complete in [PR #88](https://github.com/robchristie/stobie/pull/88) |
+| Increment | Repository | Status | Delivery |
+| --- | --- | --- | --- |
+| 1. Outside-app route: `stobie new`, `stobie build-web`, `stobie serve`, one packaging path, the outside-app stage and the guide | stobie | Landed | [PR #86](https://github.com/robchristie/stobie/pull/86) (`8bfcdd6`) |
+| 2a. Create and import the viewer repository, CI green, pinned to increment 1's merge | emuella-viewer | Landed | Import [`f83ff98`](https://github.com/robchristie/emuella-viewer/commit/f83ff987f39b3f61744209335a086afeb05d0f77) pinned to `8bfcdd6`; carried-over guards in [emuella-viewer#1](https://github.com/robchristie/emuella-viewer/pull/1) (`f2ef8b1`) |
+| 2b. Register the viewer repository | stobie-workspace | Landed | [stobie-workspace#5](https://github.com/robchristie/stobie-workspace/pull/5) (`168baf2`) |
+| 2c. Remove the viewer from Stobie | stobie | Landed | [PR #87](https://github.com/robchristie/stobie/pull/87) (`b9f5a6c`) |
+| 3. README and front-door documents, the fresh-agent probe and closeout | stobie | Complete | [PR #88](https://github.com/robchristie/stobie/pull/88) |
 
 ## Evidence
 
