@@ -13,6 +13,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use egui::accesskit::{self, AriaCurrent, Live, Node, NodeId, Orientation, Role, Toggled};
 
+use crate::native_text::{NativeFont, NativeTextRegistration};
+
 /// Prefix of every element ID the layer creates, kept apart from page IDs.
 pub const ARIA_ID_PREFIX: &str = "stobie-a11y:";
 
@@ -24,6 +26,18 @@ pub const SEMANTIC_ID_ATTRIBUTE: &str = "data-stobie-id";
 /// browser host gives it a one-pixel hit target at its centre that forwards
 /// pointer input to the canvas.
 pub const HIT_ATTRIBUTE: &str = "data-stobie-hit";
+
+/// Marks a text field that the application presents as a native field while
+/// it is active (see `native_text`).
+pub const NATIVE_ATTRIBUTE: &str = "data-stobie-native";
+
+/// Marks the active native field. Its selection and placeholder rules select
+/// it by this attribute.
+pub const NATIVE_ACTIVE_ATTRIBUTE: &str = "data-stobie-native-active";
+
+/// iOS zooms the page to focus a text field whose text is smaller than this,
+/// in CSS pixels.
+const NATIVE_MIN_FONT_PX: f64 = 16.0;
 
 /// One element of the projected layer.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,6 +66,53 @@ pub struct AriaTree {
     pub roots: Vec<String>,
     /// The element the canvas's `aria-activedescendant` names.
     pub active: Option<String>,
+    /// Elements a pointer acts on, in egui's registration order.
+    pub targets: Vec<PointerTarget>,
+    /// The native fields' active presentation, by element ID.
+    pub native: BTreeMap<String, NativeField>,
+}
+
+/// An element a pointer acts on, with the part of it that is shown.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PointerTarget {
+    pub id: String,
+    /// `(x0, y0, x1, y1)` in points.
+    pub visible: (f64, f64, f64, f64),
+    /// Whether it is an enabled, editable text field.
+    pub text_field: bool,
+}
+
+/// How a native field is presented while it is active: its element's inline
+/// style, positioned over the canvas in CSS pixels, the stylesheet rules for
+/// its selection and placeholder, and its placeholder text.
+#[derive(Clone, Debug, PartialEq)]
+pub struct NativeField {
+    pub style: String,
+    pub rules: String,
+    pub placeholder: String,
+}
+
+/// The editable text field a tap at `point` (in points) would focus: the
+/// topmost element a pointer acts on there, egui's last registered, if it is
+/// an enabled, editable text field.
+pub fn text_field_at(tree: &AriaTree, (x, y): (f64, f64)) -> Option<&str> {
+    tree.targets
+        .iter()
+        .rev()
+        .find(|target| {
+            let (x0, y0, x1, y1) = target.visible;
+            x0 <= x && x <= x1 && y0 <= y && y <= y1
+        })
+        .filter(|target| target.text_field)
+        .map(|target| target.id.as_str())
+}
+
+/// Whether a touch from `start` to `end`, in points, lasting `seconds`, is a
+/// tap that egui will take as a click: it stays within egui's click distance
+/// and time.
+pub fn is_tap(start: (f64, f64), end: (f64, f64), seconds: f64) -> bool {
+    let distance = (end.0 - start.0).hypot(end.1 - start.1);
+    distance <= 6.0 && (0.0..0.8).contains(&seconds)
 }
 
 /// One DOM change. Applying a diff's operations in order turns the previous
@@ -108,6 +169,21 @@ pub fn project_within(
     scale: f32,
     viewport: Option<(f64, f64, f64, f64)>,
 ) -> AriaTree {
+    project_native(update, scale, viewport, &[])
+}
+
+/// [`project_within`], presenting the text fields registered in `native` as
+/// native fields.
+pub(crate) fn project_native(
+    update: &accesskit::TreeUpdate,
+    scale: f32,
+    viewport: Option<(f64, f64, f64, f64)>,
+    native: &[NativeTextRegistration],
+) -> AriaTree {
+    let native: HashMap<NodeId, &NativeTextRegistration> = native
+        .iter()
+        .map(|field| (field.id.accesskit_id(), field))
+        .collect();
     let nodes: HashMap<NodeId, &Node> = update.nodes.iter().map(|(id, node)| (*id, node)).collect();
     let mut tree = AriaTree::default();
     let Some(root) = update.tree.as_ref().map(|tree| tree.root) else {
@@ -118,6 +194,7 @@ pub fn project_within(
     };
     let mut projection = Projection {
         nodes: &nodes,
+        native: &native,
         scale,
         tree: &mut tree,
         ids: HashMap::new(),
@@ -143,16 +220,20 @@ pub fn project_within(
     // no pointer. An earlier one, such as a dock splitter's grab area that
     // its panes' contents overlap, lies beneath it.
     for (id, (x, y), order) in &hits {
-        let contested = interactive[order + 1..]
-            .iter()
-            .any(|(other, (x0, y0, x1, y1))| {
+        let contested = interactive[order + 1..].iter().any(
+            |PointerTarget {
+                 id: other,
+                 visible: (x0, y0, x1, y1),
+                 ..
+             }| {
                 !is_ancestor(&tree, other, id)
                     && !is_ancestor(&tree, id, other)
                     && x0 <= x
                     && x <= x1
                     && y0 <= y
                     && y <= y1
-            });
+            },
+        );
         if contested {
             tree.elements
                 .get_mut(id)
@@ -183,17 +264,19 @@ pub fn project_within(
     if update.focus != root {
         tree.active = ids.get(&update.focus).cloned();
     }
+    tree.targets = interactive;
     tree
 }
 
 struct Projection<'a> {
     nodes: &'a HashMap<NodeId, &'a Node>,
+    native: &'a HashMap<NodeId, &'a NativeTextRegistration>,
     scale: f32,
     tree: &'a mut AriaTree,
     ids: HashMap<NodeId, String>,
     used: BTreeSet<String>,
-    /// Elements a pointer acts on, in tree order, with their bounds in points.
-    interactive: Vec<(String, (f64, f64, f64, f64))>,
+    /// Elements a pointer acts on, in tree order, with their visible bounds.
+    interactive: Vec<PointerTarget>,
     /// Hit target candidates, with their centres in points and their index
     /// in `interactive`.
     hits: Vec<(String, (f64, f64), usize)>,
@@ -259,6 +342,22 @@ impl Projection<'_> {
             // A text field cannot hold a hit target element, so its own
             // centre pixel is its hit target, and only while it takes one.
             style.push_str(";clip-path:inset(calc(50% - 0.5px));touch-action:none");
+            if let Some(field) = self.native.get(&id) {
+                attributes.insert(NATIVE_ATTRIBUTE, "true".to_owned());
+                // A native field edits prose with the platform's help, unless
+                // the application turned it off.
+                let (spellcheck, autocorrect, autocapitalize) = if field.spellcheck {
+                    ("true", "on", "sentences")
+                } else {
+                    ("false", "off", "off")
+                };
+                attributes.insert("spellcheck", spellcheck.to_owned());
+                attributes.insert("autocorrect", autocorrect.to_owned());
+                attributes.insert("autocapitalize", autocapitalize.to_owned());
+                self.tree
+                    .native
+                    .insert(element_id.clone(), native_field(field, self.scale));
+            }
         }
         let pointer_control = if tag == "div" {
             attributes.contains_key("role") && node.supports_action(accesskit::Action::Click)
@@ -305,7 +404,11 @@ impl Projection<'_> {
                     && (node.supports_action(accesskit::Action::Click)
                         || matches!(node.role(), Role::Splitter | Role::Slider | Role::ScrollBar)))
         {
-            self.interactive.push((element_id.clone(), visible));
+            self.interactive.push(PointerTarget {
+                id: element_id.clone(),
+                visible,
+                text_field: tag != "div" && !node.is_read_only() && !node.is_disabled(),
+            });
         }
         if let Some(author) = node.author_id() {
             attributes.insert(SEMANTIC_ID_ATTRIBUTE, author.to_owned());
@@ -353,6 +456,100 @@ impl Projection<'_> {
         self.used.insert(candidate.clone());
         candidate
     }
+}
+
+/// A native field's active presentation over the canvas. Its geometry and
+/// style come from its registration, in points, scaled to CSS pixels by
+/// `scale`. Text smaller than [`NATIVE_MIN_FONT_PX`] is laid out at that size
+/// in an element scaled down to the field, so focusing it does not zoom the
+/// page on iOS.
+fn native_field(field: &NativeTextRegistration, scale: f32) -> NativeField {
+    let scale = f64::from(scale.max(f32::EPSILON));
+    let font_px = f64::from(field.font_size) * scale;
+    let shrink = if font_px < NATIVE_MIN_FONT_PX {
+        font_px / NATIVE_MIN_FONT_PX
+    } else {
+        1.0
+    };
+    // Lengths inside the element, which the shrink scales back down.
+    let inner = |points: f32| f64::from(points.max(0.0)) * scale / shrink;
+    let (rect, text) = (field.rect, field.text_rect);
+    let visible = rect.intersect(field.clip);
+    let mut style = format!(
+        "position:absolute;margin:0;box-sizing:border-box;left:{:.1}px;top:{:.1}px;width:{:.1}px;height:{:.1}px;padding:{:.1}px {:.1}px {:.1}px {:.1}px;",
+        f64::from(rect.min.x) * scale,
+        f64::from(rect.min.y) * scale,
+        inner(rect.width()),
+        inner(rect.height()),
+        inner(text.min.y - rect.min.y),
+        inner(rect.max.x - text.max.x),
+        inner(rect.max.y - text.max.y),
+        inner(text.min.x - rect.min.x),
+    );
+    style.push_str(
+        "border:0;border-radius:0;outline:none;background:transparent;-webkit-appearance:none;appearance:none;resize:none;overflow-x:hidden;overflow-y:auto;",
+    );
+    let family = match field.family {
+        NativeFont::Proportional => {
+            format!(
+                "\"{}\",system-ui,-apple-system,sans-serif",
+                crate::REGULAR_FONT_FAMILY
+            )
+        }
+        NativeFont::Monospace => "ui-monospace,Menlo,monospace".to_owned(),
+    };
+    let colour = css_colour(field.text);
+    style.push_str(&format!(
+        "font-family:{family};font-size:{:.1}px;font-weight:400;font-style:normal;letter-spacing:normal;line-height:{:.1}px;color:{colour};-webkit-text-fill-color:{colour};caret-color:{};",
+        font_px / shrink,
+        inner(field.line_height),
+        css_colour(field.caret),
+    ));
+    style.push_str(
+        "opacity:1;pointer-events:auto;user-select:text;-webkit-user-select:text;touch-action:manipulation;-webkit-tap-highlight-color:transparent;",
+    );
+    if visible != rect {
+        // Only what the field's scroll area or pane shows of it.
+        let (top, right, bottom, left) = if visible.is_positive() {
+            (
+                visible.min.y - rect.min.y,
+                rect.max.x - visible.max.x,
+                rect.max.y - visible.max.y,
+                visible.min.x - rect.min.x,
+            )
+        } else {
+            (rect.height(), 0.0, 0.0, 0.0)
+        };
+        style.push_str(&format!(
+            "clip-path:inset({:.1}px {:.1}px {:.1}px {:.1}px);",
+            inner(top),
+            inner(right),
+            inner(bottom),
+            inner(left)
+        ));
+    }
+    if shrink < 1.0 {
+        style.push_str(&format!(
+            "transform:scale({});transform-origin:0 0;",
+            number(shrink)
+        ));
+    }
+    let placeholder = css_colour(field.placeholder);
+    let rules = format!(
+        "[{NATIVE_ACTIVE_ATTRIBUTE}]::selection{{background-color:{}}}[{NATIVE_ACTIVE_ATTRIBUTE}]::placeholder{{color:{placeholder};-webkit-text-fill-color:{placeholder};opacity:1}}",
+        css_colour(field.selection),
+    );
+    NativeField {
+        style,
+        rules,
+        placeholder: field.hint.clone(),
+    }
+}
+
+/// A CSS colour from egui's premultiplied colour.
+fn css_colour(colour: egui::Color32) -> String {
+    let [r, g, b, a] = colour.to_srgba_unmultiplied();
+    format!("rgba({r},{g},{b},{})", number(f64::from(a) / 255.0))
 }
 
 /// Whether element `ancestor` contains element `id`.

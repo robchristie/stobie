@@ -293,15 +293,20 @@ fn text_input(
     record: Option<RecordId>,
 ) -> egui::Response {
     let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-        let edit = if multiline {
-            egui::TextEdit::multiline(value).desired_rows(4)
+        let width = ui.available_width();
+        // Notes are prose: on touch devices they edit in a native field.
+        let response = if multiline {
+            NativeTextEdit::multiline(value, egui::Id::new(id))
+                .desired_rows(4)
+                .desired_width(width)
+                .show(ui)
         } else {
-            egui::TextEdit::singleline(value)
+            ui.add(
+                egui::TextEdit::singleline(value)
+                    .id(egui::Id::new(id))
+                    .desired_width(width),
+            )
         };
-        let response = ui.add(
-            edit.id(egui::Id::new(id))
-                .desired_width(ui.available_width()),
-        );
         ui.ctx().accesskit_node_builder(response.id, |node| {
             node.set_label(name);
             node.set_author_id(id.to_owned());

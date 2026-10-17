@@ -458,6 +458,7 @@ try {
       check('plain click after scrolling', { target: step.target });
     }
   }
+  if (expectations.touch) await checkTouchFields(expectations.touch, check);
   // Destroying the application removes the layer and restores the canvas.
   if (expectations.handle) {
     await page.evaluate(handle => window[handle].destroy(), expectations.handle);
@@ -474,6 +475,247 @@ try {
   await writeFile(resolve(evidence, 'report.json'), JSON.stringify(report, null, 2));
   await browser.close();
   server.close();
+}
+
+/**
+ * Touch taps on text fields, in a touch context of its own. iOS raises the
+ * keyboard only for a focus made while the touch is dispatched, so a tap on a
+ * text field must focus eframe's text agent inside `touchend`, before egui's
+ * next frame. A tap on a native field instead moves its layer element out of
+ * the transparent layer, over the field, and focuses it there. On the iPhone
+ * no egui pass handled the first tap's press before its `touchend`. Chromium
+ * runs frames during a tap, and eframe's `pointerup` runs a pass and focuses
+ * the agent itself. During each tap the check therefore holds animation
+ * frames and keeps touch pointer events from the page, so `touchend` alone
+ * must focus the field, as on the device.
+ */
+async function checkTouchFields({ agent, native }, check) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true });
+  try {
+    const tablet = await context.newPage();
+    tablet.on('pageerror', error => errors.push(error.message));
+    tablet.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+    await tablet.addInitScript(() => {
+      const probe = window.__touchProbe = { submits: 0, inTouchEnd: false, held: null, focus: [] };
+      for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+        addEventListener(type, event => { if (probe.held && event.pointerType === 'touch') event.stopImmediatePropagation(); }, true);
+      }
+      const request = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = callback => {
+        if (probe.held) { probe.held.push(callback); return 0; }
+        return request(callback);
+      };
+      window.__holdFrames = () => { probe.held = []; };
+      window.__releaseFrames = () => {
+        const held = probe.held ?? [];
+        probe.held = null;
+        for (const callback of held) request(callback);
+      };
+      for (const prototype of [globalThis.GPUQueue?.prototype, WebGL2RenderingContext.prototype]) {
+        const method = prototype && ('submit' in prototype ? 'submit' : 'flush');
+        if (!method) continue;
+        const original = prototype[method];
+        prototype[method] = function (...args) { probe.submits += 1; return original.apply(this, args); };
+      }
+      // Until the task that dispatches `touchend` ends.
+      addEventListener('touchend', () => { probe.inTouchEnd = true; setTimeout(() => { probe.inTouchEnd = false; }); }, true);
+      // Touches on a native field that something tries to cancel, as eframe
+      // does with touches it takes for egui, cancelable or not.
+      probe.claimed = [];
+      const preventDefault = Event.prototype.preventDefault;
+      Event.prototype.preventDefault = function () {
+        if (this.type.startsWith('touch') && this.target?.hasAttribute?.('data-stobie-native-active')) probe.claimed.push(this.type);
+        return preventDefault.call(this);
+      };
+      document.addEventListener('focusin', event => probe.focus.push({
+        tag: event.target.tagName,
+        name: event.target.getAttribute('aria-label'),
+        inGesture: probe.inTouchEnd,
+        inLayer: Boolean(event.target.closest('[id^="stobie-a11y:layer"]')),
+      }), true);
+    });
+    await tablet.goto(rendererUrl(`http://127.0.0.1:${server.address().port}/`));
+    await tablet.waitForSelector(`${LAYER} [role]`, { state: 'attached', timeout: 60000 });
+    // The application interface reports the field's own rectangle and value.
+    assert(expectations.handle, 'the touch check reads the application interface');
+    await tablet.evaluate(handle => {
+      window[handle].enable_automation(crypto.randomUUID());
+      window.__STOBIE_AUTOMATION = Object.freeze({ request: json => window[handle].automation_request(json) });
+    }, expectations.handle);
+    const client = new ApplicationClient(new BrowserTransport(tablet));
+    await client.hello();
+    const observed = async name => {
+      const { snapshot } = await client.observe();
+      return { node: snapshot.nodes.find(node => node.name === name), root: snapshot.nodes.find(node => node.id === snapshot.root) };
+    };
+    await tablet.waitForTimeout(1000);
+    const field = name => tablet.locator(`:is(input, textarea)[aria-label="${name}"][id^="stobie-a11y:"]`);
+    const focusSince = async count => (await tablet.evaluate(() => window.__touchProbe.focus)).slice(count);
+    const focusCount = () => tablet.evaluate(() => window.__touchProbe.focus.length);
+    // Off the centre pixel, so the tap lands on the canvas itself. Frames
+    // already requested run before the hold takes effect, and touch pointer
+    // events stay away while it lasts.
+    const tap = async (name, { hold } = {}) => {
+      const box = await field(name).boundingBox();
+      assert(box && box.width > 20 && box.height > 10, `${name} has a box`);
+      if (hold) {
+        await tablet.evaluate(() => window.__holdFrames());
+        await tablet.waitForTimeout(200);
+      }
+      await tablet.touchscreen.tap(box.x + 12, box.y + 8);
+      return box;
+    };
+    const releaseFrames = () => tablet.evaluate(() => window.__releaseFrames());
+    const focused = () => tablet.evaluate(layer => {
+      const element = document.activeElement;
+      return { tag: element?.tagName, name: element?.getAttribute('aria-label'), inLayer: Boolean(element?.closest(layer)) };
+    }, LAYER);
+
+    // An ordinary text field: eframe's text agent takes focus in the gesture,
+    // before egui has run a frame.
+    let before = await focusCount();
+    await tap(agent.name, { hold: true });
+    const agentNow = await focused();
+    const agentFocus = (await focusSince(before)).filter(entry => entry.tag === 'INPUT' && !entry.inLayer);
+    await releaseFrames();
+    assert(agentNow.tag === 'INPUT' && !agentNow.inLayer, `a tap on ${agent.name} focuses the text agent before a frame: ${JSON.stringify(agentNow)}`);
+    assert(agentFocus.length > 0 && agentFocus.every(entry => entry.inGesture), `the text agent takes focus inside touchend: ${JSON.stringify(agentFocus)}`);
+    // egui then focuses the field. The agent keeps focus throughout, since
+    // losing it would close the keyboard, and takes the field's name.
+    await tablet.waitForFunction(name => document.activeElement?.tagName === 'INPUT'
+      && !document.activeElement.closest('[id^="stobie-a11y:layer"]')
+      && document.activeElement.getAttribute('aria-label') === name, agent.name, { timeout: 5000 });
+    const agentAfter = await focusSince(before);
+    assert(agentAfter.every(entry => entry.tag === 'INPUT' && !entry.inLayer), `the text agent keeps focus while egui takes it: ${JSON.stringify(agentAfter)}`);
+    assert((await observed(agent.name)).node.focused, `egui focuses ${agent.name}`);
+    check('tap focuses the text agent in the gesture', { target: agent.name });
+
+    // A native field leaves the transparent layer, over its egui field, and
+    // takes focus in the gesture.
+    before = await focusCount();
+    await tap(native.name, { hold: true });
+    const nativeNow = await focused();
+    const nativeFocus = (await focusSince(before)).filter(entry => entry.name === native.name);
+    await releaseFrames();
+    assert.deepEqual(nativeNow, { tag: 'TEXTAREA', name: native.name, inLayer: false }, `a tap on ${native.name} focuses its native field before a frame`);
+    assert(nativeFocus.length > 0 && nativeFocus.every(entry => entry.inGesture && !entry.inLayer), `${native.name} takes focus inside touchend, out of the layer: ${JSON.stringify(nativeFocus)}`);
+    await tablet.waitForTimeout(500);
+    const state = await tablet.evaluate(layer => {
+      const element = document.activeElement;
+      let opacity = 1;
+      for (let node = element; node instanceof Element; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
+      const box = element.getBoundingClientRect();
+      const owner = document.querySelector(`[aria-owns~="${CSS.escape(element.id)}"]`);
+      return {
+        inLayer: Boolean(element.closest(layer)),
+        opacity,
+        pointerEvents: getComputedStyle(element).pointerEvents,
+        active: element.hasAttribute('data-stobie-native-active'),
+        box: { x: box.x, y: box.y, width: box.width, height: box.height },
+        ownedFromLayer: Boolean(owner?.closest(layer)),
+        topmost: document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === element,
+        value: element.value,
+        caret: [element.selectionStart, element.selectionEnd],
+      };
+    }, LAYER);
+    assert.deepEqual(
+      { inLayer: state.inLayer, opacity: state.opacity, pointerEvents: state.pointerEvents, active: state.active, ownedFromLayer: state.ownedFromLayer, topmost: state.topmost },
+      { inLayer: false, opacity: 1, pointerEvents: 'auto', active: true, ownedFromLayer: true, topmost: true },
+      `${native.name} is shown and interactive over the canvas`,
+    );
+    const { node, root } = await observed(native.name);
+    const canvas = await tablet.locator('canvas').boundingBox();
+    const scale = canvas.width / (root.rect.max_x - root.rect.min_x);
+    const widget = {
+      x: canvas.x + node.rect.min_x * scale,
+      y: canvas.y + node.rect.min_y * scale,
+      width: (node.rect.max_x - node.rect.min_x) * scale,
+      height: (node.rect.max_y - node.rect.min_y) * scale,
+    };
+    for (const side of ['x', 'y', 'width', 'height']) {
+      assert(Math.abs(state.box[side] - widget[side]) <= 0.5, `${native.name} lies over its field: ${side} ${state.box[side]} against ${widget[side]}`);
+    }
+    assert(node.focused, `egui focuses ${native.name}`);
+    const textboxes = (await accessibilityTree(tablet)).filter(node => node.role === 'textbox' && node.name === native.name);
+    assert.equal(textboxes.length, 1, `one ${native.name} textbox while it is active`);
+    if (native.parent) assert(textboxes[0].ancestors.includes(native.parent), `${native.name} stays in its ${native.parent}`);
+    // The caret is where the tap landed, near the start of the first line,
+    // not at the end, where a programmatic focus leaves it.
+    const [caret, caretEnd] = state.caret;
+    assert(caret === caretEnd && state.value.length > 10 && caret < state.value.length / 2, `the caret follows the tap: ${caret} of ${state.value.length}`);
+    // Typed text goes in there and reaches egui.
+    const typed = state.value.slice(0, caret) + native.text + state.value.slice(caret);
+    await tablet.keyboard.insertText(native.text);
+    await tablet.waitForTimeout(500);
+    assert.equal((await observed(native.name)).node.value, typed, `egui took the text typed into ${native.name}`);
+    assert.equal(await field(native.name).inputValue(), typed, `${native.name} keeps the typed text`);
+    // An active native field asks for no frames while nothing happens.
+    const idle = await tablet.evaluate(() => window.__touchProbe.submits);
+    await tablet.waitForTimeout(1500);
+    assert.equal(await tablet.evaluate(() => window.__touchProbe.submits), idle, `an idle active ${native.name} presents no frames`);
+    // eframe saw the tap end too, so egui holds no press: a drag on the native
+    // field, such as moving its caret, stays the field's own.
+    const cdp = await context.newCDPSession(tablet);
+    const at = (dx, dy) => [{ x: state.box.x + dx, y: state.box.y + dy }];
+    await tablet.evaluate(() => { window.__touchProbe.claimed = []; });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(30, 10) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(60, 10) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+    const claimed = await tablet.evaluate(() => window.__touchProbe.claimed);
+    assert.deepEqual(claimed, [], `touches on the active ${native.name} stay the field's`);
+    // eframe keeps its one-pixel text agent at egui's caret, over the field;
+    // the native field lies above it, so a touch there stays the field's.
+    const agentSpot = await tablet.evaluate(layer => {
+      const agent = [...document.querySelectorAll('input')].find(input => !input.closest(layer) && !input.closest('[id^="stobie-a11y:native"]'));
+      const box = agent.getBoundingClientRect();
+      const x = box.left + box.width / 2, y = box.top + box.height / 2;
+      const field = document.activeElement.getBoundingClientRect();
+      return {
+        overField: x >= field.left && x <= field.right && y >= field.top && y <= field.bottom,
+        topmostIsField: document.elementFromPoint(x, y) === document.activeElement,
+      };
+    }, LAYER);
+    assert.deepEqual(agentSpot, { overField: true, topmostIsField: true }, `the native field lies over eframe's text agent`);
+    // eframe's `pointerup` focuses the canvas for any touch on it, such as
+    // one on the field's edge. While egui keeps the field, it takes focus back.
+    await tablet.evaluate(() => document.querySelector('canvas').focus({ preventScroll: true }));
+    await tablet.waitForTimeout(500);
+    const refocused = await focused();
+    assert.deepEqual(refocused, { tag: 'TEXTAREA', name: native.name, inLayer: false }, `${native.name} takes focus back from the canvas`);
+    check('tap activates a native field in the gesture', { target: native.name, box: state.box, caret });
+
+    // Escape ends editing: egui leaves the field and it returns to the layer.
+    await tablet.keyboard.press('Escape');
+    await tablet.waitForFunction(({ name, layer }) => {
+      const element = document.querySelector(`textarea[aria-label="${name}"][id^="stobie-a11y:"]`);
+      return element?.closest(layer) && document.activeElement === document.querySelector('canvas');
+    }, { name: native.name, layer: LAYER }, { timeout: 5000 });
+    check('Escape returns the native field', { target: native.name });
+    // Tapped again and then left by a tap on another field, it returns too.
+    await tap(native.name);
+    await tablet.waitForFunction(name => document.activeElement?.getAttribute('aria-label') === name
+      && document.activeElement.hasAttribute('data-stobie-native-active'), native.name, { timeout: 5000 });
+    // A tap on another field returns the native field to the layer.
+    await tap(agent.name);
+    await tablet.waitForFunction(({ name, layer }) => {
+      const element = document.querySelector(`textarea[aria-label="${name}"][id^="stobie-a11y:"]`);
+      return element?.closest(layer) && !element.hasAttribute('data-stobie-native-active');
+    }, { name: native.name, layer: LAYER }, { timeout: 5000 });
+    const returned = await tablet.evaluate(({ name, layer }) => {
+      const element = document.querySelector(`textarea[aria-label="${name}"][id^="stobie-a11y:"]`);
+      return {
+        clipped: element.style.clipPath !== '',
+        placeholders: document.querySelectorAll(`${layer} span[aria-hidden="true"]:not([data-stobie-hit-target])`).length,
+        agentFocused: document.activeElement?.tagName === 'INPUT' && !document.activeElement.closest(layer),
+        value: element.value,
+      };
+    }, { name: native.name, layer: LAYER });
+    assert.deepEqual(returned, { clipped: true, placeholders: 0, agentFocused: true, value: typed }, `${native.name} returns to the layer`);
+    check('a tap elsewhere returns the native field', { target: native.name });
+  } finally {
+    await context.close();
+  }
 }
 
 /** The browser accessibility tree as role, name, value and properties, with ancestor roles. */
