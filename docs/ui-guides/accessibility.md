@@ -150,7 +150,9 @@ snapshot, is the source.
   the field has DOM focus, counts the application focused. It stops drawing
   the text, caret and selection while the field is active. Edits reach egui
   as `SetValue`, as in other layer fields. The field returns to the layer
-  when it loses DOM focus or egui's focus leaves it. Only a tap activates it:
+  when it loses DOM focus to anything but the canvas, or egui's focus leaves
+  it; when eframe focuses the canvas for a touch while egui keeps the field,
+  the field takes focus back. Only a tap activates it:
   mouse clicks, Tab and assistive technology use it as an ordinary layer
   field. While it is active, window and visual viewport resize and scroll
   events move its host without a pass, and popups that egui draws over it are
@@ -217,7 +219,8 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
   before the next animation frame. A tap on the native notes field focuses
   its element there, shown and topmost over the field and outside the layer
   container, with one notes textbox in its region. A later drag on it is not
-  claimed for egui. Inserted text reaches egui, the active field presents no frames while idle, and a tap on the
+  claimed for egui, and it takes focus back from the canvas while egui keeps
+  it. Inserted text reaches egui, the active field presents no frames while idle, and a tap on the
   title returns it to the layer.
 
 This proves the browser accessibility tree only. It is not screen-reader

@@ -1383,10 +1383,19 @@ impl Layer {
         let Some(field) = self.tree.native.get(&id).cloned() else {
             return self.deactivate_native(focused);
         };
-        if !focused {
-            return self.deactivate_native(false);
-        }
         let egui_focus = self.tree.active.as_deref() == Some(id.as_str());
+        if !focused {
+            // eframe's `pointerup` focuses the canvas for any touch on it,
+            // including one on the field's own edge, just outside the
+            // element. While egui keeps the field, the field takes DOM focus
+            // back; focus moved anywhere else returns it to the layer.
+            let canvas_focused = self.document.active_element().as_ref()
+                == Some(self.canvas.unchecked_ref::<Element>());
+            if !(canvas_focused && egui_focus) {
+                return self.deactivate_native(false);
+            }
+            focus_without_scroll(&element)?;
+        }
         let active = self.native.as_mut().expect("an active native field");
         // The diff may have moved the placeholder to another layer parent,
         // which then owns the field instead.

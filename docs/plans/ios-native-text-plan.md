@@ -1,7 +1,7 @@
 # Native text input on iOS
 
 Status: active
-Next action: The owner runs the [device checklist](#device-checklist) on the iPhone and records the results here; land only after they pass.
+Next action: The owner reports checklist items 2, 3 and 5 to 10 on a build of the latest head; land only after every item passes.
 
 Framework work item 1 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 the composer of a chat client must raise the keyboard on the first tap and
@@ -20,13 +20,11 @@ The spike's evidence, on an iPhone 12 Pro Max with iOS 26.6.2 and Safari 26.6.1
   the field focus. eframe's own
   iOS workaround in its `touchend` handler blurs and refocuses the agent only
   when the agent already has focus. That needs a frame between `touchstart`
-  and `touchend`. On the iPhone, the device log shows the first tap focusing
-  the agent once and never refocusing it, so no pass handled the press before
-  `touchend`. That is inferred from the order of focus events; touch events
-  were not logged. The second tap refocuses it, and the keyboard opens 120 ms
-  later. Chromium runs frames
-  between Playwright's `touchstart` and `touchend`, which is why emulation
-  never showed the problem.
+  and `touchend`. On the iPhone, the spike's device log shows the first tap
+  focusing the agent once and never refocusing it: the agent was not focused
+  before `touchend`. The second tap refocuses it, and the keyboard opens
+  120 ms later. Chromium runs frames between Playwright's `touchstart` and
+  `touchend`, which is why emulation never showed the problem.
 - **Caret, loupe and predictions.** iOS caret gestures and the loupe act on the
   agent, a one-pixel input with a transparent caret, not on the text egui
   draws. eframe also clears the agent's value on blur and on every input type
@@ -100,7 +98,9 @@ document, so it runs before eframe's bubbling `touchend` on the document.
   the press, so a native field moved over the tap takes no pointer input
   until the next pass. Where `pointerup` comes first,
   as in Chromium, eframe's pass has already focused the agent, and nothing
-  is stopped. The device log does not show which order iOS uses.
+  is stopped. The first device run of this branch shows that iOS sends
+  `pointerdown`, `touchstart`, `pointerup`, `touchend`, as Chromium does, so
+  on iOS the stop never acts.
 - If egui does not focus the field, because a popup egui draws over it comes
   earlier in the tree, eframe blurs the agent in the next pass and the
   keyboard closes again. The layer's hit targets have the same limit.
@@ -177,8 +177,11 @@ and its active style (`AriaTree::native`).
   - Keys: Tab and Escape return DOM focus to the canvas and reach egui. Cmd and
     Ctrl chords reach egui as shortcuts, as in other layer fields. Return types
     a newline in a multiline field.
-  - Deactivation: when the element loses DOM focus, or when egui's focus
-    leaves the field after it had it. A tap elsewhere on the canvas does the
+  - Deactivation: when the element loses DOM focus to anything but the
+    canvas, or when egui's focus leaves the field after it had it. eframe's
+    `pointerup` focuses the canvas for any touch on it, including one on the
+    field's edge just outside the element. If egui still has the field, the
+    field takes DOM focus back. A tap elsewhere on the canvas does the
     second, because eframe prevents the touch's default and so the element
     keeps DOM focus. The layer then puts the element back in the container,
     restores its layer style, focuses the canvas, so that eframe gives the
@@ -217,11 +220,33 @@ and its active style (`AriaTree::native`).
   notes focuses the visible element during `touchend`, over the field's
   rectangle and outside the layer container, with the caret at the tap, and
   the accessibility tree still has one "Record notes" textbox. Nothing claims
-  a later drag on the active field for egui, so eframe saw the tap end.
-  Inserted text reaches egui. An active field presents no frames while idle.
+  a later drag on the active field for egui, so eframe saw the tap end. The
+  field takes focus back from the canvas while egui keeps it, and Escape
+  returns it to the layer. Inserted text reaches egui. An active field presents no frames while idle.
   A tap elsewhere puts the element back in the layer.
 - The owner's device results pass every item in the
   [device checklist](#device-checklist).
+
+## Device results
+
+First run, 17 October 2026, on the spike's iPhone 12 Pro Max (iOS 26.6.2),
+built from `f1beca8`. The owner reported: "This update looks good. Now a
+single tap opens the ios keyboard and UI shows ios copy. paste etc. popup."
+The diagnostics log (local, `.spike-runtime/device-logs/device-default.jsonl`,
+session `a385e072`) shows:
+
+- one tap on the composer: the native field focused 4 ms after `touchend`
+  and the keyboard opened 145 ms later (item 1);
+- typing and backspace as `insertText` and `deleteContentBackward` on the
+  native field, ten touches inside it and a `select` event (item 4);
+- touch and pointer order as `pointerdown`, `touchstart`, `pointerup`,
+  `touchend`;
+- a defect: a 1-second press on the canvas outside the field's element made
+  eframe's `pointerup` focus the canvas while egui kept the field. The field
+  returned to the layer and eframe's agent took over editing. The layer now
+  refocuses the field in that case; the touch check covers it.
+
+The other checklist items were not reported in this run.
 
 ## Delivery increments
 
@@ -230,7 +255,7 @@ and its active style (`AriaTree::native`).
 | Plan and decision | Complete | This plan |
 | First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
 | Native composer mode | Prototype complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
-| Device acceptance | Waiting for the owner | Device checklist results |
+| Device acceptance | Items 1 and 4 pass; the rest outstanding | [Device results](#device-results) |
 
 ## Device checklist
 

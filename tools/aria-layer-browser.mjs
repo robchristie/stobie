@@ -664,8 +664,25 @@ async function checkTouchFields({ agent, native }, check) {
     await cdp.detach();
     const claimed = await tablet.evaluate(() => window.__touchProbe.claimed);
     assert.deepEqual(claimed, [], `touches on the active ${native.name} stay the field's`);
+    // eframe's `pointerup` focuses the canvas for any touch on it, such as
+    // one on the field's edge. While egui keeps the field, it takes focus back.
+    await tablet.evaluate(() => document.querySelector('canvas').focus({ preventScroll: true }));
+    await tablet.waitForTimeout(500);
+    const refocused = await focused();
+    assert.deepEqual(refocused, { tag: 'TEXTAREA', name: native.name, inLayer: false }, `${native.name} takes focus back from the canvas`);
     check('tap activates a native field in the gesture', { target: native.name, box: state.box, caret });
 
+    // Escape ends editing: egui leaves the field and it returns to the layer.
+    await tablet.keyboard.press('Escape');
+    await tablet.waitForFunction(({ name, layer }) => {
+      const element = document.querySelector(`textarea[aria-label="${name}"][id^="stobie-a11y:"]`);
+      return element?.closest(layer) && document.activeElement === document.querySelector('canvas');
+    }, { name: native.name, layer: LAYER }, { timeout: 5000 });
+    check('Escape returns the native field', { target: native.name });
+    // Tapped again and then left by a tap on another field, it returns too.
+    await tap(native.name);
+    await tablet.waitForFunction(name => document.activeElement?.getAttribute('aria-label') === name
+      && document.activeElement.hasAttribute('data-stobie-native-active'), native.name, { timeout: 5000 });
     // A tap on another field returns the native field to the layer.
     await tap(agent.name);
     await tablet.waitForFunction(({ name, layer }) => {
