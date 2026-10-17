@@ -1,7 +1,7 @@
 # Native text input on iOS
 
-Status: active
-Next action: The owner confirms, on a build of the latest head, a single-tap keyboard after an app switch and after rotation, and that touches at the caret keep the iOS field; land only after they pass.
+Status: complete
+Delivery: [PR #92](https://github.com/robchristie/stobie/pull/92)
 
 Framework work item 1 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 the composer of a chat client must raise the keyboard on the first tap and
@@ -270,14 +270,33 @@ order they were asked). The log (session `605ce61a`, standalone) shows:
   moved to the agent until the next tap. The host now goes after the agent,
   above it; the touch check covers it.
 
+Third run, 17 October 2026, same device, built from `d2b37d3`. Since the
+second run the server served only that build's package assets
+(`2b2bfa9f…`), and the standalone session `ff6ae8df` transferred the whole
+package (2.70 MB). The owner reported a single-tap keyboard after an app
+switch, a single-tap keyboard after rotation, and touches at the caret
+keeping the iOS loupe, selection menu and typing, all passing. The log
+shows:
+
+- after 5.3 s hidden, one tap focused the native field 8 ms after
+  `touchend` and the keyboard opened (item 1 after an app switch);
+- with the keyboard up, two rotations, the keyboard reopening after each
+  (item 10);
+- after two rotations with the keyboard closed, one tap focused the field
+  and the keyboard opened 163 ms later (item 1 after rotation);
+- six touches on the active field while typing, none of them on eframe's
+  text agent, and no fall-back to the agent.
+
+Every checklist item has now passed on the iPhone.
+
 ## Delivery increments
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Plan and decision | Complete | This plan |
-| First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
-| Native composer mode | Prototype complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
-| Device acceptance | Items 2 to 10 and item 1 after closing the keyboard pass; item 1 after an app switch and rotation outstanding | [Device results](#device-results) |
+| First-tap keyboard workaround | Complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
+| Native composer mode | Complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
+| Device acceptance | Complete | [Device results](#device-results): three runs on the iPhone; every checklist item passes on `d2b37d3` or, for items unaffected since, on `f6de9cb` |
 
 ## Device checklist
 
