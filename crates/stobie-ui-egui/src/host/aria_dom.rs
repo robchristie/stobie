@@ -1176,7 +1176,17 @@ impl Layer {
         )?;
         let rules = self.document.create_element("style")?;
         host.append_child(&rules)?;
-        self.container.after_with_node_1(&host)?;
+        // After eframe's text agent, a sibling of the canvas that eframe
+        // keeps at egui's caret, so the field lies above it and a touch there
+        // stays the field's.
+        match self
+            .text_agent
+            .as_ref()
+            .filter(|agent| agent.parent_node() == self.container.parent_node())
+        {
+            Some(agent) => agent.after_with_node_1(&host)?,
+            None => self.container.after_with_node_1(&host)?,
+        }
         // The field edits and hands keys back as it does in the layer.
         let key = self.key;
         let handlers: [(&'static str, Handler); 3] = [

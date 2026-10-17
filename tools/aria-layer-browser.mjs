@@ -664,6 +664,19 @@ async function checkTouchFields({ agent, native }, check) {
     await cdp.detach();
     const claimed = await tablet.evaluate(() => window.__touchProbe.claimed);
     assert.deepEqual(claimed, [], `touches on the active ${native.name} stay the field's`);
+    // eframe keeps its one-pixel text agent at egui's caret, over the field;
+    // the native field lies above it, so a touch there stays the field's.
+    const agentSpot = await tablet.evaluate(layer => {
+      const agent = [...document.querySelectorAll('input')].find(input => !input.closest(layer) && !input.closest('[id^="stobie-a11y:native"]'));
+      const box = agent.getBoundingClientRect();
+      const x = box.left + box.width / 2, y = box.top + box.height / 2;
+      const field = document.activeElement.getBoundingClientRect();
+      return {
+        overField: x >= field.left && x <= field.right && y >= field.top && y <= field.bottom,
+        topmostIsField: document.elementFromPoint(x, y) === document.activeElement,
+      };
+    }, LAYER);
+    assert.deepEqual(agentSpot, { overField: true, topmostIsField: true }, `the native field lies over eframe's text agent`);
     // eframe's `pointerup` focuses the canvas for any touch on it, such as
     // one on the field's edge. While egui keeps the field, it takes focus back.
     await tablet.evaluate(() => document.querySelector('canvas').focus({ preventScroll: true }));

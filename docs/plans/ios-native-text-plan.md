@@ -1,7 +1,7 @@
 # Native text input on iOS
 
 Status: active
-Next action: The owner reports item 1's repeat cases and items 2, 3 and 5 to 10 on a build of the latest head; land only after every item passes.
+Next action: The owner confirms, on a build of the latest head, a single-tap keyboard after an app switch and after rotation, and that touches at the caret keep the iOS field; land only after they pass.
 
 Framework work item 1 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 the composer of a chat client must raise the keyboard on the first tap and
@@ -223,7 +223,8 @@ and its active style (`AriaTree::native`).
   a later drag on the active field for egui, so eframe saw the tap end. The
   field takes focus back from the canvas while egui keeps it, and Escape
   returns it to the layer. Inserted text reaches egui. An active field presents no frames while idle.
-  A tap elsewhere puts the element back in the layer.
+  The field lies above eframe's text agent. A tap elsewhere puts the element
+  back in the layer.
 - The owner's device results pass every item in the
   [device checklist](#device-checklist).
 
@@ -250,6 +251,25 @@ session `a385e072`) shows:
 Item 1's repeats after closing the keyboard, an app switch and rotation, and
 items 2, 3 and 5 to 10, were not reported in this run.
 
+Second run, 17 October 2026, same device, built from `f6de9cb` (the device
+loaded package assets `3f1ad5ff…`, built from that head). The owner
+reported items 2, 3 and 5 to 10 as passing ("1. Yes 2. Working well now
+3. Yes 4. Yes 5. yes 6. All good 7. All good 8. All good", numbered in the
+order they were asked). The log (session `605ce61a`, standalone) shows:
+
+- three single-tap activations after the keyboard had closed, each opening
+  the keyboard (item 1, repeat after closing the keyboard);
+- eight touches on the canvas beside the active field: each time eframe's
+  `pointerup` took focus, the field took it back within 3 ms, and the
+  keyboard stayed up (the first run's defect, fixed);
+- `insertLineBreak` from Return and `insertFromPaste` (item 7);
+- no orientation change or app switch in this build's sessions, so item 1's
+  repeats after rotation and an app switch have no logged evidence;
+- a further defect: one touch landed on eframe's one-pixel text agent, which
+  eframe keeps at egui's caret and which lay above the native host. Editing
+  moved to the agent until the next tap. The host now goes after the agent,
+  above it; the touch check covers it.
+
 ## Delivery increments
 
 | Increment | Status | Evidence |
@@ -257,7 +277,7 @@ items 2, 3 and 5 to 10, were not reported in this run.
 | Plan and decision | Complete | This plan |
 | First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
 | Native composer mode | Prototype complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
-| Device acceptance | Item 1's first case and item 4 pass; the rest outstanding | [Device results](#device-results) |
+| Device acceptance | Items 2 to 10 and item 1 after closing the keyboard pass; item 1 after an app switch and rotation outstanding | [Device results](#device-results) |
 
 ## Device checklist
 

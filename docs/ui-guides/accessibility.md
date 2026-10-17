@@ -139,7 +139,8 @@ snapshot, is the source.
 - **Native fields.** A field shown with `NativeTextEdit` carries
   `data-stobie-native`, spelling, autocorrect and sentence capitalisation
   (unless the application turns them off). A tap on it moves its element
-  out of the transparent container into a visible host over the canvas,
+  out of the transparent container into a visible host over the canvas and
+  above eframe's text agent, which eframe keeps at egui's caret,
   leaving a hidden placeholder in its place. Until the next pass it takes no
   pointer input, so eframe's `touchend` still finds the canvas under the tap
   and releases egui's press. Its layer parent owns it through
