@@ -1253,7 +1253,13 @@ impl Layer {
             None => id.to_owned(),
         };
         owner.set_attribute("aria-owns", &owned)?;
-        element.set_attribute("style", &field.style)?;
+        // Until the next pass, the field takes no pointer input: eframe's own
+        // `touchend` runs after this listener and hit-tests the touch, and it
+        // releases egui's press only if it finds the canvas there.
+        let style = field
+            .style
+            .replace("pointer-events:auto", "pointer-events:none");
+        element.set_attribute("style", &style)?;
         element.set_attribute(aria::NATIVE_ACTIVE_ATTRIBUTE, "")?;
         if field.placeholder.is_empty() {
             element.remove_attribute("placeholder")?;
@@ -1315,7 +1321,7 @@ impl Layer {
             owner,
             owns,
             confirmed: false,
-            style: field.style,
+            style,
             rules: field.rules,
             listeners,
         });

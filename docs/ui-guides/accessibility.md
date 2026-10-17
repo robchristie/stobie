@@ -127,9 +127,10 @@ snapshot, is the source.
   on an enabled, editable text field therefore focuses the text agent at
   once, from a capture `touchend` listener. The field is the topmost
   interactive element at that point in the last pass, as egui decides
-  clicks. eframe's canvas `pointerup` handler focuses the canvas, so the
-  same tap's touch `pointerup`, where a browser sends it after `touchend`,
-  stops at the document; egui takes the release from `touchend`. In the pass
+  clicks. eframe's `pointerup` handler focuses the canvas, so the same tap's
+  touch `pointerup`, where a browser sends it after `touchend`, stops in the
+  document's capture phase; egui takes the release from eframe's `touchend`.
+  In the pass
   in which egui takes focus from the tap, its text edit emits no IME output
   yet, so the layer supplies the field's rectangle and eframe keeps the agent
   focused. Where a popup that egui draws over a field comes earlier in the
@@ -139,7 +140,9 @@ snapshot, is the source.
   `data-stobie-native`, spelling, autocorrect and sentence capitalisation
   (unless the application turns them off). A tap on it moves its element
   out of the transparent container into a visible host over the canvas,
-  leaving a hidden placeholder in its place. Its layer parent owns it through
+  leaving a hidden placeholder in its place. Until the next pass it takes no
+  pointer input, so eframe's `touchend` still finds the canvas under the tap
+  and releases egui's press. Its layer parent owns it through
   `aria-owns`, so it stays in its region. The layer styles it from the `Ui`'s
   visuals and font, with text under 16 CSS pixels scaled so that iOS does not
   zoom, and focuses it inside the gesture, with the caret where egui's
@@ -151,7 +154,8 @@ snapshot, is the source.
   mouse clicks, Tab and assistive technology use it as an ordinary layer
   field. While it is active, window and visual viewport resize and scroll
   events move its host without a pass, and popups that egui draws over it are
-  hidden beneath it. The [plan](../plans/ios-native-text-plan.md) records
+  hidden beneath it. Return in a single-line native field does not reach
+  egui. The [plan](../plans/ios-native-text-plan.md) records
   the design.
 - **Shortcuts.** An action button's registered shortcut is its
   `aria-keyshortcuts`. In the browser a Cmd shortcut lists both forms, such
@@ -212,8 +216,8 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 - in Record Desk with touch, a tap on the title focuses eframe's text agent
   before the next animation frame. A tap on the native notes field focuses
   its element there, shown and topmost over the field and outside the layer
-  container, with one notes textbox in its region. Inserted text reaches
-  egui, the active field presents no frames while idle, and a tap on the
+  container, with one notes textbox in its region. A later drag on it is not
+  claimed for egui. Inserted text reaches egui, the active field presents no frames while idle, and a tap on the
   title returns it to the layer.
 
 This proves the browser accessibility tree only. It is not screen-reader

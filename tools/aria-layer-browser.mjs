@@ -519,6 +519,14 @@ async function checkTouchFields({ agent, native }, check) {
       }
       // Until the task that dispatches `touchend` ends.
       addEventListener('touchend', () => { probe.inTouchEnd = true; setTimeout(() => { probe.inTouchEnd = false; }); }, true);
+      // Touches on a native field that something tries to cancel, as eframe
+      // does with touches it takes for egui, cancelable or not.
+      probe.claimed = [];
+      const preventDefault = Event.prototype.preventDefault;
+      Event.prototype.preventDefault = function () {
+        if (this.type.startsWith('touch') && this.target?.hasAttribute?.('data-stobie-native-active')) probe.claimed.push(this.type);
+        return preventDefault.call(this);
+      };
       document.addEventListener('focusin', event => probe.focus.push({
         tag: event.target.tagName,
         name: event.target.getAttribute('aria-label'),
@@ -645,6 +653,17 @@ async function checkTouchFields({ agent, native }, check) {
     const idle = await tablet.evaluate(() => window.__touchProbe.submits);
     await tablet.waitForTimeout(1500);
     assert.equal(await tablet.evaluate(() => window.__touchProbe.submits), idle, `an idle active ${native.name} presents no frames`);
+    // eframe saw the tap end too, so egui holds no press: a drag on the native
+    // field, such as moving its caret, stays the field's own.
+    const cdp = await context.newCDPSession(tablet);
+    const at = (dx, dy) => [{ x: state.box.x + dx, y: state.box.y + dy }];
+    await tablet.evaluate(() => { window.__touchProbe.claimed = []; });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(30, 10) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(60, 10) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+    const claimed = await tablet.evaluate(() => window.__touchProbe.claimed);
+    assert.deepEqual(claimed, [], `touches on the active ${native.name} stay the field's`);
     check('tap activates a native field in the gesture', { target: native.name, box: state.box, caret });
 
     // A tap on another field returns the native field to the layer.

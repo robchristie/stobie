@@ -17,7 +17,7 @@ The spike's evidence, on an iPhone 12 Pro Max with iOS 26.6.2 and Safari 26.6.1
 - **Two taps.** iOS raises the keyboard only for a `focus()` made while a user
   gesture is being dispatched. eframe 0.36.1 focuses its hidden text agent in
   `AppRunner::handle_platform_output`, in the animation frame after egui gives
-  the field focus. egui gives a text edit focus on the press. eframe's own
+  the field focus. eframe's own
   iOS workaround in its `touchend` handler blurs and refocuses the agent only
   when the agent already has focus. That needs a frame between `touchstart`
   and `touchend`. On the iPhone, the device log shows the first tap focusing
@@ -90,12 +90,15 @@ document, so it runs before eframe's bubbling `touchend` on the document.
   for one frame, which would close the keyboard again. While egui's focus is
   on the tapped field, the layer's output hook supplies the field's rectangle
   as IME output, for at most the two shown passes after the tap.
-- eframe's canvas `pointerup` handler focuses the canvas and runs a pass at
-  once. Where a browser sends a touch's `pointerup` after its `touchend`,
-  that would blur the field the tap has just focused, outside the gesture.
-  After a `touchend` that focused a field, the layer stops the same tap's
-  touch `pointerup` in the capture phase. egui still receives the release,
-  because eframe's `touchend` sends it too. Where `pointerup` comes first,
+- eframe's `pointerup` handler, on the document, focuses the canvas and runs
+  a pass at once. Where a browser sends a touch's `pointerup` after its
+  `touchend`, that would blur the field the tap has just focused, outside the
+  gesture. After a `touchend` that focused a field, the layer stops the same
+  tap's touch `pointerup` in the capture phase. egui still receives the
+  release, because eframe's `touchend` sends it too. eframe sends it only if
+  its hit test finds the canvas under the touch, or a pass has already seen
+  the press, so a native field moved over the tap takes no pointer input
+  until the next pass. Where `pointerup` comes first,
   as in Chromium, eframe's pass has already focused the agent, and nothing
   is stopped. The device log does not show which order iOS uses.
 - If egui does not focus the field, because a popup egui draws over it comes
@@ -190,7 +193,10 @@ and its active style (`AriaTree::native`).
   the element. A page that scrolls without a pass or a viewport event leaves
   the element misaligned until the next pass. egui's caret is not updated
   from the element's selection on deactivation; it stays at the end of the
-  text.
+  text. Each edit reaches egui as select-all and paste, which leaves egui's
+  cursor at the end, so a field taller than its scroll area scrolls to its
+  end on every edit. Return in a single-line native field does not reach
+  egui, so an application cannot submit on Return from it.
 
 ## Acceptance
 
@@ -207,12 +213,13 @@ and its active style (`AriaTree::native`).
   field. During each tap it holds animation frames and keeps touch pointer
   events from the page, so that, as on the iPhone, no egui pass handles the
   press first. A tap on Record title focuses eframe's agent during
-  `touchend`. A
-  tap on Record notes focuses the visible element during `touchend`, over the
-  field's rectangle and outside the layer container, and the accessibility
-  tree still has one "Record notes" textbox. Inserted text reaches egui. An
-  active field presents no frames while idle. A tap elsewhere puts the
-  element back in the layer.
+  `touchend`, and the agent keeps focus while egui takes it. A tap on Record
+  notes focuses the visible element during `touchend`, over the field's
+  rectangle and outside the layer container, with the caret at the tap, and
+  the accessibility tree still has one "Record notes" textbox. Nothing claims
+  a later drag on the active field for egui, so eframe saw the tap end.
+  Inserted text reaches egui. An active field presents no frames while idle.
+  A tap elsewhere puts the element back in the layer.
 - The owner's device results pass every item in the
   [device checklist](#device-checklist).
 
@@ -222,7 +229,7 @@ and its active style (`AriaTree::native`).
 | --- | --- | --- |
 | Plan and decision | Complete | This plan |
 | First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
-| Native composer mode | Prototype complete | Unit tests; Chromium touch check |
+| Native composer mode | Prototype complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
 | Device acceptance | Waiting for the owner | Device checklist results |
 
 ## Device checklist
