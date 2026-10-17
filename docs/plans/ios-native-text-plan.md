@@ -84,6 +84,12 @@ document, so it runs before eframe's bubbling `touchend` on the document.
   `handle_platform_output` finds the agent focused already and leaves it.
   eframe's own `touchend` blur and refocus still runs after the layer's
   listener and does no harm.
+- In the pass in which egui takes focus from the tap, the text edit emits no
+  IME output yet, because egui assigns IME ownership at the start of a pass.
+  eframe reads that as "not editing", blurs the agent and focuses the canvas
+  for one frame, which would close the keyboard again. While egui's focus is
+  on the tapped field, the layer's output hook supplies the field's rectangle
+  as IME output, for at most the two shown passes after the tap.
 - eframe's canvas `pointerup` handler focuses the canvas and runs a pass at
   once. Where a browser sends a touch's `pointerup` after its `touchend`,
   that would blur the field the tap has just focused, outside the gesture.
@@ -154,10 +160,17 @@ and its active style (`AriaTree::native`).
   the element through the layer's usual text update. Composition text reaches
   egui as it is typed.
 - **Focus hand-off.**
-  - From the layer to egui: the AccessKit `Focus` request at activation. When
-    egui first reports focus on the field, the layer copies egui's cursor
-    (the tapped position) into the element's selection, because iOS places a
-    programmatic focus's caret at the end.
+  - From the layer to egui: the AccessKit `Focus` request at activation.
+    eframe counts the application focused only while the canvas or its agent
+    has DOM focus, and egui reports a field focused only in a focused
+    viewport, so the layer's input hook marks the input focused while the
+    native field has DOM focus.
+  - Caret: a programmatic focus puts the caret at the end. At activation the
+    layer places it where egui would, from the galley egui laid out for the
+    field in the last pass (`NativeTextRegistration::char_at`). egui cannot
+    place it itself: when a tap's events reach it in one pass, eframe's
+    `PointerGone` comes with them and egui does not count the field as
+    hovered.
   - Keys: Tab and Escape return DOM focus to the canvas and reach egui. Cmd and
     Ctrl chords reach egui as shortcuts, as in other layer fields. Return types
     a newline in a multiline field.
@@ -187,8 +200,9 @@ and its active style (`AriaTree::native`).
     or covered fields are excluded;
   - the projection of native fields: the marker, absolute and clipped
     geometry, the style from the registration and the 16-pixel guard;
-  - `NativeTextEdit`: it registers per pass, and while active egui paints no
-    visible text or caret.
+  - `NativeTextEdit`: it registers per pass, a tap's caret position comes
+    from egui's layout, and while active egui paints no visible text or
+    caret and requests no frames.
 - A Chromium touch check with Record Desk, whose notes field becomes a native
   field. During each tap it holds animation frames and keeps touch pointer
   events from the page, so that, as on the iPhone, no egui pass handles the
@@ -207,8 +221,8 @@ and its active style (`AriaTree::native`).
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Plan and decision | Complete | This plan |
-| First-tap keyboard workaround | In progress | Unit tests; Chromium touch check |
-| Native composer mode | In progress | Unit tests; Chromium touch check |
+| First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
+| Native composer mode | Prototype complete | Unit tests; Chromium touch check |
 | Device acceptance | Waiting for the owner | Device checklist results |
 
 ## Device checklist

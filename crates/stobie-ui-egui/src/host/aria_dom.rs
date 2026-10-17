@@ -1382,6 +1382,24 @@ impl Layer {
         }
         let egui_focus = self.tree.active.as_deref() == Some(id.as_str());
         let active = self.native.as_mut().expect("an active native field");
+        // The diff may have moved the placeholder to another layer parent,
+        // which then owns the field instead.
+        if let Some(parent) = active.placeholder.parent_element()
+            && parent != active.owner
+        {
+            match &active.owns {
+                Some(owns) => active.owner.set_attribute("aria-owns", owns)?,
+                None => active.owner.remove_attribute("aria-owns")?,
+            }
+            let owns = parent.get_attribute("aria-owns");
+            let owned = match &owns {
+                Some(owns) => format!("{owns} {id}"),
+                None => id.clone(),
+            };
+            parent.set_attribute("aria-owns", &owned)?;
+            active.owner = parent;
+            active.owns = owns;
+        }
         if !active.confirmed && egui_focus {
             active.confirmed = true;
         } else if active.confirmed && !egui_focus {

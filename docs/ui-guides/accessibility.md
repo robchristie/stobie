@@ -129,8 +129,12 @@ snapshot, is the source.
   interactive element at that point in the last pass, as egui decides
   clicks. eframe's canvas `pointerup` handler focuses the canvas, so the
   same tap's touch `pointerup`, where a browser sends it after `touchend`,
-  stops at the document; egui takes the release from `touchend`. A popup that egui draws over a field but registers earlier still
-  loses the tap to the field; the keyboard then opens and closes again.
+  stops at the document; egui takes the release from `touchend`. In the pass
+  in which egui takes focus from the tap, its text edit emits no IME output
+  yet, so the layer supplies the field's rectangle and eframe keeps the agent
+  focused. Where a popup that egui draws over a field comes earlier in the
+  tree, the layer still takes the field for the tap's target, egui gives the
+  popup the click, and the keyboard opens and closes again.
 - **Native fields.** A field shown with `NativeTextEdit` carries
   `data-stobie-native`, spelling, autocorrect and sentence capitalisation
   (unless the application turns them off). A tap on it moves its element
@@ -138,9 +142,10 @@ snapshot, is the source.
   leaving a hidden placeholder in its place. Its layer parent owns it through
   `aria-owns`, so it stays in its region. The layer styles it from the `Ui`'s
   visuals and font, with text under 16 CSS pixels scaled so that iOS does not
-  zoom, and focuses it inside the gesture. egui focuses the field through
-  AccessKit, the native caret takes egui's cursor position, and egui stops
-  drawing the text, caret and selection while it is active. Edits reach egui
+  zoom, and focuses it inside the gesture, with the caret where egui's
+  layout puts the tap. egui focuses the field through AccessKit and, while
+  the field has DOM focus, counts the application focused. It stops drawing
+  the text, caret and selection while the field is active. Edits reach egui
   as `SetValue`, as in other layer fields. The field returns to the layer
   when it loses DOM focus or egui's focus leaves it. Only a tap activates it:
   mouse clicks, Tab and assistive technology use it as an ordinary layer
