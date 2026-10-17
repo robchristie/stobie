@@ -1,7 +1,7 @@
 # Native text input on iOS
 
 Status: active
-Next action: The owner reports checklist items 2, 3 and 5 to 10 on a build of the latest head; land only after every item passes.
+Next action: The owner reports item 1's repeat cases and items 2, 3 and 5 to 10 on a build of the latest head; land only after every item passes.
 
 Framework work item 1 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 the composer of a chat client must raise the keyboard on the first tap and
@@ -181,9 +181,9 @@ and its active style (`AriaTree::native`).
     canvas, or when egui's focus leaves the field after it had it. eframe's
     `pointerup` focuses the canvas for any touch on it, including one on the
     field's edge just outside the element. If egui still has the field, the
-    field takes DOM focus back. A tap elsewhere on the canvas does the
-    second, because eframe prevents the touch's default and so the element
-    keeps DOM focus. The layer then puts the element back in the container,
+    field takes DOM focus back. A tap elsewhere on the canvas deactivates
+    the field because egui gives up the field's focus on the click. The
+    layer then puts the element back in the container,
     restores its layer style, focuses the canvas, so that eframe gives the
     agent focus if egui focused another text field, and clears the active
     state. A field that is no longer presented or no longer native
@@ -235,8 +235,9 @@ single tap opens the ios keyboard and UI shows ios copy. paste etc. popup."
 The diagnostics log (local, `.spike-runtime/device-logs/device-default.jsonl`,
 session `a385e072`) shows:
 
-- one tap on the composer: the native field focused 4 ms after `touchend`
-  and the keyboard opened 145 ms later (item 1);
+- one tap on the composer from the conversation view: the native field
+  focused 4 ms after `touchend` and the keyboard opened 145 ms later (item 1,
+  first case only);
 - typing and backspace as `insertText` and `deleteContentBackward` on the
   native field, ten touches inside it and a `select` event (item 4);
 - touch and pointer order as `pointerdown`, `touchstart`, `pointerup`,
@@ -246,7 +247,8 @@ session `a385e072`) shows:
   returned to the layer and eframe's agent took over editing. The layer now
   refocuses the field in that case; the touch check covers it.
 
-The other checklist items were not reported in this run.
+Item 1's repeats after closing the keyboard, an app switch and rotation, and
+items 2, 3 and 5 to 10, were not reported in this run.
 
 ## Delivery increments
 
@@ -255,7 +257,7 @@ The other checklist items were not reported in this run.
 | Plan and decision | Complete | This plan |
 | First-tap keyboard workaround | Prototype complete | Unit tests; Chromium touch check, which fails without the `touchend` focus and without the IME cover |
 | Native composer mode | Prototype complete | Unit tests; Chromium touch check, which fails if the moved field takes pointer input before eframe's `touchend` |
-| Device acceptance | Items 1 and 4 pass; the rest outstanding | [Device results](#device-results) |
+| Device acceptance | Item 1's first case and item 4 pass; the rest outstanding | [Device results](#device-results) |
 
 ## Device checklist
 
