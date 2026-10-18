@@ -11,6 +11,7 @@ members = [
     "crates/stobie-ui-egui",
     "crates/stobie-ui-egui-derive",
     "apps/analytical-workspace-lab",
+    "apps/live-feed",
     "apps/stobie-gallery",
     "apps/tile-worker",
     "xtask",

@@ -8,6 +8,13 @@ impl<A: Application> eframe::App for AppHost<A> {
         Some(self)
     }
 
+    fn logic(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
+        // eframe calls this before each pass and also while the viewport is
+        // hidden, so a hidden application keeps up with its event sources.
+        let hidden = context.input(|input| input.viewport().visible() == Some(false));
+        self.apply_sent_intents_before_pass(hidden);
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.present(ui);
         #[cfg(target_arch = "wasm32")]

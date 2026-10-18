@@ -56,6 +56,9 @@ enum Act {
 enum Intent {
     Layout(WorkspaceChange),
     Theme(Box<ApplicationTheme>),
+    /// Add to the count, as an event from outside a pass might.
+    Add(u64),
+    Fail(&'static str),
 }
 
 impl From<WorkspaceChange> for Intent {
@@ -122,6 +125,12 @@ struct Counter {
     /// UI passes counted by `UiState`, as `completed` saw them.
     presented_passes: u64,
     theme: Option<ApplicationTheme>,
+    /// The sender the host gave `started`.
+    sender: Option<IntentSender<Intent>>,
+    /// Sent intents each completed pass presented.
+    sent_presented: Vec<usize>,
+    /// Schedule a pass from `prepare`.
+    prepare_timeout: bool,
 }
 
 fn tokens() -> DesignTokens {
@@ -316,6 +325,22 @@ impl Application for Counter {
                 self.theme = Some(*theme);
                 Ok(true)
             }
+            Intent::Add(amount) => {
+                self.count += amount;
+                Ok(amount > 0)
+            }
+            Intent::Fail(message) => Err(message.into()),
+        }
+    }
+
+    fn started(&mut self, intents: IntentSender<Intent>) {
+        assert!(self.sender.is_none(), "the host starts an application once");
+        self.sender = Some(intents);
+    }
+
+    fn prepare(&mut self, pass: &mut PassContext<'_>, _: &mut View) {
+        if self.prepare_timeout {
+            pass.request_repaint_after("timed work", std::time::Duration::from_millis(80));
         }
     }
 
@@ -352,7 +377,8 @@ impl Application for Counter {
         self.active_pane
     }
 
-    fn completed(&mut self, _pass: &CompletedPass<'_>, view: &View) {
+    fn completed(&mut self, pass: &CompletedPass<'_>, view: &View) {
+        self.sent_presented.push(pass.sent_intents);
         self.presented.push(self.count);
         self.presented_passes = view.passes;
     }
@@ -1162,4 +1188,134 @@ fn the_dock_observes_panes_and_emits_layout_intents() {
     harness.run();
     let workspace = host(&harness).app().workspace.as_ref().unwrap();
     assert_eq!(workspace.active_pane, inactive);
+}
+
+fn sender(harness: &Harness<'_, Probe>) -> IntentSender<Intent> {
+    host(harness).app().sender.clone().expect("started")
+}
+
+/// Run the passes egui asks for and return how many ran. egui follows each
+/// immediate request with one settling pass of its own.
+fn settle(harness: &mut Harness<'_, Probe>) -> u64 {
+    let before = host(harness).ui_state().passes;
+    harness.run();
+    assert!(!harness.ctx.has_requested_repaint());
+    host(harness).ui_state().passes - before
+}
+
+#[test]
+fn sent_intents_wake_an_idle_host_and_present_in_the_pass_that_applies_them() {
+    let mut harness = harness(Counter::default());
+    harness.run();
+    assert!(
+        !harness.ctx.has_requested_repaint(),
+        "an idle application asks for no pass"
+    );
+
+    // An event arrives on another thread, as a native socket's would.
+    let events = sender(&harness);
+    std::thread::spawn(move || events.send(Intent::Add(2)).unwrap())
+        .join()
+        .unwrap();
+    assert!(
+        harness.ctx.has_requested_repaint(),
+        "the event wakes the host"
+    );
+    assert_eq!(
+        host(&harness).app().count,
+        0,
+        "nothing applies outside a pass"
+    );
+
+    harness.step();
+    let host_ref = host(&harness);
+    // The pass that applied the event presented it, so it asks for no other.
+    assert_eq!(host_ref.app().presented.last(), Some(&2));
+    assert_eq!(host_ref.app().sent_presented.last(), Some(&1));
+    assert!(host_ref.repaint_reasons().is_empty());
+    assert_eq!(settle(&mut harness), 1, "only egui's settling pass follows");
+
+    // Intents sent before the pass runs join it, in the order sent.
+    let events = sender(&harness);
+    events.send(Intent::Add(3)).unwrap();
+    events.send(Intent::Fail("Feed closed")).unwrap();
+    events.send(Intent::Add(5)).unwrap();
+    harness.step();
+    let app = host(&harness).app();
+    assert_eq!(app.presented.last(), Some(&10));
+    assert_eq!(app.sent_presented.last(), Some(&3));
+    // The error is shown in the same pass, so it asks for no other either.
+    assert_eq!(app.errors, ["Feed closed"]);
+    assert!(host(&harness).repaint_reasons().is_empty());
+    assert_eq!(settle(&mut harness), 1);
+
+    // An event that changes nothing costs the same passes and no more.
+    events.send(Intent::Add(0)).unwrap();
+    assert!(harness.ctx.has_requested_repaint());
+    assert_eq!(settle(&mut harness), 2);
+    assert_eq!(host(&harness).app().count, 10);
+}
+
+#[test]
+fn intent_senders_fail_once_the_host_stops() {
+    let harness = harness(Counter::default());
+    let events = host(&harness).intent_sender();
+    assert!(!events.is_stopped());
+    drop(harness);
+    assert!(events.is_stopped());
+    assert!(matches!(
+        events.send(Intent::Add(1)),
+        Err(HostStopped(Intent::Add(1)))
+    ));
+}
+
+#[test]
+fn prepare_can_schedule_a_later_pass() {
+    let mut harness = harness(Counter::default());
+    host_mut(&mut harness).app_mut().prepare_timeout = true;
+    harness.step();
+    assert_eq!(
+        host(&harness).repaint_reasons(),
+        [HostRepaint::Scheduled {
+            reason: "timed work",
+            delay: std::time::Duration::from_millis(80),
+        }]
+    );
+}
+
+#[test]
+fn intents_applied_while_hidden_are_presented_once_visible() {
+    let mut harness = harness(Counter::default());
+    harness.run();
+    let events = sender(&harness);
+    events.send(Intent::Add(4)).unwrap();
+    // eframe's `logic` while the viewport is hidden: the intent applies, but
+    // no pass presents it, so the host checks again later.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    let host_ref = host(&harness);
+    assert_eq!(host_ref.app().count, 4);
+    assert_eq!(host_ref.app().presented.last(), Some(&0));
+    let recheck = HostRepaint::Scheduled {
+        reason: "sent intents await a visible pass",
+        delay: HIDDEN_RECHECK,
+    };
+    assert_eq!(host_ref.repaint_reasons(), [recheck]);
+    assert!(harness.ctx.has_requested_repaint());
+    // Still hidden and nothing new: it keeps checking.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert_eq!(host(&harness).repaint_reasons(), [recheck]);
+    assert!(harness.ctx.has_requested_repaint());
+    // A visible pass presents it and stops the checks.
+    harness.step();
+    assert_eq!(host(&harness).app().presented.last(), Some(&4));
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert!(host(&harness).repaint_reasons().is_empty());
+    harness.run();
+    // While hidden with nothing applied, the host asks for nothing.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert!(!harness.ctx.has_requested_repaint());
+    // A visible viewport's pass follows `logic`, so it needs no check.
+    events.send(Intent::Add(1)).unwrap();
+    host_mut(&mut harness).apply_sent_intents_before_pass(false);
+    assert!(host(&harness).repaint_reasons().is_empty());
 }

@@ -139,6 +139,10 @@ details.
   records, applies one validated transaction, undoes and redoes, and saves
   across native restarts and browser reloads. It uses only the core and UI
   crates.
+- **[Live Feed](apps/live-feed/README.md)**: numbered events from a server,
+  received while the application is otherwise idle. Its browser WebSocket
+  client reconnects and catches up from the last sequence number; natively,
+  lines on standard input arrive the same way.
 - **Analytical Workspace Lab** and **Stobie Gallery**, below: the optional
   image layer under load, and the shared design system's components.
 - **[Emuella image viewer](https://github.com/robchristie/emuella-viewer)**, in
@@ -295,6 +299,7 @@ presentation so each has a clear owner.
 | [`analytical-workspace-lab`](apps/analytical-workspace-lab) | The analytical demo, its feature panes and application-owned actions. |
 | [`minimal-workspace` example](apps/analytical-workspace-lab/examples/minimal-workspace.rs) | A small native consumer using public framework APIs and existing package dependencies, independent of Lab implementation. |
 | [`stobie-gallery`](apps/stobie-gallery) | The component catalogue and deterministic UI stories. |
+| [`live-feed`](apps/live-feed) | Events from outside the host's passes: a reconnecting browser WebSocket client and a native standard-input source. |
 | [`stobie-tile-worker`](apps/tile-worker) | The browser Web Worker entry point for tile preparation and decoding. |
 | [`xtask`](xtask) | Builds, architecture checks, token generation and verification tooling. |
 

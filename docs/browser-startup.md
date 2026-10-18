@@ -301,4 +301,6 @@ meaningful-content hooks at your application boundary: an application on
 `AppHost` reports construction and its first complete UI pass to the loader
 without code, and can call `window.__stobieStartupMark('first_useful_content')`
 itself. Keep workers, data/transport policy and framework dependencies outside
-Stobie core.
+Stobie core. A transport the application owns, such as a WebSocket client,
+feeds the host through `Application::started` and its `IntentSender`; see
+[Receive events from outside](application-composition.md#receive-events-from-outside).

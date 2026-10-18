@@ -9,13 +9,13 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 | --- | --- |
 | `checks` | Tool regressions, tracked-file policy, plans/tokens, formatting, native/WASM lint, workspace tests, rendered API documentation and selected doctests, native/WASM example compilation, architecture, no-default-feature UI tests and browser-tool regressions |
 | `native-lab` | Lab library/binary and minimal example in one release invocation; Lab and minimal native smokes; Lab/native interface journey |
-| `native-other` | Every remaining workspace release library/binary; Gallery, icon, navigation and status-chip native smokes |
-| `browser` | Development Lab/Gallery/Worker release WASM and bindgen packages; Lab browser smoke; Lab/browser interface journey |
+| `native-other` | Every remaining workspace release library/binary; Gallery, icon, navigation, status-chip and Live Feed native smokes |
+| `browser` | Development Lab/Gallery/Worker/Live Feed release WASM and bindgen packages; Lab browser smoke; Lab/browser interface journey; Live Feed browser smoke |
 | `gallery-browser` | Shared UI Gallery release WASM/bindgen builder; Gallery, icon, navigation and status-chip browser smokes |
 | `production` | Separate production release WASM build and packaging, startup smoke and the prescribed startup benchmark |
 | `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
 | `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
-| `webgl2` | Development Lab/Gallery/Worker and Record Desk release WASM/bindgen packages; forced onto WebGL2, the Lab, Gallery, icon, navigation, status-chip and Record Desk browser smokes, the three ARIA layer checks, the Lab/browser interface journey and Record Desk's browser CLI parity |
+| `webgl2` | Development Lab/Gallery/Worker/Live Feed and Record Desk release WASM/bindgen packages; forced onto WebGL2, the Lab, Gallery, icon, navigation, status-chip, Record Desk and Live Feed browser smokes, the three ARIA layer checks, the Lab/browser interface journey and Record Desk's browser CLI parity |
 | `outside-app` | Release `stobie` CLI; `stobie new` into a directory outside the checkout, patched to the source under test; the generated application's tests, Clippy, release native build, `stobie build-web` and `--production`; an `--imaging` application checked natively and for WASM; the application launched natively and opened in Chromium on WebGPU and forced WebGL2, each observed and operated only through `stobie` |
 
 The two native package selections cover the previous workspace release targets.

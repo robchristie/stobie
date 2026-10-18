@@ -142,7 +142,10 @@ applies this pass's data intents in emission order (`order_intents` can
 rearrange them), followed by its actions, rechecking each action's availability
 first. It repaints only when state changed, an error was shown, a dock drag is
 active or you call `Frame::request_repaint(reason)`;
-`Frame::request_repaint_after(reason, delay)` schedules a later pass. To
+`Frame::request_repaint_after(reason, delay)` schedules a later pass, and
+`PassContext` offers both to `prepare`. Intents sent from outside a pass apply
+before `prepare` and present in that pass (see
+[Receive events from outside](#receive-events-from-outside)). To
 persist to eframe storage, implement `Application::save`; return true from
 `take_save_request` after an action such as "Save layout" to save at once. The
 `AppHost` rustdoc gives the exact contract.
@@ -167,6 +170,59 @@ add context such as its pane or domain; that observation replaces the recipe's.
 A custom widget's AccessKit node must agree with its semantic node:
 `audit_accesskit` checks roles, names, states, live settings, list containers
 and bounds, and the browser layer mirrors the AccessKit side.
+
+## Receive events from outside
+
+A socket message, a timer, a fetch result or a worker thread delivers data
+outside the host's passes. Implement `Application::started`, which the host
+calls once before its first pass with an `IntentSender` for your intent type,
+and give clones of the sender to your transports:
+
+```text
+fn started(&mut self, intents: IntentSender<FeedIntent>) {
+    self.socket = Some(FeedSocket::open(&self.feed_url, intents));
+}
+
+// In the transport, for each message:
+if intents.send(FeedIntent::Event(event)).is_err() {
+    // The host has stopped; close the connection.
+}
+```
+
+- `send` queues the intent and wakes the host when the queue was empty. At the
+  start of its next pass, before `prepare`, the host applies every queued
+  intent in the order sent, through the same `apply` as the UI's intents, so
+  that pass presents them and asks for no other. An error goes to
+  `report_error` and shows in the same pass. `CompletedPass::sent_intents`
+  counts them.
+- Nothing runs between events: an idle application stays idle until something
+  is sent. Each send costs one pass, and egui follows it with one settling
+  pass of its own, even when the intent changes nothing. Filter heartbeats,
+  acknowledgements and replayed events in the transport.
+- The sender is `Send` and `Sync` when the intent is `Send`, so a native
+  thread can own it. In the browser everything runs on the page's thread:
+  call it from a WebSocket callback, a timer or a `wasm_bindgen_futures`
+  future.
+- While the viewport is hidden (a minimised or occluded window, or a hidden
+  browser page, where eframe wakes about once a second) eframe runs no pass,
+  but the host still applies sent intents. It then checks every 250 ms
+  (`HIDDEN_RECHECK`) until a visible pass presents them, so a page shown again
+  catches up without input. A hidden application with nothing new does
+  nothing.
+- A stream that changes state on every pass delays an agent's `set-text`
+  until it pauses, because a semantic edit waits for a pass that state did
+  not change under.
+- `send` fails with `HostStopped`, returning the intent, once the host has
+  stopped, for example after the page calls `destroy()` or the window closed.
+- For timed work that needs no data, `Frame::request_repaint_after` and
+  `PassContext::request_repaint_after` schedule a later pass instead.
+- `AppHost::intent_sender` returns another sender, for a page hook or a test.
+
+Which connections to open, how to reconnect and what the protocol says belong
+to the application, not to Stobie. The [Live Feed](../apps/live-feed/README.md)
+example has a browser WebSocket client that reconnects with a growing delay
+and catches up from the last sequence number it received, and a native source
+that reads standard input on a thread.
 
 ## Keep these rules
 
@@ -290,7 +346,9 @@ through the shared startup loader, which shows loading and failure states and
 records startup milestones. `stobie build-web` builds the library, runs
 `wasm-bindgen` into `web/pkg/` and writes the loader. For page hooks beyond these, write
 the handle around `WebHost` yourself: `with_host` reads the running host and
-`with_host_mut(|host| host.submit(intent))` sends an intent through `apply`.
+`with_host_mut(|host| host.submit(intent))` sends an intent through `apply`
+at once. Events the application receives itself, such as WebSocket messages,
+take the [sender route](#receive-events-from-outside) instead.
 The component Gallery's `lib.rs` is an example. The
 [browser startup guide](browser-startup.md) covers packaging.
 

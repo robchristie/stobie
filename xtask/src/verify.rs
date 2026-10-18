@@ -92,6 +92,8 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "stobie-gallery",
                     "-p",
                     "stobie-tile-worker",
+                    "-p",
+                    "live-feed",
                     "--",
                     "-D",
                     "warnings",
@@ -202,6 +204,11 @@ pub fn run_stage(name: &str) -> Result<()> {
                     &["tools/status-chip-native-smoke.sh"],
                     &evidence_environment,
                 )?;
+                run_with_environment(
+                    "bash",
+                    &["tools/live-feed-smoke.sh", "native"],
+                    &evidence_environment,
+                )?;
             }
         }
         "browser" => {
@@ -224,6 +231,11 @@ pub fn run_stage(name: &str) -> Result<()> {
                         "browser",
                     ],
                     &interface_environment,
+                )?;
+                run_with_environment(
+                    "bash",
+                    &["tools/live-feed-smoke.sh", "browser"],
+                    &evidence_environment,
                 )?;
             }
         }
@@ -355,8 +367,8 @@ pub fn run_stage(name: &str) -> Result<()> {
             }
         }
         "webgl2" => {
-            // The Lab, the Gallery and Record Desk repeat their browser checks
-            // on WebGL2: WebGPU flags are withheld and pages open with
+            // The Lab, the Gallery, Record Desk and Live Feed repeat their
+            // browser checks on WebGL2: WebGPU flags are withheld and pages open with
             // `?renderer=webgl2`. Each smoke checks the canvas reports WebGL2.
             let webgl2 = evidence.join("webgl2");
             let environment = [
@@ -398,6 +410,11 @@ pub fn run_stage(name: &str) -> Result<()> {
                 )?;
             }
             if cfg!(target_os = "linux") {
+                run_with_environment(
+                    "bash",
+                    &["tools/live-feed-smoke.sh", "browser"],
+                    &environment,
+                )?;
                 run_with_environment(
                     "bash",
                     &[
