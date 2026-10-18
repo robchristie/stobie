@@ -27,14 +27,19 @@ pub(super) fn lock<I>(queue: &Mutex<VecDeque<I>>) -> MutexGuard<'_, VecDeque<I>>
 /// in the order they were sent, through [`Application::apply`](super::Application::apply),
 /// at the start of its next pass, before `prepare` and the UI, so that pass
 /// presents them. Sending into an empty queue asks egui for that pass; further
-/// intents sent before it runs join the same pass. Natively, eframe also
-/// applies them while the window is minimised, without presenting. In the
-/// browser, eframe runs no pass while the page is hidden, so intents wait until
-/// it is shown.
+/// intents sent before it runs join the same pass, which egui follows with
+/// one settling pass of its own.
 ///
-/// Every send therefore costs one pass, even when its intent changes nothing.
-/// Filter transport traffic such as heartbeats and acknowledgements before it
-/// reaches the sender, and send the events that can change presented state.
+/// While the viewport is hidden (a minimised or occluded window, or a hidden
+/// browser page, where eframe wakes about once a second) eframe runs no pass
+/// but still lets the host apply sent intents. The host then checks again
+/// every [`HIDDEN_RECHECK`](super::HIDDEN_RECHECK) until a visible pass
+/// presents them.
+///
+/// Every send therefore costs a pass and egui's settling pass, even when its
+/// intent changes nothing. Filter transport traffic such as heartbeats and
+/// acknowledgements before it reaches the sender, and send the events that
+/// can change presented state.
 pub struct IntentSender<I> {
     queue: Weak<Mutex<VecDeque<I>>>,
     context: egui::Context,

@@ -203,10 +203,15 @@ if intents.send(FeedIntent::Event(event)).is_err() {
   thread can own it. In the browser everything runs on the page's thread:
   call it from a WebSocket callback, a timer or a `wasm_bindgen_futures`
   future.
-- Natively, eframe also applies sent intents while the window is minimised,
-  without presenting them. In the browser, eframe runs no pass while the page
-  is hidden, so intents wait in the queue until it is shown; a transport that
-  may deliver a lot while hidden should coalesce or rely on catching up.
+- While the viewport is hidden (a minimised or occluded window, or a hidden
+  browser page, where eframe wakes about once a second) eframe runs no pass,
+  but the host still applies sent intents. It then checks every 250 ms
+  (`HIDDEN_RECHECK`) until a visible pass presents them, so a page shown again
+  catches up without input. A hidden application with nothing new does
+  nothing.
+- A stream that changes state on every pass delays an agent's `set-text`
+  until it pauses, because a semantic edit waits for a pass that state did
+  not change under.
 - `send` fails with `HostStopped`, returning the intent, once the host has
   stopped, for example after the page calls `destroy()` or the window closed.
 - For timed work that needs no data, `Frame::request_repaint_after` and

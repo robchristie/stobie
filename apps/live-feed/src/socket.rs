@@ -214,6 +214,9 @@ impl Inner {
             attempt,
             delay_ms,
         }));
+        if self.stopped.get() {
+            return;
+        }
         let timer = web_sys::window().and_then(|window| {
             window
                 .set_timeout_with_callback_and_timeout_and_arguments_0(

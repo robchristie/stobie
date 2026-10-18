@@ -1,7 +1,7 @@
 # Events from outside the host's passes
 
-Status: active
-Next action: Land the pull request after independent review and CI.
+Status: complete
+Delivery: [PR #93](https://github.com/robchristie/stobie/pull/93)
 
 Framework work item 3 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 an async event source that wakes the host. Bokkie, the first consumer, needs a
@@ -37,6 +37,15 @@ sender.** Transports stay in the application.
   `HostRepaint`: an idle application wakes for exactly the events that arrive.
   Errors reach `report_error` and show in the same pass.
   `CompletedPass::sent_intents` counts them.
+- While the viewport is hidden (a minimised or occluded window, or a hidden
+  browser page) eframe runs `logic` but no pass: on the web it falls back from
+  `requestAnimationFrame` to a `setTimeout` throttled to about once a second.
+  The host still applies sent intents then, and records that a pass has yet to
+  present them. eframe runs no pass when a page is shown again unless focus
+  changes, and none when a native window stops being occluded, so while hidden
+  with unpresented changes the host schedules a recheck every 250 ms
+  (`HIDDEN_RECHECK`) until a visible pass presents them. A hidden application
+  with nothing new schedules nothing.
 - `Application::started(&mut self, IntentSender<Self::Intent>)` runs once in
   `AppHost::new`, before the first pass. `AppHost::intent_sender` returns more
   senders for page hooks and tests. `with_host_mut` and `submit` remain for
@@ -86,7 +95,9 @@ Its feed events are `{"seq": N, "text": "..."}`.
   only egui's settling pass follows; intents sent before a pass join it in
   order; an error shows in that pass; an intent that changes nothing costs its
   passes and no more; a dropped host refuses sends; `prepare` can schedule a
-  later pass.
+  later pass; an intent applied while hidden schedules rechecks until a
+  visible pass presents it, and a hidden host with nothing new asks for
+  nothing.
 - Example unit tests: parsing, duplicates, gaps, the bounded tail, standard
   input lines in order, and Clear.
 - `tools/live-feed-smoke.sh native`: the release binary under Xvfb, driven
@@ -99,7 +110,11 @@ Its feed events are `{"seq": N, "text": "..."}`.
   stays idle, repaints for each event, does not repaint for a replayed event or
   a heartbeat, reconnects after the server closes the connection with
   `after=4`, catches up on the events published meanwhile with none missed or
-  duplicated, and receives later events.
+  duplicated, and receives later events. With nothing focused, it hides the
+  page (emulating `document.hidden` and dispatching `visibilitychange`), sends
+  an event, checks that nothing presents it, shows the page and expects it
+  presented with no input. That step failed on the first reviewed head and
+  passes with the recheck.
 - `cargo xtask verify` passes.
 
 ## Delivery increments
@@ -107,6 +122,7 @@ Its feed events are `{"seq": N, "text": "..."}`.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Framework sender, queue, hook and delayed `prepare` repaint | Complete | Host unit tests |
+| Hidden-viewport recheck, from independent review of the first head | Complete | Host unit test; hidden-page browser smoke step |
 | Live Feed example, smokes and verification wiring | Complete | Example tests; native and browser smokes on WebGPU and WebGL2 |
 | Documentation | Complete | Composition guide section "Receive events from outside"; browser guide; README; example README |
 
@@ -121,6 +137,11 @@ Its feed events are `{"seq": N, "text": "..."}`.
   a placeholder host and replace it.
 - A useful `Debug` for `HostStopped` cannot require `Debug` intents, because
   application intents rarely derive it; it prints no intent.
+
+- Independent review of the first head found the hidden-page defect by
+  reading eframe's source; the smoke reproduced it only once the canvas lost
+  focus, because a focused canvas makes eframe repaint on every visibility
+  change.
 
 ## Later work
 

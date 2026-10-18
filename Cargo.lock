@@ -1928,7 +1928,6 @@ dependencies = [
  "eframe",
  "egui",
  "egui_kittest",
- "js-sys",
  "serde",
  "serde_json",
  "stobie-ui-egui",

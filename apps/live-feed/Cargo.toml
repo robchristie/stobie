@@ -20,7 +20,6 @@ serde.workspace = true
 serde_json.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3.104"
 wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["CloseEvent", "Location", "MessageEvent", "Url", "UrlSearchParams", "WebSocket", "Window"] }
 

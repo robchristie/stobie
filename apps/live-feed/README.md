@@ -25,7 +25,9 @@ cargo run -p live-feed
 
 For the browser, `cargo xtask build-web` writes `apps/live-feed/web/`. The
 page connects to `feed` beside it, or to the WebSocket URL given as
-`?feed=<url>`, so serve it with a feed server that speaks the format above.
+`?feed=<url>`, so serve it with a feed server that speaks the format above. A
+link can therefore point the page at any WebSocket server; an application
+built from this should fix its feed URL or allow only its own servers.
 `tools/live-feed-smoke.sh browser` runs it in Chromium against a mock server
 that drops the connection, and checks the catch-up; `tools/live-feed-smoke.sh
 native` drives the native build through standard input. Both check that the

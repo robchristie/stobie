@@ -120,6 +120,15 @@ async function browser() {
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
     page.on('pageerror', error => errors.push(String(error)));
+    // Headless pages are never hidden, so the page's visibility is emulated:
+    // eframe reads it through the prototype getters, before it starts.
+    await page.addInitScript(() => {
+      let hidden = false;
+      Object.defineProperty(Document.prototype, 'hidden', { configurable: true, get: () => hidden });
+      Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => (hidden ? 'hidden' : 'visible') });
+      window.__setPageHidden = value => { hidden = value; document.dispatchEvent(new Event('visibilitychange')); };
+    });
+    const setHidden = hidden => page.evaluate(value => window.__setPageHidden(value), hidden);
     // A mock feed server: it keeps every event, and on each connection sends
     // those after the client's `after`, overlapping by one to test that the
     // client drops a replay.
@@ -162,6 +171,23 @@ async function browser() {
     report.steps.push({ name: 'reconnected and caught up', facts: caughtUp, connections: gateway.connections });
     await eventRepaints(client, 'event after reconnecting', () => gateway.publish({ seq: 7, text: 'Event 7' }),
       { last_sequence: 7, received: 7 });
+
+    // An event that arrives while the page is hidden is presented when the
+    // page is shown again, with no input. Nothing has focus, as on a page
+    // the user only reads, so eframe sees no focus change on showing it.
+    report.focusedBeforeHiding = await page.evaluate(() => document.activeElement?.id || document.activeElement?.tagName);
+    await page.evaluate(() => document.activeElement?.blur());
+    await idle(client, 'idle before hiding');
+    await setHidden(true);
+    await wait(300);
+    gateway.publish({ seq: 8, text: 'Event 8' });
+    await wait(1500);
+    const hidden = await observe(client);
+    assert.equal(hidden.facts.last_sequence, 7, 'a hidden page presents nothing');
+    await setHidden(false);
+    const shown = await waitFacts(client, { last_sequence: 8, latest: 'Event 8' }, 5000);
+    await idle(client, 'idle after showing');
+    report.steps.push({ name: 'event while hidden, presented on show', facts: shown });
     assert.deepEqual(errors, [], 'no page errors');
   } finally {
     await browser.close();

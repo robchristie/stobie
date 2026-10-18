@@ -228,6 +228,10 @@ macro_rules! application_identity {
     };
 }
 
+/// How soon a hidden viewport checks again whether it is visible, while it
+/// holds sent intents that no pass has presented.
+pub const HIDDEN_RECHECK: std::time::Duration = std::time::Duration::from_millis(250);
+
 /// Why the host asked egui for another pass.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HostRepaint {
@@ -704,6 +708,9 @@ pub struct AppHost<A: Application> {
     sent: events::IntentQueue<A::Intent>,
     /// Sent intents applied since the previous completed pass.
     sent_applied: usize,
+    /// Whether sent intents changed state outside a pass that presented it,
+    /// as while the viewport is hidden.
+    unpresented: bool,
     /// Whether the first complete pass was reported to the startup loader.
     #[cfg(target_arch = "wasm32")]
     startup_reported: bool,
@@ -759,6 +766,7 @@ impl<A: Application> AppHost<A> {
             fields_stale: false,
             sent: Default::default(),
             sent_applied: 0,
+            unpresented: false,
             #[cfg(target_arch = "wasm32")]
             startup_reported: false,
         };
@@ -848,19 +856,50 @@ impl<A: Application> AppHost<A> {
     }
 
     /// Apply the intents sent from outside passes, in the order they were
-    /// sent. The pass that follows presents them, so they request no pass of
+    /// sent, and return whether presented state changed or an error is now
+    /// shown. The pass that follows presents them, so they request no pass of
     /// their own; an error is shown through [`Application::report_error`] in
-    /// that pass too. eframe calls this before each pass and, natively, while
-    /// the window is minimised; [`Self::present`] calls it as well.
-    pub fn apply_sent_intents(&mut self) {
+    /// that pass too.
+    fn apply_sent_intents(&mut self) -> bool {
         let intents = std::mem::take(&mut *events::lock(&self.sent));
+        let mut changed = false;
         for intent in intents {
             self.sent_applied += 1;
             match self.app.apply(intent, &mut self.ui_state) {
-                Ok(true) => self.fields_stale = true,
+                Ok(true) => {
+                    self.fields_stale = true;
+                    changed = true;
+                }
                 Ok(false) => {}
-                Err(message) => self.app.report_error(message),
+                Err(message) => {
+                    self.app.report_error(message);
+                    changed = true;
+                }
             }
+        }
+        changed
+    }
+
+    /// Apply sent intents before a pass, as eframe's `App::logic` does before
+    /// every pass and also while the viewport is hidden: a minimised or
+    /// occluded window, or a hidden browser page. A hidden viewport runs no
+    /// pass, and eframe may run none when it is shown again, so until a
+    /// visible pass presents what was applied, the host checks again after
+    /// [`HIDDEN_RECHECK`].
+    fn apply_sent_intents_before_pass(&mut self, hidden: bool) {
+        if self.apply_sent_intents() {
+            self.unpresented = true;
+        }
+        if hidden && self.unpresented {
+            let reason = HostRepaint::Scheduled {
+                reason: "sent intents await a visible pass",
+                delay: HIDDEN_RECHECK,
+            };
+            // Recorded once however long the viewport stays hidden.
+            if !self.repaint.contains(&reason) {
+                self.repaint.push(reason);
+            }
+            request_passes(&self.context, &[reason]);
         }
     }
 
@@ -895,6 +934,8 @@ impl<A: Application> AppHost<A> {
         let root_rect = root.max_rect();
         self.repaint.clear();
         self.apply_sent_intents();
+        // This pass presents everything applied so far.
+        self.unpresented = false;
         self.count_tab_presses(&context);
         let preferences = self.app.preferences();
         let theme = self.app.theme();

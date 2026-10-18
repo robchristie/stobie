@@ -1282,3 +1282,40 @@ fn prepare_can_schedule_a_later_pass() {
         }]
     );
 }
+
+#[test]
+fn intents_applied_while_hidden_are_presented_once_visible() {
+    let mut harness = harness(Counter::default());
+    harness.run();
+    let events = sender(&harness);
+    events.send(Intent::Add(4)).unwrap();
+    // eframe's `logic` while the viewport is hidden: the intent applies, but
+    // no pass presents it, so the host checks again later.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    let host_ref = host(&harness);
+    assert_eq!(host_ref.app().count, 4);
+    assert_eq!(host_ref.app().presented.last(), Some(&0));
+    let recheck = HostRepaint::Scheduled {
+        reason: "sent intents await a visible pass",
+        delay: HIDDEN_RECHECK,
+    };
+    assert_eq!(host_ref.repaint_reasons(), [recheck]);
+    assert!(harness.ctx.has_requested_repaint());
+    // Still hidden and nothing new: it keeps checking.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert_eq!(host(&harness).repaint_reasons(), [recheck]);
+    assert!(harness.ctx.has_requested_repaint());
+    // A visible pass presents it and stops the checks.
+    harness.step();
+    assert_eq!(host(&harness).app().presented.last(), Some(&4));
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert!(host(&harness).repaint_reasons().is_empty());
+    harness.run();
+    // While hidden with nothing applied, the host asks for nothing.
+    host_mut(&mut harness).apply_sent_intents_before_pass(true);
+    assert!(!harness.ctx.has_requested_repaint());
+    // A visible viewport's pass follows `logic`, so it needs no check.
+    events.send(Intent::Add(1)).unwrap();
+    host_mut(&mut harness).apply_sent_intents_before_pass(false);
+    assert!(host(&harness).repaint_reasons().is_empty());
+}
