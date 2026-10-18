@@ -598,14 +598,17 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
             };
             let deadline = timeout(args, stobie_client::DEFAULT_TIMEOUT)?;
             let mut client = Client::new(transport(&target)?).with_timeout(deadline);
-            // A page opened with ?automation=1 may still be loading its
-            // application; wait for it rather than failing at once.
+            // The browser may have just opened the page, whose URL its target
+            // list shows a moment later, and a page opened with ?automation=1
+            // may still be loading its application; wait for both rather than
+            // failing at once.
             let started = std::time::Instant::now();
             let hello = loop {
                 match client.hello() {
                     Err(error)
-                        if error.message == stobie_client::NOT_STARTED
-                            && started.elapsed() < deadline =>
+                        if started.elapsed() < deadline
+                            && (stobie_client::no_page_matches(&error)
+                                || error.message == stobie_client::NOT_STARTED) =>
                     {
                         std::thread::sleep(Duration::from_millis(250));
                     }

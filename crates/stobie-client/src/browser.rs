@@ -74,7 +74,10 @@ impl BrowserTransport {
         &self.endpoint
     }
 
-    /// The selected page, resolved once.
+    /// The selected page, resolved once. When none matches, the error is
+    /// one [`no_page_matches`] recognises; `attach` waits for a page that
+    /// the browser has opened but whose URL its target list does not show
+    /// yet, and every other command fails at once.
     pub fn target(&mut self, deadline: Instant) -> Result<TargetInfo, ClientError> {
         let endpoint = resolve_endpoint(Some(&self.endpoint), None)
             .expect("validated when the transport was made");
@@ -86,56 +89,21 @@ impl BrowserTransport {
             .iter()
             .filter(|target| target.kind == "page")
             .collect();
-        let describe = |pages: &[&TargetInfo]| {
-            pages
-                .iter()
-                .map(|page| format!("{} {}", page.id, page.url.as_deref().unwrap_or("")))
-                .collect::<Vec<_>>()
-                .join("; ")
-        };
-        let selected: Vec<&TargetInfo> = match &self.page {
-            PageSelector::Target(id) => pages
-                .iter()
-                .copied()
-                .filter(|page| &page.id == id)
-                .collect(),
-            PageSelector::Url(url) => {
-                let exact: Vec<_> = pages
-                    .iter()
-                    .copied()
-                    .filter(|page| page.url.as_deref() == Some(url.as_str()))
-                    .collect();
-                if exact.is_empty() {
-                    pages
-                        .iter()
-                        .copied()
-                        .filter(|page| {
-                            page.url
-                                .as_deref()
-                                .is_some_and(|page| page.starts_with(url.as_str()))
-                        })
-                        .collect()
-                } else {
-                    exact
-                }
-            }
-            PageSelector::Only => pages.clone(),
-        };
-        match selected.as_slice() {
+        match select(&pages, &self.page).as_slice() {
             [page] => {
                 self.websocket = page.web_socket_debugger_url.clone();
                 Ok((*page).clone())
             }
             [] => Err(ClientError::connection(
                 format!(
-                    "no page matches; the browser's pages are: {}",
-                    describe(&pages)
+                    "{NO_PAGE_MATCHES}; the browser's pages are: {}",
+                    describe_pages(&pages)
                 ),
                 "open the application with ?automation=1, then pass --page URL or --target ID",
             )),
-            _ => Err(ClientError::usage(format!(
+            selected => Err(ClientError::usage(format!(
                 "several pages match: {}",
-                describe(&selected)
+                describe_pages(selected)
             ))),
         }
     }
@@ -327,9 +295,150 @@ impl Transport for BrowserTransport {
     }
 }
 
+const NO_PAGE_MATCHES: &str = "no page matches";
+
+/// Whether `error` says that no browser page matched the selector.
+pub fn no_page_matches(error: &ClientError) -> bool {
+    error.code == "connection_failed" && error.message.starts_with(NO_PAGE_MATCHES)
+}
+
+fn describe_pages(pages: &[&TargetInfo]) -> String {
+    pages
+        .iter()
+        .map(|page| format!("{} {}", page.id, page.url.as_deref().unwrap_or("")))
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+/// The pages `selector` names: by target ID, by exact URL or else URL prefix,
+/// or every page.
+fn select<'a>(pages: &[&'a TargetInfo], selector: &PageSelector) -> Vec<&'a TargetInfo> {
+    match selector {
+        PageSelector::Target(id) => pages
+            .iter()
+            .copied()
+            .filter(|page| &page.id == id)
+            .collect(),
+        PageSelector::Url(url) => {
+            let exact: Vec<_> = pages
+                .iter()
+                .copied()
+                .filter(|page| page.url.as_deref() == Some(url.as_str()))
+                .collect();
+            if exact.is_empty() {
+                pages
+                    .iter()
+                    .copied()
+                    .filter(|page| {
+                        page.url
+                            .as_deref()
+                            .is_some_and(|page| page.starts_with(url.as_str()))
+                    })
+                    .collect()
+            } else {
+                exact
+            }
+        }
+        PageSelector::Only => pages.to_vec(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn page(id: &str, url: &str) -> TargetInfo {
+        TargetInfo {
+            id: id.into(),
+            kind: "page".into(),
+            title: None,
+            url: Some(url.into()),
+            attached: None,
+            browser_context_id: None,
+            web_socket_debugger_url: None,
+        }
+    }
+
+    #[test]
+    fn pages_are_selected_by_target_exact_url_or_prefix() {
+        let (a, b, blank) = (
+            page("A", "http://127.0.0.1:8080/?automation=1"),
+            page("B", "http://127.0.0.1:8080/?automation=1&renderer=webgl2"),
+            page("C", ""),
+        );
+        let pages = [&a, &b, &blank];
+        let ids = |selector: PageSelector| -> Vec<String> {
+            select(&pages, &selector)
+                .iter()
+                .map(|page| page.id.clone())
+                .collect()
+        };
+        assert_eq!(
+            ids(PageSelector::Url(a.url.clone().unwrap())),
+            ["A"],
+            "exact wins"
+        );
+        assert_eq!(
+            ids(PageSelector::Url(
+                "http://127.0.0.1:8080/?automation=1&r".into()
+            )),
+            ["B"]
+        );
+        assert_eq!(ids(PageSelector::Target("C".into())), ["C"]);
+        assert_eq!(ids(PageSelector::Only).len(), 3);
+        // A page still navigating shows an empty URL, which matches nothing
+        // until its navigation appears.
+        assert!(ids(PageSelector::Url("http://127.0.0.1:9000/".into())).is_empty());
+    }
+
+    /// A DevTools endpoint whose one page shows an empty URL for its first
+    /// `blank` listings, as Chromium's can just after a navigation commits.
+    fn devtools(blank: usize) -> String {
+        use std::io::{Read as _, Write as _};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            for (listing, stream) in listener.incoming().enumerate() {
+                let mut stream = stream.unwrap();
+                let mut request = [0; 1024];
+                let _ = stream.read(&mut request);
+                let url = if listing < blank {
+                    ""
+                } else {
+                    "http://127.0.0.1:8080/?automation=1"
+                };
+                let body = format!(r#"[{{"id":"P","type":"page","url":"{url}"}}]"#);
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        format!("http://{address}")
+    }
+
+    #[test]
+    fn a_page_that_does_not_match_yet_fails_at_once_with_a_recognisable_error() {
+        let endpoint = devtools(1);
+        let mut transport = BrowserTransport::new(
+            &endpoint,
+            PageSelector::Url("http://127.0.0.1:8080/?automation=1".into()),
+        )
+        .unwrap();
+        let deadline = Instant::now() + std::time::Duration::from_secs(5);
+        let started = Instant::now();
+        let error = transport.target(deadline).unwrap_err();
+        assert!(no_page_matches(&error), "{error:?}");
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "no waiting"
+        );
+        // The next listing shows the page's URL, as attach's retry sees.
+        assert_eq!(transport.target(deadline).unwrap().id, "P");
+        let wrong = ClientError::usage("several pages match: P");
+        assert!(!no_page_matches(&wrong));
+    }
 
     fn classify(state: serde_json::Value) -> String {
         classify_missing(&state).message

@@ -17,7 +17,7 @@ mod error;
 mod transport;
 
 #[cfg(feature = "browser")]
-pub use browser::{BrowserTransport, NOT_STARTED, PageSelector};
+pub use browser::{BrowserTransport, NOT_STARTED, PageSelector, no_page_matches};
 pub use client::*;
 pub use condition::Condition;
 pub use error::{ClientError, ErrorClass};
