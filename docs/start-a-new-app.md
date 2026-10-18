@@ -39,6 +39,7 @@ stobie serve
 | `src/lib.rs` | A small notes application on the framework host, with tests |
 | `src/main.rs` | The native entry point |
 | `web/index.html`, `web/bootstrap.js` | The browser page and its bootstrap |
+| `web/icons/` | Placeholder icons for the installable page, to replace |
 | `README.md` | These commands, for the next reader |
 
 The application declares its actions, state, UI and handlers; the
@@ -52,8 +53,13 @@ feature, described in [Compose an image application](image-application-compositi
 mode, checks that the `wasm-bindgen` CLI is exactly the version of the
 `wasm-bindgen` crate the project locks (and prints the install command when
 it is not), runs it into `web/pkg/`, and writes the shared startup loader,
-`web/browser-startup.js`. Both are generated; the template's `.gitignore`
-leaves them out. `stobie serve` serves `web/` on `http://127.0.0.1:8080/`
+`web/browser-startup.js`. Because the page links `manifest.webmanifest`, it
+also writes that manifest and a service worker, `web/sw.js`, so the page
+installs as a web application, including on an iPhone's home screen. All of
+these are generated; the template's `.gitignore` leaves them out. The page's
+`<head>` names the application, colours it and lists its icons; the
+[browser startup guide](browser-startup.md#installable-web-applications)
+describes the tags and the service worker. `stobie serve` serves `web/` on `http://127.0.0.1:8080/`
 without caching. The host prefers WebGPU and falls back to WebGL2;
 `?renderer=webgl2` forces it.
 

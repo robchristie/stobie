@@ -16,6 +16,7 @@ pub fn media_type(path: &Path) -> &'static str {
         Some("js" | "mjs") => "text/javascript; charset=utf-8",
         Some("css") => "text/css; charset=utf-8",
         Some("json" | "map") => "application/json",
+        Some("webmanifest") => "application/manifest+json",
         Some("wasm") => "application/wasm",
         Some("svg") => "image/svg+xml",
         Some("png") => "image/png",

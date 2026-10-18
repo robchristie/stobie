@@ -9,8 +9,19 @@ operate it with the `stobie` command.
   explains each part.
 - `src/main.rs` is the native entry point; the library's `web_handle!` is the
   browser one.
-- `web/` holds `index.html` and `bootstrap.js`. `stobie build-web` writes
-  `web/pkg/` and `web/browser-startup.js` beside them.
+- `web/` holds `index.html`, `bootstrap.js` and placeholder icons in
+  `web/icons/`. `stobie build-web` writes `web/pkg/`, `web/browser-startup.js`,
+  `web/manifest.webmanifest` and `web/sw.js` beside them.
+
+## Install it
+
+The page is an installable web application. Its `<head>` names it (`<title>`
+and `apple-mobile-web-app-title`), colours it (`theme-color`) and points at its
+icons; `stobie build-web` writes the web app manifest and service worker from
+those tags, so change them there and replace the PNGs in `web/icons/` at the
+same sizes. Browsers install, and service workers run, only over HTTPS or on
+`localhost`. On an iPhone, open the page in Safari and choose Share, then Add
+to Home Screen.
 
 ## Run it
 

@@ -4,10 +4,12 @@
 //! `stobie serve` commands and the repository's `cargo xtask build-web` and
 //! production build all call it. It runs `cargo` for `wasm32-unknown-unknown`
 //! and checks the `wasm-bindgen` CLI against the version the project locks,
-//! writes the shared startup loader, and optionally packages the result with
+//! writes the shared startup loader and, for an installable page, its web
+//! app manifest and service worker, and optionally packages the result with
 //! `wasm-opt`, Brotli and gzip into immutable, content-addressed assets.
 
 pub mod package;
+pub mod pwa;
 pub mod serve;
 mod web;
 

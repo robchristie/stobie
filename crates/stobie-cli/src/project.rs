@@ -144,6 +144,25 @@ impl NewApp {
             .collect()
     }
 
+    /// Placeholder PNG icons for the installable page, at the paths and sizes
+    /// `web/index.html` names, for the application to replace.
+    pub fn icons(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let (background, foreground) = ([0x0b, 0x0f, 0x12], [0x4f, 0xb3, 0xbf]);
+        [
+            ("web/icons/icon-192.png", 192),
+            ("web/icons/icon-512.png", 512),
+            ("web/icons/apple-touch-icon.png", 180),
+        ]
+        .into_iter()
+        .map(|(path, size)| {
+            (
+                path,
+                stobie_build::pwa::placeholder_icon(size, background, foreground),
+            )
+        })
+        .collect()
+    }
+
     /// `.cargo/config.toml` patching every Stobie dependency to `checkout`.
     pub fn local_patch(&self, checkout: &Path) -> String {
         let mut text = format!(
@@ -253,11 +272,20 @@ pub fn new(args: &Args, name: &str) -> Result<Output, ClientError> {
     if let Some(checkout) = &checkout {
         files.push((".cargo/config.toml", app.local_patch(checkout)));
     }
-    for (relative, text) in &files {
+    let icons = app.icons();
+    let contents = files
+        .iter()
+        .map(|(relative, text)| (*relative, text.as_bytes()))
+        .chain(
+            icons
+                .iter()
+                .map(|(relative, png)| (*relative, png.as_slice())),
+        );
+    for (relative, bytes) in contents {
         let path = directory.join(relative);
         fs::create_dir_all(path.parent().expect("files have parents")).map_err(io(&path))?;
-        fs::write(&path, text).map_err(io(&path))?;
-        written.push(*relative);
+        fs::write(&path, bytes).map_err(io(&path))?;
+        written.push(relative);
     }
     let directory = fs::canonicalize(&directory).unwrap_or(directory);
     let next = vec![
@@ -551,6 +579,34 @@ mod tests {
             .1;
         assert!(bootstrap.contains("import('./pkg/field_notes.js')"));
         assert!(bootstrap.contains(&format!("./{}", stobie_build::STARTUP_LOADER_FILE)));
+    }
+
+    /// The generated page is installable: its head declares what
+    /// `stobie build-web` needs, and the generated icons satisfy it.
+    #[test]
+    fn the_template_page_and_icons_are_installable() {
+        let app = app(false);
+        let files = app.files();
+        let page = &files
+            .iter()
+            .find(|(path, _)| *path == "web/index.html")
+            .unwrap()
+            .1;
+        let declared = stobie_build::pwa::declaration(page)
+            .unwrap()
+            .expect("the template links a manifest");
+        assert_eq!(declared.short_name, "Field Notes");
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/stobie-cli-tests")
+            .join(format!("icons-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        for (path, png) in app.icons() {
+            let path = directory.join(path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, png).unwrap();
+        }
+        declared.check_icons(&directory.join("web")).unwrap();
+        fs::remove_dir_all(&directory).unwrap();
     }
 
     /// The template pins what the repository itself builds with.

@@ -1,4 +1,6 @@
-// `stobie build-web` writes browser-startup.js and pkg/ beside this file.
+// `stobie build-web` writes browser-startup.js, pkg/, manifest.webmanifest and
+// sw.js beside this file. The loader registers sw.js because index.html links
+// the manifest, and keeps #app-shell above an on-screen keyboard.
 import { startApplication } from './browser-startup.js';
 
 await startApplication({
@@ -7,6 +9,7 @@ await startApplication({
   canvasId: 'app-canvas',
   handleName: '__STOBIE_HANDLE',
   start: (handle, canvas) => handle.start(canvas),
+  fitViewport: true,
   afterStart: handle => {
     // With ?automation=1 in the URL, `stobie attach` can read and operate the page.
     if (new URL(location.href).searchParams.get('automation') === '1') {
