@@ -1,0 +1,28 @@
+[package]
+name = "live-feed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "live-feed"
+path = "src/main.rs"
+
+[dependencies]
+eframe.workspace = true
+egui.workspace = true
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui" }
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3.104"
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["CloseEvent", "Location", "MessageEvent", "Url", "UrlSearchParams", "WebSocket", "Window"] }
+
+[dev-dependencies]
+egui_kittest.workspace = true

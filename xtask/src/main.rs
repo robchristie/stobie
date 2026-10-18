@@ -50,7 +50,7 @@ fn main() -> Result<()> {
 }
 
 fn build_web() -> Result<()> {
-    for app in ["analytical-workspace-lab", "stobie-gallery"] {
+    for app in ["analytical-workspace-lab", "stobie-gallery", "live-feed"] {
         stobie_build::write_startup_loader(Path::new(&format!("apps/{app}/web")))?;
     }
     ensure_wasm_bindgen()?;
@@ -67,6 +67,8 @@ fn build_web() -> Result<()> {
             "stobie-gallery",
             "-p",
             "stobie-tile-worker",
+            "-p",
+            "live-feed",
         ],
     )?;
     bindgen(
@@ -80,6 +82,10 @@ fn build_web() -> Result<()> {
     bindgen(
         "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
         "apps/analytical-workspace-lab/web/worker-pkg",
+    )?;
+    bindgen(
+        "target/wasm32-unknown-unknown/release/live_feed.wasm",
+        "apps/live-feed/web/pkg",
     )?;
     Ok(())
 }
@@ -141,6 +147,7 @@ fn architecture() -> Result<()> {
     // beyond eframe's own GPU backend.
     for (label, arguments) in [
         ("stobie-gallery", &["-p", "stobie-gallery"][..]),
+        ("live-feed", &["-p", "live-feed"][..]),
         (
             "record-desk",
             &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],
@@ -159,6 +166,7 @@ fn architecture() -> Result<()> {
         ),
         ("stobie-gallery", &["-p", "stobie-gallery"][..]),
         ("stobie-tile-worker", &["-p", "stobie-tile-worker"][..]),
+        ("live-feed", &["-p", "live-feed"][..]),
         (
             "record-desk",
             &["--manifest-path", "consumers/record-desk/Cargo.toml"][..],

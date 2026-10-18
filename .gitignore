@@ -6,11 +6,13 @@
 /apps/analytical-workspace-lab/web/pkg
 /apps/analytical-workspace-lab/web/worker-pkg
 /apps/stobie-gallery/web/pkg
+/apps/live-feed/web/pkg
 *.profraw
 __pycache__/
 
 /apps/analytical-workspace-lab/web/browser-startup.js
 /apps/stobie-gallery/web/browser-startup.js
+/apps/live-feed/web/browser-startup.js
 
 /consumers/record-desk/target/
 /consumers/record-desk/web/pkg/

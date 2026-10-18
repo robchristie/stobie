@@ -10,18 +10,21 @@
 //!
 //! One pass runs in this order:
 //!
-//! 1. [`Application::prepare`] adapts state to the viewport and polls workers.
-//! 2. Queued semantic invocations run, each rechecked against current state.
-//! 3. Available shortcuts are consumed with exact modifiers.
-//! 4. [`Application::ui`] presents state and emits intents and action triggers.
-//! 5. The completed observation is published, and [`Application::completed`]
+//! 1. Intents sent through an [`IntentSender`] from outside the host's passes,
+//!    such as socket messages, apply in the order they were sent.
+//! 2. [`Application::prepare`] adapts state to the viewport and polls workers.
+//! 3. Queued semantic invocations run, each rechecked against current state.
+//! 4. Available shortcuts are consumed with exact modifiers.
+//! 5. [`Application::ui`] presents state and emits intents and action triggers.
+//! 6. The completed observation is published, and [`Application::completed`]
 //!    sees it together with the state it presented.
-//! 6. Data intents apply in emission order (or as [`Application::order_intents`]
+//! 7. Data intents apply in emission order (or as [`Application::order_intents`]
 //!    arranges them), then actions in trigger order, each action rechecking its
 //!    availability immediately before it runs.
-//! 7. A repaint is requested only for a recorded [`HostRepaint`]. Any state
+//! 8. A repaint is requested only for a recorded [`HostRepaint`]. Any state
 //!    change requests one, so the next pass presents and observes it. A
-//!    scheduled reason requests a pass after its delay instead.
+//!    scheduled reason requests a pass after its delay instead. Sent intents
+//!    need none: the pass that applies them presents them.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::hash::Hash;
@@ -44,10 +47,12 @@ use crate::{
 
 #[cfg(feature = "eframe")]
 mod entry;
+mod events;
 mod renderer;
 use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
 pub use entry::*;
+pub use events::{HostStopped, IntentSender};
 pub use renderer::renderer_identity;
 
 /// An application whose per-pass plumbing Stobie owns. See the crate documentation
@@ -155,6 +160,15 @@ pub trait Application: 'static {
     /// state, before this pass's intents and actions apply. Geometry and state
     /// therefore agree.
     fn completed(&mut self, _pass: &CompletedPass<'_>, _state: &Self::UiState) {}
+
+    /// Called once when the host starts, before its first pass, with the
+    /// sender for intents from outside its passes: socket messages, timer
+    /// ticks, fetch results and worker threads. Start transports here and give
+    /// them clones of the sender. The host applies what they send at the start
+    /// of its next pass, so a transport wakes the application only when an
+    /// event arrives; see [`IntentSender`]. Keep transport policy, such as
+    /// which connections to open and when to reconnect, in the application.
+    fn started(&mut self, _intents: IntentSender<Self::Intent>) {}
 
     /// Whether the browser host mirrors this application's accessibility tree
     /// into a hidden ARIA layer over its canvas, for screen readers and
@@ -633,6 +647,12 @@ impl PassContext<'_> {
     pub fn request_repaint(&mut self, reason: &'static str) {
         self.repaint.push(HostRepaint::Application(reason));
     }
+
+    /// Ask for a pass after `delay`, for example when the next item of timed
+    /// work in `prepare` falls due.
+    pub fn request_repaint_after(&mut self, reason: &'static str, delay: std::time::Duration) {
+        self.repaint.push(HostRepaint::Scheduled { reason, delay });
+    }
 }
 
 /// A completed UI pass, before its intents and actions apply.
@@ -647,6 +667,9 @@ pub struct CompletedPass<'a> {
     /// Intents and actions that change state add [`HostRepaint::StateChanged`]
     /// after this hook.
     pub repaint: &'a [HostRepaint],
+    /// Intents from an [`IntentSender`] applied since the previous pass,
+    /// which this pass presented.
+    pub sent_intents: usize,
 }
 
 /// Owns an [`Application`] and runs its per-pass lifecycle.
@@ -677,6 +700,10 @@ pub struct AppHost<A: Application> {
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
+    /// Intents sent from outside passes, applied at the start of the next.
+    sent: events::IntentQueue<A::Intent>,
+    /// Sent intents applied since the previous completed pass.
+    sent_applied: usize,
     /// Whether the first complete pass was reported to the startup loader.
     #[cfg(target_arch = "wasm32")]
     startup_reported: bool,
@@ -699,9 +726,10 @@ fn apply_appearance(context: &egui::Context, preferences: UiPreferences, theme: 
 }
 
 impl<A: Application> AppHost<A> {
-    /// Host `app` in `context`. Native hosts start automation when
-    /// `STOBIE_AUTOMATION_SOCKET` names an absolute socket path; a startup
-    /// failure is reported through [`Application::report_error`].
+    /// Host `app` in `context` and call [`Application::started`]. Native
+    /// hosts start automation when `STOBIE_AUTOMATION_SOCKET` names an
+    /// absolute socket path; a startup failure is reported through
+    /// [`Application::report_error`].
     pub fn new(context: &egui::Context, app: A) -> Self {
         crate::observation::enable(context);
         let identity = app.identity();
@@ -729,11 +757,15 @@ impl<A: Application> AppHost<A> {
             edit_focus: None,
             completing: None,
             fields_stale: false,
+            sent: Default::default(),
+            sent_applied: 0,
             #[cfg(target_arch = "wasm32")]
             startup_reported: false,
         };
         #[cfg(not(target_arch = "wasm32"))]
         host.start_native_inspection();
+        let intents = host.intent_sender();
+        host.app.started(intents);
         host
     }
 
@@ -808,6 +840,30 @@ impl<A: Application> AppHost<A> {
         &self.ui_state
     }
 
+    /// A sender for intents from outside the host's passes, such as a page
+    /// hook's or a transport's; the same route [`Application::started`]
+    /// receives.
+    pub fn intent_sender(&self) -> IntentSender<A::Intent> {
+        IntentSender::new(&self.sent, &self.context)
+    }
+
+    /// Apply the intents sent from outside passes, in the order they were
+    /// sent. The pass that follows presents them, so they request no pass of
+    /// their own; an error is shown through [`Application::report_error`] in
+    /// that pass too. eframe calls this before each pass and, natively, while
+    /// the window is minimised; [`Self::present`] calls it as well.
+    pub fn apply_sent_intents(&mut self) {
+        let intents = std::mem::take(&mut *events::lock(&self.sent));
+        for intent in intents {
+            self.sent_applied += 1;
+            match self.app.apply(intent, &mut self.ui_state) {
+                Ok(true) => self.fields_stale = true,
+                Ok(false) => {}
+                Err(message) => self.app.report_error(message),
+            }
+        }
+    }
+
     /// Apply an intent from outside a pass, such as a page hook or a test,
     /// through the same handler as the UI's intents. An error reaches
     /// [`Application::report_error`]. Returns whether it asked for a repaint.
@@ -838,6 +894,7 @@ impl<A: Application> AppHost<A> {
         // The root node covers the viewport, not content that overflowed it.
         let root_rect = root.max_rect();
         self.repaint.clear();
+        self.apply_sent_intents();
         self.count_tab_presses(&context);
         let preferences = self.app.preferences();
         let theme = self.app.theme();
@@ -898,9 +955,11 @@ impl<A: Application> AppHost<A> {
                 tab_presses: self.tab_presses,
                 context: &context,
                 repaint: &self.repaint,
+                sent_intents: self.sent_applied,
             },
             &self.ui_state,
         );
+        self.sent_applied = 0;
         self.app.order_intents(&mut intents);
         for intent in intents {
             let outcome = self.app.apply(intent, &mut self.ui_state);

@@ -8,6 +8,12 @@ impl<A: Application> eframe::App for AppHost<A> {
         Some(self)
     }
 
+    fn logic(&mut self, _context: &egui::Context, _frame: &mut eframe::Frame) {
+        // Before each pass, and natively also while the window is minimised,
+        // so a hidden application keeps up with its event sources.
+        self.apply_sent_intents();
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.present(ui);
         #[cfg(target_arch = "wasm32")]
