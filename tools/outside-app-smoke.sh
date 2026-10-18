@@ -88,3 +88,6 @@ export DISPLAY=:93 WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_H
 owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/xvfb.log" 2>&1
 sleep 1
 ui_sandbox "$(command -v node)" tools/outside-app-smoke.mjs "$STOBIE" "$APP" "$CARGO_TARGET_DIR/release/outside-notes" "$EVIDENCE_DIR"
+# The generated page is installable: both builds wrote its manifest and
+# service worker, which Chromium accepts, and it starts offline.
+ui_sandbox "$(command -v node)" tools/pwa-smoke.mjs outside-notes "$APP/web" "$OUTSIDE/production" "$EVIDENCE_DIR"

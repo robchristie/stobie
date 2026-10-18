@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installStartup, installWorkerStartup, startApplication } from '../../crates/stobie-build/web/browser-startup.js';
+import { fitVisualViewport, installStartup, installWorkerStartup, registerServiceWorker, startApplication } from '../../crates/stobie-build/web/browser-startup.js';
 
 function environment() {
   let now = 10, next = 0;
@@ -359,4 +359,37 @@ test('a delayed watchdog callback seeing a hidden page cannot destroy or spend i
   assert.equal([...env.timerDelays.values()][0], 1000);
   workspaceFrame(env, startup);
   assert.equal(startup.report.status, 'ready');
+});
+
+test('the service worker beside the page registers only for a page that links a manifest', async () => {
+  const registered = [];
+  const scope = (manifest, container = { register: async (url, options) => { registered.push([url, options.scope]); return { scope: options.scope }; } }) => ({
+    document: { querySelector: selector => (manifest && selector === 'link[rel~="manifest"]' ? {} : null) },
+    navigator: { serviceWorker: container }, isSecureContext: true,
+    location: { href: 'https://example.test/apps/notes/?automation=1' },
+  });
+  const report = {};
+  assert.deepEqual(await registerServiceWorker({ report, scope: scope(false) }), { state: 'not_requested' });
+  assert.deepEqual(await registerServiceWorker({ report, scope: scope(true) }), { state: 'registered', scope: 'https://example.test/apps/notes/' });
+  assert.deepEqual(registered, [['https://example.test/apps/notes/sw.js', 'https://example.test/apps/notes/']]);
+  assert.deepEqual(await registerServiceWorker({ report, mode: false, scope: scope(true) }), { state: 'not_requested' });
+  assert.deepEqual(await registerServiceWorker({ report, scope: scope(true, null) }), { state: 'unsupported' });
+  const failing = { register: async () => { throw new Error('bad script'); } };
+  assert.deepEqual(await registerServiceWorker({ report, scope: scope(true, failing) }), { state: 'failed', message: 'bad script' });
+  assert.equal(report.serviceWorker.state, 'failed');
+});
+
+test('the visual viewport sizes the page shell and drops the bottom inset under a keyboard', () => {
+  const listeners = new Map(), properties = new Map();
+  const viewport = { height: 800, offsetTop: 0, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) };
+  const scope = { visualViewport: viewport, innerHeight: 800, document: { documentElement: { style: { setProperty: (name, value) => properties.set(name, value) } } } };
+  const stop = fitVisualViewport({ scope });
+  assert.equal(properties.get('--stobie-viewport-height'), '800px');
+  assert.equal(properties.get('--stobie-bottom-inset'), 'env(safe-area-inset-bottom, 0px)');
+  Object.assign(viewport, { height: 420, offsetTop: 12 });
+  listeners.get('resize')();
+  assert.deepEqual([properties.get('--stobie-viewport-height'), properties.get('--stobie-viewport-top'), properties.get('--stobie-bottom-inset')], ['420px', '12px', '0px']);
+  stop();
+  assert.equal(listeners.size, 0);
+  assert.equal(typeof fitVisualViewport({ scope: {} }), 'function', 'no visual viewport, nothing to fit');
 });

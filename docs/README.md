@@ -15,8 +15,9 @@ learn the current API.
 - [UI guides](ui-guides/README.md): components, panes, interactions,
   accessibility, tokens and UI review.
 - [Design language](design-language.md): visual and semantic contracts.
-- [Production browser builds](browser-startup.md): web packaging, WebGPU and
-  WebGL2 selection, and startup measurement.
+- [Production browser builds](browser-startup.md): web packaging,
+  installable web applications, WebGPU and WebGL2 selection, and startup
+  measurement.
 - [Regional source adapter contract](regional-adapter-contract.md): external
   regional image sources for the imaging layer.
 

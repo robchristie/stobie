@@ -162,10 +162,56 @@ export function installStartup({ app, workerUrl, canvasId, scope = globalThis, t
   };
 }
 
+// Keep `--stobie-viewport-height` and `--stobie-viewport-top` on the root
+// element at the visual viewport's size and offset, and `--stobie-bottom-inset`
+// at the bottom safe area, or 0 while an on-screen keyboard covers it. iOS
+// shrinks only the visual viewport for its keyboard, so a page shell sized from
+// these stays above the keyboard. Returns a function that stops it.
+export function fitVisualViewport({ scope = globalThis } = {}) {
+  const viewport = scope.visualViewport;
+  const style = scope.document?.documentElement?.style;
+  if (!viewport || !style) return () => {};
+  const update = () => {
+    // A keyboard takes far more height than browser chrome does.
+    const keyboard = scope.innerHeight - viewport.height > 120;
+    style.setProperty('--stobie-viewport-height', `${viewport.height}px`);
+    style.setProperty('--stobie-viewport-top', `${viewport.offsetTop}px`);
+    style.setProperty('--stobie-bottom-inset', keyboard ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+  };
+  update();
+  viewport.addEventListener('resize', update);
+  viewport.addEventListener('scroll', update);
+  return () => { viewport.removeEventListener('resize', update); viewport.removeEventListener('scroll', update); };
+}
+
+// Register the service worker `stobie build-web` writes, `sw.js` beside the
+// page, for the page's directory. `mode` 'auto' registers it when the page
+// links a manifest, true always and false never. The outcome is recorded in
+// `report.serviceWorker`; registration never delays or fails startup.
+export async function registerServiceWorker({ report, mode = 'auto', scope = globalThis }) {
+  const requested = mode === true || (mode === 'auto' && Boolean(scope.document?.querySelector?.('link[rel~="manifest"]')));
+  const container = scope.navigator?.serviceWorker;
+  if (!requested) report.serviceWorker = { state: 'not_requested' };
+  else if (!container || scope.isSecureContext === false) report.serviceWorker = { state: 'unsupported' };
+  else {
+    report.serviceWorker = { state: 'registering' };
+    try {
+      const page = new URL('./', scope.location.href);
+      const registration = await container.register(new URL('sw.js', page).href, { scope: page.href });
+      report.serviceWorker = { state: 'registered', scope: registration.scope };
+    } catch (error) { report.serviceWorker = { state: 'failed', message: describe(error) }; }
+  }
+  return report.serviceWorker;
+}
+
 // The framework host chooses WebGPU or WebGL2 itself. Only an application
 // whose renderer needs WebGPU, such as the viewer, sets `requireWebGpu`.
-export async function startApplication({ app, workerUrl, load, canvasId, handleName, start, afterStart, requireWebGpu = false, scope = globalThis }) {
+// `fitViewport` sizes the page from the visual viewport (`fitVisualViewport`),
+// and `serviceWorker` registers the build's service worker once the
+// application has started (`registerServiceWorker`).
+export async function startApplication({ app, workerUrl, load, canvasId, handleName, start, afterStart, requireWebGpu = false, fitViewport = false, serviceWorker = 'auto', scope = globalThis }) {
   let handle;
+  if (fitViewport) fitVisualViewport({ scope });
   const startup = installStartup({ app, workerUrl, canvasId, scope, onFailure: () => {
     // Leave the Rust callback/constructor before releasing partially started resources.
     scope.queueMicrotask?.(() => {
@@ -191,6 +237,8 @@ export async function startApplication({ app, workerUrl, load, canvasId, handleN
     startup.mark('framework_start_end');
     scope[handleName] = handle;
     afterStart?.(handle);
+    // Installation caches the package, so it waits until the application runs.
+    registerServiceWorker({ report: startup.report, mode: serviceWorker, scope });
     startup.phase('workspace', 'Preparing workspace…');
   } catch (error) { startup.fail(startup.report.phase, error); }
   return startup;

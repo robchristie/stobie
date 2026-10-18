@@ -107,6 +107,88 @@ for your chosen retention period. Rebuilding over that same directory destroys
 its previous output and is therefore inappropriate for a retained deployment.
 This work does not deploy or publish a site.
 
+## Installable web applications
+
+A page whose `<head>` links `manifest.webmanifest` is an installable web
+application. `stobie build-web` and production packaging (`--production`
+and `stobie package-web`) then write two files at the web root, beside
+`index.html`: the web app manifest and a service worker, `sw.js`. In a
+production package they sit at `<app>/`, outside `assets/<content-sha256>/`,
+because a service worker controls only its own directory and below, and the
+page and manifest must keep stable addresses. Both are mutable, like the
+page: serve them with `Cache-Control: no-cache`, as `tools/browser-serve.mjs`
+does, and the manifest as `application/manifest+json`. The package manifest
+records them under each application's `pwa` field. `stobie new` writes such a
+page.
+
+The page's head is the single source of the application's identity, because
+iOS reads these tags rather than the manifest:
+
+| Tag | Use |
+| --- | --- |
+| `<link rel="manifest" href="manifest.webmanifest">` | Asks for the output; the link must name that file |
+| `<meta name="viewport" content="... viewport-fit=cover">` | Required: the page uses the whole screen, and its shell keeps clear of the safe areas |
+| `<title>`, or `<meta name="application-name">` | The manifest's `name` |
+| `<meta name="apple-mobile-web-app-title">` | Required: the short name, under the home-screen icon |
+| `<meta name="theme-color">` | Required: the theme colour; the first without a `media` query, otherwise the first |
+| `<meta name="stobie-background-color">` | Optional splash background; the theme colour otherwise |
+| `<meta name="description">` | Optional description |
+| `<link rel="icon" sizes="192x192">` and `sizes="512x512"` | Required PNG icons |
+| `<link rel="apple-touch-icon">` | Required 180 × 180 PNG icon for iOS |
+
+The build fails, naming the missing tag, when one is absent, and checks that
+each icon is a PNG of its size inside the web root. Icons are ordinary files,
+so in a production package they are immutable hashed assets and the manifest
+names them there. Packaging points the page's manifest link at
+`../../manifest.webmanifest`, because the page's `<base>` resolves relative
+URLs into the asset directory. The manifest's `id`, `start_url` and `scope`
+are `./`, the web root, so a package works under any base path. Keep
+`apple-mobile-web-app-capable` and `apple-mobile-web-app-status-bar-style` in
+the page for iOS; the build does not need them.
+
+The service worker:
+- serves the page network-first: online it is always the server's latest,
+  and offline the last copy seen;
+- serves files under `assets/<content-sha256>/` cache-first, since they never
+  change;
+- serves anything else in scope, such as the manifest or a development
+  build's `pkg/`, network-first, falling back to the cached copy offline;
+- in a production package, caches the page, the manifest and every asset at
+  install, so the application starts offline after one visit;
+- on activation, deletes earlier versions' caches. A page still open on an
+  older package fetches anything missing from the server, which keeps
+  previous assets as [Hosting and publication](#hosting-and-publication)
+  describes.
+
+A new package changes `sw.js`, so the browser installs it on the next visit,
+and it takes over at once. A development build's service worker caches
+nothing ahead and is network-first throughout, so reloads see the latest
+build.
+
+The startup loader registers `sw.js` once the application has started, when
+the page links a manifest; `startApplication({ serviceWorker: false })` opts
+out. `window.__STOBIE_STARTUP.serviceWorker` records the outcome: `registered`
+with its scope, `not_requested`, `unsupported` (no service workers, or not a
+secure context: browsers allow them only over HTTPS or on `localhost`) or
+`failed` with a message. With `fitViewport: true`, the loader keeps
+`--stobie-viewport-height`, `--stobie-viewport-top` and
+`--stobie-bottom-inset` on the root element at the visual viewport's size. A
+page shell sized from them, as in the `stobie new` page, stays above the iOS
+keyboard, which shrinks only the visual viewport.
+
+The outside-app verification stage checks a `stobie new` application's
+development and production output in Chromium with `tools/pwa-smoke.mjs`:
+- the files are at the web root;
+- Chromium reports no manifest or installability errors;
+- the service worker controls the page;
+- a reload fetches only the page and manifest;
+- an offline reload starts the application.
+
+Chromium cannot stand in for an iPhone's home-screen installation, its icon
+and splash, or launching offline from the home screen. The
+[iOS PWA spike](ios-pwa-spike-report.md) proved those with hand-written
+equivalents of these files.
+
 ## Renderer backends
 
 `WebHost::start`, which every `AppHost` application uses through

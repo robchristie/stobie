@@ -273,3 +273,77 @@ fn pinned_real_wasm_opt_builds_distinct_variants() {
         .collect();
     assert_eq!(ids.len(), 3);
 }
+
+#[test]
+fn an_installable_page_gets_its_manifest_and_service_worker_at_the_web_root() {
+    let fixture = Fixture::new("installable");
+    fs::write(fixture.input.join("index.html"), crate::pwa::tests::PAGE).unwrap();
+    crate::pwa::tests::write_icons(&fixture.input, [192, 512, 180]);
+    // A development build's own files are never packaged as assets.
+    fs::write(fixture.input.join("sw.js"), "// development\n").unwrap();
+    fs::write(fixture.input.join("manifest.webmanifest"), "{}\n").unwrap();
+    let packaged = package(&fixture.options()).unwrap();
+    let app = &packaged.apps[0];
+    let pwa = app.pwa.as_ref().expect("installable");
+    assert_eq!(pwa.manifest.path, "lab/manifest.webmanifest");
+    assert_eq!(pwa.service_worker.path, "lab/sw.js");
+    decompress(&pwa.manifest, &fixture.output);
+    decompress(&pwa.service_worker, &fixture.output);
+    let assets: Vec<&str> = app
+        .assets
+        .iter()
+        .map(|asset| {
+            asset
+                .path
+                .strip_prefix(&format!("{}/", app.asset_directory))
+                .unwrap()
+        })
+        .collect();
+    assert!(assets.contains(&"icons/apple-touch-icon.png"));
+    assert!(!assets.contains(&"sw.js") && !assets.contains(&"manifest.webmanifest"));
+    // The base points into the asset directory; the manifest link climbs out.
+    let html = fs::read_to_string(fixture.output.join(&app.entry.path)).unwrap();
+    assert!(html.contains(&format!("<base href=\"./assets/{}/\">", app.content_id)));
+    assert!(html.contains(r#"<link rel="manifest" href="../../manifest.webmanifest">"#));
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(fixture.output.join("lab/manifest.webmanifest")).unwrap())
+            .unwrap();
+    assert_eq!(
+        manifest["icons"][0]["src"],
+        format!("assets/{}/icons/icon-192.png", app.content_id)
+    );
+    // The service worker caches the page, the manifest and every asset.
+    let worker = fs::read_to_string(fixture.output.join("lab/sw.js")).unwrap();
+    assert!(worker.contains(&format!("const VERSION = \"{}\";", app.content_id)));
+    let precache: Vec<String> = serde_json::from_str(
+        worker
+            .lines()
+            .find_map(|line| line.strip_prefix("const PRECACHE = "))
+            .unwrap()
+            .trim_end_matches(';'),
+    )
+    .unwrap();
+    assert_eq!(&precache[..2], ["./", "manifest.webmanifest"]);
+    assert_eq!(precache.len(), app.assets.len() + 2);
+    for asset in &app.assets {
+        let relative = asset.path.strip_prefix("lab/").unwrap();
+        assert!(precache.iter().any(|path| path == relative), "{relative}");
+    }
+    let recorded: Value =
+        serde_json::from_slice(&fs::read(fixture.output.join("manifest.json")).unwrap()).unwrap();
+    assert_eq!(
+        recorded["apps"][0]["pwa"]["serviceWorker"]["path"],
+        "lab/sw.js"
+    );
+}
+
+#[test]
+fn a_page_without_a_manifest_link_packages_as_before() {
+    let fixture = Fixture::new("not-installable");
+    let packaged = package(&fixture.options()).unwrap();
+    assert!(packaged.apps[0].pwa.is_none());
+    assert!(!fixture.output.join("lab/sw.js").exists());
+    let recorded: Value =
+        serde_json::from_slice(&fs::read(fixture.output.join("manifest.json")).unwrap()).unwrap();
+    assert!(recorded["apps"][0].get("pwa").is_none());
+}

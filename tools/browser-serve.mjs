@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.wasm': 'application/wasm', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.wasm': 'application/wasm', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 
 /** Prefer br, then gzip, then identity at equal quality; explicit q=0 is honoured. */
 export function negotiateEncoding(header = '', available = ['br', 'gzip', 'identity']) {
@@ -40,6 +40,14 @@ export function createProductionServer({ directory = 'target/browser-production'
   function addAssets(packageManifest, packageDirectory, retained) {
     for (const app of packageManifest.apps) {
       if (!retained) resources.set(app.entry.path, { ...app.entry, directory: packageDirectory, immutable: false });
+      // An installable application's manifest and service worker are mutable,
+      // like its page, and only the current publication's are served.
+      if (!retained && app.pwa) {
+        for (const file of [app.pwa.manifest, app.pwa.serviceWorker]) {
+          if (!file || path.posix.dirname(file.path) !== app.name) throw new Error('PWA file is outside its web root');
+          resources.set(file.path, { ...file, directory: packageDirectory, immutable: false });
+        }
+      }
       for (const asset of app.assets) {
         if (!asset.path.startsWith(`${app.name}/assets/${app.contentId}/`)) throw new Error('Asset is outside its versioned package');
         const isHtml = path.extname(asset.path) === '.html';

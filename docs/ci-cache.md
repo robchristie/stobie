@@ -16,7 +16,7 @@ can be reproduced with `cargo xtask verify-stage <name>`.
 | `ui` | Gallery release WASM/bindgen package and every deterministic fixture/baseline check |
 | `record-desk` | Independent workspace boundary/fmt/native and WASM lint/tests/release builds, both smokes and both interface journeys |
 | `webgl2` | Development Lab/Gallery/Worker/Live Feed and Record Desk release WASM/bindgen packages; forced onto WebGL2, the Lab, Gallery, icon, navigation, status-chip, Record Desk and Live Feed browser smokes, the three ARIA layer checks, the Lab/browser interface journey and Record Desk's browser CLI parity |
-| `outside-app` | Release `stobie` CLI; `stobie new` into a directory outside the checkout, patched to the source under test; the generated application's tests, Clippy, release native build, `stobie build-web` and `--production`; an `--imaging` application checked natively and for WASM; the application launched natively and opened in Chromium on WebGPU and forced WebGL2, each observed and operated only through `stobie` |
+| `outside-app` | Release `stobie` CLI; `stobie new` into a directory outside the checkout, patched to the source under test; the generated application's tests, Clippy, release native build, `stobie build-web` and `--production`; an `--imaging` application checked natively and for WASM; the application launched natively and opened in Chromium on WebGPU and forced WebGL2, each observed and operated only through `stobie`; its development and production PWA output checked in Chromium for installability, service-worker caching and an offline start |
 
 The two native package selections cover the previous workspace release targets.
 The Lab's example is selected with its normal library and binary to avoid a

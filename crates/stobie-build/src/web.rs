@@ -10,11 +10,16 @@ use std::process::{Command, Stdio};
 use serde_json::Value;
 
 use crate::package::{self, Manifest, Variant};
-use crate::{Error, write_startup_loader};
+use crate::{Error, pwa, write_startup_loader};
 
 /// Names inside a web root that builds generate. Staging for a production
 /// package skips them and writes fresh ones.
-pub const GENERATED: &[&str] = &["pkg", crate::STARTUP_LOADER_FILE];
+pub const GENERATED: &[&str] = &[
+    "pkg",
+    crate::STARTUP_LOADER_FILE,
+    pwa::MANIFEST_FILE,
+    pwa::SERVICE_WORKER_FILE,
+];
 
 #[derive(Clone, Debug, Default)]
 pub struct BuildOptions {
@@ -47,6 +52,9 @@ pub struct BuildReport {
     pub web_dir: PathBuf,
     pub wasm: PathBuf,
     pub wasm_bindgen: String,
+    /// Whether the page links a manifest, so the build wrote the manifest and
+    /// service worker.
+    pub installable: bool,
     pub production: Option<(PathBuf, Manifest)>,
 }
 
@@ -316,9 +324,35 @@ fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
         .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
-/// Build one application's web root in place: `pkg/` from wasm-bindgen and
-/// the startup loader beside `index.html`. With production options, also
-/// package a clean copy of it.
+/// Write the manifest and service worker beside a page that links
+/// `manifest.webmanifest`, after checking its icons. A development build's
+/// service worker caches nothing ahead and serves everything network-first.
+fn write_pwa(web_dir: &Path, app: &str) -> Result<bool, Error> {
+    let html = fs::read_to_string(web_dir.join("index.html")).map_err(io("read index.html"))?;
+    let Some(declaration) = pwa::declaration(&html)? else {
+        return Ok(false);
+    };
+    declaration.check_icons(web_dir)?;
+    fs::write(web_dir.join(pwa::MANIFEST_FILE), declaration.manifest(""))
+        .map_err(io(format!("write {}", pwa::MANIFEST_FILE)))?;
+    fs::write(
+        web_dir.join(pwa::SERVICE_WORKER_FILE),
+        pwa::service_worker(app, "development", &[]),
+    )
+    .map_err(io(format!("write {}", pwa::SERVICE_WORKER_FILE)))?;
+    Ok(true)
+}
+
+/// The packaged name of a Cargo package: lower case with hyphens, as Cargo
+/// also allows `_` and upper case.
+fn app_name(package: &str) -> String {
+    package.to_ascii_lowercase().replace('_', "-")
+}
+
+/// Build one application's web root in place: `pkg/` from wasm-bindgen, the
+/// startup loader beside `index.html` and, for a page that links
+/// `manifest.webmanifest`, the manifest and service worker. With production
+/// options, also package a clean copy of it.
 pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
     let metadata = cargo_metadata(options.manifest_path.as_deref(), options.locked)?;
     let package = application(&metadata, options.package.as_deref())?.clone();
@@ -342,6 +376,7 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
     let wasm = build_wasm(options, &package)?;
     bindgen(&wasm, &web_dir.join("pkg"))?;
     write_startup_loader(&web_dir)?;
+    let installable = write_pwa(&web_dir, &app_name(&name))?;
     let production = match &options.production {
         None => None,
         Some(production) => {
@@ -373,11 +408,9 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
                 "rustflags": std::env::var("RUSTFLAGS").ok(),
                 "cargoEncodedRustflags": std::env::var("CARGO_ENCODED_RUSTFLAGS").ok(),
             });
-            // Package names are lower-case with hyphens; Cargo also allows
-            // `_` and upper case.
             let manifest = package::package(&package::Options {
                 apps: vec![package::App {
-                    name: name.to_ascii_lowercase().replace('_', "-"),
+                    name: app_name(&name),
                     directory: staging,
                 }],
                 output: output.clone(),
@@ -397,6 +430,7 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
         web_dir,
         wasm,
         wasm_bindgen: version,
+        installable,
         production,
     })
 }

@@ -7,7 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { brotliDecompressSync, gunzipSync } from 'node:zlib';
+import { brotliDecompressSync, crc32, deflateSync, gunzipSync } from 'node:zlib';
 import { createProductionServer, negotiateEncoding, sha256 } from '../browser-serve.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -280,4 +280,46 @@ test('request evidence is disabled by default and enabled recording caps retaine
   for (const invalid of [NaN, Infinity, 0, -1, 1.5, '2']) {
     assert.throws(() => createProductionServer({ directory: output, recordRequests: true, maxRequestRecords: invalid }), /positive integer/);
   }
+});
+
+// A square PNG of one colour, the smallest valid icon of `size`.
+function png(size) {
+  const chunk = (kind, body) => {
+    const length = Buffer.alloc(4); length.writeUInt32BE(body.length);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([Buffer.from(kind), body])));
+    return Buffer.concat([length, Buffer.from(kind), body, crc]);
+  };
+  const header = Buffer.alloc(13); header.writeUInt32BE(size, 0); header.writeUInt32BE(size, 4); header.set([8, 2, 0, 0, 0], 8);
+  const rows = Buffer.alloc(size * (size * 3 + 1));
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]);
+}
+
+test('an installable package serves its manifest and service worker at the web root as mutable files', async t => {
+  const { options, output, input } = fixture(t);
+  writeFileSync(path.join(input, 'index.html'), `<html><head>
+<meta name="viewport" content="width=device-width, viewport-fit=cover"><title>Lab</title>
+<meta name="apple-mobile-web-app-title" content="Lab"><meta name="theme-color" content="#0b0f12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" sizes="192x192" href="icons/192.png"><link rel="icon" sizes="512x512" href="icons/512.png">
+<link rel="apple-touch-icon" href="icons/180.png">
+</head><body></body></html>`);
+  mkdirSync(path.join(input, 'icons'));
+  for (const size of [180, 192, 512]) writeFileSync(path.join(input, `icons/${size}.png`), png(size));
+  const manifest = packageBrowser(options);
+  const app = manifest.apps[0];
+  assert.deepEqual([app.pwa.manifest.path, app.pwa.serviceWorker.path], ['lab/manifest.webmanifest', 'lab/sw.js']);
+  const server = await serve(t, { directory: output });
+  const webManifest = await get(server, '/lab/manifest.webmanifest');
+  assert.equal(webManifest.status, 200);
+  assert.equal(webManifest.headers['content-type'], 'application/manifest+json');
+  assert.equal(webManifest.headers['cache-control'], 'no-cache');
+  const icon = JSON.parse(webManifest.bytes).icons[0].src;
+  assert.equal((await get(server, `/lab/${icon}`)).headers['cache-control'], 'public, max-age=31536000, immutable');
+  const worker = await get(server, '/lab/sw.js');
+  assert.equal(worker.status, 200);
+  assert.match(worker.headers['content-type'], /^text\/javascript/);
+  assert.equal(worker.headers['cache-control'], 'no-cache');
+  assert.match(worker.bytes.toString(), new RegExp(`const VERSION = "${app.contentId}";`));
+  assert.match((await get(server, '/lab/')).bytes.toString(), /<link rel="manifest" href="\.\.\/\.\.\/manifest\.webmanifest">/);
+  assert.equal((await get(server, `/${app.assetDirectory}/sw.js`)).status, 404);
 });

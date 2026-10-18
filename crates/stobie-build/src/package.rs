@@ -13,7 +13,7 @@ use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::Error;
+use crate::{Error, pwa};
 
 /// The Binaryen release whose `wasm-opt` the optimised variants require.
 pub const WASM_OPT_VERSION: &str = "131";
@@ -99,6 +99,18 @@ pub struct PackagedApp {
     pub asset_directory: String,
     pub entry: Representations,
     pub assets: Vec<Representations>,
+    /// The manifest and service worker at the web root, beside the entry,
+    /// for a page that links `manifest.webmanifest`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pwa: Option<PwaFiles>,
+}
+
+/// An installable application's mutable files at its web root.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PwaFiles {
+    pub manifest: Representations,
+    pub service_worker: Representations,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -448,6 +460,14 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
                 "build the application with wasm-bindgen first",
             ));
         }
+        let html_path = app.directory.join("index.html");
+        let html =
+            fs::read_to_string(&html_path).map_err(io(format!("read {}", html_path.display())))?;
+        let declaration = pwa::declaration(&html)
+            .map_err(|error| Error::new(format!("{}: {}", app.name, error.message), error.hint))?;
+        if let Some(declaration) = &declaration {
+            declaration.check_icons(&app.directory)?;
+        }
         let mut input_records = Vec::new();
         let mut assets: Vec<(String, Vec<u8>)> = Vec::new();
         for relative in &inputs {
@@ -459,7 +479,12 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
                 bytes: described.bytes,
                 sha256: described.sha256,
             });
-            if relative == "index.html" {
+            // The manifest and service worker are written afresh at the web
+            // root, never as hashed assets.
+            let generated = [pwa::MANIFEST_FILE, pwa::SERVICE_WORKER_FILE];
+            if relative == "index.html"
+                || (declaration.is_some() && generated.contains(&relative.as_str()))
+            {
                 continue;
             }
             let bytes = if relative.ends_with(".wasm") && variant != Variant::None {
@@ -516,15 +541,42 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
                 write_representations(&staging.0, &format!("{asset_directory}/{path}"), bytes)
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let html_path = app.directory.join("index.html");
-        let html =
-            fs::read_to_string(&html_path).map_err(io(format!("read {}", html_path.display())))?;
+        // The base points relative URLs into the asset directory, so the
+        // manifest link climbs back to the web root.
+        let html = match &declaration {
+            Some(declaration) => {
+                declaration.with_manifest_href(&html, &format!("../../{}", pwa::MANIFEST_FILE))
+            }
+            None => html,
+        };
         let html = add_base(&app.name, &html, &content_id)?;
         let entry = write_representations(
             &staging.0,
             &format!("{}/index.html", app.name),
             html.as_bytes(),
         )?;
+        let pwa = match &declaration {
+            None => None,
+            Some(declaration) => {
+                let prefix = format!("assets/{content_id}/");
+                let precache: Vec<String> = ["./".to_owned(), pwa::MANIFEST_FILE.to_owned()]
+                    .into_iter()
+                    .chain(assets.iter().map(|(path, _)| format!("{prefix}{path}")))
+                    .collect();
+                Some(PwaFiles {
+                    manifest: write_representations(
+                        &staging.0,
+                        &format!("{}/{}", app.name, pwa::MANIFEST_FILE),
+                        declaration.manifest(&prefix).as_bytes(),
+                    )?,
+                    service_worker: write_representations(
+                        &staging.0,
+                        &format!("{}/{}", app.name, pwa::SERVICE_WORKER_FILE),
+                        pwa::service_worker(&app.name, &content_id, &precache).as_bytes(),
+                    )?,
+                })
+            }
+        };
         packaged.push(PackagedApp {
             name: app.name,
             input_identity,
@@ -533,6 +585,7 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
             asset_directory,
             entry,
             assets: records,
+            pwa,
         });
     }
     let manifest = Manifest {
