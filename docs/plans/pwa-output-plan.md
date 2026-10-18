@@ -130,6 +130,19 @@ keyboard, and relaunch offline in Aeroplane Mode.
   fallback; and that an unchanged reload alone does not prove cache-first,
   because the browser's HTTP cache also holds immutable assets. All three are
   fixed, and the smoke now checks which responses the worker served.
+- Two verification races appeared while this landed:
+  - Record Desk's browser CLI parity check failed once locally in the
+    `webgl2` stage. The Node client's first invocation against a freshly
+    started page (`ApplicationClient.invoke`, whose `discover` runs right
+    after `hello`) got `missing_observation`, apparently because the host had
+    not yet published its first observation; the Rust CLI's matching
+    invocation completed. The rerun passed. This plan did not change the
+    client or observation path.
+  - Post-merge CI on the squash commit failed once in `outside-app`.
+    `stobie attach` listed Chromium's pages just after the navigation
+    committed, while the page's URL was still empty, and gave up. The job
+    passed on a rerun, and [PR #95](https://github.com/robchristie/stobie/pull/95)
+    made `attach` wait within its timeout for a page to match.
 - `stobie new ios-spike` still titles the app "Ios Spike", which now also
   becomes its home-screen name; edit the page's tags.
 
@@ -139,3 +152,14 @@ keyboard, and relaunch offline in Aeroplane Mode.
 - Maskable icons, and screenshots for richer install prompts, if wanted.
 - An update notice: the new service worker takes over at once, so an open
   page keeps running its package until reloaded.
+- Development-build service worker file list (`pwa::web_files`), from
+  review:
+  - use `DirEntry::file_type`, so it neither follows symlinked directories
+    nor loops on a symlink cycle;
+  - percent-encode the listed paths, so a name with a space or non-ASCII
+    matches the worker's `url.pathname`.
+- The parity race above: have the smoke harness (`startNode` and `startCli`
+  in `tools/stobie-cli-smoke.mjs`) wait for a page's first observation before
+  its scenarios, so neither client can meet it there. Then decide whether both
+  clients' `invoke` should wait for a first observation themselves; the Rust
+  client's `discover_one` does not wait either.
