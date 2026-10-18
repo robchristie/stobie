@@ -324,6 +324,7 @@ fn an_installable_page_gets_its_manifest_and_service_worker_at_the_web_root() {
     )
     .unwrap();
     assert_eq!(&precache[..2], ["./", "manifest.webmanifest"]);
+    assert!(worker.contains(r#"const FILES = new Set(["manifest.webmanifest"]);"#));
     assert_eq!(precache.len(), app.assets.len() + 2);
     for asset in &app.assets {
         let relative = asset.path.strip_prefix("lab/").unwrap();

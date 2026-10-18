@@ -122,6 +122,28 @@ fn an_incomplete_page_names_what_is_missing() {
 }
 
 #[test]
+fn a_development_worker_serves_the_files_beside_the_page() {
+    let directory = scratch("files");
+    for path in [
+        "index.html",
+        "sw.js",
+        "bootstrap.js",
+        "pkg/app_bg.wasm",
+        ".hidden",
+        "tests/a.mjs",
+    ] {
+        let path = directory.join(path);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, "x").unwrap();
+    }
+    assert_eq!(
+        web_files(&directory).unwrap(),
+        ["bootstrap.js", "pkg/app_bg.wasm"]
+    );
+    fs::remove_dir_all(&directory).unwrap();
+}
+
+#[test]
 fn icons_must_be_pngs_of_their_size_inside_the_root() {
     let directory = scratch("icons");
     let declared = declaration(PAGE).unwrap().unwrap();
@@ -194,7 +216,13 @@ fn the_manifest_and_service_worker_name_the_web_root() {
             ("assets/abc/icons/apple-touch-icon.png", "180x180"),
         ]
     );
-    let worker = service_worker("notes", "abc", &["./".into(), "assets/abc/app.js".into()]);
+    let worker = service_worker(
+        "notes",
+        "abc",
+        &["./".into(), "assets/abc/app.js".into()],
+        &["manifest.webmanifest".into()],
+    );
+    assert!(worker.contains(r#"const FILES = new Set(["manifest.webmanifest"]);"#));
     assert!(worker.contains(r#"const APP = "notes";"#));
     assert!(worker.contains(r#"const VERSION = "abc";"#));
     assert!(worker.contains(r#"const PRECACHE = ["./","assets/abc/app.js"];"#));

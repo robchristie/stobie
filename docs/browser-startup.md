@@ -151,8 +151,14 @@ The service worker:
   and offline the last copy seen;
 - serves files under `assets/<content-sha256>/` cache-first, since they never
   change;
-- serves anything else in scope, such as the manifest or a development
-  build's `pkg/`, network-first, falling back to the cached copy offline;
+- serves the other files the build wrote, such as the manifest or a
+  development build's `pkg/`, network-first, falling back to the cached copy
+  offline;
+- leaves every other request to the network and never caches it, so an
+  application server's API under the same path, or private data, never
+  reaches Cache Storage;
+- keeps only complete `200` responses, and a response the cache refuses is
+  still returned;
 - in a production package, caches the page, the manifest and every asset at
   install, so the application starts offline after one visit;
 - on activation, deletes earlier versions' caches. A page still open on an
@@ -163,7 +169,11 @@ The service worker:
 A new package changes `sw.js`, so the browser installs it on the next visit,
 and it takes over at once. A development build's service worker caches
 nothing ahead and is network-first throughout, so reloads see the latest
-build.
+build. It stays registered for its origin, such as `stobie serve`'s
+`http://127.0.0.1:8080/`, until removed in the browser's developer tools,
+and handles the files it lists for any page later served there; that is
+harmless because they are network-first, but remove it when switching to an
+unrelated application on the same port.
 
 The startup loader registers `sw.js` once the application has started, when
 the page links a manifest; `startApplication({ serviceWorker: false })` opts
@@ -181,8 +191,10 @@ development and production output in Chromium with `tools/pwa-smoke.mjs`:
 - the files are at the web root;
 - Chromium reports no manifest or installability errors;
 - the service worker controls the page;
-- a reload fetches only the page and manifest;
-- an offline reload starts the application.
+- a request the build did not write bypasses the worker and is not cached;
+- on a reload the worker serves the hashed assets, and only the page and
+  manifest reach the server;
+- offline, the worker serves everything and the application starts.
 
 Chromium cannot stand in for an iPhone's home-screen installation, its icon
 and splash, or launching offline from the home screen. The

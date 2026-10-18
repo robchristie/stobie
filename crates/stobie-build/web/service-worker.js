@@ -3,13 +3,16 @@
 //
 // The page is network-first: online it is always the server's latest, and
 // offline the last copy seen. Content-addressed assets under
-// `assets/<sha-256>/` never change, so they are cache-first. Anything else in
-// scope, such as the manifest or a development build's files, is
-// network-first with the cached copy offline. A production package's assets
-// are cached at install, so the application starts offline after one visit.
+// `assets/<sha-256>/` never change, so they are cache-first. The other files
+// the build wrote, such as the manifest or a development build's `pkg/`, are
+// network-first with the cached copy offline. Every other request, such as an
+// application server's API under the same path, goes to the network untouched
+// and is never cached. A production package's assets are cached at install,
+// so the application starts offline after one visit.
 const APP = __STOBIE_APP__;
 const VERSION = __STOBIE_VERSION__;
 const PRECACHE = __STOBIE_PRECACHE__;
+const FILES = new Set(__STOBIE_FILES__);
 
 const PREFIX = `stobie:${APP}:`;
 const CACHE = `${PREFIX}${VERSION}`;
@@ -36,25 +39,31 @@ self.addEventListener('activate', event => {
   })());
 });
 
+// Keep a complete response; a response the cache refuses still stands.
+async function keep(key, response) {
+  if (response.status !== 200 || response.redirected) return;
+  try { await (await caches.open(CACHE)).put(key, response.clone()); } catch { /* Not kept. */ }
+}
+
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) (await caches.open(CACHE)).put(request, response.clone());
+  await keep(request, response);
   return response;
 }
 
 async function networkFirst(request, key) {
-  const cache = await caches.open(CACHE);
+  let response;
   try {
-    const response = await fetch(request);
-    if (response.ok && !response.redirected) await cache.put(key, response.clone());
-    return response;
+    response = await fetch(request);
   } catch (error) {
-    const cached = await cache.match(key);
+    const cached = await (await caches.open(CACHE)).match(key, { ignoreSearch: true });
     if (cached) return cached;
     throw error;
   }
+  await keep(key, response);
+  return response;
 }
 
 self.addEventListener('fetch', event => {
@@ -64,10 +73,10 @@ self.addEventListener('fetch', event => {
   const path = url.pathname.slice(SCOPE.pathname.length);
   if (IMMUTABLE.test(path)) {
     event.respondWith(cacheFirst(request));
-  } else if (request.mode === 'navigate' || path === '' || path === 'index.html') {
-    // Every navigation in scope is the one page, whatever its query.
+  } else if (path === '' || path === 'index.html') {
+    // The page, whatever its query, is kept under one key.
     event.respondWith(networkFirst(request, PAGE));
-  } else {
-    event.respondWith(networkFirst(request, request));
+  } else if (FILES.has(path)) {
+    event.respondWith(networkFirst(request, url.origin + url.pathname));
   }
 });

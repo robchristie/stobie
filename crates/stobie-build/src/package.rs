@@ -572,7 +572,13 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
                     service_worker: write_representations(
                         &staging.0,
                         &format!("{}/{}", app.name, pwa::SERVICE_WORKER_FILE),
-                        pwa::service_worker(&app.name, &content_id, &precache).as_bytes(),
+                        pwa::service_worker(
+                            &app.name,
+                            &content_id,
+                            &precache,
+                            &[pwa::MANIFEST_FILE.to_owned()],
+                        )
+                        .as_bytes(),
                     )?,
                 })
             }

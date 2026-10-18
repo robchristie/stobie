@@ -42,9 +42,13 @@ the output by linking `manifest.webmanifest`.
   directory. Icons stay ordinary assets, immutable and hashed; the manifest
   names them there. The service worker carries the content ID as its version
   and precaches the page, the manifest and every asset.
-- **Service worker**: page network-first (any navigation in scope is the one
-  page), `assets/<64 hex>/` cache-first, anything else network-first with a
-  cached fallback; old versions' caches deleted on activation; `skipWaiting`
+- **Service worker**: the page network-first, `assets/<64 hex>/`
+  cache-first, and the other files the build wrote (the manifest, or every
+  file of a development web root) network-first with a cached fallback.
+  Every other request passes to the network uncached, so an application
+  server's API under the same path never reaches Cache Storage. Only
+  complete `200` responses are kept, and a failed cache write never replaces
+  the network response. Old versions' caches go on activation; `skipWaiting`
   and `clients.claim`.
 - **Startup loader**: `startApplication` registers `sw.js` beside the page
   once the application has started, when the page links a manifest
@@ -84,9 +88,12 @@ the output by linking `manifest.webmanifest`.
     errors;
   - icons are served as PNGs from the asset directory;
   - the service worker registers and controls the page;
-  - a controlled reload fetches only the page and the manifest from the
+  - a request the build did not write bypasses the worker and stays out of
+    Cache Storage;
+  - on a controlled reload the worker serves every hashed asset
+    (`Response.fromServiceWorker`), and only the page and manifest reach the
     server;
-  - an offline reload starts the application.
+  - offline, the worker serves every response and the application starts.
 - `cargo xtask verify` passes.
 
 ## Delivery increments
@@ -116,6 +123,13 @@ keyboard, and relaunch offline in Aeroplane Mode.
 
 - Chromium reports `in-incognito` as an installability error for Playwright's
   default context, so the smoke uses a persistent profile.
+- Independent review of the first head passed it but noted that the worker
+  cached every same-origin request in scope, which for an application whose
+  server shares the path, as Bokkie's gateway may, would put API responses
+  in Cache Storage; that a failed cache write turned a good response into a
+  fallback; and that an unchanged reload alone does not prove cache-first,
+  because the browser's HTTP cache also holds immutable assets. All three are
+  fixed, and the smoke now checks which responses the worker served.
 - `stobie new ios-spike` still titles the app "Ios Spike", which now also
   becomes its home-screen name; edit the page's tags.
 

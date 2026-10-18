@@ -476,9 +476,11 @@ impl Declaration {
     }
 }
 
-/// The service worker for `app` at `version`, which installs with every
-/// path in `precache`, relative to its scope, already cached.
-pub fn service_worker(app: &str, version: &str, precache: &[String]) -> String {
+/// The service worker for `app` at `version`. It installs with every path in
+/// `precache` already cached, and serves the page, hashed assets and the
+/// other `files` the build wrote; paths are relative to its scope. It leaves
+/// every other request to the network.
+pub fn service_worker(app: &str, version: &str, precache: &[String], files: &[String]) -> String {
     SERVICE_WORKER
         .replace(
             "__STOBIE_APP__",
@@ -492,6 +494,38 @@ pub fn service_worker(app: &str, version: &str, precache: &[String]) -> String {
             "__STOBIE_PRECACHE__",
             &serde_json::to_string(precache).expect("strings serialise"),
         )
+        .replace(
+            "__STOBIE_FILES__",
+            &serde_json::to_string(files).expect("strings serialise"),
+        )
+}
+
+/// Every file under `web_root` the service worker serves besides the page:
+/// paths relative to it, skipping hidden files, `tests` and the worker.
+pub fn web_files(web_root: &Path) -> Result<Vec<String>, Error> {
+    fn visit(directory: &Path, prefix: &str, files: &mut Vec<String>) -> Result<(), Error> {
+        let read = |error: std::io::Error| {
+            Error::new(format!("read {}: {error}", directory.display()), "")
+        };
+        for entry in fs::read_dir(directory).map_err(read)? {
+            let entry = entry.map_err(read)?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') || name == "tests" {
+                continue;
+            }
+            let relative = format!("{prefix}{name}");
+            if entry.path().is_dir() {
+                visit(&entry.path(), &format!("{relative}/"), files)?;
+            } else if !matches!(relative.as_str(), "index.html" | SERVICE_WORKER_FILE) {
+                files.push(relative);
+            }
+        }
+        Ok(())
+    }
+    let mut files = Vec::new();
+    visit(web_root, "", &mut files)?;
+    files.sort();
+    Ok(files)
 }
 
 /// A placeholder icon: a disc of `foreground` centred on `background`, as a

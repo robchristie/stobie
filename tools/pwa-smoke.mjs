@@ -42,6 +42,9 @@ async function check(label, url, { assetPrefix, server }) {
   const result = { url };
   try {
     const page = context.pages()[0] ?? await context.newPage();
+    // Which responses the service worker served, by path.
+    let served = new Map();
+    page.on('response', response => served.set(new URL(response.url()).pathname, response.fromServiceWorker()));
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));
     const ready = () => page.waitForFunction(() => window.__STOBIE_STARTUP?.status === 'ready', null, { timeout: 60000 });
@@ -77,11 +80,24 @@ async function check(label, url, { assetPrefix, server }) {
     const installability = await cdp.send('Page.getInstallabilityErrors');
     assert.deepEqual(installability.installabilityErrors, [], `${label}: installability`);
     result.manifest = parsed;
+    // A request the build did not write, such as an application server's
+    // API under the same path, bypasses the worker and is never cached.
+    const api = new URL('api/state?since=1', url);
+    await page.evaluate(href => fetch(href).then(response => response.status), api.href);
+    assert.equal(served.get(api.pathname), false, `${label}: an unlisted request bypasses the worker`);
+    const kept = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async name => (await (await caches.open(name)).keys()).map(request => request.url)))).flat());
+    assert(!kept.some(href => href.includes('/api/')), `${label}: nothing unlisted is cached`);
+    result.cached = kept.length;
     // A reload while controlled: the page comes from the network, the
-    // hashed assets from the cache.
+    // hashed assets from the worker's cache.
     server?.requests.splice(0);
+    served = new Map();
     await page.reload();
     await ready();
+    const assets = [...served].filter(([path]) => path.includes('/assets/'));
+    if (server) assert(assets.length > 0, `${label}: the reload loaded hashed assets`);
+    assert(assets.every(([, worker]) => worker), `${label}: hashed assets come from the worker`);
+    result.onlineReloadFromWorker = Object.fromEntries(served);
     if (server) {
       const paths = server.requests.map(request => new URL(request.url, 'http://local').pathname);
       result.onlineReloadRequests = paths;
@@ -90,9 +106,11 @@ async function check(label, url, { assetPrefix, server }) {
     }
     // Offline, the cached page and assets start the application.
     await context.setOffline(true);
+    served = new Map();
     await page.reload();
     await ready();
     await launch.assertBrowserRenderer(page, '#app-canvas');
+    assert(served.size > 0 && [...served.values()].every(worker => worker), `${label}: offline, the worker serves everything`);
     await context.setOffline(false);
     result.offline = 'ready';
     assert.deepEqual(errors, [], `${label}: no page errors`);
