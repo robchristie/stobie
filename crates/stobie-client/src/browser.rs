@@ -74,69 +74,43 @@ impl BrowserTransport {
         &self.endpoint
     }
 
-    /// The selected page, resolved once.
+    /// The selected page, resolved once. A page that does not match yet, as
+    /// just after the browser opened it and before its navigation shows in
+    /// the target list, is waited for until `deadline`.
     pub fn target(&mut self, deadline: Instant) -> Result<TargetInfo, ClientError> {
         let endpoint = resolve_endpoint(Some(&self.endpoint), None)
             .expect("validated when the transport was made");
-        let targets = CdpClient::new(endpoint)
-            .with_deadline(deadline)
-            .targets()
-            .map_err(|error| cdp_error("cannot list the browser's pages", error))?;
-        let pages: Vec<&TargetInfo> = targets
-            .iter()
-            .filter(|target| target.kind == "page")
-            .collect();
-        let describe = |pages: &[&TargetInfo]| {
-            pages
+        loop {
+            let targets = CdpClient::new(endpoint.clone())
+                .with_deadline(deadline)
+                .targets()
+                .map_err(|error| cdp_error("cannot list the browser's pages", error))?;
+            let pages: Vec<&TargetInfo> = targets
                 .iter()
-                .map(|page| format!("{} {}", page.id, page.url.as_deref().unwrap_or("")))
-                .collect::<Vec<_>>()
-                .join("; ")
-        };
-        let selected: Vec<&TargetInfo> = match &self.page {
-            PageSelector::Target(id) => pages
-                .iter()
-                .copied()
-                .filter(|page| &page.id == id)
-                .collect(),
-            PageSelector::Url(url) => {
-                let exact: Vec<_> = pages
-                    .iter()
-                    .copied()
-                    .filter(|page| page.url.as_deref() == Some(url.as_str()))
-                    .collect();
-                if exact.is_empty() {
-                    pages
-                        .iter()
-                        .copied()
-                        .filter(|page| {
-                            page.url
-                                .as_deref()
-                                .is_some_and(|page| page.starts_with(url.as_str()))
-                        })
-                        .collect()
-                } else {
-                    exact
+                .filter(|target| target.kind == "page")
+                .collect();
+            match select(&pages, &self.page).as_slice() {
+                [page] => {
+                    self.websocket = page.web_socket_debugger_url.clone();
+                    return Ok((*page).clone());
+                }
+                [] if Instant::now() + PAGE_POLL < deadline => std::thread::sleep(PAGE_POLL),
+                [] => {
+                    return Err(ClientError::connection(
+                        format!(
+                            "no page matches; the browser's pages are: {}",
+                            describe_pages(&pages)
+                        ),
+                        "open the application with ?automation=1, then pass --page URL or --target ID",
+                    ));
+                }
+                selected => {
+                    return Err(ClientError::usage(format!(
+                        "several pages match: {}",
+                        describe_pages(selected)
+                    )));
                 }
             }
-            PageSelector::Only => pages.clone(),
-        };
-        match selected.as_slice() {
-            [page] => {
-                self.websocket = page.web_socket_debugger_url.clone();
-                Ok((*page).clone())
-            }
-            [] => Err(ClientError::connection(
-                format!(
-                    "no page matches; the browser's pages are: {}",
-                    describe(&pages)
-                ),
-                "open the application with ?automation=1, then pass --page URL or --target ID",
-            )),
-            _ => Err(ClientError::usage(format!(
-                "several pages match: {}",
-                describe(&selected)
-            ))),
         }
     }
 
@@ -327,9 +301,98 @@ impl Transport for BrowserTransport {
     }
 }
 
+/// How often [`BrowserTransport::target`] lists the pages again while none
+/// matches.
+const PAGE_POLL: std::time::Duration = std::time::Duration::from_millis(100);
+
+fn describe_pages(pages: &[&TargetInfo]) -> String {
+    pages
+        .iter()
+        .map(|page| format!("{} {}", page.id, page.url.as_deref().unwrap_or("")))
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+/// The pages `selector` names: by target ID, by exact URL or else URL prefix,
+/// or every page.
+fn select<'a>(pages: &[&'a TargetInfo], selector: &PageSelector) -> Vec<&'a TargetInfo> {
+    match selector {
+        PageSelector::Target(id) => pages
+            .iter()
+            .copied()
+            .filter(|page| &page.id == id)
+            .collect(),
+        PageSelector::Url(url) => {
+            let exact: Vec<_> = pages
+                .iter()
+                .copied()
+                .filter(|page| page.url.as_deref() == Some(url.as_str()))
+                .collect();
+            if exact.is_empty() {
+                pages
+                    .iter()
+                    .copied()
+                    .filter(|page| {
+                        page.url
+                            .as_deref()
+                            .is_some_and(|page| page.starts_with(url.as_str()))
+                    })
+                    .collect()
+            } else {
+                exact
+            }
+        }
+        PageSelector::Only => pages.to_vec(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn page(id: &str, url: &str) -> TargetInfo {
+        TargetInfo {
+            id: id.into(),
+            kind: "page".into(),
+            title: None,
+            url: Some(url.into()),
+            attached: None,
+            browser_context_id: None,
+            web_socket_debugger_url: None,
+        }
+    }
+
+    #[test]
+    fn pages_are_selected_by_target_exact_url_or_prefix() {
+        let (a, b, blank) = (
+            page("A", "http://127.0.0.1:8080/?automation=1"),
+            page("B", "http://127.0.0.1:8080/?automation=1&renderer=webgl2"),
+            page("C", ""),
+        );
+        let pages = [&a, &b, &blank];
+        let ids = |selector: PageSelector| -> Vec<String> {
+            select(&pages, &selector)
+                .iter()
+                .map(|page| page.id.clone())
+                .collect()
+        };
+        assert_eq!(
+            ids(PageSelector::Url(a.url.clone().unwrap())),
+            ["A"],
+            "exact wins"
+        );
+        assert_eq!(
+            ids(PageSelector::Url(
+                "http://127.0.0.1:8080/?automation=1&r".into()
+            )),
+            ["B"]
+        );
+        assert_eq!(ids(PageSelector::Target("C".into())), ["C"]);
+        assert_eq!(ids(PageSelector::Only).len(), 3);
+        // A page still navigating shows an empty URL, which matches nothing
+        // until its navigation appears.
+        assert!(ids(PageSelector::Url("http://127.0.0.1:9000/".into())).is_empty());
+    }
 
     fn classify(state: serde_json::Value) -> String {
         classify_missing(&state).message
