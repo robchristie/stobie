@@ -107,9 +107,11 @@ target. Each request evaluates only the page's fixed dispatcher,
 `window.__STOBIE_AUTOMATION.request`, with `Runtime.evaluate`. A page opened
 without `?automation=1` has no dispatcher, and `stobie` says so. On a page
 that starts through the shared startup loader, as `stobie new` generates,
-`attach` waits until `--timeout` for a page to match, so it can attach as the
-browser opens the page, and for the dispatcher while the page loads and the
-application starts; other commands say that it has not started yet. When its
+`attach` waits for the dispatcher until `--timeout` while the page loads and
+the application starts, and other commands say that it has not started yet.
+`attach` also waits, within the same timeout, for a page to match its
+selector, because Chromium can list a page it has just opened before showing
+its URL; other commands fail at once when no page matches. When its
 startup failed, both report the failure, for example "No supported
 renderer". Without GPU acceleration, Chromium may need
 `--use-angle=swiftshader --enable-unsafe-swiftshader` for WebGL2. The DevTools

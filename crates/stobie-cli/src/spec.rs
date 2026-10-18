@@ -315,7 +315,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--timeout",
                 Some("MS"),
-                "How long to wait for the page's application to start and answer (default 15000)",
+                "How long to wait for the page to match and its application to start and answer (default 15000)",
             ),
             flag("--json", None, "Emit one JSON object instead of text"),
         ],

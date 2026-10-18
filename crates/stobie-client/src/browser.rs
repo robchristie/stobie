@@ -74,43 +74,37 @@ impl BrowserTransport {
         &self.endpoint
     }
 
-    /// The selected page, resolved once. A page that does not match yet, as
-    /// just after the browser opened it and before its navigation shows in
-    /// the target list, is waited for until `deadline`.
+    /// The selected page, resolved once. When none matches, the error is
+    /// one [`no_page_matches`] recognises; `attach` waits for a page that
+    /// the browser has opened but whose URL its target list does not show
+    /// yet, and every other command fails at once.
     pub fn target(&mut self, deadline: Instant) -> Result<TargetInfo, ClientError> {
         let endpoint = resolve_endpoint(Some(&self.endpoint), None)
             .expect("validated when the transport was made");
-        loop {
-            let targets = CdpClient::new(endpoint.clone())
-                .with_deadline(deadline)
-                .targets()
-                .map_err(|error| cdp_error("cannot list the browser's pages", error))?;
-            let pages: Vec<&TargetInfo> = targets
-                .iter()
-                .filter(|target| target.kind == "page")
-                .collect();
-            match select(&pages, &self.page).as_slice() {
-                [page] => {
-                    self.websocket = page.web_socket_debugger_url.clone();
-                    return Ok((*page).clone());
-                }
-                [] if Instant::now() + PAGE_POLL < deadline => std::thread::sleep(PAGE_POLL),
-                [] => {
-                    return Err(ClientError::connection(
-                        format!(
-                            "no page matches; the browser's pages are: {}",
-                            describe_pages(&pages)
-                        ),
-                        "open the application with ?automation=1, then pass --page URL or --target ID",
-                    ));
-                }
-                selected => {
-                    return Err(ClientError::usage(format!(
-                        "several pages match: {}",
-                        describe_pages(selected)
-                    )));
-                }
+        let targets = CdpClient::new(endpoint)
+            .with_deadline(deadline)
+            .targets()
+            .map_err(|error| cdp_error("cannot list the browser's pages", error))?;
+        let pages: Vec<&TargetInfo> = targets
+            .iter()
+            .filter(|target| target.kind == "page")
+            .collect();
+        match select(&pages, &self.page).as_slice() {
+            [page] => {
+                self.websocket = page.web_socket_debugger_url.clone();
+                Ok((*page).clone())
             }
+            [] => Err(ClientError::connection(
+                format!(
+                    "{NO_PAGE_MATCHES}; the browser's pages are: {}",
+                    describe_pages(&pages)
+                ),
+                "open the application with ?automation=1, then pass --page URL or --target ID",
+            )),
+            selected => Err(ClientError::usage(format!(
+                "several pages match: {}",
+                describe_pages(selected)
+            ))),
         }
     }
 
@@ -301,9 +295,12 @@ impl Transport for BrowserTransport {
     }
 }
 
-/// How often [`BrowserTransport::target`] lists the pages again while none
-/// matches.
-const PAGE_POLL: std::time::Duration = std::time::Duration::from_millis(100);
+const NO_PAGE_MATCHES: &str = "no page matches";
+
+/// Whether `error` says that no browser page matched the selector.
+pub fn no_page_matches(error: &ClientError) -> bool {
+    error.code == "connection_failed" && error.message.starts_with(NO_PAGE_MATCHES)
+}
 
 fn describe_pages(pages: &[&TargetInfo]) -> String {
     pages
@@ -392,6 +389,55 @@ mod tests {
         // A page still navigating shows an empty URL, which matches nothing
         // until its navigation appears.
         assert!(ids(PageSelector::Url("http://127.0.0.1:9000/".into())).is_empty());
+    }
+
+    /// A DevTools endpoint whose one page shows an empty URL for its first
+    /// `blank` listings, as Chromium's can just after a navigation commits.
+    fn devtools(blank: usize) -> String {
+        use std::io::{Read as _, Write as _};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            for (listing, stream) in listener.incoming().enumerate() {
+                let mut stream = stream.unwrap();
+                let mut request = [0; 1024];
+                let _ = stream.read(&mut request);
+                let url = if listing < blank {
+                    ""
+                } else {
+                    "http://127.0.0.1:8080/?automation=1"
+                };
+                let body = format!(r#"[{{"id":"P","type":"page","url":"{url}"}}]"#);
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            }
+        });
+        format!("http://{address}")
+    }
+
+    #[test]
+    fn a_page_that_does_not_match_yet_fails_at_once_with_a_recognisable_error() {
+        let endpoint = devtools(1);
+        let mut transport = BrowserTransport::new(
+            &endpoint,
+            PageSelector::Url("http://127.0.0.1:8080/?automation=1".into()),
+        )
+        .unwrap();
+        let deadline = Instant::now() + std::time::Duration::from_secs(5);
+        let started = Instant::now();
+        let error = transport.target(deadline).unwrap_err();
+        assert!(no_page_matches(&error), "{error:?}");
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "no waiting"
+        );
+        // The next listing shows the page's URL, as attach's retry sees.
+        assert_eq!(transport.target(deadline).unwrap().id, "P");
+        let wrong = ClientError::usage("several pages match: P");
+        assert!(!no_page_matches(&wrong));
     }
 
     fn classify(state: serde_json::Value) -> String {
