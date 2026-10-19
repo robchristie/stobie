@@ -51,6 +51,10 @@ extern crate self as stobie_ui_egui;
 pub mod __private {
     #[cfg(all(feature = "eframe", target_arch = "wasm32"))]
     pub use crate::host::__startup_mark as startup_mark;
+    /// Local time fixtures, for the browser test's page hook.
+    pub use crate::local_time::evidence::{
+        report as local_time_report, viewer_report as local_time_viewer_report,
+    };
     #[cfg(all(feature = "eframe", target_arch = "wasm32"))]
     pub use {js_sys, wasm_bindgen, web_sys};
 }
@@ -62,6 +66,7 @@ mod application_theme;
 // applies its DOM operations.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 mod aria;
+pub mod local_time;
 mod virtual_grid;
 pub mod web_push;
 

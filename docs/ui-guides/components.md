@@ -392,3 +392,89 @@ bounds. Gallery audits its fully visible text allocation subset, retaining all
 measurement attempts in coverage. Production observations include partial clips.
 Preserve the viewport/pass inventory when filtering clipped successful text; never discard failed measurements. The scoped method handles ordinary
 publication and inherits the context's explicit domain reference and target pane.
+
+## Local date and time
+
+Format instants for people with `stobie_ui_egui::local_time`, never with
+hand-written offsets or relative phrases. `LocalTime::viewer()` takes the
+viewer's zone and locale and the system clock; `LocalTime::new(zone, locale,
+clock)` chooses each, and `with_zone` shows the same instants in another
+zone, such as the IANA zone a person's schedule runs in
+(`TimeZone::named("Australia/Adelaide")`, which refuses unknown names).
+Instants are `Timestamp`s: whole milliseconds since the Unix epoch, in years
+1 to 9999.
+
+| Method | Example (12-hour, day before month) | Example (24-hour) |
+| --- | --- | --- |
+| `time_of_day` | 9:41 AM | 09:41 |
+| `clock_time(ClockTime)`, a wall-clock time without a date | 7:00 AM | 07:00 |
+| `short_date`, with the year only outside the current year | 14 Apr, 14 Apr 2025 | 14 Apr |
+| `long_date` | Tuesday 14 April 2026 | Tuesday 14 April 2026 |
+| `relative_day` | Today, Yesterday, Tomorrow, Tuesday (within the last six days), then the short date | the same |
+| `relative_day_and_time` | Yesterday at 7:00 AM | Yesterday at 07:00 |
+| `compact`, for a list row | 9:41 AM today, otherwise the relative day | 09:41 |
+| `utc_offset` | UTC+9:30, UTC-3:30, UTC | the same |
+| `format_duration` (a free function) | 45 s, 12 min, 2 h 10 min, 1 day 4 h | the same |
+
+With month before day (United States English) the dates read "Apr 14",
+"Apr 14, 2025" and "Tuesday, April 14, 2026". `TimeZone::name` gives the
+zone's IANA name for saying which zone is in use, and `civil` gives an
+instant's wall-clock fields and offset for application logic such as
+grouping by day.
+
+Days are calendar days on the zone's wall clock: a 23- or 25-hour day at a
+daylight-saving change is still one day, a repeated local time keeps its own
+offset, and a skipped one never appears. Inject a fixed `Clock`, a named
+zone and an explicit `TimeLocale` in tests and gallery evidence; never depend
+on the host's zone, locale or clock.
+
+**Platforms.** The browser converts with `Intl.DateTimeFormat` and the
+native build with the system's time zone database through `jiff`
+(`/usr/share/zoneinfo` on Linux and macOS, and `jiff`'s bundled copy on
+Windows); `jiff` is not part of the web build. A Linux host or container
+without zoneinfo refuses every named zone and treats the viewer's zone as
+`Etc/Unknown`, which behaves as UTC.
+Stobie writes the text itself from the wall-clock fields, so the web and
+native builds give the same text for the same zone, locale and instant, and
+browser engines can differ only in their zone data and in how they resolve
+a locale. Shared fixtures in
+`crates/stobie-ui-egui/src/local_time/fixtures.json`, across daylight-saving
+changes in Adelaide and New York, half- and quarter-hour offsets, local mean
+time and the ends of the range, are checked natively by the unit tests and
+in Chromium by `tools/local-time-browser.mjs` (gallery-browser stage), which
+also checks that the viewer's zone and locale are the page's.
+
+**Locales.** A `TimeLocale` is a clock (`HourCycle::Twelve` or `TwentyFour`)
+and a `DateOrder` (`DayMonth` or `MonthDay`); `with_hour_cycle` applies a
+person's own choice of clock. The words ("Today", weekday and month names,
+"AM") are English in every locale, like the rest of Stobie's text; Stobie
+does not yet translate. In the browser, `TimeLocale::viewer()` and
+`for_language_tag` read the clock and the order of a numeric month and day
+from `Intl`. Natively, the viewer's locale is the first of `LC_ALL`,
+`LC_TIME` and `LANG` (a desktop application on macOS or Windows usually has
+none of them, and so reads as United States English whatever the system
+setting), and a tag resolves through a table that matches
+Chromium for 45 tags (checked by the browser test); an unlisted tag takes
+its language's entry, and an unlisted language a 24-hour clock with day
+before month. Known differences:
+
+- A tag the table does not list can resolve differently from the browser,
+  such as `en-DE` (the `en` entry natively, a 24-hour clock in Chromium), and
+  Unicode extensions such as `-u-hc-h23` are honoured only by `Intl`.
+- Locale conventions a `TimeLocale` does not model are not followed: "am" in
+  `en-AU`, "a.m." in `en-CA`, "9 h 41" in `fr-CA` and year-first dates all
+  read as above.
+- The viewer's zone name in the browser can be an older alias (Chromium
+  reports `Asia/Calcutta` for `Asia/Kolkata`); a named zone keeps the name it
+  was given on both platforms.
+- A platform zone without an IANA name, such as a POSIX `TZ` rule, is named
+  `Etc/Unknown`.
+
+Each format in the browser makes one `Intl` call, or two where the text
+depends on today, and `LocalTime::viewer()` reads the
+platform each time it is called, so keep a `LocalTime` and replace
+it when the zone or locale may have changed, such as when the application
+returns to the foreground. Times shown relative to now ("Today", "in 2 h")
+change as time passes: schedule a later pass with
+`Frame::request_repaint_after` for the next change rather than repainting
+every frame.
