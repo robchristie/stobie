@@ -1,7 +1,7 @@
 # Local date and time
 
-Status: active
-Next action: open the pull request, then review it.
+Status: complete
+Delivery: [PR #99](https://github.com/robchristie/stobie/pull/99)
 
 An application needs to show people when things happen: a message's time
 ("9:41 AM"), a list row's day ("Yesterday", "Tuesday", "14 Apr"), a
@@ -99,8 +99,8 @@ applications fell back to relative times ("3 h ago") redrawn each minute.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| `local_time` module, native zone data and the guide | In progress | Unit tests |
-| Browser path and the shared fixtures in Chromium | In progress | Browser test |
+| `local_time` module, native zone data and the guide | Complete | Unit tests, shared fixtures natively |
+| Browser path and the shared fixtures in Chromium | Complete for Chromium | Browser test in the gallery-browser stage; no Safari run (see Observations) |
 
 ## Observations
 
