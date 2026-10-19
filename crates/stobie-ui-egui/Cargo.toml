@@ -11,7 +11,7 @@ default = ["eframe"]
 image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
 # Native and browser entry points for hosted applications. They leave GPU backends to the
 # application: depend on eframe with its `wgpu` feature, or the browser build has no wgpu backend.
-eframe = ["dep:eframe", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:console_error_panic_hook"]
+eframe = ["dep:eframe", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:console_error_panic_hook"]
 
 [dependencies]
 egui.workspace = true
@@ -27,10 +27,15 @@ serde_json.workspace = true
 # `links` lets the link recipe open URLs in the platform's default browser natively.
 eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_default_features", "x11", "wayland", "links"], optional = true }
 
+# Local time reads zone data natively (src/local_time.rs); the browser uses Intl.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+jiff = "0.2.38"
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { workspace = true, optional = true }
+# Intl for local time in every browser build; eframe's entry points also use them.
+wasm-bindgen.workspace = true
+js-sys = "0.3.104"
 wasm-bindgen-futures = { workspace = true, optional = true }
-js-sys = { version = "0.3.104", optional = true }
 # eframe already enables most of these features for the ARIA layer and renderer
 # policy; MessageEvent, ServiceWorker* and Url serve Web Push (src/web_push.rs).
 web-sys = { workspace = true, features = ["AddEventListenerOptions", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }

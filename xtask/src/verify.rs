@@ -253,6 +253,12 @@ pub fn run_stage(name: &str) -> Result<()> {
                 &["run", "gallery-browser-smoke"],
                 &evidence_environment,
             )?;
+            // Local time through the Gallery's WebAssembly build and the page's Intl.
+            run_with_environment(
+                "node",
+                &["tools/local-time-browser.mjs"],
+                &evidence_environment,
+            )?;
             run_with_environment(
                 "bash",
                 &["tools/icon-actions-browser-smoke.sh"],

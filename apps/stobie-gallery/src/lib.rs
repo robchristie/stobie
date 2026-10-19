@@ -110,3 +110,21 @@ pub(crate) fn startup_frame(useful_content: bool) {
         CONTENT.call_once(|| startup_mark("first_useful_content"));
     }
 }
+
+/// The shared local time fixtures formatted through the page's `Intl`, for
+/// `tools/local-time-browser.mjs`.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn local_time_report(fixtures: &str) -> Result<String, JsValue> {
+    stobie_ui_egui::__private::local_time_report(fixtures)
+        .map_err(|error| JsValue::from_str(&error))
+}
+
+/// The page's zone and locale, and `at` formatted in them with the clock at
+/// `now` (both milliseconds since the Unix epoch).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn local_time_viewer_report(at: f64, now: f64) -> Result<String, JsValue> {
+    stobie_ui_egui::__private::local_time_viewer_report(at as i64, now as i64)
+        .map_err(|error| JsValue::from_str(&error))
+}
