@@ -1,0 +1,405 @@
+{
+  "description": "Local date and time fixtures: every case is formatted natively by the unit tests and in the browser by tools/local-time-browser.mjs, and both must give exactly these values. Locales are hour cycle and date order; `locales` lists every tag of the native table with its resolution.",
+  "cases": [
+    {
+      "zone": "Australia/Adelaide",
+      "locale": "12 day-month",
+      "now": 1776299400000,
+      "now_utc": "2026-04-16T00:30:00Z",
+      "instants": [
+        {
+          "at": 1775318400000,
+          "utc": "2026-04-04T16:00:00Z",
+          "expected": {
+            "time_of_day": "2:30 AM",
+            "short_date": "5 Apr",
+            "long_date": "Sunday 5 April 2026",
+            "relative_day": "5 Apr",
+            "relative_day_and_time": "5 Apr at 2:30 AM",
+            "compact": "5 Apr",
+            "utc_offset": "UTC+10:30"
+          }
+        },
+        {
+          "at": 1775322000000,
+          "utc": "2026-04-04T17:00:00Z",
+          "expected": {
+            "time_of_day": "2:30 AM",
+            "short_date": "5 Apr",
+            "long_date": "Sunday 5 April 2026",
+            "relative_day": "5 Apr",
+            "relative_day_and_time": "5 Apr at 2:30 AM",
+            "compact": "5 Apr",
+            "utc_offset": "UTC+9:30"
+          }
+        },
+        {
+          "at": 1776297540000,
+          "utc": "2026-04-15T23:59:00Z",
+          "expected": {
+            "time_of_day": "9:29 AM",
+            "short_date": "16 Apr",
+            "long_date": "Thursday 16 April 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 9:29 AM",
+            "compact": "9:29 AM",
+            "utc_offset": "UTC+9:30"
+          }
+        },
+        {
+          "at": 1775786400000,
+          "utc": "2026-04-10T02:00:00Z",
+          "expected": {
+            "time_of_day": "11:30 AM",
+            "short_date": "10 Apr",
+            "long_date": "Friday 10 April 2026",
+            "relative_day": "Friday",
+            "relative_day_and_time": "Friday at 11:30 AM",
+            "compact": "Friday",
+            "utc_offset": "UTC+9:30"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Australia/Adelaide",
+      "locale": "24 day-month",
+      "now": 1791118800000,
+      "now_utc": "2026-10-04T13:00:00Z",
+      "instants": [
+        {
+          "at": 1791044940000,
+          "utc": "2026-10-03T16:29:00Z",
+          "expected": {
+            "time_of_day": "01:59",
+            "short_date": "4 Oct",
+            "long_date": "Sunday 4 October 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 01:59",
+            "compact": "01:59",
+            "utc_offset": "UTC+9:30"
+          }
+        },
+        {
+          "at": 1791045000000,
+          "utc": "2026-10-03T16:30:00Z",
+          "expected": {
+            "time_of_day": "03:00",
+            "short_date": "4 Oct",
+            "long_date": "Sunday 4 October 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 03:00",
+            "compact": "03:00",
+            "utc_offset": "UTC+10:30"
+          }
+        },
+        {
+          "at": 1791032400000,
+          "utc": "2026-10-03T13:00:00Z",
+          "expected": {
+            "time_of_day": "22:30",
+            "short_date": "3 Oct",
+            "long_date": "Saturday 3 October 2026",
+            "relative_day": "Yesterday",
+            "relative_day_and_time": "Yesterday at 22:30",
+            "compact": "Yesterday",
+            "utc_offset": "UTC+9:30"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "locale": "12 month-day",
+      "now": 1772971200000,
+      "now_utc": "2026-03-08T12:00:00Z",
+      "instants": [
+        {
+          "at": 1772953140000,
+          "utc": "2026-03-08T06:59:00Z",
+          "expected": {
+            "time_of_day": "1:59 AM",
+            "short_date": "Mar 8",
+            "long_date": "Sunday, March 8, 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 1:59 AM",
+            "compact": "1:59 AM",
+            "utc_offset": "UTC-5:00"
+          }
+        },
+        {
+          "at": 1772953200000,
+          "utc": "2026-03-08T07:00:00Z",
+          "expected": {
+            "time_of_day": "3:00 AM",
+            "short_date": "Mar 8",
+            "long_date": "Sunday, March 8, 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 3:00 AM",
+            "compact": "3:00 AM",
+            "utc_offset": "UTC-4:00"
+          }
+        },
+        {
+          "at": 1767223800000,
+          "utc": "2025-12-31T23:30:00Z",
+          "expected": {
+            "time_of_day": "6:30 PM",
+            "short_date": "Dec 31, 2025",
+            "long_date": "Wednesday, December 31, 2025",
+            "relative_day": "Dec 31, 2025",
+            "relative_day_and_time": "Dec 31, 2025 at 6:30 PM",
+            "compact": "Dec 31, 2025",
+            "utc_offset": "UTC-5:00"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Asia/Kolkata",
+      "locale": "24 day-month",
+      "now": 1767225600000,
+      "now_utc": "2026-01-01T00:00:00Z",
+      "instants": [
+        {
+          "at": 1767205740000,
+          "utc": "2025-12-31T18:29:00Z",
+          "expected": {
+            "time_of_day": "23:59",
+            "short_date": "31 Dec 2025",
+            "long_date": "Wednesday 31 December 2025",
+            "relative_day": "Yesterday",
+            "relative_day_and_time": "Yesterday at 23:59",
+            "compact": "Yesterday",
+            "utc_offset": "UTC+5:30"
+          }
+        },
+        {
+          "at": 1767378600000,
+          "utc": "2026-01-02T18:30:00Z",
+          "expected": {
+            "time_of_day": "00:00",
+            "short_date": "3 Jan",
+            "long_date": "Saturday 3 January 2026",
+            "relative_day": "3 Jan",
+            "relative_day_and_time": "3 Jan at 00:00",
+            "compact": "3 Jan",
+            "utc_offset": "UTC+5:30"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "locale": "12 month-day",
+      "now": 1782907200000,
+      "now_utc": "2026-07-01T12:00:00Z",
+      "instants": [
+        {
+          "at": 1782950400000,
+          "utc": "2026-07-02T00:00:00Z",
+          "expected": {
+            "time_of_day": "12:00 AM",
+            "short_date": "Jul 2",
+            "long_date": "Thursday, July 2, 2026",
+            "relative_day": "Tomorrow",
+            "relative_day_and_time": "Tomorrow at 12:00 AM",
+            "compact": "Tomorrow",
+            "utc_offset": "UTC"
+          }
+        },
+        {
+          "at": 1782907200000,
+          "utc": "2026-07-01T12:00:00Z",
+          "expected": {
+            "time_of_day": "12:00 PM",
+            "short_date": "Jul 1",
+            "long_date": "Wednesday, July 1, 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 12:00 PM",
+            "compact": "12:00 PM",
+            "utc_offset": "UTC"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Chatham",
+      "locale": "24 day-month",
+      "now": 1768478400000,
+      "now_utc": "2026-01-15T12:00:00Z",
+      "instants": [
+        {
+          "at": 1768478400000,
+          "utc": "2026-01-15T12:00:00Z",
+          "expected": {
+            "time_of_day": "01:45",
+            "short_date": "16 Jan",
+            "long_date": "Friday 16 January 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 01:45",
+            "compact": "01:45",
+            "utc_offset": "UTC+13:45"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "America/St_Johns",
+      "locale": "12 month-day",
+      "now": 1768478400000,
+      "now_utc": "2026-01-15T12:00:00Z",
+      "instants": [
+        {
+          "at": 1768478400000,
+          "utc": "2026-01-15T12:00:00Z",
+          "expected": {
+            "time_of_day": "8:30 AM",
+            "short_date": "Jan 15",
+            "long_date": "Thursday, January 15, 2026",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 8:30 AM",
+            "compact": "8:30 AM",
+            "utc_offset": "UTC-3:30"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Australia/Adelaide",
+      "locale": "12 day-month",
+      "now": 1768478400000,
+      "now_utc": "2026-01-15T12:00:00Z",
+      "instants": [
+        {
+          "at": -2524521600000,
+          "utc": "1890-01-01T00:00:00Z",
+          "expected": {
+            "time_of_day": "9:14 AM",
+            "short_date": "1 Jan 1890",
+            "long_date": "Wednesday 1 January 1890",
+            "relative_day": "1 Jan 1890",
+            "relative_day_and_time": "1 Jan 1890 at 9:14 AM",
+            "compact": "1 Jan 1890",
+            "utc_offset": "UTC+9:14:20"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Kiritimati",
+      "locale": "24 day-month",
+      "now": -62135424000000,
+      "now_utc": "0001-01-03T00:00:00Z",
+      "instants": [
+        {
+          "at": -62135424000000,
+          "utc": "0001-01-03T00:00:00Z",
+          "expected": {
+            "time_of_day": "13:30",
+            "short_date": "2 Jan",
+            "long_date": "Tuesday 2 January 1",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 13:30",
+            "compact": "13:30",
+            "utc_offset": "UTC-10:29:20"
+          }
+        },
+        {
+          "at": 253402127999999,
+          "utc": "9999-12-29T23:59:59.999Z",
+          "expected": {
+            "time_of_day": "13:59",
+            "short_date": "30 Dec 9999",
+            "long_date": "Thursday 30 December 9999",
+            "relative_day": "30 Dec 9999",
+            "relative_day_and_time": "30 Dec 9999 at 13:59",
+            "compact": "30 Dec 9999",
+            "utc_offset": "UTC+14:00"
+          }
+        }
+      ]
+    },
+    {
+      "zone": "Etc/GMT+12",
+      "locale": "12 month-day",
+      "now": 253402127999999,
+      "now_utc": "9999-12-29T23:59:59.999Z",
+      "instants": [
+        {
+          "at": 253402127999999,
+          "utc": "9999-12-29T23:59:59.999Z",
+          "expected": {
+            "time_of_day": "11:59 AM",
+            "short_date": "Dec 29",
+            "long_date": "Wednesday, December 29, 9999",
+            "relative_day": "Today",
+            "relative_day_and_time": "Today at 11:59 AM",
+            "compact": "11:59 AM",
+            "utc_offset": "UTC-12:00"
+          }
+        },
+        {
+          "at": -62135424000000,
+          "utc": "0001-01-03T00:00:00Z",
+          "expected": {
+            "time_of_day": "12:00 PM",
+            "short_date": "Jan 2, 1",
+            "long_date": "Tuesday, January 2, 1",
+            "relative_day": "Jan 2, 1",
+            "relative_day_and_time": "Jan 2, 1 at 12:00 PM",
+            "compact": "Jan 2, 1",
+            "utc_offset": "UTC-12:00"
+          }
+        }
+      ]
+    }
+  ],
+  "locales": {
+    "ar": "12 day-month",
+    "cs": "24 day-month",
+    "da": "24 day-month",
+    "de": "24 day-month",
+    "el": "12 day-month",
+    "en": "12 month-day",
+    "en-AU": "12 day-month",
+    "en-CA": "12 month-day",
+    "en-GB": "24 day-month",
+    "en-IE": "24 day-month",
+    "en-IN": "12 day-month",
+    "en-NZ": "12 day-month",
+    "en-PH": "12 month-day",
+    "en-SG": "12 day-month",
+    "en-US": "12 month-day",
+    "en-ZA": "24 month-day",
+    "es": "24 day-month",
+    "es-MX": "12 day-month",
+    "es-US": "12 day-month",
+    "fi": "24 day-month",
+    "fr": "24 day-month",
+    "fr-CA": "24 month-day",
+    "he": "24 day-month",
+    "hi": "12 day-month",
+    "hu": "24 month-day",
+    "id": "24 day-month",
+    "it": "24 day-month",
+    "ja": "24 month-day",
+    "ko": "12 month-day",
+    "ms": "12 day-month",
+    "nb": "24 day-month",
+    "nl": "24 day-month",
+    "pl": "24 day-month",
+    "pt": "24 day-month",
+    "pt-BR": "24 day-month",
+    "ro": "24 day-month",
+    "ru": "24 day-month",
+    "sv": "24 day-month",
+    "th": "24 day-month",
+    "tr": "24 day-month",
+    "uk": "24 day-month",
+    "vi": "24 day-month",
+    "zh": "24 month-day",
+    "zh-HK": "12 day-month",
+    "zh-TW": "12 month-day"
+  }
+}
