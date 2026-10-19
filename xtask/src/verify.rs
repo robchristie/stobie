@@ -123,6 +123,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "tools/tests/application-interface-selection.test.mjs",
                     "tools/tests/lab-result-selection.test.mjs",
                     "tools/tests/browser-serve.test.mjs",
+                    "tools/tests/service-worker-push.test.mjs",
                 ],
             )?;
         }

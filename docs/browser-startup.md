@@ -133,6 +133,7 @@ iOS reads these tags rather than the manifest:
 | `<meta name="theme-color">` | Required: the theme colour; the first without a `media` query, otherwise the first |
 | `<meta name="stobie-background-color">` | Optional splash background; the theme colour otherwise |
 | `<meta name="description">` | Optional description |
+| `<meta name="stobie-web-push" content="enabled">` | Optional: the service worker also handles Web Push; see [Web Push](web-push.md) |
 | `<link rel="icon" sizes="192x192">` and `sizes="512x512"` | Required PNG icons |
 | `<link rel="apple-touch-icon">` | Required 180 × 180 PNG icon for iOS |
 
@@ -165,6 +166,11 @@ The service worker:
   older package fetches anything missing from the server, which keeps
   previous assets as [Hosting and publication](#hosting-and-publication)
   describes.
+
+A page that declares `stobie-web-push` gets the same worker followed by
+`push` and `notificationclick` handlers, and the package manifest's `pwa`
+field records `"webPush": true`; [Web Push](web-push.md) describes them.
+Without the tag the worker has no push code at all.
 
 A new package changes `sw.js`, so the browser installs it on the next visit,
 and it takes over at once. A development build's service worker caches

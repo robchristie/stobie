@@ -8,6 +8,11 @@
 //! `apple-mobile-web-app-title` gives the short name, `theme-color` the colour,
 //! and `<link rel="icon" sizes>` and `<link rel="apple-touch-icon">` the icons.
 //! The manifest is derived from those tags.
+//!
+//! An installable page that also declares `<meta name="stobie-web-push"
+//! content="enabled">` gets a service worker that handles Web Push: it shows
+//! a notification for every push and routes a tapped notification back into
+//! the application. Without the tag the worker is unchanged.
 
 use std::fs;
 use std::ops::Range;
@@ -20,6 +25,11 @@ pub const MANIFEST_FILE: &str = "manifest.webmanifest";
 /// The service worker's file name at the web root.
 pub const SERVICE_WORKER_FILE: &str = "sw.js";
 const SERVICE_WORKER: &str = include_str!("../web/service-worker.js");
+const SERVICE_WORKER_PUSH: &str = include_str!("../web/service-worker-push.js");
+/// The `<meta name>` that opts an installable page into Web Push.
+pub const WEB_PUSH_META: &str = "stobie-web-push";
+/// The one value [`WEB_PUSH_META`] accepts.
+pub const WEB_PUSH_ENABLED: &str = "enabled";
 
 /// The icon sizes a manifest needs, in pixels: 192 and 512 for installation,
 /// and 180 for iOS's `apple-touch-icon`.
@@ -37,6 +47,8 @@ pub struct Declaration {
     /// `rel="icon"` links with one square `sizes` value.
     pub icons: Vec<Icon>,
     pub apple_touch_icon: String,
+    /// Whether the page opts into Web Push with [`WEB_PUSH_META`].
+    pub web_push: bool,
     /// The bytes of the manifest link's `href` value in the page.
     manifest_href: Range<usize>,
 }
@@ -241,13 +253,47 @@ fn missing(what: &str, tag: &str) -> Error {
     )
 }
 
+/// Whether the head opts into Web Push. Any value but
+/// [`WEB_PUSH_ENABLED`] is an error, so a typo never silently disables it.
+fn web_push(tags: &[Tag]) -> Result<bool, Error> {
+    let Some(tag) = tags.iter().find(|tag| {
+        tag.name == "meta"
+            && tag
+                .value("name")
+                .is_some_and(|value| value.eq_ignore_ascii_case(WEB_PUSH_META))
+    }) else {
+        return Ok(false);
+    };
+    match tag.value("content").map(str::trim) {
+        Some(WEB_PUSH_ENABLED) => Ok(true),
+        other => Err(Error::new(
+            format!(
+                "<meta name=\"{WEB_PUSH_META}\"> has content {:?}, not \"{WEB_PUSH_ENABLED}\"",
+                other.unwrap_or_default()
+            ),
+            format!(
+                "use <meta name=\"{WEB_PUSH_META}\" content=\"{WEB_PUSH_ENABLED}\">, or remove it"
+            ),
+        )),
+    }
+}
+
 /// Read the page's installable identity, or `None` when it links no manifest.
 pub fn declaration(html: &str) -> Result<Option<Declaration>, Error> {
     let tags = head_tags(html);
+    let web_push = web_push(&tags)?;
     let Some(link) = tags
         .iter()
         .find(|tag| tag.name == "link" && tag.has_token("rel", "manifest"))
     else {
+        if web_push {
+            return Err(Error::new(
+                format!("index.html declares {WEB_PUSH_META} but links no {MANIFEST_FILE}"),
+                format!(
+                    "Web Push needs the installable page's service worker; add <link rel=\"manifest\" href=\"{MANIFEST_FILE}\"> and its tags"
+                ),
+            ));
+        }
         return Ok(None);
     };
     let href = link
@@ -358,6 +404,7 @@ pub fn declaration(html: &str) -> Result<Option<Declaration>, Error> {
         background_color,
         icons,
         apple_touch_icon,
+        web_push,
         manifest_href: href.span.clone(),
     }))
 }
@@ -498,6 +545,42 @@ pub fn service_worker(app: &str, version: &str, precache: &[String], files: &[St
             "__STOBIE_FILES__",
             &serde_json::to_string(files).expect("strings serialise"),
         )
+}
+
+/// [`service_worker`] followed by Web Push handling: every push shows a
+/// notification, titled with `name`, the application's, when the payload
+/// gives no title, and a tapped notification opens or focuses the
+/// application at its route.
+pub fn push_service_worker(
+    app: &str,
+    version: &str,
+    precache: &[String],
+    files: &[String],
+    name: &str,
+) -> String {
+    service_worker(app, version, precache, files)
+        + &SERVICE_WORKER_PUSH.replace(
+            "__STOBIE_NAME__",
+            &serde_json::to_string(name).expect("a string serialises"),
+        )
+}
+
+impl Declaration {
+    /// The service worker this page asks for: [`push_service_worker`] when it
+    /// opts into Web Push, otherwise [`service_worker`].
+    pub fn service_worker(
+        &self,
+        app: &str,
+        version: &str,
+        precache: &[String],
+        files: &[String],
+    ) -> String {
+        if self.web_push {
+            push_service_worker(app, version, precache, files, &self.name)
+        } else {
+            service_worker(app, version, precache, files)
+        }
+    }
 }
 
 /// Every file under `web_root` the service worker serves besides the page:

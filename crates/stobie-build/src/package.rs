@@ -111,6 +111,9 @@ pub struct PackagedApp {
 pub struct PwaFiles {
     pub manifest: Representations,
     pub service_worker: Representations,
+    /// Whether the service worker handles Web Push; recorded only when it does.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub web_push: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -572,14 +575,16 @@ pub fn package(options: &Options) -> Result<Manifest, Error> {
                     service_worker: write_representations(
                         &staging.0,
                         &format!("{}/{}", app.name, pwa::SERVICE_WORKER_FILE),
-                        pwa::service_worker(
-                            &app.name,
-                            &content_id,
-                            &precache,
-                            &[pwa::MANIFEST_FILE.to_owned()],
-                        )
-                        .as_bytes(),
+                        declaration
+                            .service_worker(
+                                &app.name,
+                                &content_id,
+                                &precache,
+                                &[pwa::MANIFEST_FILE.to_owned()],
+                            )
+                            .as_bytes(),
                     )?,
+                    web_push: declaration.web_push,
                 })
             }
         };

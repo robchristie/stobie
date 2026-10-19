@@ -336,6 +336,31 @@ fn an_installable_page_gets_its_manifest_and_service_worker_at_the_web_root() {
         recorded["apps"][0]["pwa"]["serviceWorker"]["path"],
         "lab/sw.js"
     );
+    // Without the opt-in, the worker has no push handling and the package
+    // manifest records none.
+    assert!(!pwa.web_push && !worker.contains("'push'"));
+    assert!(recorded["apps"][0]["pwa"].get("webPush").is_none());
+}
+
+#[test]
+fn an_opted_in_page_gets_a_push_worker() {
+    let fixture = Fixture::new("web-push");
+    let page = crate::pwa::tests::PAGE.replace(
+        "<title>",
+        "<meta name=\"stobie-web-push\" content=\"enabled\"><title>",
+    );
+    fs::write(fixture.input.join("index.html"), page).unwrap();
+    crate::pwa::tests::write_icons(&fixture.input, [192, 512, 180]);
+    let packaged = package(&fixture.options()).unwrap();
+    let pwa = packaged.apps[0].pwa.as_ref().expect("installable");
+    assert!(pwa.web_push);
+    decompress(&pwa.service_worker, &fixture.output);
+    let worker = fs::read_to_string(fixture.output.join("lab/sw.js")).unwrap();
+    assert!(worker.contains(r#"const NAME = "Field & Notes";"#));
+    assert!(worker.contains("self.addEventListener('push'"));
+    let recorded: Value =
+        serde_json::from_slice(&fs::read(fixture.output.join("manifest.json")).unwrap()).unwrap();
+    assert_eq!(recorded["apps"][0]["pwa"]["webPush"], true);
 }
 
 #[test]

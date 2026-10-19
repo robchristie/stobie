@@ -63,6 +63,7 @@ mod application_theme;
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 mod aria;
 mod virtual_grid;
+pub mod web_push;
 
 mod components;
 mod generated_tokens;

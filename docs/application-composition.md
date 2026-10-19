@@ -360,6 +360,11 @@ needs no code for any of this; the
 [browser startup guide](browser-startup.md#renderer-backends) gives the
 details.
 
+An installable application can also receive Web Push notifications: the
+page opts in with one tag, and `stobie_ui_egui::web_push::WebPush`, started
+in `Application::started`, subscribes inside a tap and delivers tapped
+notifications' routes as intents. [Web Push](web-push.md) describes it.
+
 `WebHost` also mirrors the accessibility tree into a hidden ARIA layer beside
 the canvas, so screen readers and accessibility-tree browser agents can read
 the application. The [accessibility guide](ui-guides/accessibility.md#browser-aria-layer)

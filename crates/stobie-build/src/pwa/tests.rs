@@ -228,3 +228,63 @@ fn the_manifest_and_service_worker_name_the_web_root() {
     assert!(worker.contains(r#"const PRECACHE = ["./","assets/abc/app.js"];"#));
     assert!(!worker.contains("__STOBIE_"));
 }
+
+#[test]
+fn a_page_opts_into_web_push_with_one_meta_tag() {
+    assert!(!declaration(PAGE).unwrap().unwrap().web_push);
+    let opted = PAGE.replace(
+        "<title>",
+        "<meta name=\"Stobie-Web-Push\" content=\" enabled \">\n<title>",
+    );
+    assert!(declaration(&opted).unwrap().unwrap().web_push);
+    // Another value is a mistake, not a quiet opt-out.
+    for content in ["on", "", "disabled"] {
+        let page = PAGE.replace(
+            "<title>",
+            &format!("<meta name=\"stobie-web-push\" content=\"{content}\"><title>"),
+        );
+        let error = declaration(&page).unwrap_err();
+        assert!(
+            error.message.contains("not \"enabled\""),
+            "{}",
+            error.message
+        );
+    }
+    // Push needs the installable page's worker.
+    let error = declaration(
+        "<html><head><title>Lab</title><meta name=stobie-web-push content=enabled></head></html>",
+    )
+    .unwrap_err();
+    assert!(error.message.contains("links no manifest.webmanifest"));
+}
+
+#[test]
+fn only_an_opted_in_worker_handles_push() {
+    let precache = ["./".to_owned(), "assets/abc/app.js".to_owned()];
+    let files = ["manifest.webmanifest".to_owned()];
+    let caching = service_worker("notes", "abc", &precache, &files);
+    for handler in ["'push'", "'notificationclick'", "NAME"] {
+        assert!(!caching.contains(handler), "{handler}");
+    }
+    let pushing = push_service_worker("notes", "abc", &precache, &files, "Field & \"Notes\"");
+    // The caching worker is unchanged; push handling follows it.
+    let push = pushing
+        .strip_prefix(&caching)
+        .expect("the caching worker first");
+    assert!(push.contains(r#"const NAME = "Field & \"Notes\"";"#));
+    assert!(push.contains("self.addEventListener('push'"));
+    assert!(push.contains("self.addEventListener('notificationclick'"));
+    assert!(!pushing.contains("__STOBIE_"));
+    // A page's declaration chooses between them.
+    let mut declared = declaration(PAGE).unwrap().unwrap();
+    assert_eq!(
+        declared.service_worker("notes", "abc", &precache, &files),
+        caching
+    );
+    declared.web_push = true;
+    declared.name = "Field & \"Notes\"".into();
+    assert_eq!(
+        declared.service_worker("notes", "abc", &precache, &files),
+        pushing
+    );
+}
