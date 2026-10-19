@@ -190,6 +190,8 @@ impl fmt::Debug for TimeZone {
     }
 }
 
+/// Zones are equal when their names are, as given: `Australia/Adelaide` and
+/// `australia/adelaide` are the same zone but unequal values.
 impl PartialEq for TimeZone {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
@@ -398,7 +400,8 @@ impl CivilDateTime {
 /// Keep one and replace it when the viewer's zone or locale may have
 /// changed, such as when the application returns to the foreground:
 /// [`LocalTime::viewer`] reads the platform each time it is called, and in
-/// the browser each format makes one to four `Intl` calls.
+/// the browser each format makes one `Intl` call, or two where the text
+/// depends on today.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalTime {
     zone: TimeZone,
@@ -457,11 +460,7 @@ impl LocalTime {
 
     /// The time of day: "9:41 AM", or "09:41" on a 24-hour clock.
     pub fn time_of_day(&self, at: Timestamp) -> String {
-        let civil = self.civil(at);
-        self.clock_time(ClockTime {
-            hour: civil.hour,
-            minute: civil.minute,
-        })
+        self.time_of(&self.civil(at))
     }
 
     /// A wall-clock time in this locale, such as "7:00 AM" for a schedule.
@@ -484,15 +483,7 @@ impl LocalTime {
     /// year added ("14 Apr 2025", "Apr 14, 2025") when it is not the current
     /// year in this zone.
     pub fn short_date(&self, at: Timestamp) -> String {
-        let civil = self.civil(at);
-        let current_year = self.civil(self.now()).year == civil.year;
-        let month = &MONTHS[usize::from(civil.month - 1)][..3];
-        match (self.locale.date_order, current_year) {
-            (DateOrder::DayMonth, true) => format!("{} {month}", civil.day),
-            (DateOrder::DayMonth, false) => format!("{} {month} {}", civil.day, civil.year),
-            (DateOrder::MonthDay, true) => format!("{month} {}", civil.day),
-            (DateOrder::MonthDay, false) => format!("{month} {}, {}", civil.day, civil.year),
-        }
+        self.short_date_of(&self.civil(at), &self.civil(self.now()))
     }
 
     /// A long date: "Tuesday 14 April 2026", or "Tuesday, April 14, 2026"
@@ -512,30 +503,54 @@ impl LocalTime {
     /// days on the zone's wall clock, so a day with a daylight-saving change
     /// still counts as one.
     pub fn relative_day(&self, at: Timestamp) -> String {
-        let civil = self.civil(at);
-        match civil.day_number() - self.civil(self.now()).day_number() {
-            0 => "Today".into(),
-            -1 => "Yesterday".into(),
-            1 => "Tomorrow".into(),
-            -6..=-2 => civil.weekday.name().into(),
-            _ => self.short_date(at),
-        }
+        self.relative_day_of(&self.civil(at), &self.civil(self.now()))
     }
 
     /// The relative day and the time of day: "Yesterday at 7:00 AM",
     /// "14 Apr at 7:00 AM".
     pub fn relative_day_and_time(&self, at: Timestamp) -> String {
-        format!("{} at {}", self.relative_day(at), self.time_of_day(at))
+        let civil = self.civil(at);
+        let day = self.relative_day_of(&civil, &self.civil(self.now()));
+        format!("{day} at {}", self.time_of(&civil))
     }
 
     /// The time of day for an instant today, and otherwise the
     /// [relative day](LocalTime::relative_day): what a list of
     /// conversations shows beside each one.
     pub fn compact(&self, at: Timestamp) -> String {
-        if self.civil(at).day_number() == self.civil(self.now()).day_number() {
-            self.time_of_day(at)
+        let (civil, today) = (self.civil(at), self.civil(self.now()));
+        if civil.day_number() == today.day_number() {
+            self.time_of(&civil)
         } else {
-            self.relative_day(at)
+            self.relative_day_of(&civil, &today)
+        }
+    }
+
+    fn time_of(&self, civil: &CivilDateTime) -> String {
+        self.clock_time(ClockTime {
+            hour: civil.hour,
+            minute: civil.minute,
+        })
+    }
+
+    fn short_date_of(&self, civil: &CivilDateTime, today: &CivilDateTime) -> String {
+        let current_year = today.year == civil.year;
+        let month = &MONTHS[usize::from(civil.month - 1)][..3];
+        match (self.locale.date_order, current_year) {
+            (DateOrder::DayMonth, true) => format!("{} {month}", civil.day),
+            (DateOrder::DayMonth, false) => format!("{} {month} {}", civil.day, civil.year),
+            (DateOrder::MonthDay, true) => format!("{month} {}", civil.day),
+            (DateOrder::MonthDay, false) => format!("{month} {}, {}", civil.day, civil.year),
+        }
+    }
+
+    fn relative_day_of(&self, civil: &CivilDateTime, today: &CivilDateTime) -> String {
+        match civil.day_number() - today.day_number() {
+            0 => "Today".into(),
+            -1 => "Yesterday".into(),
+            1 => "Tomorrow".into(),
+            -6..=-2 => civil.weekday.name().into(),
+            _ => self.short_date_of(civil, today),
         }
     }
 

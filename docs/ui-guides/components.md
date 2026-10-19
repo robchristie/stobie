@@ -429,9 +429,11 @@ zone and an explicit `TimeLocale` in tests and gallery evidence; never depend
 on the host's zone, locale or clock.
 
 **Platforms.** The browser converts with `Intl.DateTimeFormat` and the
-native build with the system's time zone database through `jiff` (its
-bundled copy on platforms without one, such as Windows); `jiff` is not part
-of the web build.
+native build with the system's time zone database through `jiff`
+(`/usr/share/zoneinfo` on Linux and macOS, and `jiff`'s bundled copy on
+Windows); `jiff` is not part of the web build. A Linux host or container
+without zoneinfo refuses every named zone and treats the viewer's zone as
+`Etc/Unknown`, which behaves as UTC.
 Stobie writes the text itself from the wall-clock fields, so the web and
 native builds give the same text for the same zone, locale and instant, and
 browser engines can differ only in their zone data and in how they resolve
@@ -449,7 +451,9 @@ person's own choice of clock. The words ("Today", weekday and month names,
 does not yet translate. In the browser, `TimeLocale::viewer()` and
 `for_language_tag` read the clock and the order of a numeric month and day
 from `Intl`. Natively, the viewer's locale is the first of `LC_ALL`,
-`LC_TIME` and `LANG`, and a tag resolves through a table that matches
+`LC_TIME` and `LANG` (a desktop application on macOS or Windows usually has
+none of them, and so reads as United States English whatever the system
+setting), and a tag resolves through a table that matches
 Chromium for 45 tags (checked by the browser test); an unlisted tag takes
 its language's entry, and an unlisted language a 24-hour clock with day
 before month. Known differences:
@@ -466,8 +470,8 @@ before month. Known differences:
 - A platform zone without an IANA name, such as a POSIX `TZ` rule, is named
   `Etc/Unknown`.
 
-Each format in the browser makes one to four `Intl` calls (the instant, and
-now where the text depends on today), and `LocalTime::viewer()` reads the
+Each format in the browser makes one `Intl` call, or two where the text
+depends on today, and `LocalTime::viewer()` reads the
 platform each time it is called, so keep a `LocalTime` and replace
 it when the zone or locale may have changed, such as when the application
 returns to the foreground. Times shown relative to now ("Today", "in 2 h")

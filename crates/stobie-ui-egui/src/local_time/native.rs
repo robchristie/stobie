@@ -1,5 +1,5 @@
-//! Native zone data: the system's time zone database through `jiff`, or its
-//! bundled copy on platforms without one, such as Windows.
+//! Native zone data: the system's time zone database through `jiff`
+//! (`/usr/share/zoneinfo` on Unix, and `jiff`'s bundled copy on Windows).
 
 use super::{Fields, TimeLocale, tabled_locale};
 
