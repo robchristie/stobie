@@ -3,6 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+/// The largest line limit a bounded text recipe accepts. Reading text, under
+/// [`TextOverflow::WrapUnbounded`], has no limit.
 pub const MAX_TEXT_LINES: u8 = 8;
 pub const TEXT_AUDIT_TOLERANCE: f32 = 1.0;
 
@@ -36,6 +38,11 @@ pub enum TextOverflow {
     Scroll,
     /// The allocation must grow to the measured single-line text.
     Expand,
+    /// Text wraps at the declared width to as many lines as it needs, and the
+    /// allocation grows to the measured height; it is never truncated. Only the
+    /// reading-text and link recipes use it, and they declare a line limit of 0
+    /// (none). A parent scroll surface may clip the allocation.
+    WrapUnbounded,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -127,6 +134,8 @@ pub enum TextComponentKind {
     DiagnosticRow,
     SectionHeading,
     ContentLabel,
+    ReadingText,
+    Link,
     ApplicationBarLabel,
     ImageStatus,
     GalleryHeading,
@@ -160,8 +169,11 @@ pub struct TextLayoutObservation {
     pub overflow: TextOverflow,
     #[serde(default)]
     pub interaction: TextInteraction,
+    /// The declared line limit; 0 under [`TextOverflow::WrapUnbounded`], which
+    /// has none.
     pub declared_max_lines: u8,
-    pub line_count: u8,
+    /// Laid-out lines, counted in full however many there are.
+    pub line_count: u32,
     pub truncated: bool,
     /// Failed requests retain their diagnostic even when the fallback is clipped.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -172,6 +184,11 @@ pub struct TextLayoutObservation {
 #[serde(rename_all = "snake_case")]
 pub enum TextLayoutError {
     InvalidMaxLines(u8),
+    /// A bounded text recipe was asked to wrap without a line limit; only the
+    /// reading-text and link recipes lay out unbounded text.
+    UnboundedOverflow,
+    /// A link's URL is blank or not an http, https or mailto address.
+    InvalidUrl,
     InvalidWidth,
     InvalidFontScale,
     FontsNotInstalled,
@@ -236,6 +253,9 @@ pub fn audit_text_layouts(observations: &[TextLayoutObservation]) -> Vec<TextAud
             observation.overflow,
             TextOverflow::Clip | TextOverflow::Scroll
         );
+        // Unbounded text grows its own allocation, but a parent scroll surface
+        // may clip that allocation.
+        let unbounded = observation.overflow == TextOverflow::WrapUnbounded;
         if !outside_is_declared
             && !observation
                 .allocated_rect
@@ -246,6 +266,7 @@ pub fn audit_text_layouts(observations: &[TextLayoutObservation]) -> Vec<TextAud
             });
         }
         if !outside_is_declared
+            && !unbounded
             && !observation
                 .clip_rect
                 .contains_with_tolerance(observation.painted_rect, TEXT_AUDIT_TOLERANCE)
@@ -254,7 +275,12 @@ pub fn audit_text_layouts(observations: &[TextLayoutObservation]) -> Vec<TextAud
                 component_id: observation.component_id,
             });
         }
-        if observation.line_count > observation.declared_max_lines
+        let over_limit = if unbounded {
+            observation.declared_max_lines != 0
+        } else {
+            observation.line_count > u32::from(observation.declared_max_lines)
+        };
+        if over_limit
             || (observation.line_count == 0
                 && observation.painted_rect.max_x > observation.painted_rect.min_x)
         {

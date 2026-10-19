@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "reading/conversation",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 614
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.31e919cfbe1d9c82",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Flat-memory attention for long documents",
+      "rect": {
+        "min_x": 534,
+        "min_y": 388,
+        "max_x": 769.125,
+        "max_y": 420
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/flat-memory-attention"
+    },
+    {
+      "id": "presentation.db78e417e9f5d89e",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Evaluating agents that call tools: a survey",
+      "rect": {
+        "min_x": 534,
+        "min_y": 425,
+        "max_x": 760.90625,
+        "max_y": 457
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/evaluating-tool-agents"
+    }
+  ],
+  "semantic_audit": []
+}

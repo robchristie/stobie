@@ -119,7 +119,9 @@ example because it opens a menu. An action that chooses a value declares an
 implements `Application::perform_with`, which receives the validated value;
 apply the same intent its control emits. Every text field presented through
 `PresentationContext::native` and observed as a text input can be set through
-the framework's `stobie.set-text` capability without application code. Without the
+the framework's `stobie.set-text` capability without application code, and
+every link presented through `PresentationContext::link` can be opened through
+`stobie.open-link`, always in a new browser tab. Without the
 environment variable, no automation starts. Use a short, fresh directory for
 the socket: Unix socket paths are limited to about 100 bytes, and a socket left
 by a killed process blocks the next start until it is removed. Startup failures
@@ -155,7 +157,8 @@ semantic nodes and measured text automatically, and a discarded layout pass is
 replaced rather than merged. The host publishes them as presented, so the audits
 report clipped and overflowing content. Dock panes scroll, so inside a pane it
 publishes only what is visible: nodes are clipped to the region they were drawn
-in or omitted, and partly visible text is not audited. Wrap other scrolling
+in or omitted, and partly visible text is not audited, except reading text and
+links, which declare that a scroll area clips them. Wrap other scrolling
 content in `observe_visible_only`.
 For a custom widget, call `PresentationContext::observe_node` and
 `observe_text`, or the free `observe_node`, with the pane's semantic node as

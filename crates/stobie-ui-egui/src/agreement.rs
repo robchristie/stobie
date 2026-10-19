@@ -72,6 +72,7 @@ pub fn expected_aria_role(role: UiRole) -> Option<&'static str> {
         UiRole::Viewport => "group",
         UiRole::ResultRow | UiRole::ThumbnailCell => "option",
         UiRole::Status => "status",
+        UiRole::Link => "link",
         UiRole::Application
         | UiRole::ApplicationBar
         | UiRole::Toolbar

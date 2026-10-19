@@ -6,6 +6,9 @@ mod icon_action_tests;
 mod navigation;
 mod property;
 mod range;
+mod reading;
+#[cfg(test)]
+mod reading_tests;
 mod result_row;
 mod status;
 mod status_chip;
@@ -28,6 +31,10 @@ pub use navigation::{
 };
 pub use property::property_row;
 pub use range::range_control;
+pub use reading::{
+    INVALID_LINK_URL, LinkSpec, LinkTarget, ReadingTextSpec, link, link_colour, link_semantic_node,
+    link_url_allowed, reading_text,
+};
 pub use result_row::{
     ResultRowSpec, list_box, result_row, result_row_height, set_position_semantics,
 };

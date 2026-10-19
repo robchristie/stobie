@@ -123,8 +123,8 @@ Commands that name controls take `--id`, `--role`, `--name`,
 `--capability`, `--pane`, `--domain JSON` or `--selector JSON`. All given
 properties must match. A positional argument fills the obvious field:
 `invoke CAPABILITY`, `query ID`, `discover CAPABILITY`, `set-text ID TEXT`.
-Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab` and
-`result_row`. Add `--id` or `--pane` when a capability has several controls.
+Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
+`link` and `result_row`. Add `--id` or `--pane` when a capability has several controls.
 
 ## Commands
 
@@ -147,6 +147,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file).
+- `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
+  is its URL, in a new browser tab (natively, the default browser), so the
+  application stays open. The outline tags links `[open-link]`.
 - `wait CONDITION` polls until a condition holds: `present`, `absent`,
   `enabled`, `capability_enabled`, `focused`, `selected`, `checked`, `name`,
   `value`, `status`, `selection_changed`, `fact` (`--key K --value V`) or

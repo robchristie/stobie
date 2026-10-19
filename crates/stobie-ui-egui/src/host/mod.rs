@@ -38,7 +38,7 @@ use crate::{
     ActionKey, ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme,
     Availability, CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour,
     DockTextContext, DomainReference, Execution, IconId, Inspection, InspectionBinding,
-    InspectionError, InspectionReply, InspectionRequest, IntoActionTarget, Invocation,
+    InspectionError, InspectionReply, InspectionRequest, IntoActionTarget, Invocation, LinkBinding,
     ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
     SemanticUiId, ShortcutKey, TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode,
     UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
@@ -48,6 +48,7 @@ use crate::{
 #[cfg(feature = "eframe")]
 mod entry;
 mod events;
+mod new_tab;
 mod renderer;
 use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
@@ -704,6 +705,8 @@ pub struct AppHost<A: Application> {
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
+    /// URLs that open-link invocations asked for, opened in the next pass.
+    links_to_open: Vec<String>,
     /// Intents sent from outside passes, applied at the start of the next.
     sent: events::IntentQueue<A::Intent>,
     /// Sent intents applied since the previous completed pass.
@@ -764,6 +767,7 @@ impl<A: Application> AppHost<A> {
             edit_focus: None,
             completing: None,
             fields_stale: false,
+            links_to_open: Vec::new(),
             sent: Default::default(),
             sent_applied: 0,
             unpresented: false,
@@ -953,6 +957,11 @@ impl<A: Application> AppHost<A> {
         };
         self.app.prepare(&mut prepare, &mut self.ui_state);
         self.drain_invocations();
+        // A semantic open always asks for a new tab, so the application under
+        // inspection stays open; natively the platform opens its browser.
+        for url in self.links_to_open.drain(..) {
+            context.open_url(egui::OpenUrl::new_tab(url));
+        }
         let mut triggers: Vec<_> = self
             .consume_shortcuts(root)
             .into_iter()
@@ -1025,9 +1034,14 @@ impl<A: Application> AppHost<A> {
         let bindings = self.bindings();
         let reasons = self.repaint.len();
         let fields = self.text_field_bindings();
-        let reply = inspection.dispatch_invocation(request, &bindings, &fields, |invocation| {
-            self.run_invocation(invocation)
-        });
+        let links = self.link_bindings();
+        let reply = inspection.dispatch_invocation_with_links(
+            request,
+            &bindings,
+            &fields,
+            &links,
+            |invocation| self.run_invocation(invocation),
+        );
         // Only a state change repaints; reads never do.
         if self.repaint.len() > reasons {
             self.context.request_repaint();
@@ -1217,6 +1231,15 @@ impl<A: Application> AppHost<A> {
                 self.repaint.push(HostRepaint::Application("set text"));
                 Ok(Execution::Deferred)
             }
+            // The URL opens through egui's platform output in the next pass.
+            Invocation::OpenLink { link } => {
+                if !crate::link_url_allowed(&link.url) {
+                    return Err(InspectionError::validation(crate::INVALID_LINK_URL));
+                }
+                self.links_to_open.push(link.url);
+                self.repaint.push(HostRepaint::Application("open link"));
+                Ok(Execution::Completed)
+            }
         }
     }
 
@@ -1225,6 +1248,15 @@ impl<A: Application> AppHost<A> {
         if let (Some(request), Some(inspection)) = (&edit.request, &self.inspection) {
             inspection.complete(request, Err(InspectionError::validation(message)));
         }
+    }
+
+    /// Every link the latest pass presented, as an open-link binding.
+    fn link_bindings(&self) -> Vec<LinkBinding> {
+        self.snapshot
+            .nodes
+            .iter()
+            .filter_map(LinkBinding::from_node)
+            .collect()
     }
 
     fn text_field_bindings(&self) -> Vec<TextFieldBinding> {
@@ -1378,7 +1410,8 @@ impl<A: Application> AppHost<A> {
         loop {
             let bindings = self.bindings();
             let fields = self.text_field_bindings();
-            if !inspection.drain_invocation(&bindings, &fields, |invocation| {
+            let links = self.link_bindings();
+            if !inspection.drain_invocation_with_links(&bindings, &fields, &links, |invocation| {
                 self.run_invocation(invocation)
             }) {
                 break;
@@ -1511,13 +1544,16 @@ impl<A: Application> AppHost<A> {
         let text_fields = pair_text_fields(context, &mut nodes);
         // Visible-only surfaces scroll, so they submit partially visible text.
         // Audit their measured successes only when complete; keep every failed
-        // attempt and all other text as presented.
+        // attempt and all other text as presented. Reading text and links
+        // declare that a scroll surface clips them, and their recipes omit
+        // text scrolled fully out of view, so their partial text stays.
         let text: Vec<_> = observed
             .text
             .into_iter()
             .filter(|(text, visible_only)| {
                 !visible_only
                     || text.layout_error.is_some()
+                    || text.overflow == crate::TextOverflow::WrapUnbounded
                     || (text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
                         && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
                         && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
@@ -1566,11 +1602,12 @@ impl<A: Application> AppHost<A> {
             collections: observation.collections,
             ..Default::default()
         };
-        if let Err(error) = inspection.stage_completed_with_fields(
+        if let Err(error) = inspection.stage_completed_with_links(
             context,
             self.snapshot.clone(),
             &self.bindings(),
             &self.text_field_bindings(),
+            &self.link_bindings(),
             metadata,
             observation.facts,
         ) {
@@ -1674,6 +1711,8 @@ fn pair_text_fields(
     fields
 }
 
+#[cfg(test)]
+mod link_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

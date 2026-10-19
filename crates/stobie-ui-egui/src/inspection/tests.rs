@@ -1187,6 +1187,7 @@ fn typed_fixture(
         snapshot,
         &bindings,
         &fields,
+        &[],
         CollectionMetadata::default(),
         BTreeMap::new(),
     )
@@ -1510,6 +1511,7 @@ fn text_fields_must_present_a_text_input_node() {
         snapshot,
         &bindings,
         &[field],
+        &[],
         CollectionMetadata::default(),
         BTreeMap::new(),
     )

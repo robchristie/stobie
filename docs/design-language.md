@@ -91,6 +91,7 @@ Default alignment and overflow are semantic:
 | Content | Alignment | Lines | Default overflow |
 | --- | --- | --- | --- |
 | Names, labels and prose | Start | One in chrome; multiple in content | Truncate in chrome with semantic full text; wrap in content |
+| Reading text and links | Start | Unlimited | Wrap at the available width, never truncate; a parent scroll area clips |
 | Numeric result columns | End | One | Truncate only after preserving sign, unit and semantic full text |
 | Status and errors | Start | Wrap when persistent | Wrap, or move detail to diagnostics when chrome is narrow |
 | Compact status chips | Start | One | Measured ellipsis with complete semantic value and tooltip |
@@ -118,9 +119,12 @@ and `error`. Each role resolves its font family, size, actual weight, line heigh
 from generated tokens. Egui galley layout is the production measurement
 authority; role names never become runtime stylesheet selectors.
 
-Implemented overflow policies are `ellipsis`, `wrap`, `clip`, `scroll` and
-`expand`. Ellipsis and bounded wrapping use egui's `Galley::elided` as the sole
-truncation signal. Clip and scroll preserve intrinsic layout and explicitly
+Implemented overflow policies are `ellipsis`, `wrap`, `clip`, `scroll`,
+`expand` and `wrap_unbounded`. Ellipsis and bounded wrapping use egui's
+`Galley::elided` as the sole truncation signal. Unbounded wrapping belongs to
+the [reading-text and link recipes](ui-guides/components.md#reading-text): it
+declares no line limit, grows its allocation to the measured height, never
+truncates and accepts a parent scroll area's clip. Clip and scroll preserve intrinsic layout and explicitly
 permit content bounds outside the local allocation because the owning clip or
 scroll surface constrains visible paint. Expand requires the useful allocation
 to contain the measured text. All policies retain full semantic text.

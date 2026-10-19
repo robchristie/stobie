@@ -232,6 +232,9 @@ pub struct ResolvedTarget {
 /// The framework capability that replaces a text field's text as typing would.
 pub const SET_TEXT_CAPABILITY: &str = "stobie.set-text";
 
+/// The framework capability that opens a link's URL as activating it would.
+pub const OPEN_LINK_CAPABILITY: &str = "stobie.open-link";
+
 /// The value a capability takes, published by discovery. An action takes at
 /// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
 /// as `"none"`; the others as objects tagged by `kind`.

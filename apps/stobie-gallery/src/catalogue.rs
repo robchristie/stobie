@@ -35,10 +35,12 @@ pub enum StoryId {
     NavigationSidebar,
     NavigationStates,
     NavigationLongNarrow,
+    ReadingConversation,
+    ReadingLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 30] = [
+    pub const ALL: [Self; 32] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -69,6 +71,8 @@ impl StoryId {
         Self::NavigationSidebar,
         Self::NavigationStates,
         Self::NavigationLongNarrow,
+        Self::ReadingConversation,
+        Self::ReadingLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -103,6 +107,8 @@ impl StoryId {
             Self::NavigationSidebar => "navigation/sidebar",
             Self::NavigationStates => "navigation/states",
             Self::NavigationLongNarrow => "navigation/long-narrow",
+            Self::ReadingConversation => "reading/conversation",
+            Self::ReadingLongNarrow => "reading/long-narrow",
         }
     }
 }
@@ -155,6 +161,7 @@ pub enum StoryGroup {
     Reference,
     Icon,
     Navigation,
+    Reading,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -280,6 +287,12 @@ const ICON_ACTION_STATES: &[StoryState] = &[
     StoryState::Disabled,
     StoryState::KeyboardFocused,
 ];
+const READING_NARROW_STATES: &[StoryState] = &[
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
+    StoryState::Disabled,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -307,7 +320,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 30] = [
+pub static STORIES: [StoryDefinition; 32] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -576,6 +589,24 @@ pub static STORIES: [StoryDefinition; 30] = [
         320,
         430,
         ICON_NARROW_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::ReadingConversation,
+        "A long reply in a conversation, with links that open in a new tab.",
+        StoryGroup::Reading,
+        640,
+        560,
+        REFERENCE_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::ReadingLongNarrow,
+        "Unbroken and localised text, long and disabled links, clipped scrolling.",
+        StoryGroup::Reading,
+        320,
+        600,
+        READING_NARROW_STATES,
         SCROLL,
     ),
 ];

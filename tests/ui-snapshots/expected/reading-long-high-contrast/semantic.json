@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "reading/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 673
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.26af5ddde113d846",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Vollständiger Bericht über die nächtliche Auswertung aller Quellen",
+      "rect": {
+        "min_x": 694,
+        "min_y": 379,
+        "max_x": 941.90625,
+        "max_y": 457
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/reports/nightly-evaluation"
+    },
+    {
+      "id": "presentation.3968a45f5e293869",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "https://example.org/changes",
+      "rect": {
+        "min_x": 694,
+        "min_y": 462,
+        "max_x": 933.9375,
+        "max_y": 494
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/changes"
+    },
+    {
+      "id": "presentation.d677ad27de11b7bd",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Archived copy (unavailable offline)",
+      "rect": {
+        "min_x": 694,
+        "min_y": 499,
+        "max_x": 978.03125,
+        "max_y": 531
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/archive"
+    }
+  ],
+  "semantic_audit": []
+}
