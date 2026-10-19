@@ -688,3 +688,77 @@ fn reading_identity_is_stable_across_layouts() {
         ids[1].2.iter().map(|l| l.component_id).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn only_http_https_and_mailto_urls_are_allowed() {
+    for url in [
+        URL,
+        "http://example.org",
+        "HTTPS://Example.org/Path?q=1#top",
+        "mailto:someone@example.org",
+    ] {
+        assert!(crate::link_url_allowed(url), "{url}");
+    }
+    for url in [
+        "",
+        "   ",
+        "javascript:alert(1)",
+        "JavaScript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "vbscript:msgbox",
+        "file:///etc/passwd",
+        "ftp://example.org",
+        "/relative/path",
+        "https://",
+        "mailto:",
+        " https://example.org",
+        "https://example.org/a b",
+        "https://example.org/\nnext",
+    ] {
+        assert!(!crate::link_url_allowed(url), "{url:?}");
+    }
+}
+
+#[test]
+fn rejected_urls_paint_a_diagnostic_and_open_nothing() {
+    for url in ["javascript:alert(document.domain)", "", "  "] {
+        let spec = LinkSpec::new("Read the paper", url);
+        let (snapshot, update, layouts) = present_semantics(PHONE, spec);
+        let link = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.role == UiRole::Link)
+            .unwrap();
+        assert!(!link.enabled, "{url:?}");
+        assert_eq!(
+            link.disabled_reason.as_deref(),
+            Some(crate::INVALID_LINK_URL)
+        );
+        let findings = audit_accesskit(&snapshot, &update);
+        assert!(findings.is_empty(), "{url:?}: {findings:#?}");
+        let failure = layouts
+            .iter()
+            .find(|layout| layout.component_id.kind == TextComponentKind::Link)
+            .unwrap();
+        assert_eq!(failure.layout_error, Some(TextLayoutError::InvalidUrl));
+        assert!(audit_text_layouts(&layouts).iter().any(|finding| matches!(
+            finding,
+            TextAuditFinding::LayoutFailed {
+                error: TextLayoutError::InvalidUrl,
+                ..
+            }
+        )));
+        let binding = crate::LinkBinding::from_node(link).unwrap();
+        assert!(!binding.availability.enabled());
+
+        let (mut harness, rect, opened) =
+            link_harness(LinkSpec::new("Read the paper", "javascript:alert(1)"), true);
+        click(&mut harness, rect.center(), egui::PointerButton::Primary);
+        click(&mut harness, rect.center(), egui::PointerButton::Middle);
+        harness.key_press(egui::Key::Tab);
+        harness.run();
+        harness.key_press(egui::Key::Enter);
+        harness.run();
+        assert!(take(&opened).is_empty(), "{url:?}");
+    }
+}

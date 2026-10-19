@@ -22,11 +22,15 @@ and Space, and AccessKit click; the same tab only for `LinkTarget::SameTab`,
 with a middle click still opening a new tab; a disabled link opening nothing;
 the `Link` node, its URL and AccessKit parity (including a mismatched URL);
 wrapping long labels and URL fallback for blank labels; a fixed allocation on
-hover; and link colour contrast in all four reference modes and the three
+hover; only http, https and mailto URLs opening, with `javascript:`, `data:`,
+blank and malformed URLs painting a failing diagnostic and an unavailable link
+that opens nothing by any route; and link colour contrast in all four reference modes and the three
 authored Gallery identities. Host regressions publish each presented link as
 `stobie.open-link`, open a new tab when an agent invokes it (even for a
 same-tab link), refuse a disabled link, reject a target whose URL changed and
-report keyboard focus on the link's node.
+report keyboard focus on the link's node. The web host takes new-tab
+requests out of each pass's output and opens them with `noopener` and
+`noreferrer`; a regression checks that only new-tab requests are taken.
 
 Presentation checks: passed. The ordinary conversation and the narrow
 high-contrast column at 150% were inspected for hierarchy, alignment,
@@ -58,8 +62,9 @@ beyond what egui offers.
 WebGPU and again on WebGL2. In Chromium it drags across the whole reply and
 reads the actual clipboard, which holds the reply exactly, with its paragraph
 breaks. A physical click on a link, and Enter and Space after focusing the
-link through the ARIA layer, each open a new tab showing the link's URL while
-the Gallery page keeps its URL and story; example.org is answered locally, so
+link through the ARIA layer, each open a new tab showing the link's URL, with
+no `window.opener` and no referrer, while the Gallery page keeps its URL and
+story; example.org is answered locally, so
 nothing leaves the host. It clicks a disabled link and sees no tab open,
 checks the narrow column's wrapping, bare URL and clipped observation,
 scrolls it, and confirms the idle page presents no frames.

@@ -5,10 +5,31 @@ use egui::{Color32, CursorIcon, Rect, Response, Sense, Stroke, text::LayoutJob};
 
 use crate::{
     DesignTokens, PresentationId, SemanticUiId, TextComponentId, TextComponentKind,
-    TextInteraction, TextLayoutObservation, TextRole, TextRoleStyles, UiNode, UiRole,
-    measure_component_reading, paint_measured_text, present_accessible_measured_text,
-    present_measured_text, reading_job,
+    TextInteraction, TextLayoutError, TextLayoutObservation, TextRole, TextRoleStyles, UiNode,
+    UiRole, failed_measurement, measure_component_reading, paint_measured_text,
+    present_accessible_measured_text, present_measured_text, reading_job,
 };
+
+/// Why a link whose URL [`link_url_allowed`] rejects is unavailable.
+pub const INVALID_LINK_URL: &str = "The link's address is not an http, https or mailto URL";
+
+/// Whether a link may open `url`: an `http://` or `https://` URL with a host
+/// part, or a `mailto:` address, without whitespace or control characters.
+/// Other schemes, such as `javascript:` or `data:`, could run script or
+/// replace the application, so links present them as unavailable.
+pub fn link_url_allowed(url: &str) -> bool {
+    if url.is_empty() || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return false;
+    }
+    let lower = url.to_ascii_lowercase();
+    ["http://", "https://", "mailto:"]
+        .into_iter()
+        .any(|scheme| {
+            lower
+                .strip_prefix(scheme)
+                .is_some_and(|rest| !rest.is_empty())
+        })
+}
 
 /// How a reading surface presents its text. It always wraps at the available
 /// width, to as many lines as the text needs, and is never truncated.
@@ -105,7 +126,10 @@ pub enum LinkTarget {
 pub struct LinkSpec<'a> {
     /// Visible text and accessible name. A blank label shows the URL.
     pub label: &'a str,
-    /// The URL to open. Must not be blank.
+    /// The URL to open: http, https or mailto (see [`link_url_allowed`]).
+    /// The application decides whether a URL from an untrusted source, such
+    /// as a model's reply, should be shown as a link at all; Stobie only
+    /// refuses schemes that could run script or replace the application.
     pub url: &'a str,
     /// Additional context for assistive technology, such as where the link
     /// leads or that it opens a new tab, in the application's language.
@@ -172,13 +196,21 @@ pub(crate) fn contrast_ratio(foreground: Color32, background: Color32) -> f64 {
 /// Present a link that opens `spec.url`: in a new browser tab by default, or
 /// the platform's default browser natively. A modifier or middle click always
 /// opens a new tab. Pointer, keyboard (Tab, then Enter or Space) and
-/// assistive-technology activation share one route.
+/// assistive-technology activation share one route. In a hosted web
+/// application the new tab opens with `noopener` and `noreferrer`, so the
+/// linked page cannot reach back into the application's tab.
+///
+/// A URL that [`link_url_allowed`] rejects, including a blank one, paints a
+/// visible diagnostic, records a failing observation
+/// ([`TextLayoutError::InvalidUrl`]) and presents an unavailable link that
+/// opens nothing.
 ///
 /// The underlined label wraps at the available width without a line limit
 /// and is never truncated. The allocation hugs the label, with half a spacing
 /// unit either side so the focus ring clears it, and keeps the token minimum
-/// hit size; the label is start-aligned within it and centred vertically. Hovering shows the URL and a pointing-hand cursor; keyboard
-/// focus adds the token focus ring. The label is inert: activation owns the
+/// hit size; the label is start-aligned within it and centred vertically.
+/// Hovering shows the URL and a pointing-hand cursor; keyboard focus adds the
+/// token focus ring. The label is inert: activation owns the
 /// pointer. Low-level callers publish the matching [`link_semantic_node`];
 /// [`crate::PresentationContext::link`] records both automatically.
 pub fn link(
@@ -189,9 +221,9 @@ pub fn link(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> Response {
-    assert!(!spec.url.trim().is_empty(), "a link needs a URL");
+    let valid = link_url_allowed(spec.url);
     let label = spec.visible_label();
-    let enabled = ui.is_enabled();
+    let enabled = ui.is_enabled() && valid;
     let foreground = if enabled {
         link_colour(tokens)
     } else {
@@ -205,6 +237,16 @@ pub fn link(
     // The hovered and pressed underline is heavier; measure both so the
     // allocation never moves with hover.
     let measure = |ui: &egui::Ui, underline: f32| {
+        if !valid {
+            return failed_measurement(
+                ui.painter(),
+                label,
+                TextInteraction::Inert,
+                TextLayoutError::InvalidUrl,
+                tokens,
+                label_width,
+            );
+        }
         let mut job: LayoutJob = reading_job(label, spec.role, foreground, tokens, font_scale);
         for section in &mut job.sections {
             section.format.underline = Stroke::new(underline, foreground);
@@ -236,7 +278,9 @@ pub fn link(
             Sense::hover()
         },
     );
-    if response.clicked_with_open_in_background() {
+    if !enabled {
+        // An unavailable link opens nothing, whatever its sense reports.
+    } else if response.clicked_with_open_in_background() {
         ui.ctx().open_url(egui::OpenUrl::new_tab(spec.url));
     } else if response.clicked() {
         ui.ctx().open_url(egui::OpenUrl {
@@ -252,9 +296,13 @@ pub fn link(
             node.set_label(label);
             node.set_url(spec.url);
             node.set_author_id(identity.semantic_id().0);
-            match spec.description {
-                Some(description) => node.set_description(description),
-                None => node.clear_description(),
+            match (spec.description, valid) {
+                (description, false) => node.set_description(format!(
+                    "{}; unavailable: {INVALID_LINK_URL}",
+                    description.unwrap_or_default()
+                )),
+                (Some(description), true) => node.set_description(description),
+                (None, true) => node.clear_description(),
             }
             let bounds = response.interact_rect;
             node.set_bounds(egui::accesskit::Rect {
@@ -320,8 +368,12 @@ pub fn link_semantic_node(
     );
     node.name = spec.visible_label().to_owned();
     node.description = spec.description.map(str::to_owned);
-    node.enabled = response.enabled();
+    let valid = link_url_allowed(spec.url);
+    node.enabled = response.enabled() && valid;
     node.focused = response.has_focus();
     node.value = Some(spec.url.to_owned());
+    if !valid {
+        node.disabled_reason = Some(INVALID_LINK_URL.to_owned());
+    }
     Some(node)
 }

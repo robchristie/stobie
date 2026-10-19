@@ -32,7 +32,8 @@ pub use navigation::{
 pub use property::property_row;
 pub use range::range_control;
 pub use reading::{
-    LinkSpec, LinkTarget, ReadingTextSpec, link, link_colour, link_semantic_node, reading_text,
+    INVALID_LINK_URL, LinkSpec, LinkTarget, ReadingTextSpec, link, link_colour, link_semantic_node,
+    link_url_allowed, reading_text,
 };
 pub use result_row::{
     ResultRowSpec, list_box, result_row, result_row_height, set_position_semantics,

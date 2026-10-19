@@ -43,7 +43,9 @@ recipe and egui's hyperlink.
   label shows the URL; token minimum hit size; hover tooltip with the URL,
   pointing hand and heavier underline without moving the allocation; focus
   ring; new tab by default, `SameTab` opt-out, middle or modifier click always
-  a new tab; disabled opens nothing. `UiRole::Link` maps to an AccessKit
+  a new tab; disabled opens nothing. Only http, https and mailto URLs open;
+  any other URL is a failing diagnostic and an unavailable link, never a
+  panic. Hosted web applications open new tabs with `noopener,noreferrer`. `UiRole::Link` maps to an AccessKit
   `Link` with its URL, checked by parity, and to `link` in the ARIA layer.
 - Hosts publish each presented link as `stobie.open-link` (URL as the
   target's meaning); an agent's open always asks for a new tab. eframe's
@@ -63,7 +65,7 @@ critique, with at most one refinement.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| Reading text, links and the open-link capability | Complete | 14 recipe, 4 host and 3 Gallery regressions |
+| Reading text, links and the open-link capability | Complete | 16 recipe, 5 host and 3 Gallery regressions |
 | Gallery, documentation and physical evidence | Complete | [UI evidence](../reading-text-evidence.md), two inspected baselines, browser and native journeys |
 | Candidate qualification | Complete | `cargo xtask verify` on the candidate; review, CI and merge retained in the PR |
 

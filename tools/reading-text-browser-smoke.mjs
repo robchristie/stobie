@@ -93,12 +93,14 @@ async function opensNewTab(label, expected, act) {
   const tab = await popup;
   await tab.waitForLoadState('domcontentloaded');
   assert.equal(tab.url(), expected, `${label}: the new tab shows the link's URL`);
+  assert.equal(await tab.evaluate(() => window.opener), null, `${label}: the new tab has no opener`);
+  assert.equal(await tab.evaluate(() => document.referrer), '', `${label}: the new tab has no referrer`);
   assert.equal(page.url(), pageUrl, `${label}: the Gallery page was not replaced`);
   assert(!page.isClosed());
   const after = await snapshot();
   assert.equal(after.story, before.story, `${label}: the Gallery kept its state`);
   assert(after.frame >= before.frame);
-  opened.push({ route: label, url: tab.url(), gallery_url: page.url(), story: after.story });
+  opened.push({ route: label, url: tab.url(), opener: null, referrer: '', gallery_url: page.url(), story: after.story });
   await tab.close();
   await page.bringToFront();
 }

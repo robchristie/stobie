@@ -187,6 +187,8 @@ pub enum TextLayoutError {
     /// A bounded text recipe was asked to wrap without a line limit; only the
     /// reading-text and link recipes lay out unbounded text.
     UnboundedOverflow,
+    /// A link's URL is blank or not an http, https or mailto address.
+    InvalidUrl,
     InvalidWidth,
     InvalidFontScale,
     FontsNotInstalled,

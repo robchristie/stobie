@@ -167,6 +167,10 @@ mod web {
                                 .take()
                                 .expect("the application is created once");
                             let app = create(creation);
+                            // New-tab links open without an opener.
+                            creation
+                                .egui_ctx
+                                .add_plugin(crate::host::new_tab::NewTabLinks);
                             // A restarted host replaces its previous layer.
                             if let Some(previous) = layer.take() {
                                 super::aria_dom::remove(previous);

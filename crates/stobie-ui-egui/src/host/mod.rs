@@ -48,6 +48,7 @@ use crate::{
 #[cfg(feature = "eframe")]
 mod entry;
 mod events;
+mod new_tab;
 mod renderer;
 use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
@@ -1232,6 +1233,9 @@ impl<A: Application> AppHost<A> {
             }
             // The URL opens through egui's platform output in the next pass.
             Invocation::OpenLink { link } => {
+                if !crate::link_url_allowed(&link.url) {
+                    return Err(InspectionError::validation(crate::INVALID_LINK_URL));
+                }
                 self.links_to_open.push(link.url);
                 self.repaint.push(HostRepaint::Application("open link"));
                 Ok(Execution::Completed)

@@ -199,7 +199,18 @@ runner would otherwise open a same-tab link as `_self`, replacing the page.
 Natively it opens the platform's default browser (Stobie enables eframe's
 `links` feature). `LinkTarget::SameTab` is the explicit opt-out; a middle or
 modifier click always opens a new tab. Pointer release, Tab then Enter or
-Space, and assistive-technology activation share one route.
+Space, and assistive-technology activation share one route. A hosted web
+application opens every new-tab request with `noopener` and `noreferrer`, so
+the linked page cannot navigate the application's tab.
+
+A link opens only `http://` and `https://` URLs with a host part and `mailto:`
+addresses (`link_url_allowed`). Any other URL, including a blank one or a
+`javascript:` or `data:` URL, paints the usual measured diagnostic, records a
+failing observation (`InvalidUrl`) and presents an unavailable link whose
+semantic and accessible description give the reason; it never panics and
+opens nothing. Stobie checks only the scheme: whether a URL from an untrusted
+source, such as a model's reply, should be offered as a link at all is the
+application's decision.
 
 The label is an underlined, inert measured label in the spec's `TextRole`
 (body by default). It wraps at the available width without a line limit and

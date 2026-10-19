@@ -290,7 +290,7 @@ pub(crate) fn reading_job(
 
 /// The failure fallback shared by component measurement: a visible one-line
 /// diagnostic that keeps its typed error for the audit.
-fn failed_measurement(
+pub(crate) fn failed_measurement(
     painter: &Painter,
     text: &str,
     interaction: TextInteraction,
