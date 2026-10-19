@@ -52,16 +52,18 @@ mod tests {
 
     #[test]
     fn only_new_tab_requests_are_taken_in_order() {
-        let mut output = egui::PlatformOutput::default();
-        output.commands = vec![
-            egui::OutputCommand::OpenUrl(egui::OpenUrl::new_tab("https://example.org/a")),
-            egui::OutputCommand::CopyText("kept".into()),
-            egui::OutputCommand::OpenUrl(egui::OpenUrl {
-                url: "https://example.org/same".into(),
-                new_tab: false,
-            }),
-            egui::OutputCommand::OpenUrl(egui::OpenUrl::new_tab("https://example.org/b")),
-        ];
+        let mut output = egui::PlatformOutput {
+            commands: vec![
+                egui::OutputCommand::OpenUrl(egui::OpenUrl::new_tab("https://example.org/a")),
+                egui::OutputCommand::CopyText("kept".into()),
+                egui::OutputCommand::OpenUrl(egui::OpenUrl {
+                    url: "https://example.org/same".into(),
+                    new_tab: false,
+                }),
+                egui::OutputCommand::OpenUrl(egui::OpenUrl::new_tab("https://example.org/b")),
+            ],
+            ..Default::default()
+        };
         assert_eq!(
             take_new_tab_urls(&mut output),
             ["https://example.org/a", "https://example.org/b"]
