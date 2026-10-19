@@ -338,7 +338,7 @@ fn write_pwa(web_dir: &Path, app: &str) -> Result<bool, Error> {
     let files = pwa::web_files(web_dir)?;
     fs::write(
         web_dir.join(pwa::SERVICE_WORKER_FILE),
-        pwa::service_worker(app, "development", &[], &files),
+        declaration.service_worker(app, "development", &[], &files),
     )
     .map_err(io(format!("write {}", pwa::SERVICE_WORKER_FILE)))?;
     Ok(true)

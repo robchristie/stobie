@@ -52,6 +52,21 @@ rm -rf "$APP" "$OUTSIDE/outside-imaging"
   "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web.json"
   "$STOBIE" build-web --production --output "$OUTSIDE/production" --json >"$EVIDENCE_DIR/build-web-production.json"
 )
+# A second application opts into Web Push: its library is the check's
+# (tools/web-push-app/lib.rs) and its page declares stobie-web-push.
+PUSH_APP="$OUTSIDE/outside-push"
+rm -rf "$PUSH_APP" "$OUTSIDE/push-production"
+"$STOBIE" new outside-push --path "$PUSH_APP" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
+cp tools/web-push-app/lib.rs "$PUSH_APP/src/lib.rs"
+sed -i 's|<link rel="manifest"|<meta name="stobie-web-push" content="enabled" />\n    <link rel="manifest"|' "$PUSH_APP/web/index.html"
+grep -q 'name="stobie-web-push"' "$PUSH_APP/web/index.html"
+(
+  cd "$PUSH_APP"
+  cargo fmt --check
+  cargo clippy --all-targets -- -D warnings
+  cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
+  "$STOBIE" build-web --production --output "$OUTSIDE/push-production" --json >"$EVIDENCE_DIR/build-web-push.json"
+)
 # The image layer compiles natively and for the web from outside too.
 "$STOBIE" new outside-imaging --imaging --path "$OUTSIDE/outside-imaging" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
 (
@@ -91,3 +106,6 @@ ui_sandbox "$(command -v node)" tools/outside-app-smoke.mjs "$STOBIE" "$APP" "$C
 # The generated page is installable: both builds wrote its manifest and
 # service worker, which Chromium accepts, and it starts offline.
 ui_sandbox "$(command -v node)" tools/pwa-smoke.mjs outside-notes "$APP/web" "$OUTSIDE/production" "$EVIDENCE_DIR"
+# The opted-in application subscribes inside a tap, shows every push and
+# receives a tapped notification's route, under a strict CSP.
+ui_sandbox "$(command -v node)" tools/web-push-smoke.mjs outside-push "$OUTSIDE/push-production" "$EVIDENCE_DIR"

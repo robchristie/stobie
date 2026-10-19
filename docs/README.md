@@ -18,6 +18,8 @@ learn the current API.
 - [Production browser builds](browser-startup.md): web packaging,
   installable web applications, WebGPU and WebGL2 selection, and startup
   measurement.
+- [Web Push](web-push.md): notifications for an installable web application,
+  subscribing inside a tap, the app badge and a tapped notification's route.
 - [Regional source adapter contract](regional-adapter-contract.md): external
   regional image sources for the imaging layer.
 
