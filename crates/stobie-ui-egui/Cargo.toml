@@ -31,8 +31,9 @@ eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_de
 wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
 js-sys = { version = "0.3.104", optional = true }
-# eframe already enables these features, so the ARIA layer and renderer policy add no web-sys code.
-web-sys = { workspace = true, features = ["AddEventListenerOptions", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "Navigator", "Node", "Touch", "TouchEvent", "TouchList", "Window"], optional = true }
+# eframe already enables most of these features for the ARIA layer and renderer
+# policy; MessageEvent, ServiceWorker* and Url serve Web Push (src/web_push.rs).
+web-sys = { workspace = true, features = ["AddEventListenerOptions", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [[example]]

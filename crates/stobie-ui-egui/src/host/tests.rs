@@ -1319,3 +1319,53 @@ fn intents_applied_while_hidden_are_presented_once_visible() {
     host_mut(&mut harness).apply_sent_intents_before_pass(false);
     assert!(host(&harness).repaint_reasons().is_empty());
 }
+
+#[test]
+fn web_push_reports_unsupported_natively_through_the_sender() {
+    use crate::web_push::{PushEvent, PushOperation, PushSupport, WebPush};
+    let mut harness = harness(Counter::default());
+    harness.run();
+    let heard = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let record = heard.clone();
+    let push = WebPush::start(sender(&harness), move |event| {
+        record.borrow_mut().push(event);
+        Intent::Add(1)
+    });
+    assert!(!push.support().is_supported());
+    assert_eq!(push.permission(), None);
+    assert!(!push.set_app_badge(3));
+    push.subscribe(
+        "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+    );
+    push.subscribe("not a key");
+    push.unsubscribe();
+    let heard = heard.borrow();
+    let PushEvent::State(state) = &heard[0] else {
+        panic!("{heard:?}")
+    };
+    assert!(
+        matches!(&state.support, PushSupport::Unsupported(reason) if reason.contains("browser"))
+    );
+    assert_eq!(
+        (state.permission, state.subscription.as_ref()),
+        (None, None)
+    );
+    let failed: Vec<_> = heard[1..]
+        .iter()
+        .map(|event| match event {
+            PushEvent::Failed { operation, message } => (*operation, message.as_str()),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(failed.len(), 3);
+    assert_eq!(failed[0].0, PushOperation::Subscribe);
+    assert!(failed[0].1.contains("only in the browser"));
+    assert!(
+        failed[1].1.contains("base64url"),
+        "the key is checked first"
+    );
+    assert_eq!(failed[2].0, PushOperation::Unsubscribe);
+    // Each event reached the host as the application's own intent.
+    harness.step();
+    assert_eq!(host(&harness).app().count, 4);
+}
