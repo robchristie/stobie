@@ -206,6 +206,11 @@ pub fn run_stage(name: &str) -> Result<()> {
                 )?;
                 run_with_environment(
                     "bash",
+                    &["tools/reading-text-native-smoke.sh"],
+                    &evidence_environment,
+                )?;
+                run_with_environment(
+                    "bash",
                     &["tools/live-feed-smoke.sh", "native"],
                     &evidence_environment,
                 )?;
@@ -260,6 +265,11 @@ pub fn run_stage(name: &str) -> Result<()> {
             run_with_environment(
                 "bash",
                 &["tools/status-chip-browser-smoke.sh"],
+                &evidence_environment,
+            )?;
+            run_with_environment(
+                "bash",
+                &["tools/reading-text-browser-smoke.sh"],
                 &evidence_environment,
             )?;
             run_with_environment(
@@ -398,6 +408,7 @@ pub fn run_stage(name: &str) -> Result<()> {
             for smoke in [
                 "tools/navigation-browser-smoke.sh",
                 "tools/status-chip-browser-smoke.sh",
+                "tools/reading-text-browser-smoke.sh",
                 "tools/record-desk-browser-smoke.sh",
             ] {
                 run_with_environment("bash", &[smoke], &environment)?;

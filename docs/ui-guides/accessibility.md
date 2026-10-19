@@ -186,6 +186,7 @@ snapshot, is the source.
 | `ResultRow`, `ThumbnailCell` | `ListBoxOption` inside `ListBox` | `option` with `aria-selected`, `aria-posinset` and `aria-setsize`, inside `listbox` |
 | `Status` | `Status`, live polite | `status`, a polite live region. A readout that follows the pointer declares live off (`aria-live="off"`) |
 | `StatusChip` | `Label` | Text; never a live region |
+| `Link` | `Link` with its URL | `link`, a hit target while enabled |
 | `Section` | As the recipe sets it | `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |

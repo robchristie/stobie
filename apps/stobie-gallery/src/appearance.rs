@@ -261,6 +261,43 @@ mod tests {
     }
 
     #[test]
+    fn links_keep_text_contrast_on_authored_application_surfaces() {
+        use stobie_ui_egui::{DensityVariant, TypographyProfile, link_colour};
+        let luminance = |c: egui::Color32| {
+            let linear = |v: u8| {
+                let s = f64::from(v) / 255.0;
+                if s <= 0.04045 {
+                    s / 12.92
+                } else {
+                    ((s + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            0.2126 * linear(c.r()) + 0.7152 * linear(c.g()) + 0.0722 * linear(c.b())
+        };
+        for index in 0..=2 {
+            for (variant, target) in [
+                (ThemeVariant::Light, 4.5),
+                (ThemeVariant::Dark, 4.5),
+                (ThemeVariant::LightHighContrast, 7.0),
+                (ThemeVariant::DarkHighContrast, 7.0),
+            ] {
+                let tokens = authored_theme(index).resolve(
+                    variant,
+                    DensityVariant::Comfortable,
+                    TypographyProfile::Dense,
+                );
+                let link = link_colour(&tokens);
+                for surface in [tokens.colours.surface_canvas, tokens.colours.surface_panel] {
+                    let a = luminance(link);
+                    let b = luminance(surface.into());
+                    let ratio = (a.max(b) + 0.05) / (a.min(b) + 0.05);
+                    assert!(ratio >= target, "preset {index} {variant:?}: {ratio:.2}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn workbench_and_production_shell_render_each_authored_identity() {
         use stobie_ui_egui::{DensityVariant, TypographyProfile, UiPreferences};
         for index in 0..=2 {

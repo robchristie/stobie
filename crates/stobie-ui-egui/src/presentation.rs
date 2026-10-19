@@ -528,6 +528,74 @@ impl PresentationContext {
         response
     }
 
+    /// Text of any length, such as a message or a document: measured, wrapped
+    /// at the available width and selectable. Unlike [`Self::content`] it has
+    /// no line limit and is never truncated; put long text in a scroll area.
+    ///
+    /// ```
+    /// use stobie_ui_egui::{DesignTokens, LinkSpec, PresentationContext,
+    ///     PresentationObservations, PresentationScope, ReadingTextSpec, SemanticUiId};
+    ///
+    /// // A reply of any length, followed by the page it cites.
+    /// fn reply(ui: &mut egui::Ui, tokens: DesignTokens, scale: f32, message_id: u64,
+    ///          text: &str, source: &str) -> PresentationObservations {
+    ///     let mut p = PresentationContext::new(ui, tokens, scale,
+    ///         PresentationScope::new("conversation").child(message_id), SemanticUiId::root());
+    ///     egui::ScrollArea::vertical().show(ui, |ui| {
+    ///         p.reading_text(ui, "body", text, ReadingTextSpec::default());
+    ///         // Opens in a new browser tab, so the conversation stays open.
+    ///         p.link(ui, "source", LinkSpec::new("Read the source", source));
+    ///     });
+    ///     p.finish(ui)
+    /// }
+    /// ```
+    pub fn reading_text(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        text: &str,
+        spec: crate::ReadingTextSpec,
+    ) -> Response {
+        self.check_pass(ui);
+        crate::reading_text(
+            ui,
+            self.scope.instance(key),
+            text,
+            spec,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        )
+    }
+
+    /// A link to an external URL, opened in a new browser tab by default,
+    /// with its measured label and semantic `Link` node recorded. Hosts offer
+    /// the link to agents as the `stobie.open-link` capability.
+    pub fn link(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: crate::LinkSpec<'_>,
+    ) -> Response {
+        self.check_pass(ui);
+        let identity = self.scope.instance(key);
+        let response = crate::link(
+            ui,
+            spec,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if let Some(mut node) =
+            crate::link_semantic_node(&response, spec, identity, self.parent.clone())
+        {
+            node.domain_reference = self.domain_reference.clone();
+            self.push_node(ui, node);
+        }
+        response
+    }
+
     /// Reserve the existing measured line slot for a fixed-height row.
     pub fn fixed_slot(
         &mut self,

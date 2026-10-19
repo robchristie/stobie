@@ -54,6 +54,7 @@ learn the current API.
   [browser startup results](browser-startup-results.md),
   [iOS PWA spike](ios-pwa-spike-report.md),
   [navigation items](navigation-item-evidence.md),
+  [reading text and links](reading-text-evidence.md),
   [Record Desk](record-desk-evidence.md),
   [status chips](status-chip-evidence.md) and
   [verification friction](verification-friction.md).

@@ -140,6 +140,75 @@ impl TextFieldBinding {
     }
 }
 
+/// A presented link that agents can open: its semantic identity and URL.
+/// Hosts bind every enabled or disabled [`UiRole::Link`] node, without
+/// application code. The URL is the target's meaning, so a link whose URL
+/// changed after discovery is stale.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LinkBinding {
+    pub id: SemanticUiId,
+    pub url: String,
+    pub pane: Option<PaneId>,
+    pub domain: Option<DomainReference>,
+    pub availability: Availability,
+}
+
+impl LinkBinding {
+    /// The binding for a presented link node, or `None` for any other node or
+    /// a link without a URL.
+    pub fn from_node(node: &UiNode) -> Option<Self> {
+        let url = node.value.as_ref().filter(|_| node.role == UiRole::Link)?;
+        Some(Self {
+            id: node.id.clone(),
+            url: url.clone(),
+            pane: node.pane,
+            domain: node.domain_reference.clone(),
+            availability: if node.enabled {
+                Availability::Enabled
+            } else {
+                Availability::Disabled {
+                    reason: node
+                        .disabled_reason
+                        .clone()
+                        .unwrap_or_else(|| "The link is unavailable".into())
+                        .into(),
+                }
+            },
+        })
+    }
+
+    fn describe(&self, observation: u64) -> CapabilityDescription {
+        let target = ResolvedTarget {
+            id: self.id.clone(),
+            capability: OPEN_LINK_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            meaning: self.url.clone(),
+            observation,
+        };
+        CapabilityDescription {
+            id: self.id.clone(),
+            capability: OPEN_LINK_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            label: "Open link".into(),
+            description: "Open the link's URL in a new browser tab, or the platform's default browser natively".into(),
+            scope: if self.pane.is_some() {
+                ActionScope::Pane
+            } else {
+                ActionScope::Application
+            },
+            shortcut: None,
+            availability: self.availability.clone(),
+            rendered: false,
+            control_enabled: None,
+            semantic_invocable: true,
+            arguments: ArgumentContract::None,
+            target,
+        }
+    }
+}
+
 /// One admitted invocation, executed on the application thread.
 #[derive(Clone, Debug)]
 pub enum Invocation<A: ActionKey> {
@@ -156,6 +225,9 @@ pub enum Invocation<A: ActionKey> {
         field: TextFieldBinding,
         text: String,
     },
+    /// Open a presented link's URL. A semantic open always asks for a new
+    /// browser tab, so the application under inspection stays open.
+    OpenLink { link: LinkBinding },
 }
 
 /// How far an executed invocation got.
@@ -341,7 +413,32 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<(), InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, text_fields, metadata, facts)?;
+        self.stage_completed_with_links(
+            context,
+            snapshot,
+            bindings,
+            text_fields,
+            &[],
+            metadata,
+            facts,
+        )
+    }
+
+    /// [`Self::stage_completed_with_fields`] with the pass's presented links,
+    /// which discovery publishes as `stobie.open-link` capabilities.
+    #[allow(clippy::too_many_arguments)]
+    pub fn stage_completed_with_links<A: ActionKey>(
+        &self,
+        context: &egui::Context,
+        snapshot: UiSnapshot,
+        bindings: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        links: &[LinkBinding],
+        metadata: CollectionMetadata,
+        facts: BTreeMap<String, ObservationValue>,
+    ) -> Result<(), InspectionError> {
+        let publication =
+            prepare_publication(snapshot, bindings, text_fields, links, metadata, facts)?;
         self.state.lock().expect("inspection mutex poisoned").staged = Some(StagedPublication {
             viewport: context.viewport_id(),
             pass: context.cumulative_pass_nr(),
@@ -359,7 +456,7 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<u64, InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, &[], metadata, facts)?;
+        let publication = prepare_publication(snapshot, bindings, &[], &[], metadata, facts)?;
         Ok(self
             .state
             .lock()
@@ -508,6 +605,17 @@ impl Inspection {
         &self,
         current: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
+        execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
+    ) -> bool {
+        self.drain_invocation_with_links(current, text_fields, &[], execute)
+    }
+
+    /// [`Self::drain_invocation`] with the current presented links.
+    pub fn drain_invocation_with_links<A: ActionKey>(
+        &self,
+        current: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        links: &[LinkBinding],
         mut execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> bool {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
@@ -531,6 +639,7 @@ impl Inspection {
         let validation = state.resolve_current(
             current,
             text_fields,
+            links,
             &request_id,
             &selector,
             &expected,
@@ -602,13 +711,25 @@ impl Inspection {
         text_fields: &[TextFieldBinding],
         execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> InspectionReply {
+        self.dispatch_invocation_with_links(request, current, text_fields, &[], execute)
+    }
+
+    /// [`Self::dispatch_invocation`] with the current presented links.
+    pub fn dispatch_invocation_with_links<A: ActionKey>(
+        &self,
+        request: InspectionRequest,
+        current: &[InspectionBinding<A>],
+        text_fields: &[TextFieldBinding],
+        links: &[LinkBinding],
+        execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
+    ) -> InspectionReply {
         let invocation = matches!(request.operation, InspectionOperation::Invoke { .. });
         let request_id = request.request_id.clone();
         let reply = self.handle(request);
         let queued = matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
             if receipt.state == ReceiptState::Queued);
         if invocation && queued {
-            self.drain_invocation(current, text_fields, execute);
+            self.drain_invocation_with_links(current, text_fields, links, execute);
             let state = self.state.lock().expect("inspection mutex poisoned");
             if let Some(entry) = state.ledger.get(&request_id) {
                 return state.reply(
@@ -968,10 +1089,12 @@ impl InspectionState {
         capability.arguments.parse(arguments).map(drop)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn resolve_current<A: ActionKey>(
         &self,
         bindings: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
+        links: &[LinkBinding],
         request_id: &str,
         selector: &InspectionSelector,
         expected: &ResolvedTarget,
@@ -980,18 +1103,18 @@ impl InspectionState {
         let publication = self.publication()?;
         let observation = publication.observation.id;
         let snapshot = &publication.observation.snapshot;
-        let actions = bindings.iter().map(|binding| {
-            (
-                binding.describe(observation),
-                Some(binding),
-                None::<&TextFieldBinding>,
-            )
-        });
+        let actions = bindings
+            .iter()
+            .map(|binding| (binding.describe(observation), Current::Action(binding)));
         let fields = text_fields
             .iter()
-            .map(|field| (field.describe(observation), None, Some(field)));
+            .map(|field| (field.describe(observation), Current::Field(field)));
+        let links = links
+            .iter()
+            .map(|link| (link.describe(observation), Current::Link(link)));
         let candidates: Vec<_> = actions
             .chain(fields)
+            .chain(links)
             .filter(|(description, ..)| {
                 selector_matches_binding(selector, description, snapshot.node(&description.id))
             })
@@ -1008,39 +1131,49 @@ impl InspectionState {
                 "current selector resolves multiple bindings",
             ));
         }
-        let (description, binding, field) = &candidates[0];
+        let (description, current) = &candidates[0];
         validate_expected(&description.target, expected)?;
         validate_invocable(description)?;
         let argument = description.arguments.parse(arguments)?;
-        match (binding, field) {
-            (Some(binding), _) => Ok(Invocation::Action {
+        Ok(match current {
+            Current::Action(binding) => Invocation::Action {
                 target: binding.target,
                 argument,
-            }),
-            (None, Some(field)) => Ok(Invocation::SetText {
+            },
+            Current::Field(field) => Invocation::SetText {
                 request_id: request_id.to_owned(),
                 field: (*field).clone(),
                 text: match argument {
                     ActionArgument::Text(text) => text,
                     _ => unreachable!("set text takes a text argument"),
                 },
-            }),
-            (None, None) => unreachable!("each candidate has a binding"),
-        }
+            },
+            Current::Link(link) => Invocation::OpenLink {
+                link: (*link).clone(),
+            },
+        })
     }
+}
+
+/// The current binding a candidate capability resolves to.
+enum Current<'a, A: ActionKey> {
+    Action(&'a InspectionBinding<A>),
+    Field(&'a TextFieldBinding),
+    Link(&'a LinkBinding),
 }
 
 fn prepare_publication<A: ActionKey>(
     snapshot: UiSnapshot,
     bindings: &[InspectionBinding<A>],
     text_fields: &[TextFieldBinding],
+    links: &[LinkBinding],
     metadata: CollectionMetadata,
     facts: BTreeMap<String, ObservationValue>,
 ) -> Result<Publication, InspectionError> {
     use InspectionErrorCode as Code;
     if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
         || snapshot.text.len() > INSPECTION_TEXT_LIMIT
-        || bindings.len() + text_fields.len() > INSPECTION_NODE_LIMIT
+        || bindings.len() + text_fields.len() + links.len() > INSPECTION_NODE_LIMIT
         || metadata.collections.len() > 256
         || facts.len() > 256
     {
@@ -1093,10 +1226,22 @@ fn prepare_publication<A: ActionKey>(
             ));
         }
     }
+    for link in links {
+        let presented = snapshot
+            .node(&link.id)
+            .is_some_and(|node| node.role == UiRole::Link);
+        if !presented || link.url.is_empty() || !targets.insert((&link.id, OPEN_LINK_CAPABILITY)) {
+            return Err(InspectionError::new(
+                Code::InvalidRequest,
+                "links require a unique, presented link node with a URL",
+            ));
+        }
+    }
     let capabilities = bindings
         .iter()
         .map(|binding| binding.describe(0))
         .chain(text_fields.iter().map(|field| field.describe(0)))
+        .chain(links.iter().map(|link| link.describe(0)))
         .collect();
     let publication = Publication {
         observation: CompletedObservation {

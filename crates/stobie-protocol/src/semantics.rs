@@ -140,6 +140,9 @@ pub enum UiRole {
     /// Informational measured Label; never a button or live region.
     StatusChip,
     Section,
+    /// A link to an external URL, carried as the node's `value`. Hosts offer
+    /// it as the `stobie.open-link` capability.
+    Link,
 }
 
 /// The domain identity a semantic node presents, published to agents as

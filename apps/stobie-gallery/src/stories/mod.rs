@@ -3,6 +3,7 @@ mod data;
 mod dock;
 mod icons;
 mod navigation;
+mod reading;
 mod reference;
 mod status_chips;
 mod toolbars;
@@ -101,6 +102,9 @@ fn present_story(
                 &mut state.navigation,
                 &mut report,
             )
+        }
+        StoryId::ReadingConversation | StoryId::ReadingLongNarrow => {
+            reading::story(ui, story, tokens, font_scale, &mut report)
         }
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {

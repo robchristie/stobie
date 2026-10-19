@@ -7,7 +7,8 @@ use std::fmt::Write as _;
 use serde::Serialize;
 use stobie_client::protocol::{
     ArgumentContract, Availability, CapabilityDescription, CompletedObservation, DomainReference,
-    ObservationValue, PaneId, SET_TEXT_CAPABILITY, SemanticUiId, UiNode, UiRole,
+    OPEN_LINK_CAPABILITY, ObservationValue, PaneId, SET_TEXT_CAPABILITY, SemanticUiId, UiNode,
+    UiRole,
 };
 
 /// Longest name or value shown in text output, in characters.
@@ -69,11 +70,13 @@ pub fn argument_summary(contract: &ArgumentContract) -> Option<String> {
     })
 }
 
-/// One capability as an outline annotation: its ID (or `set-text`), its
-/// argument, and its availability unless enabled.
+/// One capability as an outline annotation: its ID (or `set-text` or
+/// `open-link`), its argument, and its availability unless enabled.
 pub fn capability_tag(capability: &CapabilityDescription) -> String {
     let mut tag = if capability.capability == SET_TEXT_CAPABILITY {
         "set-text".to_owned()
+    } else if capability.capability == OPEN_LINK_CAPABILITY {
+        "open-link".to_owned()
     } else {
         capability.capability.clone()
     };

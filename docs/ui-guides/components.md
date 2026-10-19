@@ -34,16 +34,19 @@ scope) to share the complete role treatment.
 
 Choose `measured_content_label` for actual bounded content height and
 `measured_fixed_slot_label` only when the parent requires a deliberate line
-slot. Never use a bounded label as a document reader; long evidence belongs in
-a selectable scroll surface. Invalid component layouts paint a diagnostic and
+slot. Never use a bounded label as a document reader: text of any length, such
+as a message or long evidence, uses the [reading-text recipe](#reading-text) in
+a scroll area. Invalid component layouts paint a diagnostic and
 fail audits. Preserve failed observations when filtering geometry, retain
 coverage after the same layout pass, and assert required semantic content.
 
 Use `TextSpec`, `TextRole` and `TextOverflow`; production widths come from
 egui galley measurement, never character counts. Keep numeric values end
-aligned. Retain full semantic text when paint is elided. The five supported
-policies are `ellipsis`, `wrap`, `clip`, `scroll` and `expand`; choose one
-explicitly rather than relying on incidental clipping.
+aligned. Retain full semantic text when paint is elided. The bounded recipes
+support `ellipsis`, `wrap`, `clip`, `scroll` and `expand` with 1 to 8 lines;
+choose one explicitly rather than relying on incidental clipping. The sixth
+policy, `wrap_unbounded`, belongs to reading text and links alone: bounded
+recipes reject it with an `UnboundedOverflow` diagnostic.
 
 Technical and user-content text is selectable unless its owning pointer
 interaction conflicts with selection. Inspector values, diagnostic values,
@@ -153,6 +156,79 @@ messages. Choose `NavigationBadge` for navigation-row counts/context, including
 its `99+` abbreviation and row-owned semantics. Gallery `status-chip/tasks`,
 `status-chip/treatments` and `status-chip/long-narrow` use the production recipe;
 the [evidence record](../status-chip-evidence.md) retains visual and physical proof.
+
+## Reading text
+
+Use `PresentationContext::reading_text(ui, key, text, ReadingTextSpec::default())`
+for text of any length that a person reads: a chat message, a reply, a
+document or long evidence. It wraps at the available width to as many lines as
+the text needs, allocates its full measured height and is never truncated.
+Paragraph breaks (`\n`) start new lines. `ReadingTextSpec` chooses the measured
+`TextRole` (body by default) and `TextInteraction`: reading text is selectable
+by default, through `present_measured_text` and egui's own drag selection and
+copy, so selecting the whole text copies it exactly. Choose `Inert` only where
+a parent owns the pointer, such as a clickable row.
+
+Put long text in a scroll area, such as `egui::ScrollArea::vertical()`; the
+recipe has no scroll surface of its own. Its observation declares
+`TextOverflow::WrapUnbounded` with a line limit of 0 (none) and reports the
+actual line count, however large. The audit holds the painted text to its
+allocation but accepts a parent scroll area's clip, so a message that crosses
+the fold keeps its observation, with the clip recorded. Text scrolled fully
+out of view adds no observation, while the pass's coverage still counts the
+attempt. The text response owns one accessible label with the complete text
+and the context's stable author ID; there is no separate semantic node, as for
+`content`. Use `content` for short bounded text (1 to 8 lines) with a
+deliberate overflow policy, and `reading_text` whenever the text could be
+longer.
+
+Low-level callers use `reading_text(ui, identity, text, spec, tokens,
+font_scale, observations)` with a stable `PresentationId`. Every reading
+surface shares one measured path from a `LayoutJob`, so later rich text
+(styled runs, links within text, code) is measured, observed and audited the
+same way. Gallery `reading/conversation` and `reading/long-narrow` use the
+production recipe; the [evidence record](../reading-text-evidence.md) retains
+the review.
+
+## Links
+
+Use `PresentationContext::link(ui, key, LinkSpec::new(label, url))` for a link
+to an external URL. Activating it opens the URL in a new browser tab by
+default, so a single-page application keeps its in-memory state; eframe's web
+runner would otherwise open a same-tab link as `_self`, replacing the page.
+Natively it opens the platform's default browser (Stobie enables eframe's
+`links` feature). `LinkTarget::SameTab` is the explicit opt-out; a middle or
+modifier click always opens a new tab. Pointer release, Tab then Enter or
+Space, and assistive-technology activation share one route.
+
+The label is an underlined, inert measured label in the spec's `TextRole`
+(body by default). It wraps at the available width without a line limit and
+is never truncated; a blank label shows the URL. The allocation hugs the label,
+with half a spacing unit either side so the focus ring clears the glyphs, and
+keeps the token minimum hit size; the label is start-aligned within it and
+centred vertically. Hover shows the URL in a tooltip, a pointing-hand cursor and a
+heavier underline without moving the allocation; keyboard focus adds the token
+focus ring. The colour is the theme's accent where it keeps 4.5:1 against both
+canvas and panel surfaces (`link_colour`), otherwise primary text; the
+underline marks the link either way, so colour is never the only cue. A
+disabled `Ui` gives a muted link that opens nothing. Place links on canvas or
+panel surfaces; the analytical reference accent keeps at least 4.5:1 there in
+light and dark and 7:1 in high contrast.
+
+`UiRole::Link` maps to one AccessKit `Link` named by the label, with the URL
+as its `url`, the optional `description`, a click action while enabled and the
+current clipped hit bounds. The semantic node carries the URL as its `value`,
+and the parity audit checks that the two agree. The ARIA layer presents it as
+`link`. Hosts publish every presented link as the framework capability
+`stobie.open-link`, so agents can discover it and open it (`stobie invoke
+stobie.open-link --id ID`) without application code; the URL is the target's
+meaning, so a link whose URL changed since discovery is stale. An agent's
+open always asks for a new tab, even for a `SameTab` link, so the application
+under inspection stays open. Descriptions are the application's own words,
+for example "Opens in a new tab"; Stobie adds no text of its own.
+
+Low-level callers use `link(ui, spec, identity, tokens, font_scale,
+observations)` and publish `link_semantic_node` while it returns a node.
 
 ## Scoped presentation
 

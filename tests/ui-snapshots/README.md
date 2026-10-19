@@ -84,3 +84,18 @@ parent activation, stable current status updates and bounded idle behaviour.
 The browser journey verifies actual clipboard content for a fully elided localised
 label, and scrolling replaces clipped owners while retaining every attempt.
 Rust regressions prove native egui selection/copy and AccessKit ownership/parity.
+
+Reading fixtures add a conversation in dark comfortable mode, with a reply of
+ten lines and two links, and a narrow light high-contrast column at 150% with
+unbroken and localised text, a wrapping link label, a bare URL, a disabled
+link and text crossing the scroll area's fold. The physical
+`tools/reading-text-browser-smoke.sh` runs through full verification: it
+copies a whole multi-paragraph reply by drag selection, opens links in a new
+tab by pointer and by Enter and Space after focusing through the ARIA layer
+while the Gallery page and its state stay, checks that a disabled link opens
+nothing, and scrolls the narrow column. Its Linux native companion,
+`tools/reading-text-native-smoke.sh`, selects the reply with xdotool and
+clicks a link, whose URL reaches the platform's default browser through a
+`BROWSER` recorder. Adding the two catalogue entries
+raised every earlier fixture's native-control count from 36 to 38 and changed
+nothing else.

@@ -34,7 +34,12 @@ impl TextSpec {
         }
     }
 
+    /// Bounded recipes accept 1 to [`MAX_TEXT_LINES`] lines. Unbounded
+    /// wrapping belongs to [`crate::reading_text`] and [`crate::link`].
     pub fn validate(self) -> Result<Self, TextLayoutError> {
+        if self.overflow == TextOverflow::WrapUnbounded {
+            return Err(TextLayoutError::UnboundedOverflow);
+        }
         if !(1..=MAX_TEXT_LINES).contains(&self.max_lines) {
             return Err(TextLayoutError::InvalidMaxLines(self.max_lines));
         }
@@ -189,6 +194,7 @@ pub fn measure_text(
             break_anywhere: true,
             overflow_character: Some('…'),
         },
+        TextOverflow::WrapUnbounded => unreachable!("validation rejects unbounded text"),
     };
     job.break_on_newline = spec.overflow == TextOverflow::Wrap;
     job.sections[0].format = TextFormat {
@@ -204,6 +210,149 @@ pub fn measure_text(
     })
 }
 
+/// Measure reading text without a line limit: `job` carries the text and its
+/// styled sections, and this sets the wrapping width, start alignment, line
+/// breaks at newlines and each section's role line height. Plain text and
+/// later rich text (styled runs, links, code) share this one measured path, so
+/// every reading surface is measured, observed and audited alike.
+pub(crate) fn measure_reading_job(
+    painter: &Painter,
+    mut job: LayoutJob,
+    role: TextRole,
+    interaction: TextInteraction,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    max_width: f32,
+) -> Result<MeasuredText, TextLayoutError> {
+    if !font_scale.is_finite() || !(1.0..=1.5).contains(&font_scale) {
+        return Err(TextLayoutError::InvalidFontScale);
+    }
+    if !max_width.is_finite() || max_width <= 0.0 {
+        return Err(TextLayoutError::InvalidWidth);
+    }
+    let role_style = role.style(tokens, font_scale);
+    let installed = painter.ctx().fonts(|fonts| {
+        job.sections.iter().all(|section| {
+            fonts
+                .definitions()
+                .families
+                .contains_key(&section.format.font_id.family)
+        })
+    });
+    if !installed {
+        return Err(TextLayoutError::FontsNotInstalled);
+    }
+    job.halign = Align::Min;
+    job.wrap = TextWrapping {
+        max_width,
+        max_rows: usize::MAX,
+        break_anywhere: false,
+        overflow_character: None,
+    };
+    job.break_on_newline = true;
+    for section in &mut job.sections {
+        section.format.line_height = Some(role_style.line_height);
+    }
+    let galley = painter.layout_job(job);
+    Ok(MeasuredText {
+        galley,
+        spec: TextSpec {
+            role,
+            overflow: TextOverflow::WrapUnbounded,
+            interaction,
+            horizontal_alignment: HorizontalTextAlignment::Start,
+            vertical_alignment: VerticalTextAlignment::Top,
+            max_lines: 0,
+        },
+        colour: role_style.colour,
+        layout_error: None,
+    })
+}
+
+/// A one-section job in `role`'s font and `colour`, ready for
+/// [`measure_reading_job`].
+pub(crate) fn reading_job(
+    text: &str,
+    role: TextRole,
+    colour: Color32,
+    tokens: &DesignTokens,
+    font_scale: f32,
+) -> LayoutJob {
+    let style = role.style(tokens, font_scale);
+    LayoutJob::single_section(
+        text.to_owned(),
+        TextFormat {
+            line_height: Some(style.line_height),
+            ..TextFormat::simple(style.font_id, colour)
+        },
+    )
+}
+
+/// The failure fallback shared by component measurement: a visible one-line
+/// diagnostic that keeps its typed error for the audit.
+fn failed_measurement(
+    painter: &Painter,
+    text: &str,
+    interaction: TextInteraction,
+    error: TextLayoutError,
+    tokens: &DesignTokens,
+    max_width: f32,
+) -> MeasuredText {
+    let colour: Color32 = tokens.colours.status_error.into();
+    let fallback = format!("Text unavailable ({error:?}): {text}");
+    let mut job = LayoutJob::simple_singleline(
+        fallback,
+        FontId::new(tokens.typography.body_size.0, FontFamily::Proportional),
+        colour,
+    );
+    job.wrap = TextWrapping {
+        max_width: if max_width.is_finite() {
+            max_width.max(1.0)
+        } else {
+            200.0
+        },
+        max_rows: 1,
+        break_anywhere: true,
+        overflow_character: Some('…'),
+    };
+    MeasuredText {
+        galley: painter.layout_job(job),
+        spec: TextSpec {
+            interaction,
+            ..TextSpec::single_line(TextRole::Error, TextOverflow::Ellipsis)
+        },
+        colour,
+        layout_error: Some(error),
+    }
+}
+
+/// [`measure_reading_job`] at a component boundary: a failed request paints
+/// an explicit diagnostic and keeps a failing observation.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn measure_component_reading(
+    painter: &Painter,
+    job: LayoutJob,
+    role: TextRole,
+    interaction: TextInteraction,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    max_width: f32,
+) -> MeasuredText {
+    let text = job.text.clone();
+    measure_reading_job(
+        painter,
+        job,
+        role,
+        interaction,
+        tokens,
+        font_scale,
+        max_width,
+    )
+    .unwrap_or_else(|error| {
+        failed_measurement(painter, &text, interaction, error, tokens, max_width)
+    })
+}
+
 /// Component boundary: invalid requests paint an explicit error and emit a
 /// failing observation instead of disappearing. Low-level callers can still
 /// use `measure_text` to handle the typed error themselves.
@@ -215,37 +364,9 @@ pub fn measure_component_text(
     font_scale: f32,
     max_width: f32,
 ) -> MeasuredText {
-    match measure_text(painter, text, spec, tokens, font_scale, max_width) {
-        Ok(measured) => measured,
-        Err(error) => {
-            let colour: Color32 = tokens.colours.status_error.into();
-            let fallback = format!("Text unavailable ({error:?}): {text}");
-            let mut job = LayoutJob::simple_singleline(
-                fallback,
-                FontId::new(tokens.typography.body_size.0, FontFamily::Proportional),
-                colour,
-            );
-            job.wrap = TextWrapping {
-                max_width: if max_width.is_finite() {
-                    max_width.max(1.0)
-                } else {
-                    200.0
-                },
-                max_rows: 1,
-                break_anywhere: true,
-                overflow_character: Some('…'),
-            };
-            MeasuredText {
-                galley: painter.layout_job(job),
-                spec: TextSpec {
-                    interaction: spec.interaction,
-                    ..TextSpec::single_line(TextRole::Error, TextOverflow::Ellipsis)
-                },
-                colour,
-                layout_error: Some(error),
-            }
-        }
-    }
+    measure_text(painter, text, spec, tokens, font_scale, max_width).unwrap_or_else(|error| {
+        failed_measurement(painter, text, spec.interaction, error, tokens, max_width)
+    })
 }
 
 pub fn paint_measured_text(
@@ -438,7 +559,7 @@ fn position_measured_text(
         overflow: measured.spec.overflow,
         interaction: measured.spec.interaction,
         declared_max_lines: measured.spec.max_lines,
-        line_count: measured.galley.rows.len().min(usize::from(u8::MAX)) as u8,
+        line_count: u32::try_from(measured.galley.rows.len()).unwrap_or(u32::MAX),
         truncated: measured.galley.elided,
         layout_error: measured.layout_error,
     };

@@ -54,6 +54,10 @@ pub enum AccessKitMismatch {
     Container {
         id: SemanticUiId,
     },
+    /// A link's AccessKit URL differs from its semantic value.
+    Url {
+        id: SemanticUiId,
+    },
 }
 
 /// Compare the common semantics for Stobie-owned custom controls. Snapshot
@@ -98,6 +102,7 @@ pub fn audit_accesskit(
                 | UiRole::StatusChip
                 | UiRole::Status
                 | UiRole::Pane
+                | UiRole::Link
         )
     }) {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
@@ -142,6 +147,7 @@ pub fn audit_accesskit(
             UiRole::StatusChip => egui::accesskit::Role::Label,
             UiRole::Status => egui::accesskit::Role::Status,
             UiRole::Pane => egui::accesskit::Role::Region,
+            UiRole::Link => egui::accesskit::Role::Link,
             _ => unreachable!(),
         };
         if node.role() != expected_role {
@@ -241,15 +247,23 @@ pub fn audit_accesskit(
                     | UiRole::Tab
                     | UiRole::ResultRow
                     | UiRole::ThumbnailCell
+                    | UiRole::Link
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
         if (semantic.role == UiRole::StatusChip && supports_click)
             || (should_click && !supports_click)
-            || (matches!(semantic.role, UiRole::Button | UiRole::NavigationItem)
-                && !semantic.enabled
+            || (matches!(
+                semantic.role,
+                UiRole::Button | UiRole::NavigationItem | UiRole::Link
+            ) && !semantic.enabled
                 && supports_click)
         {
             findings.push(AccessKitMismatch::ClickAction {
+                id: semantic.id.clone(),
+            });
+        }
+        if semantic.role == UiRole::Link && node.url() != semantic.value.as_deref() {
+            findings.push(AccessKitMismatch::Url {
                 id: semantic.id.clone(),
             });
         }
