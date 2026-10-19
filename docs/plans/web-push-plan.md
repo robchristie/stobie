@@ -1,7 +1,7 @@
 # Web Push in the installable web output
 
 Status: complete
-Delivery: [PR #__PR__](https://github.com/robchristie/stobie/pull/__PR__)
+Delivery: [PR #97](https://github.com/robchristie/stobie/pull/97)
 
 An installable Stobie web application needs Web Push: a notification for
 every push, a tapped notification routed back into the application, and a
