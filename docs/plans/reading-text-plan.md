@@ -65,7 +65,7 @@ critique, with at most one refinement.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| Reading text, links and the open-link capability | Complete | 16 recipe, 5 host and 3 Gallery regressions |
+| Reading text, links and the open-link capability | Complete | 16 recipe, 6 host and 3 Gallery regressions |
 | Gallery, documentation and physical evidence | Complete | [UI evidence](../reading-text-evidence.md), two inspected baselines, browser and native journeys |
 | Candidate qualification | Complete | `cargo xtask verify` on the candidate; review, CI and merge retained in the PR |
 

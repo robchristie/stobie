@@ -155,7 +155,8 @@ pub struct LinkBinding {
 
 impl LinkBinding {
     /// The binding for a presented link node, or `None` for any other node or
-    /// a link without a URL.
+    /// a link without a URL value. A disabled link, including one whose URL
+    /// the link recipe rejected, binds as unavailable with its reason.
     pub fn from_node(node: &UiNode) -> Option<Self> {
         let url = node.value.as_ref().filter(|_| node.role == UiRole::Link)?;
         Some(Self {
@@ -1230,10 +1231,12 @@ fn prepare_publication<A: ActionKey>(
         let presented = snapshot
             .node(&link.id)
             .is_some_and(|node| node.role == UiRole::Link);
-        if !presented || link.url.is_empty() || !targets.insert((&link.id, OPEN_LINK_CAPABILITY)) {
+        // A link with a rejected or blank URL still publishes, as an
+        // unavailable binding: the host refuses to open it.
+        if !presented || !targets.insert((&link.id, OPEN_LINK_CAPABILITY)) {
             return Err(InspectionError::new(
                 Code::InvalidRequest,
-                "links require a unique, presented link node with a URL",
+                "links require a unique, presented link node",
             ));
         }
     }

@@ -751,8 +751,7 @@ fn rejected_urls_paint_a_diagnostic_and_open_nothing() {
         let binding = crate::LinkBinding::from_node(link).unwrap();
         assert!(!binding.availability.enabled());
 
-        let (mut harness, rect, opened) =
-            link_harness(LinkSpec::new("Read the paper", "javascript:alert(1)"), true);
+        let (mut harness, rect, opened) = link_harness(LinkSpec::new("Read the paper", url), true);
         click(&mut harness, rect.center(), egui::PointerButton::Primary);
         click(&mut harness, rect.center(), egui::PointerButton::Middle);
         harness.key_press(egui::Key::Tab);

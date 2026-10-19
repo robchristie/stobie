@@ -13,8 +13,8 @@ use crate::{
 /// Why a link whose URL [`link_url_allowed`] rejects is unavailable.
 pub const INVALID_LINK_URL: &str = "The link's address is not an http, https or mailto URL";
 
-/// Whether a link may open `url`: an `http://` or `https://` URL with a host
-/// part, or a `mailto:` address, without whitespace or control characters.
+/// Whether a link may open `url`: an `http://` or `https://` URL with
+/// something after the scheme, or a `mailto:` address, without whitespace or control characters.
 /// Other schemes, such as `javascript:` or `data:`, could run script or
 /// replace the application, so links present them as unavailable.
 pub fn link_url_allowed(url: &str) -> bool {

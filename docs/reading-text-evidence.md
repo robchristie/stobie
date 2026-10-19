@@ -27,8 +27,10 @@ blank and malformed URLs painting a failing diagnostic and an unavailable link
 that opens nothing by any route; and link colour contrast in all four reference modes and the three
 authored Gallery identities. Host regressions publish each presented link as
 `stobie.open-link`, open a new tab when an agent invokes it (even for a
-same-tab link), refuse a disabled link, reject a target whose URL changed and
-report keyboard focus on the link's node. The web host takes new-tab
+same-tab link), refuse a disabled link, publish a blank-URL link as an
+unavailable capability without stopping the application's publication,
+reject a target whose URL changed and report keyboard focus on the link's
+node. The web host takes new-tab
 requests out of each pass's output and opens them with `noopener` and
 `noreferrer`; a regression checks that only new-tab requests are taken.
 

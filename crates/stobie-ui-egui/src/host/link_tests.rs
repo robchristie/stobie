@@ -65,6 +65,9 @@ impl Application for Reader {
                 ..LinkSpec::new("Read the paper", SOURCES[self.source])
             },
         );
+        // A blank URL, as a model's `[text]()` might give: an unavailable
+        // link that must not stop the rest of the application publishing.
+        p.link(ui, "blank", LinkSpec::new("Missing source", ""));
         ui.add_enabled_ui(false, |ui| {
             p.link(
                 ui,
@@ -225,7 +228,18 @@ fn presented_links_publish_an_open_link_capability_with_their_url() {
         "{:?}",
         snapshot.semantic_audit
     );
-    assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
+    // Only the blank-URL link fails, with its diagnostic.
+    assert!(
+        matches!(
+            snapshot.text_audit.as_slice(),
+            [crate::TextAuditFinding::LayoutFailed {
+                error: crate::TextLayoutError::InvalidUrl,
+                ..
+            }]
+        ),
+        "{:?}",
+        snapshot.text_audit
+    );
 
     let capabilities = discover(host(&harness), link_selector("source"));
     assert_eq!(capabilities.len(), 1);
@@ -247,7 +261,41 @@ fn presented_links_publish_an_open_link_capability_with_their_url() {
             ..Default::default()
         },
     );
-    assert_eq!(all.len(), 2);
+    assert_eq!(all.len(), 3);
+}
+
+#[test]
+fn a_blank_url_link_publishes_as_unavailable_beside_valid_links() {
+    let (mut harness, opened) = harness();
+    let blank = PresentationScope::new("reader").instance("blank");
+    let snapshot = host(&harness).ui_snapshot();
+    let node = snapshot.node(&blank.semantic_id()).unwrap();
+    assert!(!node.enabled);
+    assert_eq!(
+        node.disabled_reason.as_deref(),
+        Some(crate::INVALID_LINK_URL)
+    );
+    assert!(
+        snapshot.semantic_audit.is_empty(),
+        "{:?}",
+        snapshot.semantic_audit
+    );
+    // Discovery still answers, with the valid link available.
+    assert!(
+        discover(host(&harness), link_selector("source"))[0]
+            .availability
+            .enabled()
+    );
+    let capability = discover(host(&harness), link_selector("blank"));
+    assert_eq!(capability.len(), 1);
+    assert_eq!(
+        capability[0].availability.disabled_reason(),
+        Some(crate::INVALID_LINK_URL)
+    );
+    let expected = capability[0].target.clone();
+    let error = invoke(&mut harness, "blank", link_selector("blank"), expected).unwrap_err();
+    assert_eq!(error.code, InspectionErrorCode::Unavailable);
+    assert!(opened.borrow().is_empty());
 }
 
 #[test]

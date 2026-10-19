@@ -203,8 +203,8 @@ Space, and assistive-technology activation share one route. A hosted web
 application opens every new-tab request with `noopener` and `noreferrer`, so
 the linked page cannot navigate the application's tab.
 
-A link opens only `http://` and `https://` URLs with a host part and `mailto:`
-addresses (`link_url_allowed`). Any other URL, including a blank one or a
+A link opens only `http://` and `https://` URLs with something after the
+scheme and `mailto:` addresses (`link_url_allowed`). Any other URL, including a blank one or a
 `javascript:` or `data:` URL, paints the usual measured diagnostic, records a
 failing observation (`InvalidUrl`) and presents an unavailable link whose
 semantic and accessible description give the reason; it never panics and
