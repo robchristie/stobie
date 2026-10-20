@@ -89,6 +89,15 @@
     "listSize": { "$type": "dimension", "$value": 40, "$description": "Avatar leading a list or conversation row, at 100% text scale" },
     "stripSize": { "$type": "dimension", "$value": 56, "$description": "Avatar in a strip of pinned people or assistants, at 100% text scale" }
   },
+  "chat": {
+    "bubbleRadius": { "$type": "dimension", "$value": 12, "$description": "Message bubble corner radius at 100% text scale" },
+    "bubbleMaxWidth": { "$type": "dimension", "$value": 560, "$description": "Widest message bubble at 100% text scale; a bubble also takes at most 85% of its column" },
+    "unreadDotSize": { "$type": "dimension", "$value": 8, "$description": "Unread dot diameter at 100% text scale" }
+  },
+  "switch": {
+    "trackWidth": { "$type": "dimension", "$value": 36, "$description": "Switch track width at 100% text scale" },
+    "trackHeight": { "$type": "dimension", "$value": 20, "$description": "Switch track height at 100% text scale" }
+  },
   "typography": {
     "applicationTitleSize": { "$type": "fontSize", "$value": 18 },
     "paneTitleSize": { "$type": "fontSize", "$value": 16 },

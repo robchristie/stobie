@@ -14,7 +14,8 @@ use crate::{
     appearance::AppearanceWorkbench,
     catalogue::{STORIES, StoryId, story_definition},
     stories::{
-        IconFixtureState, NavigationFixtureState, StatusChipFixtureState, StoryState, render_story,
+        ChatFixtureState, IconFixtureState, NavigationFixtureState, StatusChipFixtureState,
+        StoryState, render_story,
     },
 };
 
@@ -222,6 +223,7 @@ pub struct GallerySnapshot {
     pub icon_fixture: IconFixtureState,
     pub navigation_fixture: NavigationFixtureState,
     pub status_chip_fixture: StatusChipFixtureState,
+    pub chat_fixture: ChatFixtureState,
 }
 
 /// The hosted Gallery: the selected story, its configuration and theme, and
@@ -276,6 +278,7 @@ impl Gallery {
                 icon_fixture: IconFixtureState::default(),
                 navigation_fixture: NavigationFixtureState::default(),
                 status_chip_fixture: StatusChipFixtureState::default(),
+                chat_fixture: ChatFixtureState::default(),
             },
         }
     }
@@ -462,6 +465,7 @@ impl Application for Gallery {
             icon_fixture: view.story.icon.clone(),
             navigation_fixture: view.story.navigation.clone(),
             status_chip_fixture: view.story.status_chip.clone(),
+            chat_fixture: view.story.chat.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]

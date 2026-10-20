@@ -147,6 +147,13 @@ pub enum TextComponentKind {
     ListRow,
     ListRowTitle,
     ListRowDetail,
+    /// A conversation row; the parent of its title, preview and time.
+    ConversationRow,
+    ConversationRowTitle,
+    ConversationRowPreview,
+    ConversationRowTime,
+    /// A switch's label, which stays in view whether it is on or off.
+    SwitchLabel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]

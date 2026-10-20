@@ -4,8 +4,13 @@ use std::hash::Hash;
 
 use egui::{Response, Ui};
 
+mod chat;
 mod composer;
 
+pub use chat::{
+    MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
+    message_bubble_tokens,
+};
 pub use composer::{
     COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
     ComposerSpec,

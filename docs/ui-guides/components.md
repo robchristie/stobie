@@ -70,7 +70,8 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges, navigation items, list rows, composers and virtual thumbnail cells. Their deterministic examples are the
+badges, navigation items, list rows, composers, avatars, message bubbles,
+conversation rows, unread dots, switches and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -592,9 +593,9 @@ Attach and a microphone. [Composing and sending](interactions.md#composing-and-s
 owns the draft, Return, focus and agent conventions. In a hosted pane:
 
 ```text
-let spec = ComposerSpec::new("Message", ComposerControl::icon(Action::Send, IconId::ArrowUp))
+let spec = ComposerSpec::new("Message", ComposerControl::icon(Action::Send, IconId::Send))
     .hint("Message Ada")
-    .leading(ComposerControl::icon(Action::Attach, IconId::Add))
+    .leading(ComposerControl::icon(Action::Attach, IconId::Attach))
     .trailing(ComposerControl::label(Action::Dictate));
 frame.composer(ui, p, "composer", &spec, &self.draft, Intent::Draft);
 ```
@@ -697,6 +698,117 @@ square in `rect`; `avatar_initials` and `avatar_eye_colour` expose the
 derivations. Gallery `avatars/figures` shows each size, people (including
 the glyph fallback), the built-in and application shapes, and images; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists its fixtures.
+
+## Chat recipes
+
+A chat application lists its conversations, shows one conversation's
+messages, and offers on or off settings. Stobie owns four recipes for that:
+the message bubble, the conversation row, the unread dot and the switch.
+The application owns its conversations, messages, senders, times, unread
+counts and settings, and how it stores and sends them. In a hosted pane:
+
+```text
+for conversation in &self.conversations {
+    let unread = (conversation.unread > 0).then(|| format!("{} unread messages", conversation.unread));
+    frame.conversation_row(ui, p, BoundAction::new(Action::Open, conversation.id),
+        ConversationRowSpec {
+            title: &conversation.name,
+            preview: Some(&conversation.latest),
+            time: Some(&conversation.time), // already formatted, such as with local_time
+            unread: unread.as_deref(),
+            selected: self.open == conversation.id,
+            avatar: Some(AvatarSpec::person(&conversation.name, AvatarSize::List)),
+        });
+}
+frame.switch(ui, p, Action::Notifications,
+    SwitchSpec { label: "Notifications", on: self.notifications });
+for message in &self.messages {
+    let side = if message.mine { MessageSide::Own } else { MessageSide::Other };
+    p.message_bubble(ui, ("message", message.id), MessageBubbleSpec { side, sender: &message.sender },
+        |ui, p| { p.markdown(ui, "text", &message.markdown, MarkdownSpec::default()); });
+}
+```
+
+- **Message bubble.** `PresentationContext::message_bubble(ui, key, spec,
+  render)` presents whatever `render` presents, such as Markdown or reading
+  text, inside a rounded bubble. `MessageSide::Own` sits at the end of the
+  line on the selection fill; `MessageSide::Other` (another person or an
+  assistant) sits at the start on the raised surface; both carry a subtle
+  border. A bubble is at most 85% of its column and `chat.bubbleMaxWidth`
+  (560 points, grown with text to 150%), hugs shorter content and grows
+  down with longer content, which wraps; `message_bubble_max_width` gives
+  the bound. The bubble measures its content after presenting it and keeps
+  that width for later passes, laying out once more when the content's
+  text, the way it is set (density, contrast or text size) or the column
+  changes. Content inside sees `message_bubble_tokens`: its surfaces are
+  the fill, so links and code blocks are checked against it, and muted text
+  becomes primary text on a fill too close to it. The bubble publishes a
+  `Section` named by `spec.sender` (the application's words, such as "You"
+  or a name) holding its content's nodes and an AccessKit group of the same
+  name; the content keeps its own text kinds, so a message's words appear in
+  observation as content text. A bubble shows no sender or time of its own:
+  an application that wants either in view presents it beside the bubble.
+- **Conversation row.** `Frame::conversation_row` presents one full-width
+  row whose whole surface performs its bound action for that conversation,
+  such as opening it. A `ConversationRowSpec` holds the title, one line of
+  `ButtonLabel` text; an optional preview, one line of `Secondary` text; an
+  optional time, one line of `Caption` text, already formatted by the
+  application and kept whole up to half the title line; optional unread
+  words, such as "2 unread messages", which paint the unread dot at the
+  preview line's end; whether the conversation is on show; and an optional
+  decorative avatar at list size. Text elides with an ellipsis. The row is
+  within block padding and at least the token hit height
+  (`conversation_row_height`). It publishes a `NavigationItem` named by the
+  full title, `selected` while the conversation is on show (the current
+  item, exposed as `aria-current`, never as a toggle), whose description is
+  the unread words, the preview, the time and the action's description,
+  separated by "; "; a disabled row adds its reason. The current row has the
+  selection fill and indicator, and a hovered current row adds a control
+  border. A hovered row has the raised surface, not the quiet action hover,
+  because the themes give that hover the selection's colour and a hovered
+  row would look current. Press uses the selection pair with an inset
+  outline, and keyboard focus the outer focus ring. Muted text on any of
+  those fills becomes primary text where it would read below its validated
+  contrast. Each enabled row is a Tab stop; Enter, Space and a pointer
+  release open it. The measurements are `ConversationRowTitle`,
+  `ConversationRowPreview` and `ConversationRowTime` under a
+  `ConversationRow` parent; like other control text they carry no content
+  text, because the row's node holds it.
+- **Unread dot.** `unread_dot_size` (`chat.unreadDotSize`, 8 points, grown
+  with text to 150%) and `unread_dot_colour`, the accent where it stands
+  out at 3:1 from the surface behind and primary text otherwise.
+  `PresentationContext::unread_dot` allocates and paints one, and
+  `paint_unread_dot` paints into a rect. The dot is decorative: the words
+  beside it, such as a row's unread words, state the unread state.
+- **Switch.** `Frame::switch` presents one on or off setting as a
+  full-width row whose surface performs its action: the label, one line of
+  `ButtonLabel` text, always in view, and a track at the row's end
+  (`switch.trackWidth` by `switch.trackHeight`, 36 by 20 points, grown with
+  text to 150%). On is an accent track with the thumb at the end; off is an
+  outlined track with the thumb at the start, both outline and thumb in
+  muted text so they stand out at 3:1. The state is shown by the track and
+  thumb, never by the row's fill, so the quiet hover fill cannot be taken
+  for on; a disabled switch keeps its position on decorative colours. The
+  application owns the setting: activating the switch performs its action,
+  which turns the setting over. It publishes a `Switch` named by the label
+  whose `checked` is its state (`role="switch"` with `aria-checked` in the
+  ARIA layer); its description is the action's description, and a disabled
+  switch adds its reason. Measurement is `SwitchLabel`.
+
+Low-level callers use `conversation_row` and `switch` with a stable
+`PresentationId` and publish `conversation_row_semantic_node` or
+`switch_semantic_node` for positive interaction bounds;
+`PresentationContext::conversation_row` and `PresentationContext::switch`
+handle ordinary publication, and `paint_switch_track` paints a track.
+
+Gallery `chat/conversation` shows the list beside a conversation on a wide
+column and above it on a narrower one, with unread, current and plain rows,
+switches on and off, and messages on both sides holding text, Markdown, a
+list and a link. Gallery `chat/long-narrow` adds long and localised names
+and previews, a row without a preview, an archived (disabled) row, a long
+switch label, a disabled switch, and bubbles holding a long link and code,
+and scrolls. The [snapshot guide](../../tests/ui-snapshots/README.md) lists
+their fixtures.
 
 ## Local date and time
 
