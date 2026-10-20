@@ -1519,3 +1519,233 @@ fn text_fields_must_present_a_text_input_node() {
     .unwrap();
     assert_eq!(error.code, InspectionErrorCode::InvalidRequest);
 }
+
+/// A row action taking a whole-number ID, as one row's Open does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+enum RowAction {
+    Open,
+}
+
+impl ActionKey for RowAction {
+    fn stable_id(self) -> &'static str {
+        "open"
+    }
+    fn specification(self) -> crate::ActionSpec<Self> {
+        crate::ActionSpec {
+            id: self,
+            label: "Open",
+            description: "Open the row with this ID",
+            compact_label: None,
+            shortcut: None,
+            scope: ActionScope::Application,
+        }
+    }
+    fn argument(self) -> ArgumentContract {
+        ArgumentContract::Number {
+            minimum: 1.0,
+            maximum: 100.0,
+            integer: true,
+        }
+    }
+}
+
+/// A snapshot with one row control, `row`, carrying `id`.
+fn row_publication(id: f64) -> (UiSnapshot, Vec<InspectionBinding<RowAction>>) {
+    let root = UiNode::container(
+        SemanticUiId::root(),
+        None,
+        UiRole::Application,
+        rect(0., 0., 100., 100.),
+    );
+    let mut node = UiNode::container(
+        "row".to_owned().into(),
+        Some(root.id.clone()),
+        UiRole::Button,
+        rect(10., 20., 30., 40.),
+    );
+    node.name = "Open first".into();
+    node.actions
+        .push(crate::SemanticActionId::from_action(RowAction::Open));
+    node.argument = ActionArgument::Number(id).to_value();
+    let bindings = vec![
+        InspectionBinding::new(
+            ActionTarget::application(RowAction::Open),
+            Availability::Enabled,
+            true,
+            "list",
+        )
+        .with_id(node.id.clone())
+        .with_argument(ActionArgument::Number(id)),
+    ];
+    let snapshot = UiSnapshot {
+        frame: 1,
+        pixels_per_point: 1.,
+        root: root.id.clone(),
+        nodes: vec![root, node],
+        ..UiSnapshot::default()
+    };
+    (snapshot, bindings)
+}
+
+fn row_target(inspection: &Inspection) -> CapabilityDescription {
+    let response = inspection.handle(request(
+        inspection,
+        "row-discovery",
+        InspectionOperation::Discover {
+            selector: InspectionSelector {
+                id: Some("row".to_owned().into()),
+                ..InspectionSelector::default()
+            },
+            limit: 8,
+            cursor: None,
+        },
+    ));
+    let Some(InspectionResult::Discover { capabilities, .. }) = response.result else {
+        panic!("expected discovery, got {:?}", response.error)
+    };
+    assert_eq!(capabilities.len(), 1);
+    capabilities[0].clone()
+}
+
+fn invoke_row(inspection: &Inspection, id: &str, expected: ResolvedTarget) -> InvocationReceipt {
+    receipt(inspection.handle(request(
+        inspection,
+        id,
+        InspectionOperation::Invoke {
+            selector: InspectionSelector {
+                id: Some("row".to_owned().into()),
+                ..InspectionSelector::default()
+            },
+            expected,
+            arguments: serde_json::Value::Null,
+        },
+    )))
+}
+
+#[test]
+fn a_rows_binding_runs_with_the_argument_its_control_carries() {
+    let inspection = Inspection::new("rows");
+    let (snapshot, bindings) = row_publication(7.0);
+    inspection
+        .publish(
+            snapshot,
+            &bindings,
+            CollectionMetadata::default(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+    let capability = row_target(&inspection);
+    assert_eq!(capability.argument, Some(serde_json::json!(7)));
+    assert_eq!(capability.target.argument, Some(serde_json::json!(7)));
+    let queued = invoke_row(&inspection, "open", capability.target);
+    assert_eq!(queued.state, ReceiptState::Queued, "{queued:?}");
+    let mut ran = Vec::new();
+    inspection.drain_invocation(&bindings, &[], |invocation| {
+        let Invocation::Action { target, argument } = invocation else {
+            panic!("an action")
+        };
+        ran.push((target.action, argument));
+        Ok(Execution::Completed)
+    });
+    assert_eq!(ran, [(RowAction::Open, ActionArgument::Number(7.0))]);
+    assert_eq!(lookup(&inspection, "open").state, ReceiptState::Completed);
+}
+
+#[test]
+fn a_control_carrying_another_argument_or_none_is_stale() {
+    let inspection = Inspection::new("rows");
+    let (snapshot, bindings) = row_publication(7.0);
+    inspection
+        .publish(
+            snapshot,
+            &bindings,
+            CollectionMetadata::default(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+    let seven = row_target(&inspection).target;
+    // Admitted against 7; the same control carries 8 before it runs.
+    assert_eq!(
+        invoke_row(&inspection, "queued", seven.clone()).state,
+        ReceiptState::Queued
+    );
+    let (snapshot, eight) = row_publication(8.0);
+    inspection
+        .publish(
+            snapshot,
+            &eight,
+            CollectionMetadata::default(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+    inspection.drain_invocation(&eight, &[], |_| panic!("a stale target never runs"));
+    let stale = lookup(&inspection, "queued");
+    assert_eq!(stale.state, ReceiptState::Rejected);
+    assert_eq!(
+        stale.error.map(|error| error.code),
+        Some(InspectionErrorCode::StaleTarget)
+    );
+    // Admission refuses the old target too, and one that names no argument.
+    for (id, expected) in [
+        ("old", seven.clone()),
+        (
+            "unbound",
+            ResolvedTarget {
+                argument: None,
+                ..seven
+            },
+        ),
+    ] {
+        let refused = invoke_row(&inspection, id, expected);
+        assert_eq!(
+            refused.error.map(|error| error.code),
+            Some(InspectionErrorCode::StaleTarget),
+            "{id}"
+        );
+    }
+}
+
+#[test]
+fn a_rows_control_removed_before_it_runs_is_stale() {
+    let inspection = Inspection::new("rows");
+    let (snapshot, bindings) = row_publication(7.0);
+    inspection
+        .publish(
+            snapshot.clone(),
+            &bindings,
+            CollectionMetadata::default(),
+            BTreeMap::new(),
+        )
+        .unwrap();
+    let target = row_target(&inspection).target;
+    assert_eq!(
+        invoke_row(&inspection, "queued", target).state,
+        ReceiptState::Queued
+    );
+    // The row and its control are gone when the queue drains.
+    inspection.drain_invocation::<RowAction>(&[], &[], |_| panic!("never runs"));
+    let stale = lookup(&inspection, "queued");
+    assert_eq!(
+        stale.error.map(|error| (error.code, error.message)),
+        Some((
+            InspectionErrorCode::StaleTarget,
+            "target disappeared before execution".into()
+        ))
+    );
+}
+
+#[test]
+fn targets_without_an_argument_keep_their_wire_form() {
+    let (inspection, snapshot, bindings) = fixture();
+    publish(&inspection, &snapshot, &bindings);
+    let target = target(&inspection);
+    let wire = serde_json::to_value(&target).unwrap();
+    assert!(wire.get("argument").is_none(), "{wire}");
+    // A client that predates arguments sends the target as it was.
+    let parsed: ResolvedTarget = serde_json::from_value(wire).unwrap();
+    assert_eq!(parsed, target);
+    assert_eq!(
+        receipt(inspection.handle(invocation(&inspection, "old-client", parsed))).state,
+        ReceiptState::Queued
+    );
+}

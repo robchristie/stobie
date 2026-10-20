@@ -99,3 +99,15 @@ clicks a link, whose URL reaches the platform's default browser through a
 `BROWSER` recorder. Adding the two catalogue entries
 raised every earlier fixture's native-control count from 36 to 38 and changed
 nothing else.
+
+Row fixtures add four people in dark comfortable and light compact modes, each
+row a list row with Open, Pinned and Remove beside it and the first person
+pinned so that their Remove is disabled, and a narrow light high-contrast
+column at 150% with long and localised titles and details elided, a disabled
+row and rows crossing the scroll area's fold. Each control's node carries its
+person's ID and is named after them. The physical journeys through these
+controls, in Chromium's ARIA layer and through `stobie`, run in
+`tools/row-actions-smoke.mjs` during the outside-app stage. Adding the two
+catalogue entries raised every earlier fixture's native-control count from 38
+to 40, and changed one pixel of `status-chip-treatments-light` by one colour
+step (at 863, 140) as the glyph atlas grew; nothing else changed.

@@ -3,8 +3,9 @@
 # in a directory outside this checkout, pointed at this checkout's source with
 # `--stobie-path`; it is tested and built natively and with `stobie build-web`,
 # then tools/outside-app-smoke.mjs starts it natively and in Chromium on WebGPU
-# and WebGL2 and operates it with `stobie`. The release `stobie` binary must
-# already be built.
+# and WebGL2 and operates it with `stobie`. Further applications check Web
+# Push and per-row actions. The release `stobie` binary must already be
+# built.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -67,6 +68,19 @@ grep -q 'name="stobie-web-push"' "$PUSH_APP/web/index.html"
   cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
   "$STOBIE" build-web --production --output "$OUTSIDE/push-production" --json >"$EVIDENCE_DIR/build-web-push.json"
 )
+# A third presents its actions once per row (tools/row-actions-app/lib.rs).
+ROWS_APP="$OUTSIDE/outside-rows"
+rm -rf "$ROWS_APP"
+"$STOBIE" new outside-rows --path "$ROWS_APP" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
+cp tools/row-actions-app/lib.rs "$ROWS_APP/src/lib.rs"
+(
+  cd "$ROWS_APP"
+  cargo fmt --check
+  cargo clippy --all-targets -- -D warnings
+  cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
+  cargo build --release
+  "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web-rows.json"
+)
 # The image layer compiles natively and for the web from outside too.
 "$STOBIE" new outside-imaging --imaging --path "$OUTSIDE/outside-imaging" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
 (
@@ -109,3 +123,6 @@ ui_sandbox "$(command -v node)" tools/pwa-smoke.mjs outside-notes "$APP/web" "$O
 # The opted-in application subscribes inside a tap, shows every push and
 # receives a tapped notification's route, under a strict CSP.
 ui_sandbox "$(command -v node)" tools/web-push-smoke.mjs outside-push "$OUTSIDE/push-production" "$EVIDENCE_DIR"
+# Each row's control carries its row's ID through `stobie` natively and in
+# the browser, and the ARIA layer names it after its row.
+ui_sandbox "$(command -v node)" tools/row-actions-smoke.mjs "$STOBIE" "$ROWS_APP" "$CARGO_TARGET_DIR/release/outside-rows" "$EVIDENCE_DIR"

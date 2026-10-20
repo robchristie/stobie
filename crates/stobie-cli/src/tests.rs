@@ -20,6 +20,7 @@ fn usage_message(result: Result<impl std::fmt::Debug, ClientError>) -> String {
 
 fn capability(id: &str, name: &str, arguments: ArgumentContract) -> CapabilityDescription {
     CapabilityDescription {
+        argument: None,
         id: SemanticUiId::new(id),
         capability: name.into(),
         pane: None,
@@ -34,6 +35,7 @@ fn capability(id: &str, name: &str, arguments: ArgumentContract) -> CapabilityDe
         semantic_invocable: true,
         arguments,
         target: ResolvedTarget {
+            argument: None,
             id: SemanticUiId::new(id),
             capability: name.into(),
             pane: None,
@@ -591,5 +593,57 @@ fn the_envelope_leads_and_the_payload_keeps_its_field_order() {
     assert_eq!(
         envelope("stop", false, &empty),
         r#"{"schema_version":1,"command":"stop","ok":false}"#
+    );
+}
+
+#[test]
+fn a_rows_control_is_selected_by_the_argument_it_carries() {
+    let selector = |value: &str| {
+        parse("invoke", &["people.open", "--argument", value])
+            .unwrap()
+            .selector(Some(("capability", "people.open")))
+            .unwrap()
+            .argument
+    };
+    assert_eq!(selector("42"), Some(serde_json::json!(42)));
+    assert_eq!(selector("true"), Some(serde_json::json!(true)));
+    assert_eq!(selector("\"42\""), Some(serde_json::json!("42")));
+    assert_eq!(selector("ada"), Some(serde_json::json!("ada")));
+    assert_eq!(selector("[1]"), Some(serde_json::json!("[1]")));
+    let json = parse("query", &["--selector", r#"{"argument":7}"#])
+        .unwrap()
+        .selector(None)
+        .unwrap();
+    assert_eq!(json.argument, Some(serde_json::json!(7)));
+
+    // A row's control carries its value, so it needs none and shows it.
+    let mut row = capability(
+        "people.open.2",
+        "people.open",
+        ArgumentContract::Number {
+            minimum: 1.0,
+            maximum: 9.0,
+            integer: true,
+        },
+    );
+    let args = parse("invoke", &["people.open"]).unwrap();
+    assert!(
+        argument(&args, &row).is_err(),
+        "the action's binding needs a value"
+    );
+    row.argument = Some(serde_json::json!(2));
+    assert_eq!(argument(&args, &row).unwrap(), None);
+    assert_eq!(output::capability_tag(&row), "people.open = 2");
+    let mut node = UiNode::container(
+        SemanticUiId::new("people.open.2"),
+        None,
+        UiRole::Button,
+        UiRect::default(),
+    );
+    node.name = "Open Grace".into();
+    node.argument = Some(serde_json::json!(2));
+    assert_eq!(
+        node_text(&node, &[]),
+        "button \"Open Grace\" carrying 2 #people.open.2"
     );
 }

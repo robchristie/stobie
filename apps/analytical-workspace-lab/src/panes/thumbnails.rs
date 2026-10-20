@@ -118,6 +118,7 @@ pub fn show(
                         .is_some_and(|root| root.contains(response.rect.into(), 1.0));
                     if response.rect.intersects(grid_ui.clip_rect()) && inside_root {
                         outputs.ui_geometry.record_node(UiNode {
+                            argument: None,
                             value: None,
                             id: SemanticUiId::new(format!("stobie.thumbnail-cell.{index}")),
                             parent: Some(SemanticUiId::pane(PaneId(6))),

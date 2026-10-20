@@ -39,6 +39,10 @@ pub struct InspectionBinding<A: ActionKey> {
     pub availability: Availability,
     pub semantic_invocable: bool,
     pub meaning: String,
+    /// The argument this binding's control carries, such as its row's ID;
+    /// [`ActionArgument::None`] for a binding that takes any value its
+    /// contract allows.
+    pub argument: ActionArgument,
 }
 
 impl<A: ActionKey> InspectionBinding<A> {
@@ -55,7 +59,14 @@ impl<A: ActionKey> InspectionBinding<A> {
             availability,
             semantic_invocable,
             meaning: meaning.into(),
+            argument: ActionArgument::None,
         }
+    }
+
+    /// Bind the argument this binding's control carries.
+    pub fn with_argument(mut self, argument: ActionArgument) -> Self {
+        self.argument = argument;
+        self
     }
 
     pub fn with_id(mut self, id: SemanticUiId) -> Self {
@@ -69,7 +80,9 @@ impl<A: ActionKey> InspectionBinding<A> {
 
     fn describe(&self, observation: u64) -> CapabilityDescription {
         let spec = self.target.action.specification();
+        let argument = self.argument.to_value();
         CapabilityDescription {
+            argument: argument.clone(),
             id: self.id.clone(),
             capability: self.target.action.stable_id().into(),
             pane: self.target.pane,
@@ -84,6 +97,7 @@ impl<A: ActionKey> InspectionBinding<A> {
             semantic_invocable: self.semantic_invocable,
             arguments: self.target.action.argument(),
             target: ResolvedTarget {
+                argument,
                 id: self.id.clone(),
                 capability: self.target.action.stable_id().into(),
                 pane: self.target.pane,
@@ -110,6 +124,7 @@ pub struct TextFieldBinding {
 impl TextFieldBinding {
     fn describe(&self, observation: u64) -> CapabilityDescription {
         let target = ResolvedTarget {
+            argument: None,
             id: self.id.clone(),
             capability: SET_TEXT_CAPABILITY.into(),
             pane: self.pane,
@@ -118,6 +133,7 @@ impl TextFieldBinding {
             observation,
         };
         CapabilityDescription {
+            argument: None,
             id: self.id.clone(),
             capability: SET_TEXT_CAPABILITY.into(),
             pane: self.pane,
@@ -180,6 +196,7 @@ impl LinkBinding {
 
     fn describe(&self, observation: u64) -> CapabilityDescription {
         let target = ResolvedTarget {
+            argument: None,
             id: self.id.clone(),
             capability: OPEN_LINK_CAPABILITY.into(),
             pane: self.pane,
@@ -188,6 +205,7 @@ impl LinkBinding {
             observation,
         };
         CapabilityDescription {
+            argument: None,
             id: self.id.clone(),
             capability: OPEN_LINK_CAPABILITY.into(),
             pane: self.pane,
@@ -1084,10 +1102,10 @@ impl InspectionState {
                 )
             })
             .collect();
-        let capability = unique_binding(&candidates)?;
+        let capability = select_invocation_target(&candidates, |candidate| *candidate, arguments)?;
         validate_expected(&capability.target, expected)?;
         validate_invocable(capability)?;
-        capability.arguments.parse(arguments).map(drop)
+        capability.parse_arguments(arguments).map(drop)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1120,22 +1138,24 @@ impl InspectionState {
                 selector_matches_binding(selector, description, snapshot.node(&description.id))
             })
             .collect();
-        if candidates.is_empty() {
-            return Err(InspectionError::new(
-                InspectionErrorCode::StaleTarget,
-                "target disappeared before execution",
-            ));
-        }
-        if candidates.len() != 1 {
-            return Err(InspectionError::new(
-                InspectionErrorCode::Ambiguous,
-                "current selector resolves multiple bindings",
-            ));
-        }
-        let (description, current) = &candidates[0];
+        // A target that is no longer presented, such as a removed row's
+        // control, is stale rather than unknown: it was admitted.
+        let (description, current) =
+            select_invocation_target(&candidates, |(description, _)| description, arguments)
+                .map_err(|error| match error.code {
+                    InspectionErrorCode::NoMatch => InspectionError::new(
+                        InspectionErrorCode::StaleTarget,
+                        "target disappeared before execution",
+                    ),
+                    InspectionErrorCode::Ambiguous => InspectionError::new(
+                        InspectionErrorCode::Ambiguous,
+                        "current selector resolves multiple bindings",
+                    ),
+                    _ => error,
+                })?;
         validate_expected(&description.target, expected)?;
         validate_invocable(description)?;
-        let argument = description.arguments.parse(arguments)?;
+        let argument = description.parse_arguments(arguments)?;
         Ok(match current {
             Current::Action(binding) => Invocation::Action {
                 target: binding.target,
@@ -1305,22 +1325,12 @@ fn selector_matches_binding(
             .name
             .as_ref()
             .is_none_or(|name| node.is_some_and(|node| &node.name == name))
-}
-
-fn unique_binding<'a>(
-    bindings: &[&'a CapabilityDescription],
-) -> Result<&'a CapabilityDescription, InspectionError> {
-    match bindings {
-        [binding] => Ok(binding),
-        [] => Err(InspectionError::new(
-            InspectionErrorCode::NoMatch,
-            "selector resolves no capability binding",
-        )),
-        _ => Err(InspectionError::new(
-            InspectionErrorCode::Ambiguous,
-            "selector resolves multiple capability bindings",
-        )),
-    }
+        && selector.argument.as_ref().is_none_or(|argument| {
+            binding
+                .argument
+                .as_ref()
+                .is_some_and(|carried| same_argument(argument, carried))
+        })
 }
 
 fn validate_expected(
@@ -1334,6 +1344,11 @@ fn validate_expected(
         || current.pane != expected.pane
         || current.domain != expected.domain
         || current.meaning != expected.meaning
+        || !match (&current.argument, &expected.argument) {
+            (Some(current), Some(expected)) => same_argument(current, expected),
+            (None, None) => true,
+            _ => false,
+        }
     {
         Err(InspectionError::new(
             InspectionErrorCode::StaleTarget,

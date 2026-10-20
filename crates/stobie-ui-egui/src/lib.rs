@@ -1336,6 +1336,7 @@ mod tests {
                 .tab_states
                 .iter()
                 .map(|(pane, rect, selected, focused)| UiNode {
+                    argument: None,
                     value: None,
                     id: SemanticUiId::tab(*pane),
                     parent: Some(SemanticUiId::root()),
@@ -1360,6 +1361,7 @@ mod tests {
                 .splitter_states
                 .iter()
                 .map(|(node, rect, horizontal, focused)| UiNode {
+                    argument: None,
                     value: None,
                     id: SemanticUiId::splitter(*node),
                     parent: Some(SemanticUiId::root()),

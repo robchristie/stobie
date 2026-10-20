@@ -149,8 +149,35 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
 ) -> Response {
+    present_action_button(
+        ui,
+        spec,
+        identity,
+        content,
+        None,
+        tokens,
+        font_scale,
+        observations,
+    )
+}
+
+/// The action button, named `name` for assistive technology and its tooltip
+/// when given, such as "Open Ada" for one row's Open; the visible label stays
+/// the action's.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn present_action_button<A: ActionKey>(
+    ui: &mut egui::Ui,
+    spec: ActionButtonSpec<A>,
+    identity: &ActionButtonIdentity,
+    content: ActionButtonContent,
+    name: Option<&str>,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
     debug_assert!(spec.availability.visible());
     let action = spec.target.action.specification();
+    let name = name.unwrap_or(action.label);
     let visible_label = if spec.compact {
         action.compact_label.unwrap_or(action.label)
     } else {
@@ -222,13 +249,11 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
         response.request_focus();
     }
     if response.interact_rect.is_positive() {
-        response.widget_info(|| {
-            egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, action.label)
-        });
+        response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, name));
         ui.ctx().accesskit_node_builder(response.id, |node| {
             use egui::accesskit::{Action, Role, Toggled};
             node.set_role(Role::Button);
-            node.set_label(action.label);
+            node.set_label(name);
             node.set_author_id(identity.semantic_id.0.clone());
             if let Some(shortcut) = action.shortcut {
                 node.set_keyboard_shortcut(shortcut.aria_keyshortcuts());
@@ -393,7 +418,7 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
     }
     if matches!(content, ActionButtonContent::IconOnly(_)) || truncated || spec.compact || !enabled
     {
-        let mut tooltip = format!("{}\n{}", action.label, action.description);
+        let mut tooltip = format!("{name}\n{}", action.description);
         if let Some(reason) = spec.availability.disabled_reason() {
             tooltip.push_str(&format!("\nUnavailable: {reason}"));
         }
@@ -429,6 +454,7 @@ pub fn action_semantic_node_with_identity<A: ActionKey>(
 ) -> UiNode {
     let action = target.action.specification();
     UiNode {
+        argument: None,
         value: None,
         id: identity.semantic_id.clone(),
         parent: Some(parent),

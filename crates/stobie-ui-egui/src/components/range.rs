@@ -55,6 +55,7 @@ pub fn range_control<A: ActionKey>(
     });
     let output = SemanticControlOutput {
         node: UiNode {
+            argument: None,
             value: None,
             id: semantic_id,
             parent: Some(parent),

@@ -89,7 +89,7 @@ async function focus(controlId) {
     pressTab: () => page.keyboard.press('Tab'),
     waitForTab: epoch => page.waitForFunction(epoch => window.__STOBIE_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
     wait: ms => page.waitForTimeout(ms),
-    maxTabs: 40,
+    maxTabs: 48,
   });
 }
 

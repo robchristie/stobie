@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "rows/actions",
+      "rect": {
+        "min_x": 522,
+        "min_y": 48,
+        "max_x": 1162,
+        "max_y": 568
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.0c6844743c7dd605",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Edsger Dijkstra",
+      "description": "Computer scientist; Select the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 278.5,
+        "max_x": 1154,
+        "max_y": 318.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 3
+    },
+    {
+      "id": "presentation.35f1d5456b8bdbc7",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Katherine Johnson",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 577.8125,
+        "min_y": 408,
+        "max_x": 629.75,
+        "max_y": 440
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 4
+    },
+    {
+      "id": "presentation.3f140436b1aac3c9",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Ada Lovelace",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 147.75,
+        "max_x": 572.8125,
+        "max_y": 179.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 1
+    },
+    {
+      "id": "presentation.4e936f84fbd393db",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Grace Hopper",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 577.8125,
+        "min_y": 234.5,
+        "max_x": 629.75,
+        "max_y": 266.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 2
+    },
+    {
+      "id": "presentation.58d316f966691a9c",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Grace Hopper",
+      "description": "Rear admiral and computer scientist; Select the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 191.75,
+        "max_x": 1154,
+        "max_y": 231.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 2
+    },
+    {
+      "id": "presentation.7414be3f56160ca4",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Ada Lovelace",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 634.75,
+        "min_y": 147.75,
+        "max_x": 666.75,
+        "max_y": 179.75
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "disabled_reason": "Unpin Ada Lovelace first",
+      "argument": 1
+    },
+    {
+      "id": "presentation.7b35a681b586e155",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Katherine Johnson",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 634.75,
+        "min_y": 408,
+        "max_x": 666.75,
+        "max_y": 440
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "argument": 4
+    },
+    {
+      "id": "presentation.859417883eef358b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Katherine Johnson",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 408,
+        "max_x": 572.8125,
+        "max_y": 440
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 4
+    },
+    {
+      "id": "presentation.93444a10482e6c91",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Edsger Dijkstra",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 577.8125,
+        "min_y": 321.25,
+        "max_x": 629.75,
+        "max_y": 353.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 3
+    },
+    {
+      "id": "presentation.a3ae9c399ac15429",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Grace Hopper",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 234.5,
+        "max_x": 572.8125,
+        "max_y": 266.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 2
+    },
+    {
+      "id": "presentation.ae6e9b5caa60de47",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Edsger Dijkstra",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 321.25,
+        "max_x": 572.8125,
+        "max_y": 353.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 3
+    },
+    {
+      "id": "presentation.b8339ee280f12058",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Ada Lovelace",
+      "description": "Mathematician; Select the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 105,
+        "max_x": 1154,
+        "max_y": 144.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 1
+    },
+    {
+      "id": "presentation.d4bc950a0a5d99d4",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Ada Lovelace",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 577.8125,
+        "min_y": 147.75,
+        "max_x": 629.75,
+        "max_y": 179.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 1
+    },
+    {
+      "id": "presentation.e6b05cde22440756",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Edsger Dijkstra",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 634.75,
+        "min_y": 321.25,
+        "max_x": 666.75,
+        "max_y": 353.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "argument": 3
+    },
+    {
+      "id": "presentation.f50f4d13f5569751",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Grace Hopper",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 634.75,
+        "min_y": 234.5,
+        "max_x": 666.75,
+        "max_y": 266.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "argument": 2
+    },
+    {
+      "id": "presentation.fbccdb2f1bb51146",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Katherine Johnson",
+      "description": "Mathematician at NASA; Select the person with this ID",
+      "rect": {
+        "min_x": 530,
+        "min_y": 365.25,
+        "max_x": 1154,
+        "max_y": 405
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 4
+    }
+  ],
+  "semantic_audit": []
+}

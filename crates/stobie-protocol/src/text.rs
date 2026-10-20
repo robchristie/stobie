@@ -140,6 +140,11 @@ pub enum TextComponentKind {
     ImageStatus,
     GalleryHeading,
     TextSample,
+    /// A list row that activates its action; the parent of its title and
+    /// detail.
+    ListRow,
+    ListRowTitle,
+    ListRowDetail,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]

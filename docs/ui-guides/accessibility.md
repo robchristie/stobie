@@ -23,7 +23,11 @@ Custom interactive controls must expose a usable role and name, current state,
 supported action, focusability, visible focus and a token minimum hit target.
 Derive IDs from stable pane/domain identity. For example, dock tabs and
 splitters use `PaneId` and `DockNodeId`; actions use their `ActionTarget`
-semantic ID. Never target stale pixel coordinates in tests or automation.
+semantic ID. A control repeated on each row of a list carries its row's
+argument and adds the row's name to its accessible name ("Open Ada
+Lovelace"), so each row's control has its own name; see
+[Actions on rows](interactions.md#actions-on-rows). Never target stale pixel
+coordinates in tests or automation.
 Nodes that contain a supported text-selection surface set `text_selectable`;
 measured-text observations retain the corresponding `TextInteraction` so a
 physical test can resolve the current allocation before dragging.

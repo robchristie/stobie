@@ -31,20 +31,20 @@ test('earlier focus stops before another key', async () => {
   assert.equal(state.observations, 4);
 });
 
-test('focus after final allowed action succeeds without a forty-sixth key', async () => {
-  const { state, callbacks } = fixture(45);
+test('focus after final allowed action succeeds without a fifty-fourth key', async () => {
+  const { state, callbacks } = fixture(53);
   await focusNavigationDestination('tasks', callbacks);
-  assert.equal(state.dispatches, 45);
-  assert.deepEqual(state.waits, Array(45).fill(60));
-  assert.equal(state.observations, 46);
+  assert.equal(state.dispatches, 53);
+  assert.deepEqual(state.waits, Array(53).fill(60));
+  assert.equal(state.observations, 54);
 });
 
 test('unreachable target fails after final observation with unchanged action/pacing bounds', async () => {
   const { state, callbacks } = fixture(Infinity);
   await assert.rejects(focusNavigationDestination('tasks', callbacks), /Tab did not reach tasks/);
-  assert.equal(state.dispatches, 45);
-  assert.deepEqual(state.waits, Array(45).fill(60));
-  assert.equal(state.observations, 46);
+  assert.equal(state.dispatches, 53);
+  assert.deepEqual(state.waits, Array(53).fill(60));
+  assert.equal(state.observations, 54);
 });
 
 test('target observation rejection propagates without another traversal', async () => {

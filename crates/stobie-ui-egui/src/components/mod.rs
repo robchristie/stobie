@@ -3,6 +3,7 @@ mod choice;
 mod icon;
 #[cfg(test)]
 mod icon_action_tests;
+mod list_row;
 mod navigation;
 mod property;
 mod range;
@@ -17,6 +18,7 @@ mod status_chip_tests;
 mod thumbnail;
 mod viewport_status;
 
+pub(crate) use action_button::present_action_button;
 pub use action_button::{
     ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     action_button, action_button_with_content, action_button_with_identity,
@@ -25,6 +27,7 @@ pub use action_button::{
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub use icon::{IconId, icon_size, paint_icon};
+pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
 pub use navigation::{
     NavigationBadge, NavigationItemSpec, navigation_item, navigation_item_minimum_width,
     navigation_item_semantic_node,

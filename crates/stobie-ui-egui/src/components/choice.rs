@@ -149,6 +149,7 @@ fn choice_impl<T: Copy + Eq, A: ActionKey>(
         options: option_nodes,
         control: SemanticControlOutput {
             node: UiNode {
+                argument: None,
                 // The selected option's label, as the control shows it.
                 value: current.map(ToOwned::to_owned),
                 id: semantic_id,

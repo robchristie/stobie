@@ -407,6 +407,7 @@ mod tests {
                     },
                 ),
                 UiNode {
+                    argument: None,
                     value: None,
                     id: SemanticUiId::new("action.undo"),
                     parent: Some(root),

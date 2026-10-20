@@ -480,6 +480,50 @@ measurement attempts in coverage. Production observations include partial clips.
 Preserve the viewport/pass inventory when filtering clipped successful text; never discard failed measurements. The scoped method handles ordinary
 publication and inherits the context's explicit domain reference and target pane.
 
+## Rows and their actions
+
+A list whose rows each offer actions presents them with the ordinary recipes
+and a `BoundAction` per row; [Actions on rows](interactions.md#actions-on-rows)
+owns the contract. In a hosted pane:
+
+```text
+for person in &self.people {
+    frame.list_row(ui, p, BoundAction::new(Action::Select, person.key),
+        ListRowSpec { title: &person.name, detail: Some(&person.role) });
+    ui.horizontal(|ui| {
+        let row = |action| BoundAction::new(action, person.id).with_subject(&person.name);
+        frame.action(ui, p, row(Action::Open), ActionEmphasis::Normal);
+        frame.toggle(ui, p, "pinned", row(Action::Pin), person.pinned);
+        frame.icon_action(ui, p, row(Action::Remove), IconId::Remove, ActionEmphasis::Quiet);
+    });
+}
+```
+
+`Frame::list_row` presents one full-width row whose whole surface performs its
+bound action for that row: a `ListRowSpec` with the row's title, one line of
+`ButtonLabel` text as in navigation items, and an optional detail, one line of
+`Secondary` text, both inert and elided with an ellipsis, within block padding
+and at least the token hit height (`list_row_height`). The row is a Button
+named by its full title; its description is the detail followed by the
+action's description, and a disabled row adds its reason. Hover uses the quiet
+action hover fill, press the validated selection pair with an inset outline,
+and keyboard focus the outer focus ring. Each enabled row is a Tab stop;
+Enter, Space and a pointer release activate it. The text measurements are
+`ListRowTitle` and `ListRowDetail` under a `ListRow` parent. A row has no
+current or selected state; a destination list uses navigation items. Low-level
+callers use `list_row` with a stable `PresentationId` and publish
+`list_row_semantic_node` for positive interaction bounds, and
+`PresentationContext::list_row` handles ordinary publication.
+
+Gallery `rows/actions` and `rows/long-narrow` present list rows with their
+actions, including a disabled action, a disabled row, elision and scrolling;
+the [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
+
+Buttons, icon actions and toggles carrying a bound action keep their visible
+label and measurements; their accessible name and tooltip add the subject,
+and `PresentationContext::bound_action` is the low-level form. A hidden
+availability for a row's argument presents nothing for it.
+
 ## Local date and time
 
 Format instants for people with `stobie_ui_egui::local_time`, never with

@@ -78,6 +78,25 @@ pub trait Application: 'static {
     /// discovery and semantic invocation alike.
     fn availability(&self, target: ActionTarget<Self::Action>) -> Availability;
 
+    /// Availability of a target for one argument, such as Open for the row
+    /// with this ID. Controls that carry an argument ([`BoundAction`]) and
+    /// their bindings use it, and the host checks it again immediately before
+    /// performing an action with an argument, from a click, a row's binding or
+    /// an invocation with a value. Return [`Availability::Hidden`] for an
+    /// argument that names nothing, such as a removed row, so that a stale
+    /// click or invocation is refused before [`Self::perform_with`]. The
+    /// default is the target's availability, leaving
+    /// [`Self::perform_with`] to reject an argument it cannot use.
+    ///
+    /// [`BoundAction`]: crate::BoundAction
+    fn availability_with(
+        &self,
+        target: ActionTarget<Self::Action>,
+        _argument: &ActionArgument,
+    ) -> Availability {
+        self.availability(target)
+    }
+
     /// Present the current state. Emit data changes with [`Frame::emit`] and
     /// actions with [`Frame::action`] or [`Frame::trigger`].
     fn ui(
@@ -281,7 +300,7 @@ fn request_passes(context: &egui::Context, reasons: &[HostRepaint]) {
 pub struct Frame<'a, A: ActionSet, I> {
     intents: &'a mut Vec<I>,
     triggers: &'a mut Vec<(ActionTarget<A>, ActionArgument)>,
-    availability: &'a dyn Fn(ActionTarget<A>) -> Availability,
+    availability: &'a dyn Fn(ActionTarget<A>, &ActionArgument) -> Availability,
     repaint: &'a mut Vec<HostRepaint>,
     tokens: DesignTokens,
     font_scale: f32,
@@ -331,10 +350,12 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
 
     /// Queue an action through the same route as a click. It runs after this
     /// pass's intents if it is still available. Pass an [`ActionTarget`] for a
-    /// pane-scoped action.
+    /// pane-scoped action, or a [`BoundAction`](crate::BoundAction) for one
+    /// that carries an argument, such as a custom row's.
     pub fn trigger(&mut self, target: impl IntoActionTarget<A>) {
+        let bound = target.into_bound(None);
         self.triggers
-            .push((target.into_target(None), ActionArgument::None));
+            .push((bound.target(), bound.argument().clone()));
     }
 
     /// Queue an action with its argument, as a control that chooses a value
@@ -344,9 +365,11 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         self.triggers.push((target.into_target(None), argument));
     }
 
-    /// The application's current availability for a target.
+    /// The application's current availability for a target, and for the
+    /// argument a [`BoundAction`](crate::BoundAction) carries.
     pub fn availability(&self, target: impl IntoActionTarget<A>) -> Availability {
-        (self.availability)(target.into_target(None))
+        let bound = target.into_bound(None);
+        (self.availability)(bound.target(), bound.argument())
     }
 
     /// Ask for another pass, for example while an animation runs.
@@ -362,6 +385,10 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// Present an action button with its current availability, and trigger the
     /// action when clicked. The action is the control's stable logical key. A
     /// pane-scoped action takes its pane from a [`Self::pane_presentation`].
+    ///
+    /// Pass a [`BoundAction`](crate::BoundAction) to present the action once
+    /// per row: the button carries the row's argument, is named after its
+    /// subject ("Open Ada") and triggers the action with the argument.
     pub fn action(
         &mut self,
         ui: &mut Ui,
@@ -369,19 +396,20 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         target: impl IntoActionTarget<A>,
         emphasis: ActionEmphasis,
     ) -> Response {
-        let target = target.into_target(presentation.pane());
+        let bound = target.into_bound(presentation.pane());
         self.button(
             ui,
             presentation,
-            target.action,
-            target,
+            bound.action(),
+            bound,
             ActionButtonState::Momentary,
             emphasis,
             ActionButtonContent::Text,
         )
     }
 
-    /// Present an icon-only action with its full accessible name.
+    /// Present an icon-only action with its full accessible name. A
+    /// [`BoundAction`](crate::BoundAction) works as for [`Self::action`].
     pub fn icon_action(
         &mut self,
         ui: &mut Ui,
@@ -390,12 +418,12 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         icon: IconId,
         emphasis: ActionEmphasis,
     ) -> Response {
-        let target = target.into_target(presentation.pane());
+        let bound = target.into_bound(presentation.pane());
         self.button(
             ui,
             presentation,
-            target.action,
-            target,
+            bound.action(),
+            bound,
             ActionButtonState::Momentary,
             emphasis,
             ActionButtonContent::IconOnly(icon),
@@ -403,7 +431,9 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     }
 
     /// Present a toggle whose pressed state the application owns; a click
-    /// triggers the action, which flips that state in [`Application::perform`].
+    /// triggers the action, which flips that state in [`Application::perform`],
+    /// or in [`Application::perform_with`] for a
+    /// [`BoundAction`](crate::BoundAction), such as one row's Pinned.
     pub fn toggle(
         &mut self,
         ui: &mut Ui,
@@ -412,16 +442,44 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         target: impl IntoActionTarget<A>,
         pressed: bool,
     ) -> Response {
-        let target = target.into_target(presentation.pane());
+        let bound = target.into_bound(presentation.pane());
         self.button(
             ui,
             presentation,
             key,
-            target,
+            bound,
             ActionButtonState::Toggle { pressed },
             ActionEmphasis::Normal,
             ActionButtonContent::Text,
         )
+    }
+
+    /// Present one row of a list whose whole surface performs the action for
+    /// that row, named by `spec.title`, and trigger it with the row's argument
+    /// when clicked. Pass a [`BoundAction`](crate::BoundAction) carrying the
+    /// row's ID. A hidden row presents nothing.
+    pub fn list_row(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: crate::ListRowSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.list_row(
+            ui,
+            bound.action(),
+            spec,
+            target,
+            &availability,
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -430,21 +488,41 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         ui: &mut Ui,
         presentation: &mut PresentationContext,
         key: impl Hash + std::fmt::Debug,
-        target: ActionTarget<A>,
+        bound: crate::BoundAction<A>,
         state: ActionButtonState,
         emphasis: ActionEmphasis,
         content: ActionButtonContent,
     ) -> Response {
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        // A row's argument that names nothing, such as a removed row's,
+        // presents no control.
+        if *bound.argument() != ActionArgument::None && !availability.visible() {
+            return ui.interact(
+                egui::Rect::NOTHING,
+                egui::Id::new((
+                    "stobie.hidden-action",
+                    bound.action().stable_id(),
+                    bound.argument().to_value().map(|value| value.to_string()),
+                )),
+                egui::Sense::hover(),
+            );
+        }
         let spec = ActionButtonSpec {
             target,
-            availability: (self.availability)(target),
+            availability,
             state,
             emphasis,
             compact: false,
         };
-        let response = presentation.action_with_content(ui, key, spec, content);
+        let response = if *bound.argument() == ActionArgument::None && bound.subject().is_none() {
+            presentation.action_with_content(ui, key, spec, content)
+        } else {
+            let name = bound.subject().map(|_| bound.accessible_name());
+            presentation.bound_action(ui, key, spec, content, bound.argument(), name.as_deref())
+        };
         if response.clicked() {
-            self.triggers.push((target, ActionArgument::None));
+            self.triggers.push((target, bound.argument().clone()));
         }
         response
     }
@@ -971,7 +1049,13 @@ impl<A: Application> AppHost<A> {
         let mut intents = Vec::new();
         {
             let app = &self.app;
-            let availability = |target: ActionTarget<A::Action>| app.availability(target);
+            let availability = |target: ActionTarget<A::Action>, argument: &ActionArgument| {
+                if *argument == ActionArgument::None {
+                    app.availability(target)
+                } else {
+                    app.availability_with(target, argument)
+                }
+            };
             let mut frame = Frame {
                 intents: &mut intents,
                 triggers: &mut triggers,
@@ -1183,7 +1267,12 @@ impl<A: Application> AppHost<A> {
         target: ActionTarget<A::Action>,
         argument: ActionArgument,
     ) -> Result<bool, String> {
-        match self.app.availability(target) {
+        let availability = if argument == ActionArgument::None {
+            self.app.availability(target)
+        } else {
+            self.app.availability_with(target, &argument)
+        };
+        match availability {
             Availability::Enabled => {
                 target
                     .action
@@ -1421,47 +1510,101 @@ impl<A: Application> AppHost<A> {
 
     /// Bind every action to each rendered control carrying it, or to its
     /// default identity when none is rendered, so discovery covers the whole set.
+    /// A control that carries an argument, such as one row's Open, has a
+    /// binding of its own; the action keeps its default binding, which takes
+    /// any argument, unless a control without an argument presents it.
     fn bindings(&self) -> Vec<InspectionBinding<A::Action>> {
         let mut bindings = Vec::new();
         let mut presented = Vec::new();
         for &action in A::Action::ALL {
-            let nodes: Vec<&UiNode> = self.snapshot.by_action(action).collect();
-            let mut targets: Vec<(ActionTarget<A::Action>, Option<&UiNode>)> =
-                match action.specification().scope {
-                    ActionScope::Application if nodes.is_empty() => {
-                        vec![(ActionTarget::application(action), None)]
-                    }
-                    ActionScope::Application => nodes
-                        .iter()
-                        .map(|node| (ActionTarget::application(action), Some(*node)))
-                        .collect(),
-                    ActionScope::Pane | ActionScope::ActivePane => nodes
-                        .iter()
-                        .filter_map(|node| {
-                            node.pane
-                                .map(|pane| (ActionTarget::pane(action, pane), Some(*node)))
+            let contract = action.argument();
+            // Each rendered control with the argument it carries, checked
+            // against the action's contract.
+            let nodes: Vec<(&UiNode, Result<ActionArgument, String>)> = self
+                .snapshot
+                .by_action(action)
+                .map(|node| {
+                    let argument = match &node.argument {
+                        None => Ok(ActionArgument::None),
+                        Some(value) => contract
+                            .parse(&serde_json::json!({ "value": value }))
+                            .map_err(|error| error.message),
+                    };
+                    (node, argument)
+                })
+                .collect();
+            let unbound = |pane: Option<PaneId>| {
+                nodes.iter().any(|(node, argument)| {
+                    matches!(argument, Ok(ActionArgument::None)) && node.pane == pane
+                })
+            };
+            let mut targets: Vec<Candidate<'_, A::Action>> = match action.specification().scope {
+                ActionScope::Application => nodes
+                    .iter()
+                    .map(|(node, argument)| {
+                        (
+                            ActionTarget::application(action),
+                            Some(*node),
+                            argument.clone(),
+                        )
+                    })
+                    .collect(),
+                ActionScope::Pane | ActionScope::ActivePane => nodes
+                    .iter()
+                    .filter_map(|(node, argument)| {
+                        node.pane.map(|pane| {
+                            (
+                                ActionTarget::pane(action, pane),
+                                Some(*node),
+                                argument.clone(),
+                            )
                         })
-                        .collect(),
-                };
+                    })
+                    .collect(),
+            };
+            if action.specification().scope == ActionScope::Application
+                && !nodes
+                    .iter()
+                    .any(|(_, argument)| matches!(argument, Ok(ActionArgument::None)))
+            {
+                targets.push((
+                    ActionTarget::application(action),
+                    None,
+                    Ok(ActionArgument::None),
+                ));
+            }
             for pane in self.app.action_panes(action) {
-                if action.specification().scope != ActionScope::Application
-                    && !targets.iter().any(|(target, _)| target.pane == Some(pane))
+                if action.specification().scope != ActionScope::Application && !unbound(Some(pane))
                 {
-                    targets.push((ActionTarget::pane(action, pane), None));
+                    targets.push((
+                        ActionTarget::pane(action, pane),
+                        None,
+                        Ok(ActionArgument::None),
+                    ));
                 }
             }
             let semantic = action.invocation().semantic();
-            for (target, node) in targets {
+            for (target, node, argument) in targets {
                 let mut meaning = self.app.meaning(target);
                 if meaning.is_empty() {
                     meaning = "stable".into();
                 }
-                let mut binding = InspectionBinding::new(
-                    target,
-                    self.app.availability(target),
-                    semantic,
-                    meaning,
-                );
+                let (availability, argument) = match argument {
+                    Ok(ActionArgument::None) => {
+                        (self.app.availability(target), ActionArgument::None)
+                    }
+                    Ok(argument) => (self.app.availability_with(target, &argument), argument),
+                    // A control carrying an argument its contract refuses
+                    // stays discoverable, and refuses invocation.
+                    Err(reason) => (
+                        Availability::Disabled {
+                            reason: format!("The control's argument is invalid: {reason}").into(),
+                        },
+                        ActionArgument::None,
+                    ),
+                };
+                let mut binding = InspectionBinding::new(target, availability, semantic, meaning)
+                    .with_argument(argument);
                 // A pane target belongs to its pane unless its control names a
                 // more specific domain object.
                 let domain = node
@@ -1470,7 +1613,7 @@ impl<A: Application> AppHost<A> {
                 // Several controls can present one target, such as a toolbar
                 // button and a viewport's custom action; the first is the
                 // capability's instance.
-                let key = (target, domain.clone());
+                let key = (target, domain.clone(), binding.argument.to_value());
                 if presented.contains(&key) {
                     continue;
                 }
@@ -1616,6 +1759,14 @@ impl<A: Application> AppHost<A> {
     }
 }
 
+/// One binding to make: an action's target, the control presenting it, if
+/// any, and the argument that control carries, or why its contract refuses it.
+type Candidate<'a, A> = (
+    ActionTarget<A>,
+    Option<&'a UiNode>,
+    Result<ActionArgument, String>,
+);
+
 /// Pair this pass's recorded egui text edits with the observed text input
 /// nodes that present them, publish each paired field's text as its node's
 /// value and offer AccessKit `SetValue` on it. A field pairs by its AccessKit
@@ -1713,6 +1864,8 @@ fn pair_text_fields(
 
 #[cfg(test)]
 mod link_tests;
+#[cfg(test)]
+mod row_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

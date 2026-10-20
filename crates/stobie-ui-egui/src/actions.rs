@@ -4,6 +4,8 @@ use egui::{Key, KeyboardShortcut, Modifiers, Ui};
 use serde::{Deserialize, Serialize};
 use stobie_core::PaneId;
 
+use crate::ActionArgument;
+
 pub use stobie_protocol::actions::*;
 
 /// egui forms of the protocol's shortcut types.
@@ -48,9 +50,19 @@ pub struct ActionTarget<A: ActionKey> {
 /// An action, or an explicit target, resolved against the pane it is presented
 /// in. Hosted frames accept either: an application-scoped action is its own
 /// target, and a pane-scoped action takes the pane of its pane presentation.
+/// A [`BoundAction`] also carries the argument its control acts with.
 pub trait IntoActionTarget<A: ActionKey> {
     /// Resolve the target. Panics for a pane-scoped action without a pane.
     fn into_target(self, pane: Option<PaneId>) -> ActionTarget<A>;
+
+    /// Resolve the target together with the argument its control carries,
+    /// none unless this is a [`BoundAction`].
+    fn into_bound(self, pane: Option<PaneId>) -> BoundAction<A>
+    where
+        Self: Sized,
+    {
+        BoundAction::for_target(self.into_target(pane), ActionArgument::None)
+    }
 }
 
 impl<A: ActionKey> IntoActionTarget<A> for A {
@@ -68,6 +80,207 @@ impl<A: ActionKey> IntoActionTarget<A> for A {
 
 impl<A: ActionKey> IntoActionTarget<A> for ActionTarget<A> {
     fn into_target(self, _pane: Option<PaneId>) -> ActionTarget<A> {
+        self
+    }
+}
+
+/// An action together with the argument its control carries, such as the ID
+/// of the row it acts on: one action, such as Open, presented once per row.
+///
+/// Pass it wherever a hosted [`Frame`](crate::Frame) takes a target:
+/// [`Frame::action`](crate::Frame::action), `icon_action`, `toggle`,
+/// `list_row`, `trigger` and `availability`. A click triggers the action with
+/// the argument, through the same route as a semantic invocation, and
+/// [`Application::availability_with`](crate::Application::availability_with)
+/// decides availability for it. The control's semantic node publishes the
+/// argument, so an agent discovers each row's control with the value it
+/// carries and invokes it without supplying one. Give the subject, such as the
+/// row's title, so that each control has its own accessible name ("Open Ada").
+///
+/// The argument must satisfy the action's declared contract, which the host
+/// checks again before performing it.
+///
+/// ```
+/// use serde::Serialize;
+/// use stobie_ui_egui::{
+///     Action, ActionArgument, ActionEmphasis, ActionTarget, Application, ApplicationIdentity,
+///     Availability, BoundAction, Frame, IconId, ListRowSpec, PresentationScope, SemanticUiId,
+///     application_identity,
+/// };
+///
+/// #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+/// #[action(prefix = "people")]
+/// enum PeopleAction {
+///     #[action(label = "Open", description = "Open the person with this ID",
+///              argument = "number", minimum = 1, maximum = 999, integer = true)]
+///     Open,
+///     #[action(label = "Remove", description = "Remove the person with this ID",
+///              argument = "number", minimum = 1, maximum = 999, integer = true)]
+///     Remove,
+/// }
+///
+/// struct Person { id: u32, name: String, role: String }
+/// struct People { people: Vec<Person>, opened: Option<u32> }
+///
+/// impl People {
+///     /// The listed person an argument names.
+///     fn index(&self, argument: &ActionArgument) -> Option<usize> {
+///         let id = argument.as_number()?;
+///         self.people.iter().position(|person| f64::from(person.id) == id)
+///     }
+/// }
+///
+/// impl Application for People {
+///     type Action = PeopleAction;
+///     type Intent = ();
+///     type UiState = ();
+///
+///     fn identity(&self) -> ApplicationIdentity {
+///         application_identity!("People")
+///     }
+///
+///     fn availability(&self, _: ActionTarget<PeopleAction>) -> Availability {
+///         Availability::Enabled
+///     }
+///
+///     // A row's actions are available while its person is listed, so a
+///     // click or an agent acting on a removed row is refused.
+///     fn availability_with(&self, _: ActionTarget<PeopleAction>, argument: &ActionArgument)
+///         -> Availability {
+///         match self.index(argument) {
+///             Some(_) => Availability::Enabled,
+///             None => Availability::Hidden,
+///         }
+///     }
+///
+///     fn ui(&self, ui: &mut egui::Ui, _: &mut (), frame: &mut Frame<'_, PeopleAction, ()>) {
+///         let mut p = frame.presentation(ui, PresentationScope::new("people"), SemanticUiId::root());
+///         for person in &self.people {
+///             // The row opens its person; its icon removes them ("Remove Ada").
+///             frame.list_row(ui, &mut p, BoundAction::new(PeopleAction::Open, person.id),
+///                 ListRowSpec { title: &person.name, detail: Some(&person.role) });
+///             frame.icon_action(ui, &mut p,
+///                 BoundAction::new(PeopleAction::Remove, person.id).with_subject(&person.name),
+///                 IconId::Remove, ActionEmphasis::Quiet);
+///         }
+///     }
+///
+///     fn apply(&mut self, _: (), _: &mut ()) -> Result<bool, String> {
+///         Ok(false)
+///     }
+///
+///     fn perform(&mut self, _: ActionTarget<PeopleAction>, _: &mut ()) -> Result<bool, String> {
+///         Err("Choose a person".into())
+///     }
+///
+///     // Clicks and agents deliver the row's ID, already validated.
+///     fn perform_with(&mut self, target: ActionTarget<PeopleAction>, argument: ActionArgument,
+///         _: &mut ()) -> Result<bool, String> {
+///         let index = self.index(&argument).ok_or("Nobody has this ID")?;
+///         match target.action {
+///             PeopleAction::Open => self.opened = Some(self.people[index].id),
+///             PeopleAction::Remove => drop(self.people.remove(index)),
+///         }
+///         Ok(true)
+///     }
+///
+///     fn report_error(&mut self, _: String) {}
+/// }
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoundAction<A: ActionKey> {
+    action: A,
+    pane: Option<PaneId>,
+    explicit: bool,
+    argument: ActionArgument,
+    subject: Option<String>,
+}
+
+impl<A: ActionKey> BoundAction<A> {
+    /// `action` carrying `argument`. A pane-scoped action takes the pane of
+    /// its presentation, as an unbound action does.
+    pub fn new(action: A, argument: impl Into<ActionArgument>) -> Self {
+        Self {
+            action,
+            pane: None,
+            explicit: false,
+            argument: argument.into(),
+            subject: None,
+        }
+    }
+
+    /// An explicit target carrying `argument`, such as a pane-scoped action
+    /// presented outside its pane.
+    pub fn for_target(target: ActionTarget<A>, argument: impl Into<ActionArgument>) -> Self {
+        Self {
+            action: target.action,
+            pane: target.pane,
+            explicit: true,
+            argument: argument.into(),
+            subject: None,
+        }
+    }
+
+    /// Name what the argument identifies, such as the row's title. Controls
+    /// add it to the action's label in their accessible name ("Open Ada"); a
+    /// list row is named by its own title instead.
+    pub fn with_subject(mut self, subject: impl Into<String>) -> Self {
+        self.subject = Some(subject.into());
+        self
+    }
+
+    /// The action this control performs.
+    pub fn action(&self) -> A {
+        self.action
+    }
+
+    /// The argument the control carries.
+    pub fn argument(&self) -> &ActionArgument {
+        &self.argument
+    }
+
+    /// What the argument identifies, when named.
+    pub fn subject(&self) -> Option<&str> {
+        self.subject.as_deref()
+    }
+
+    /// The resolved target. Panics for a pane-scoped action that was never
+    /// resolved against a pane.
+    pub fn target(&self) -> ActionTarget<A> {
+        if self.explicit {
+            ActionTarget {
+                action: self.action,
+                pane: self.pane,
+            }
+        } else {
+            self.action.into_target(self.pane)
+        }
+    }
+
+    /// The accessible name of a button presenting this action: its label,
+    /// followed by the subject when one is named.
+    pub fn accessible_name(&self) -> String {
+        let label = self.action.specification().label;
+        match &self.subject {
+            Some(subject) => format!("{label} {subject}"),
+            None => label.to_owned(),
+        }
+    }
+}
+
+impl<A: ActionKey> IntoActionTarget<A> for BoundAction<A> {
+    /// The target alone; the argument is dropped. Frames use
+    /// [`IntoActionTarget::into_bound`], which keeps it.
+    fn into_target(self, pane: Option<PaneId>) -> ActionTarget<A> {
+        self.into_bound(pane).target()
+    }
+
+    fn into_bound(mut self, pane: Option<PaneId>) -> BoundAction<A> {
+        if !self.explicit {
+            let target = self.action.into_target(self.pane.or(pane));
+            self.pane = target.pane;
+            self.explicit = true;
+        }
         self
     }
 }

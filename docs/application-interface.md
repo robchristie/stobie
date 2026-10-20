@@ -140,6 +140,36 @@ contract when the action runs. Record Desk's category edit and its category
 and review filters are choice actions, for example
 `{"capability":"record-desk.edit-category"}` with `{"value":"ideas"}`.
 
+A control can carry its action's argument, such as Open on each row of a list
+carrying that row's ID. Its node publishes the value as `argument`, and the
+host binds it as its own capability whose `argument`, and its target's, is
+that value; the action keeps its own binding, without an `argument`, which
+takes any value the contract allows. A selector's `argument` matches only
+nodes and capabilities carrying an equal value (numbers compare by value).
+Invoke a row's control with no `arguments`, which means its value, or with
+that same value; any other value sent to a selector that matches that
+control alone is `invalid_arguments`. A value also chooses among the
+controls a selector matches: a control carrying another value cannot take
+it, the one carrying it is preferred over the action's own binding, and a
+value none of several can take is `no_match`. The Rust client and `stobie`
+apply the same choice, then address the chosen control by its ID; the
+JavaScript client's `invoke` needs a selector that discovers one binding,
+such as one with `argument`. So `{"capability":"people.open"}` with `{"value":2}` invokes the
+row carrying 2 when it is presented, and otherwise the action's binding:
+
+```sh
+stobie discover people.open                # one per row, `= 2`, and the action's own
+stobie invoke people.open --value 2        # the row carrying 2
+stobie invoke people.select --argument ada # the row carrying "ada"; no value needed
+```
+
+A row removed after discovery no longer matches (`no_match`). One removed
+after its invocation was admitted is refused when it runs: `unavailable`
+when the application's availability for its argument hides it, otherwise
+`stale_target`. A target whose control now carries another value, or none,
+is `stale_target`. The [interactions guide](ui-guides/interactions.md#actions-on-rows)
+describes the application's side.
+
 Every framework text field, an egui text edit presented through
 `PresentationContext::native` and observed as a `text_input` or
 `multiline_text_input`, is bound to the framework capability
@@ -298,14 +328,18 @@ Host the application with `AppHost` (see the
 is published with one binding per action target. Its identity is the first
 rendered control that presents the target, and its domain is that control's
 domain reference or, for a pane-scoped target, the pane. An application-scoped
-action with no rendered control keeps its default identity. A pane-scoped
+action with no rendered control keeps its default identity. A control
+carrying an argument has a binding of its own, and the action keeps its
+default identity unless a control without an argument presents it. A pane-scoped
 action is discoverable where its control is rendered with a pane, and in the
 panes `Application::action_panes` lists. Facts come from
 `Application::observe`. Queued invocations drain on the application thread
 before the UI runs. Bindings are recalculated before each one, and availability
 is rechecked immediately before `perform`. Reads never request a repaint.
 
-Applications decide two things. `meaning` names the assumptions whose change
+Applications decide three things. `availability_with` decides availability
+for one argument, such as one row's Remove, and hides an argument that names
+nothing, such as a removed row's. `meaning` names the assumptions whose change
 makes a previously resolved target stale, such as selected domain identity or
 editing revision. Leave unrelated repaint and focus counters out of it. An
 action declared `physical_only` stays discoverable with `semantic_invocable`

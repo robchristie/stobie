@@ -65,6 +65,15 @@ test('selectors combine exact identity, capability, pane and structural domain e
   }
 });
 
+test('a selector argument matches only a node carrying an equal value', () => {
+  const row = { ...node(), argument: 2 };
+  assert.equal(matchesSelector(row, { capability: 'record.apply', argument: 2 }), true);
+  assert.equal(matchesSelector(row, { argument: 2.0 }), true);
+  assert.equal(matchesSelector(row, { argument: '2' }), false);
+  assert.equal(matchesSelector(node(), { argument: 2 }), false);
+  assert.throws(() => matchesSelector(row, { argument: { id: 2 } }), { code: 'invalid_request' });
+});
+
 test('bounded query passes the cursor and rejects excessive limits', async () => {
   const { client, requests } = await bound(() => ({ kind: 'query', total: 0, observation: 1, nodes: [], next_cursor: null }));
   const cursor = { observation: 1, offset: 12 };

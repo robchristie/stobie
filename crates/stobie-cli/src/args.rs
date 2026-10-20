@@ -94,7 +94,7 @@ impl Args {
         let mut selector = match self.value("--selector") {
             Some(json) => serde_json::from_str::<InspectionSelector>(json).map_err(|error| {
                 ClientError::usage(format!(
-                    "--selector is not a selector: {error}; fields are id, role, name, capability, pane and domain"
+                    "--selector is not a selector: {error}; fields are id, role, name, capability, pane, domain and argument"
                 ))
             })?,
             None => InspectionSelector::default(),
@@ -131,6 +131,17 @@ impl Args {
                         },
                     )?)
                 }
+                // A JSON number, boolean or string; anything else is text.
+                "argument" => {
+                    selector.argument = Some(
+                        serde_json::from_str::<serde_json::Value>(value)
+                            .ok()
+                            .filter(|value| {
+                                value.is_number() || value.is_boolean() || value.is_string()
+                            })
+                            .unwrap_or_else(|| serde_json::Value::String(value.to_owned())),
+                    )
+                }
                 _ => unreachable!("known selector field"),
             }
             Ok(())
@@ -138,7 +149,15 @@ impl Args {
         if let Some((field, value)) = positional {
             set(field, value)?;
         }
-        for field in ["id", "role", "name", "capability", "pane", "domain"] {
+        for field in [
+            "id",
+            "role",
+            "name",
+            "capability",
+            "pane",
+            "domain",
+            "argument",
+        ] {
             if let Some(value) = self.value(&format!("--{field}")) {
                 set(field, value)?;
             }

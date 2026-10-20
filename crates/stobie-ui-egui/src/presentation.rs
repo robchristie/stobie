@@ -5,11 +5,10 @@ use std::hash::Hash;
 use egui::{Response, Ui};
 
 use crate::{
-    ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey, DesignTokens,
-    DomainReference, IconId, NativeTextControlKind, SemanticUiId, TextAuditCoverage,
+    ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,
+    DesignTokens, DomainReference, IconId, NativeTextControlKind, SemanticUiId, TextAuditCoverage,
     TextInteraction, TextLayoutObservation, TextOverflow, TextRole, UiNode,
-    action_button_with_identity_and_content, action_semantic_node_with_identity,
-    record_native_text_control, text_audit_coverage,
+    action_semantic_node_with_identity, record_native_text_control, text_audit_coverage,
 };
 
 /// Logical hierarchy, independent of egui's layout hierarchy. Keys must describe
@@ -364,14 +363,56 @@ impl PresentationContext {
     ) -> Response {
         self.check_pass(ui);
         let identity = self.scope.instance(key).action_identity();
+        self.present_action(ui, &identity, spec, content, None, None)
+    }
+
+    /// Present one control of an action repeated per row, carrying
+    /// `argument`, such as the row's ID. Its identity combines `key` with the
+    /// argument, so each row's control is distinct; its semantic node
+    /// publishes the argument; and `name`, such as "Open Ada", is its
+    /// accessible name and tooltip while the visible label stays the
+    /// action's. Hosted applications pass a [`BoundAction`](crate::BoundAction)
+    /// to [`Frame::action`](crate::Frame::action) instead, which also
+    /// triggers the action with its argument when clicked.
+    pub fn bound_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        argument: &ActionArgument,
+        name: Option<&str>,
+    ) -> Response {
+        self.check_pass(ui);
+        let value = argument.to_value();
+        let identity = match &value {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string()))
+                .action_identity(),
+            None => self.scope.instance(key).action_identity(),
+        };
+        self.present_action(ui, &identity, spec, content, name, value)
+    }
+
+    fn present_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        identity: &ActionButtonIdentity,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        name: Option<&str>,
+        argument: Option<serde_json::Value>,
+    ) -> Response {
         let target = spec.target;
         let state = spec.state;
         let availability = spec.availability.clone();
-        let response = action_button_with_identity_and_content(
+        let response = crate::components::present_action_button(
             ui,
             spec,
-            &identity,
+            identity,
             content,
+            name,
             &self.tokens,
             self.font_scale,
             &mut self.text_layouts,
@@ -382,8 +423,12 @@ impl PresentationContext {
             &availability,
             state,
             self.parent.clone(),
-            &identity,
+            identity,
         );
+        if let Some(name) = name {
+            node.name = name.to_owned();
+        }
+        node.argument = argument;
         if self.domain_reference.is_some() {
             node.domain_reference = self.domain_reference.clone();
         }
@@ -470,6 +515,65 @@ impl PresentationContext {
             let mut node = crate::navigation_item_semantic_node(
                 &response,
                 &spec,
+                identity,
+                self.parent.clone(),
+            );
+            if self.domain_reference.is_some() {
+                node.domain_reference = self.domain_reference.clone();
+            }
+            self.push_node(ui, node);
+        }
+        response
+    }
+
+    /// Present one row of a list whose whole surface performs `target` for
+    /// that row, carrying `argument`, such as the row's ID, and named by its
+    /// title. Its identity combines `key` with the argument. Handle
+    /// `clicked()` through the application's action route; hosted
+    /// applications use [`Frame::list_row`](crate::Frame::list_row), which
+    /// does. Hidden availability returns an empty hover response without
+    /// observations.
+    pub fn list_row<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: crate::ListRowSpec<'_>,
+        target: crate::ActionTarget<A>,
+        availability: &crate::Availability,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let value = argument.to_value();
+        let identity = match &value {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        if !availability.visible() {
+            return ui.interact(
+                egui::Rect::NOTHING,
+                identity.egui_id(),
+                egui::Sense::hover(),
+            );
+        }
+        let response = crate::list_row(
+            ui,
+            &spec,
+            target,
+            availability,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if response.interact_rect.is_positive() {
+            let mut node = crate::list_row_semantic_node(
+                &response,
+                &spec,
+                target,
+                availability,
+                value,
                 identity,
                 self.parent.clone(),
             );

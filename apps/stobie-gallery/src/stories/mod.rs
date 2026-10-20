@@ -5,6 +5,7 @@ mod icons;
 mod navigation;
 mod reading;
 mod reference;
+mod rows;
 mod status_chips;
 mod toolbars;
 mod typography;
@@ -30,6 +31,7 @@ pub(crate) struct StoryState {
     pub(crate) icon: IconFixtureState,
     pub(crate) navigation: NavigationFixtureState,
     pub(crate) status_chip: StatusChipFixtureState,
+    pub(crate) rows: rows::RowFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -105,6 +107,9 @@ fn present_story(
         }
         StoryId::ReadingConversation | StoryId::ReadingLongNarrow => {
             reading::story(ui, story, tokens, font_scale, &mut report)
+        }
+        StoryId::RowsActions | StoryId::RowsLongNarrow => {
+            rows::story(ui, story, tokens, font_scale, &mut state.rows, &mut report)
         }
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {

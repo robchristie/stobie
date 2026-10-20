@@ -204,6 +204,11 @@ pub struct UiNode {
     /// label; omitted otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
+    /// The argument this control's action carries, such as the ID of the row
+    /// it acts on, as the JSON value an invocation sends in
+    /// `{"value": …}`; omitted for a control whose action takes none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub argument: Option<serde_json::Value>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -235,6 +240,7 @@ impl UiNode {
             text_selectable: false,
             disabled_reason: None,
             value: None,
+            argument: None,
         }
     }
 }

@@ -363,6 +363,96 @@ impl<T: Transport> Client<T> {
         }
     }
 
+    /// The one capability an invocation of `selector` addresses, with the
+    /// wire `arguments` it sends, which `arguments_for` builds for each
+    /// candidate from its contract (`None` for no value). A sent value also
+    /// selects, as the application does: a control carrying another value,
+    /// such as another row's Open, is not a candidate, and the control
+    /// carrying that value is preferred over the action's own binding.
+    pub fn discover_for_invocation(
+        &mut self,
+        selector: InspectionSelector,
+        mut arguments_for: impl FnMut(
+            &CapabilityDescription,
+        ) -> Result<Option<serde_json::Value>, ClientError>,
+    ) -> Result<(CapabilityDescription, Option<serde_json::Value>), ClientError> {
+        let page = self.discover(
+            selector,
+            Page {
+                limit: stobie_protocol::INSPECTION_QUERY_LIMIT,
+                cursor: None,
+            },
+        )?;
+        if let [capability] = page.capabilities.as_slice()
+            && page.total == 1
+        {
+            let arguments = arguments_for(capability)?;
+            return Ok((capability.clone(), arguments));
+        }
+        if page.capabilities.is_empty() {
+            return Err(ClientError::new(
+                "no_match",
+                "the selector discovers no capability",
+                "run `stobie discover` to list capabilities and their IDs",
+            ));
+        }
+        // Each candidate with the arguments it would be sent; a candidate whose
+        // contract refuses the value cannot be the target.
+        let mut first_error = None;
+        let candidates: Vec<(CapabilityDescription, Option<serde_json::Value>)> = page
+            .capabilities
+            .iter()
+            .filter_map(|capability| match arguments_for(capability) {
+                Ok(arguments) => Some((capability.clone(), arguments)),
+                Err(error) => {
+                    first_error.get_or_insert(error);
+                    None
+                }
+            })
+            .collect();
+        let sent = |arguments: &Option<serde_json::Value>| {
+            arguments.clone().unwrap_or(serde_json::Value::Null)
+        };
+        let chosen = candidates
+            .first()
+            .map(|(_, arguments)| sent(arguments))
+            .and_then(|arguments| {
+                stobie_protocol::select_invocation_target(
+                    &candidates,
+                    |(capability, _)| capability,
+                    &arguments,
+                )
+                .ok()
+                // Every candidate must send the same arguments for the choice
+                // to be the application's.
+                .filter(|_| candidates.iter().all(|(_, other)| sent(other) == arguments))
+            });
+        match (chosen, first_error) {
+            (Some(chosen), _) if page.next_cursor.is_none() => Ok(chosen.clone()),
+            (None, Some(error)) if candidates.is_empty() => Err(error),
+            _ => Err(ClientError::new(
+                "ambiguous",
+                format!(
+                    "the selector discovers {} capabilities: {}",
+                    page.total,
+                    page.capabilities
+                        .iter()
+                        .take(8)
+                        .map(|capability| match &capability.argument {
+                            Some(argument) => format!(
+                                "{} on {} carrying {argument}",
+                                capability.capability, capability.id.0
+                            ),
+                            None => format!("{} on {}", capability.capability, capability.id.0),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                "add the control's id, pane or domain to the selector, or the value a row's control carries",
+            )),
+        }
+    }
+
     pub fn receipt(&mut self, request_id: &str) -> Result<InvocationReceipt, ClientError> {
         let InspectionResult::Receipt { receipt } = self.read(InspectionOperation::Receipt {
             request_id: request_id.into(),
@@ -390,7 +480,7 @@ impl<T: Transport> Client<T> {
     /// `uncertain_completion`: read the receipt instead of repeating it.
     pub fn invoke(
         &mut self,
-        selector: InspectionSelector,
+        mut selector: InspectionSelector,
         options: InvokeOptions,
     ) -> Result<Invoked, ClientError> {
         let deadline = self.deadline();
@@ -398,11 +488,15 @@ impl<T: Transport> Client<T> {
         let expected = match options.expected {
             Some(expected) => expected,
             None => {
-                let capability = self.discover_one(selector.clone())?;
+                let given = (!arguments.is_null()).then(|| arguments.clone());
+                let (capability, _) =
+                    self.discover_for_invocation(selector.clone(), |_| Ok(given.clone()))?;
                 capability
-                    .arguments
-                    .parse(&arguments)
+                    .parse_arguments(&arguments)
                     .map_err(ClientError::protocol)?;
+                // Address the binding discovery chose, so that the
+                // application resolves the same one.
+                selector.id = Some(capability.id.clone());
                 capability.target
             }
         };

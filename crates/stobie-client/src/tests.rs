@@ -23,6 +23,8 @@ struct App {
     facts: Vec<(String, ObservationValue)>,
     nodes: Vec<UiNode>,
     invocations: Vec<(String, serde_json::Value)>,
+    /// The expected target's ID for each invocation.
+    targets: Vec<String>,
     receipt_reads: usize,
     after: u64,
     lose_invoke_reply: bool,
@@ -43,6 +45,7 @@ impl Fake {
 
 fn capability(id: &str, name: &str, arguments: ArgumentContract) -> CapabilityDescription {
     let target = ResolvedTarget {
+        argument: None,
         id: SemanticUiId::new(id),
         capability: name.into(),
         pane: None,
@@ -51,6 +54,7 @@ fn capability(id: &str, name: &str, arguments: ArgumentContract) -> CapabilityDe
         observation: 1,
     };
     CapabilityDescription {
+        argument: None,
         id: target.id.clone(),
         capability: name.into(),
         pane: None,
@@ -87,7 +91,27 @@ fn capabilities() -> Vec<CapabilityDescription> {
                 max_length: Some(5),
             },
         ),
+        // Open, presented on two rows that carry their IDs, and the action's
+        // own binding, which takes any ID.
+        row("people.open.1", Some(1)),
+        row("people.open.2", Some(2)),
+        row("people.open", None),
     ]
+}
+
+fn row(id: &str, carried: Option<u32>) -> CapabilityDescription {
+    let mut capability = capability(
+        id,
+        "people.open",
+        ArgumentContract::Number {
+            minimum: 1.0,
+            maximum: 99.0,
+            integer: true,
+        },
+    );
+    capability.argument = carried.map(|id| serde_json::json!(id));
+    capability.target.argument = capability.argument.clone();
+    capability
 }
 
 impl Transport for Fake {
@@ -153,6 +177,11 @@ impl Transport for Fake {
                             .capability
                             .as_ref()
                             .is_none_or(|name| *name == capability.capability)
+                            && selector.argument.as_ref().is_none_or(|argument| {
+                                capability.argument.as_ref().is_some_and(|carried| {
+                                    stobie_protocol::same_argument(argument, carried)
+                                })
+                            })
                     })
                     .collect();
                 InspectionResult::Discover {
@@ -167,6 +196,7 @@ impl Transport for Fake {
                 arguments,
                 ..
             } => {
+                app.targets.push(expected.id.0.clone());
                 app.invocations.push((expected.capability, arguments));
                 if app.lose_invoke_reply {
                     return Err(ClientError::connection("the socket closed", "retry"));
@@ -401,4 +431,53 @@ fn a_value_wait_that_times_out_says_what_the_node_presents() {
     );
     fake.0.borrow_mut().nodes = vec![node(Some("Ideas"))];
     assert!(client.wait(&condition).is_ok());
+}
+
+#[test]
+fn a_value_invokes_the_rows_control_that_carries_it() {
+    let (mut client, fake) = client();
+    let invoke = |client: &mut Client<Fake>, selector, arguments| {
+        client.invoke(
+            selector,
+            InvokeOptions {
+                arguments,
+                ..InvokeOptions::default()
+            },
+        )
+    };
+    invoke(
+        &mut client,
+        select("people.open"),
+        Some(serde_json::json!({ "value": 2 })),
+    )
+    .unwrap();
+    // A value no row carries goes to the action's own binding.
+    invoke(
+        &mut client,
+        select("people.open"),
+        Some(serde_json::json!({ "value": 7 })),
+    )
+    .unwrap();
+    // A selector's argument names the row, which needs no value.
+    invoke(
+        &mut client,
+        InspectionSelector {
+            argument: Some(serde_json::json!(1)),
+            ..select("people.open")
+        },
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        fake.0.borrow().targets,
+        ["people.open.2", "people.open", "people.open.1"]
+    );
+    // Without a value, the rows and the action's binding are ambiguous.
+    let error = invoke(&mut client, select("people.open"), None).unwrap_err();
+    assert_eq!(error.code, "ambiguous", "{error}");
+    assert!(
+        error.message.contains("people.open.2 carrying 2"),
+        "{error}"
+    );
+    assert_eq!(fake.0.borrow().invocations.len(), 3);
 }

@@ -24,6 +24,52 @@ do not need the originating application enum. Respect
 different states. Disabled controls retain clear semantic explanation and do
 not silently consume an unavailable action.
 
+## Actions on rows
+
+When one action acts on each row of a list, such as Open on each person,
+Remove on each invitation or Pinned on each item, present it once per row as a
+`BoundAction`: the action together with the argument its control carries,
+normally the row's stable ID (`BoundAction::new(Action::Open, person.id)`),
+and the row's name as its subject (`.with_subject(&person.name)`). Declare the
+action's `argument` as for any value-taking action. Pass the bound action
+wherever a hosted `Frame` takes a target: `action`, `icon_action`, `toggle`,
+`list_row`, `trigger` and `availability`. Do not hand-build a button, observe
+it by hand or call `trigger_with` from a row's click.
+
+- **Identity.** The control's identity combines its key with the argument, so
+  each row's control has its own stable semantic ID wherever the row moves.
+  Use the row's domain ID, never its position, label or a counter.
+- **Names.** A button's accessible name is the action's label followed by the
+  subject ("Open Ada Lovelace"); its visible label stays the action's. A list
+  row is named by its title. Each row's control therefore has a distinct name
+  in AccessKit, the snapshot and the browser ARIA layer.
+- **Semantics.** The control's node publishes the argument as `UiNode.argument`
+  (the JSON value an invocation would send). The host binds each such control
+  as its own capability carrying that argument, and keeps the action's own
+  binding, which takes any value its contract allows, unless a control without
+  an argument presents the action.
+- **Availability.** Implement `Application::availability_with(target,
+  argument)` to decide availability for one row, such as a disabled Remove on
+  a pinned person, and to hide an argument that names nothing, such as a
+  removed row. Controls carrying an argument, their bindings, and every
+  action performed with an argument use it; the default is the target's
+  availability.
+- **Dispatch.** A click, Enter or Space, an AccessKit click and a semantic
+  invocation all reach `Application::perform_with` with the row's argument,
+  after the host checks the contract and `availability_with` again.
+
+A row removed before its action runs is refused, never performed for another
+row. A click on a row that an earlier intent of the same pass removed is
+refused by `availability_with` when it hides the row's argument. A discovered
+target whose row has gone no longer matches (`no_match`); one admitted before
+the row went is refused when it runs (`unavailable` when `availability_with`
+hides its argument, otherwise `stale_target`). A target whose control now
+carries another argument is `stale_target`. Invoking the action's own binding
+with a removed row's ID is refused by `availability_with` when it hides that
+ID. A custom row that paints itself can carry the same contract: set its
+node's `actions` and `argument` and trigger the bound action with
+`Frame::trigger`.
+
 ## Keyboard and pointer behaviour
 
 Use the registered shortcut only in its valid scope. Pane shortcuts require an
