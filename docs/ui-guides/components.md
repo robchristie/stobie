@@ -633,6 +633,7 @@ Gallery `composer/chat` and `composer/long-narrow` present an empty draft
 with the microphone alone, a draft ready to send, grown lines, a long
 localised hint, a draft past its line limit and a disabled send; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
+
 ## Avatars
 
 `PresentationContext::avatar(ui, &spec)` allocates and paints one avatar at
