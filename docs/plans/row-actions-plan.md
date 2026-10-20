@@ -1,7 +1,7 @@
 # Actions on rows
 
-Status: active
-Next action: Run full verification and the design critique, then open the pull request.
+Status: complete
+Delivery: [PR #102](https://github.com/robchristie/stobie/pull/102)
 
 An application lists rows, such as people, accounts or invitations, and
 offers the same action on each: Open on each person, Withdraw on each
@@ -133,6 +133,43 @@ same accessible name unless the application composed one.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| Protocol, recipes, host bindings and clients | Active | Focused tests |
-| Outside application, browser and agent checks | Active | Outside-app stage |
-| Documentation, critique and full verification | Active | |
+| Protocol, recipes, host bindings and clients | Complete | Host, inspection, protocol, component, client, CLI and JavaScript client tests |
+| Outside application, browser and agent checks | Complete | `tools/row-actions-smoke.mjs` in the outside-app stage, natively and in Chromium |
+| Documentation, critique and full verification | Complete | Guides, a compiled rustdoc example and `cargo xtask verify` |
+
+## Design review
+
+```text
+Task and reference: scan, open, pin and remove people in the outside-rows
+  application; navigation items and the action button recipes as reference.
+Behavioural checks: passed (host tests; stobie natively and in Chromium;
+  Playwright clicks by ARIA name).
+Presentation checks: passed at 1000 and 360 px wide, dark theme; resting,
+  focus, hover, toggled and disabled states.
+Design decision: accepted after one revision.
+Main reason and remaining trade-off: the first critique found the row's
+  title weaker than its actions, so the title now uses ButtonLabel as
+  navigation labels do (and the application made Open quiet). The row's
+  text keeps navigation items' inset, which holds the hover fill. The
+  critique also found that the existing toggle keeps its label when off,
+  that a quiet button's hover fill matches a toggled-on fill, and that a
+  disabled icon action only dims its glyph; these belong to the existing
+  recipes and are later work.
+Exact candidate evidence links: captures under the outside-app stage's
+  evidence directory (row-actions.png, row-actions-narrow.png), not retained.
+```
+
+## Closeout
+
+Rows' controls carry their argument through the recipes, the semantic
+snapshot, discovery, invocation and the browser ARIA layer, with availability
+per argument and defined refusals for stale and removed rows. Full canonical
+verification passed on the committed implementation; review, CI and merge
+evidence stays with the owning pull request.
+
+## Later work
+
+- The toggle recipe's label stays the same when off, a quiet button's hover
+  fill matches a toggled-on fill, and a disabled icon action only dims its
+  glyph: a recipe-wide visual change for every application.
+- Current or selected list rows, for destinations and conversation lists.
