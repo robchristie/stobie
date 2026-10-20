@@ -32,7 +32,8 @@ without reading a one-time code the page shows its owner.
   even when it is elided on screen), cut on a character boundary to 256
   characters and then ending in `…` with `truncated` true. With 512 text
   observations, content is bounded per observation.
-- Only visible text is published, by the host's existing visible-only policy.
+- Only text in view publishes content: text wholly scrolled or clipped out
+  of view publishes none, in any host, docked or not.
 - `withhold_content_text` marks presented content `withheld`, with neither
   words nor length; layout, audit and accessibility are unchanged. Regions
   nest. A password's text is never observed.

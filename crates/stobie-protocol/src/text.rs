@@ -256,8 +256,9 @@ pub struct TextLayoutObservation {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_error: Option<TextLayoutError>,
     /// The presented words, bounded, for kinds that
-    /// [`TextComponentKind::presents_content`]; `None` for other kinds. A
-    /// failed layout publishes its visible diagnostic.
+    /// [`TextComponentKind::presents_content`]; `None` for other kinds and
+    /// for text wholly scrolled or clipped out of view. A failed layout
+    /// publishes its visible diagnostic.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content: Option<TextContent>,
 }

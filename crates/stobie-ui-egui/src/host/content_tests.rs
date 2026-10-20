@@ -127,6 +127,23 @@ impl Application for Notes {
             .show(ui, |ui| {
                 p.reading_text(ui, "near", "Near the top.", ReadingTextSpec::default());
                 ui.add_space(400.0);
+                p.heading(ui, "far-heading", "Heading below the fold");
+                p.content(
+                    ui,
+                    "far-label",
+                    "Label below the fold",
+                    ContentTextSpec {
+                        role: TextRole::Body,
+                        overflow: TextOverflow::Wrap,
+                        max_lines: 2,
+                        interaction: TextInteraction::Selectable,
+                    },
+                );
+                p.link(
+                    ui,
+                    "far-link",
+                    LinkSpec::new("Link below the fold", "https://example.org/far"),
+                );
                 p.reading_text(ui, "far", "Far below the fold.", ReadingTextSpec::default());
             });
     }
@@ -265,8 +282,18 @@ fn long_content_is_published_as_a_bounded_excerpt_with_a_marker() {
         panic!("an excerpt");
     };
     assert!(truncated);
-    assert_eq!(text.chars().count(), CONTENT_EXCERPT_CHARS + 1);
-    assert!(text.ends_with(CONTENT_TRUNCATION_MARKER));
+    // The bound itself is the protocol's: the first characters, then a marker.
+    assert_eq!(
+        TextContent::excerpt(&reply),
+        TextContent::Excerpt {
+            text: text.clone(),
+            truncated
+        }
+    );
+    assert_eq!(
+        text.chars().nth(CONTENT_EXCERPT_CHARS),
+        Some(CONTENT_TRUNCATION_MARKER)
+    );
     assert!(reply.starts_with(text.trim_end_matches(CONTENT_TRUNCATION_MARKER)));
     // Every excerpt stays within the bound, however long the text.
     let long = harness(Notes {
@@ -280,7 +307,7 @@ fn long_content_is_published_as_a_bounded_excerpt_with_a_marker() {
             .unwrap()
             .ui_snapshot()
             .content_text()
-            .all(|text| text.chars().count() <= CONTENT_EXCERPT_CHARS + 1)
+            .all(|text| text.chars().nth(CONTENT_EXCERPT_CHARS + 1).is_none())
     );
     assert!(published_json(&long).len() < 64 * 1024);
 }
@@ -295,9 +322,23 @@ fn withheld_content_publishes_neither_its_text_nor_its_length() {
     let json = published_json(&harness);
     assert!(!json.contains("SECRET"), "{json}");
     assert!(json.contains(r#""content":{"kind":"withheld"}"#), "{json}");
-    // Its layout is still measured and audited.
+    // Its layout is still measured and audited, and passes.
+    let code = PresentationScope::new("notes")
+        .instance("code")
+        .text_instance();
     let snapshot = host(&harness).ui_snapshot();
-    assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
+    let withheld = snapshot
+        .text
+        .iter()
+        .find(|text| text.component_id.instance == code)
+        .unwrap();
+    assert!(withheld.line_count > 0 && withheld.layout_error.is_none());
+    assert!(snapshot.text_audit_coverage.is_some(), "the text audit ran");
+    assert!(
+        !format!("{:?}", snapshot.text_audit).contains(&code.to_string()),
+        "{:?}",
+        snapshot.text_audit
+    );
 }
 
 #[test]
@@ -316,5 +357,12 @@ fn text_scrolled_out_of_view_is_not_observed() {
     let harness = harness(Notes::default());
     let content: Vec<&str> = host(&harness).ui_snapshot().content_text().collect();
     assert!(content.contains(&"Near the top."));
-    assert!(!content.contains(&"Far below the fold."), "{content:?}");
+    // No kind publishes text out of view, in a host with no pane to limit
+    // observation to visible text.
+    assert!(
+        !content.iter().any(|text| text.contains("below the fold")),
+        "{content:?}"
+    );
+    let json = published_json(&harness);
+    assert!(!json.contains("below the fold"), "{json}");
 }

@@ -237,8 +237,9 @@ presented words rather than its source, cut to the first 256 characters
 (`CONTENT_TRUNCATION_MARKER`) with `truncated` true. Text elided on screen
 still publishes its excerpt, since the elision is presentation. With the
 bound of 512 text observations, content adds at most about 128 Ki characters
-to an observation. Only text in view is published: text scrolled out of view
-or clipped away is not observed.
+to an observation. Only text in view publishes content: text wholly scrolled
+out of view or clipped away publishes none, whatever the host's visibility
+policy, and partly visible text publishes its whole excerpt.
 
 Text presented inside `withhold_content_text(ui, |ui| ...)` publishes
 `{"kind":"withheld"}`, with neither its words nor its length; its layout is
@@ -248,6 +249,8 @@ Withholding governs observation only: the text keeps its accessibility node,
 so assistive technology, and in a browser the page's ARIA layer, still
 present it. A region governs content text only: a control's name, or a text
 field's value, belongs to its semantic node and is published as before. A
+link's semantic node keeps its text and URL, so withhold sensitive text
+outside links, including links in withheld Markdown. A
 password field needs no region: a password's text is never observed.
 
 Rust callers read the excerpts with `UiSnapshot::content_text()` or a text's
