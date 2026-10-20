@@ -478,8 +478,10 @@ impl Layout<'_> {
 
 /// Each link's fragments in a galley positioned at `origin`: one rectangle
 /// per row the link's text occupies, without trailing spaces. `links` are
-/// byte ranges of the galley's text; each glyph lays out one character, and
-/// a row ending in a newline omits it.
+/// byte ranges of the galley's text. Glyphs pair with the text's characters
+/// in order (egui lays out one glyph per character, and a row ending in a
+/// newline omits it); a glyph's own `chr` is not used, because shaping gives
+/// every glyph of a multi-character cluster the cluster's first character.
 fn link_fragments(
     galley: &Galley,
     origin: Pos2,
@@ -487,17 +489,20 @@ fn link_fragments(
 ) -> Vec<(usize, Vec<Rect>)> {
     let mut fragments: Vec<(usize, Vec<Rect>)> =
         links.iter().map(|(link, _)| (*link, Vec::new())).collect();
-    let mut row_start = 0;
+    let mut characters = galley.job.text.char_indices();
     for row in &galley.rows {
+        let row_characters: Vec<(usize, char)> =
+            characters.by_ref().take(row.glyphs.len()).collect();
+        if row.ends_with_newline {
+            characters.next();
+        }
         for (slot, (_, range)) in links.iter().enumerate() {
             let mut span: Option<(f32, f32)> = None;
-            let mut byte = row_start;
-            for glyph in &row.glyphs {
-                if range.contains(&byte) && !glyph.chr.is_whitespace() {
+            for (glyph, (byte, character)) in row.glyphs.iter().zip(&row_characters) {
+                if range.contains(byte) && !character.is_whitespace() {
                     let (left, right) = span.unwrap_or((glyph.pos.x, glyph.max_x()));
                     span = Some((left.min(glyph.pos.x), right.max(glyph.max_x())));
                 }
-                byte += glyph.chr.len_utf8();
             }
             if let Some((left, right)) = span {
                 let top = origin.y + row.pos.y;
@@ -507,12 +512,6 @@ fn link_fragments(
                 ));
             }
         }
-        row_start += row
-            .glyphs
-            .iter()
-            .map(|glyph| glyph.chr.len_utf8())
-            .sum::<usize>()
-            + usize::from(row.ends_with_newline);
     }
     fragments
 }
@@ -664,7 +663,12 @@ fn present_text(
     link_nodes: &mut Vec<UiNode>,
 ) {
     let enabled = ui.is_enabled();
-    let fragments = link_fragments(&text.measured.galley, text.rect.min, &text.links);
+    // A failed measurement paints a diagnostic, not the text: no link areas.
+    let fragments = if text.measured.layout_error.is_some() {
+        Vec::new()
+    } else {
+        link_fragments(&text.measured.galley, text.rect.min, &text.links)
+    };
     // A hovered link's underline is heavier; the layout does not move.
     let hovered = fragments
         .iter()

@@ -819,31 +819,55 @@ fn the_text_audit_still_catches_markdown_text_outside_its_allocation() {
 }
 
 #[test]
-fn links_after_and_inside_non_ascii_text_keep_their_hit_area_and_label() {
-    const SOURCE: &str =
-        "Größere Schrift 👩‍💻 é: [Bericht über Größen](https://example.org/de) danach.";
-    let presented = present(SOURCE, DESKTOP, 1.0);
-    let links = presented.links();
-    assert_eq!(links[0].name, "Bericht über Größen");
-    let (mut harness, rects, opened) = link_harness(SOURCE, DESKTOP, true, MarkdownSpec::default());
-    let link = rects[0];
-    // The hit area covers the label, measured from the galley, not the text before it.
-    let words_before = present("Größere Schrift 👩‍💻 é: ", DESKTOP, 1.0)
-        .kind(TextComponentKind::ReadingText)[0]
-        .painted_rect;
+fn links_after_shaped_clusters_keep_their_whole_hit_area_and_label() {
+    // Combining marks, a keycap, ZWJ emoji and accented letters shape into
+    // clusters whose glyphs do not each report their own character.
+    const PREFIXES: [&str; 6] = [
+        "plain ",
+        "q\u{303}q\u{303}q\u{303} ",
+        "1\u{fe0f}\u{20e3} ",
+        "\u{1f3f3}\u{fe0f}\u{200d}\u{1f308} ",
+        "\u{1f469}\u{200d}\u{1f4bb} a\u{323}\u{308} ",
+        "Größere ",
+    ];
+    let mut widths = Vec::new();
+    for prefix in PREFIXES {
+        let source: &'static str = Box::leak(
+            format!("{prefix}[Bericht über Größen](https://example.org/de) danach.")
+                .into_boxed_str(),
+        );
+        let presented = present(source, DESKTOP, 1.0);
+        let links = presented.links();
+        assert_eq!(links.len(), 1, "{prefix:?}");
+        assert_eq!(links[0].name, "Bericht über Größen", "{prefix:?}");
+        widths.push(links[0].rect.max_x - links[0].rect.min_x);
+
+        let (mut harness, rects, opened) =
+            link_harness(source, DESKTOP, true, MarkdownSpec::default());
+        let link = rects[0];
+        // The first and last glyphs open the link; just outside does not.
+        for x in [link.left() + 1.0, link.right() - 1.0] {
+            click(
+                &mut harness,
+                egui::pos2(x, link.center().y),
+                egui::PointerButton::Primary,
+            );
+            assert_eq!(
+                take(&opened),
+                [egui::OpenUrl::new_tab("https://example.org/de")],
+                "{prefix:?} at {x}"
+            );
+        }
+        click(
+            &mut harness,
+            egui::pos2(link.right() + 12.0, link.center().y),
+            egui::PointerButton::Primary,
+        );
+        assert!(take(&opened).is_empty(), "{prefix:?}");
+    }
+    // The label's hit area is the same width whatever precedes it.
     assert!(
-        link.left() >= words_before.max_x - 1.0,
-        "{link:?} {words_before:?}"
+        widths.iter().all(|width| (width - widths[0]).abs() < 0.5),
+        "{widths:?}"
     );
-    click(&mut harness, link.center(), egui::PointerButton::Primary);
-    assert_eq!(
-        take(&opened),
-        [egui::OpenUrl::new_tab("https://example.org/de")]
-    );
-    click(
-        &mut harness,
-        egui::pos2(link.right() + 12.0, link.center().y),
-        egui::PointerButton::Primary,
-    );
-    assert!(take(&opened).is_empty());
 }
