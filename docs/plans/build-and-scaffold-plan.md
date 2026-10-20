@@ -1,7 +1,7 @@
 # Build profiles, scaffolding and web size
 
 Status: complete
-Delivery: [PR #PENDING](https://github.com/robchristie/stobie/pull/PENDING)
+Delivery: [PR #119](https://github.com/robchristie/stobie/pull/119)
 
 A chat application built on Stobie met five gaps in the build and scaffolding
 path: `stobie build-web` built only with `release` or `dev`, so a smaller web
