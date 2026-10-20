@@ -219,20 +219,67 @@ eviction; reaching the limit fails closed rather than forgetting duplicate
 protection. A restart creates a new instance, so old receipts cannot be looked
 up in the new instance.
 
+## Content text
+
+A semantic node names a control; the words a page presents are content text.
+Each measured text observation (`snapshot.text`) of a content kind carries a
+`content` field: a heading (`section_heading`), a content label, status or
+fixed-slot text (`content_label`), reading text and rendered Markdown blocks
+(`reading_text`), a Markdown list number (`list_marker`) and a link's text
+(`link`). The order of `snapshot.text` is presentation order. Other kinds, the
+text of controls, rows and chips, publish no `content`: their words are their
+semantic nodes' names and values.
+
+`content` is `{"kind":"excerpt","text":...,"truncated":...}` or
+`{"kind":"withheld"}`. An excerpt is the text as laid out, Markdown's
+presented words rather than its source, cut to the first 256 characters
+(`CONTENT_EXCERPT_CHARS`) and then ending in `…`
+(`CONTENT_TRUNCATION_MARKER`) with `truncated` true. Text elided on screen
+still publishes its excerpt, since the elision is presentation. With the
+bound of 512 text observations, content adds at most about 128 Ki characters
+to an observation. Only text in view publishes content: text wholly scrolled
+out of view or clipped away publishes none, whatever the host's visibility
+policy, and partly visible text publishes its whole excerpt.
+
+Text presented inside `withhold_content_text(ui, |ui| ...)` publishes
+`{"kind":"withheld"}`, with neither its words nor its length; its layout is
+still measured and audited. Use it for what an application shows a person
+but must not publish to an inspecting client, such as a one-time code.
+Withholding governs observation only: the text keeps its accessibility node,
+so assistive technology, and in a browser the page's ARIA layer, still
+present it. A region governs content text only: a control's name, or a text
+field's value, belongs to its semantic node and is published as before. A
+link's semantic node keeps its text and URL, so withhold sensitive text
+outside links, including links in withheld Markdown. A
+password field needs no region: a password's text is never observed.
+
+Rust callers read the excerpts with `UiSnapshot::content_text()` or a text's
+`content_text()`; the CLI with `stobie observe --content`; and a JavaScript
+caller from `snapshot.text[].content`. The `content` wait condition waits
+until a published excerpt contains its `value`.
+
+```sh
+stobie observe --content
+stobie wait content --value 'Record detail'
+```
+
 ## Wait for outcomes and use physical input
 
 `ApplicationClient.wait` polls completed observations with a monotonic deadline
 and optional `AbortSignal`. The CLI's deadline is `--timeout MS` (default
 15000); condition objects take no timeout field, and unknown condition fields
 are rejected. Conditions include `present`, `absent`, `enabled`,
-`capability_enabled`, `focused`, `selected`, `checked`, `name`, `value`, `status`, `selection_changed`, `fact`
-and `audits_clear`. Checked compares a boolean `value`; audits-clear waits for
+`capability_enabled`, `focused`, `selected`, `checked`, `name`, `value`, `status`, `selection_changed`, `fact`,
+`audits_clear` and `content`. Checked compares a boolean `value`; audits-clear waits for
 empty semantic/text findings with retained coverage. Name, value and
 status conditions compare exact text with `value`; value compares a text
 field's published text or a combo box's selected label; status restricts the role to
 `status`. Selection change compares selected stable IDs, against `previous` or
 the first observation. Fact conditions compare a named application-published
-primitive value; the available names are visible in `observe`.
+primitive value; the available names are visible in `observe`. Content
+conditions take no selector: one waits until any published
+[content](#content-text) excerpt contains `value`, and withheld text never
+matches.
 `enabled` tests a rendered control; `capability_enabled` tests the discovered
 application availability, including a supported action whose menu is closed.
 Timeout/cancellation diagnostics retain the last observation and relevant
@@ -352,7 +399,8 @@ build, nonce)?`. The nonce must be an opaque value that changes on each startup:
 the maintained bootstraps use `crypto.randomUUID()`. Never derive it from a WASM
 process ID, wall clock or resettable counter, which can repeat after reload.
 
-The bounds are 4,096 retained nodes, 512 measured text observations, 2 MiB
+The bounds are 4,096 retained nodes, 512 measured text observations, 256
+characters of each content excerpt, 2 MiB
 publication JSON, a 256 KiB request, 256 entries per query/discovery, 16 queued
 invocations and 256 non-evicting mutation IDs per instance. Native request
 reading has a two-second deadline. These are engineering limits, not evidence

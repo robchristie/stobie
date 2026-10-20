@@ -276,6 +276,15 @@ impl UiSnapshot {
         self.nodes.iter().filter(|node| node.text_selectable)
     }
 
+    /// The published excerpts of presented content text, such as reading
+    /// text, content labels and Markdown blocks, in presentation order.
+    /// Withheld text and the text of controls are not among them.
+    pub fn content_text(&self) -> impl Iterator<Item = &str> {
+        self.text
+            .iter()
+            .filter_map(TextLayoutObservation::content_text)
+    }
+
     pub fn by_action<A: ActionKey>(&self, action: A) -> impl Iterator<Item = &UiNode> {
         let action = action.stable_id();
         self.nodes

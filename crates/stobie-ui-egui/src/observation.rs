@@ -111,6 +111,43 @@ pub fn observe_visible_only<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -
     add_contents(ui)
 }
 
+fn withheld_id(viewport: ViewportId) -> Id {
+    Id::new(("stobie.observations.withheld-content", viewport))
+}
+
+/// Withhold the words of the content text that `add_contents` presents from
+/// observation, for sensitive text such as a secret shown to its owner. Its
+/// text observations carry [`TextContent::Withheld`](crate::TextContent)
+/// instead of an excerpt, so neither the text nor its length reaches a
+/// snapshot, an agent or a host test; its layout is still measured, observed
+/// and audited, and its accessibility node is unchanged. Regions nest. A
+/// password field needs no region: its text is never published. A region
+/// governs content text only; a control's name or value is its semantic
+/// node's, and is published as before.
+pub fn withhold_content_text<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> R {
+    struct Region(Context, Id);
+    impl Drop for Region {
+        fn drop(&mut self) {
+            self.0.data_mut(|data| {
+                let depth = data.get_temp_mut_or_default::<u32>(self.1);
+                *depth = depth.saturating_sub(1);
+            });
+        }
+    }
+    let context = ui.ctx().clone();
+    let id = withheld_id(context.viewport_id());
+    context.data_mut(|data| *data.get_temp_mut_or_default::<u32>(id) += 1);
+    let _region = Region(context, id);
+    add_contents(ui)
+}
+
+/// Whether content text presented now is inside a [`withhold_content_text`]
+/// region.
+pub(crate) fn is_content_withheld(context: &Context) -> bool {
+    let id = withheld_id(context.viewport_id());
+    context.data(|data| data.get_temp::<u32>(id).is_some_and(|depth| depth > 0))
+}
+
 /// Register observations made during `pass` of `viewport`. Observations from
 /// an earlier pass than the collector's current one are stale and ignored.
 pub(crate) fn record(
@@ -276,6 +313,7 @@ mod tests {
                     line_count: 1,
                     truncated: false,
                     layout_error: None,
+                    content: None,
                 }
             };
             observe_node(ui, node("presented"));

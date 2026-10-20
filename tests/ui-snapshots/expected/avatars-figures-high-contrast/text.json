@@ -31,7 +31,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Cher",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -63,7 +68,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Strip",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +105,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Sizes",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +142,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Header",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +179,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Grace Brewster Murray Hopper",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +216,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "List",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -223,7 +253,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "People",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -255,7 +290,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Ada Lovelace",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

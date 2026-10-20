@@ -31,7 +31,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Add",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -63,7 +68,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ArrowDown",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +105,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ArrowLeft",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +142,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ArrowRight",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +179,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ArrowUp",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +216,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Attach",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -223,7 +253,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Calendar",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -255,7 +290,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Check",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -287,7 +327,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ChevronDown",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -319,7 +364,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "ChevronRight",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -351,7 +401,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Clock",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -383,7 +438,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Close",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -415,7 +475,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Copy",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -447,7 +512,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Edit",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -479,7 +549,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Error",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -511,7 +586,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "FitView",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -543,7 +623,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Home",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -575,7 +660,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Info",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -607,7 +697,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Link",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -639,7 +734,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Mic",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -671,7 +771,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Navigate",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -703,7 +808,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Notifications",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -735,7 +845,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Overflow",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -767,7 +882,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Play",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -799,7 +919,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Polygon",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -831,7 +956,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Redo",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -863,7 +993,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Remove",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -895,7 +1030,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Save",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -927,7 +1067,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Search",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -959,7 +1104,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Send",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -991,7 +1141,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Settings",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -1023,7 +1178,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Tasks",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -1055,7 +1215,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Undo",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -1087,7 +1252,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "User",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -1119,7 +1289,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Warning",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

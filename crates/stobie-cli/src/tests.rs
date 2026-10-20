@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use stobie_client::protocol::{
     ActionScope, ApplicationIdentity, ArgumentOption, Availability, BuildIdentity,
-    CollectionMetadata, SemanticUiId, UiNode, UiRect, UiRole, UiSnapshot,
+    CollectionMetadata, SemanticUiId, TextLayoutObservation, UiNode, UiRect, UiRole, UiSnapshot,
 };
 
 use super::*;
@@ -250,6 +250,14 @@ fn wait_conditions_are_built_from_flags_or_json() {
     let value =
         condition(&parse("wait", &["value", "--id", "a.b", "--value", "12"]).unwrap()).unwrap();
     assert!(matches!(value, Condition::Value { value, .. } if value == "12"));
+    let content =
+        condition(&parse("wait", &["content", "--value", "Today's pick"]).unwrap()).unwrap();
+    assert_eq!(
+        content,
+        Condition::Content {
+            value: "Today's pick".into()
+        }
+    );
     assert!(
         usage_message(condition(
             &parse("wait", &["checked", "--id", "a", "--value", "yes"]).unwrap()
@@ -416,6 +424,111 @@ fn observation(nodes: Vec<UiNode>, facts: &[(&str, ObservationValue)]) -> Comple
             .map(|(key, value)| ((*key).into(), value.clone()))
             .collect(),
     }
+}
+
+fn text(kind: &str, instance: u64, content: Option<serde_json::Value>) -> TextLayoutObservation {
+    let rect = serde_json::json!({ "min_x": 0., "min_y": 0., "max_x": 10., "max_y": 10. });
+    let mut text = serde_json::json!({
+        "component_id": { "kind": kind, "instance": instance },
+        "parent_id": null,
+        "role": "body",
+        "horizontal_alignment": "start",
+        "vertical_alignment": "top",
+        "allocated_rect": rect,
+        "painted_rect": rect,
+        "clip_rect": rect,
+        "baseline": null,
+        "overflow": "wrap",
+        "declared_max_lines": 2,
+        "line_count": 1,
+        "truncated": false,
+    });
+    if let Some(content) = content {
+        text["content"] = content;
+    }
+    serde_json::from_value(text).unwrap()
+}
+
+#[test]
+fn observe_shows_presented_content_only_when_asked() {
+    let mut observed = observation(vec![node("root", None, UiRole::Application, "")], &[]);
+    observed.snapshot.text = vec![
+        text(
+            "section_heading",
+            1,
+            Some(serde_json::json!({ "kind": "excerpt", "text": "Inbox", "truncated": false })),
+        ),
+        text(
+            "reading_text",
+            2,
+            Some(serde_json::json!({
+                "kind": "excerpt",
+                "text": "First line\nsecond line…",
+                "truncated": true
+            })),
+        ),
+        text(
+            "content_label",
+            3,
+            Some(serde_json::json!({ "kind": "withheld" })),
+        ),
+        text("action_button", 4, None),
+    ];
+    let content = output::content_outline(&observed);
+    let lines: Vec<&str> = content.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            "content: 3 texts",
+            r#"- section_heading "Inbox""#,
+            r#"- reading_text "First line⏎second line…""#,
+            "- content_label withheld",
+        ]
+    );
+    // The plain outline and JSON leave content out and say so.
+    assert!(!output::outline(&observed, &[], 0, 64).contains("Inbox"));
+    let plain =
+        |extras| serde_json::to_value(output::observe_json(&observed, &[], 0, 64, extras)).unwrap();
+    let json = plain(output::ObserveExtras::default());
+    assert!(json.get("content").is_none());
+    assert!(
+        json["omitted"]
+            .as_array()
+            .unwrap()
+            .contains(&"content".into())
+    );
+    // Measurements alone carry no words.
+    let measured = plain(output::ObserveExtras {
+        text: true,
+        content: false,
+    });
+    assert!(!measured.to_string().contains("Inbox"), "{measured}");
+    assert_eq!(measured["text_observations"].as_array().unwrap().len(), 4);
+    let json = plain(output::ObserveExtras {
+        text: false,
+        content: true,
+    });
+    assert!(
+        !json["omitted"]
+            .as_array()
+            .unwrap()
+            .contains(&"content".into())
+    );
+    assert_eq!(
+        json["content"],
+        serde_json::json!([
+            { "component": "section_heading", "role": "body",
+              "content": { "kind": "excerpt", "text": "Inbox", "truncated": false } },
+            { "component": "reading_text", "role": "body",
+              "content": { "kind": "excerpt", "text": "First line\nsecond line…", "truncated": true } },
+            { "component": "content_label", "role": "body", "content": { "kind": "withheld" } },
+        ])
+    );
+    let both = plain(output::ObserveExtras {
+        text: true,
+        content: true,
+    });
+    assert_eq!(both["text_observations"][0]["content"]["text"], "Inbox");
 }
 
 #[test]

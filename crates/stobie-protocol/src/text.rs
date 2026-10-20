@@ -161,6 +161,76 @@ impl TextComponentId {
     }
 }
 
+impl TextComponentKind {
+    /// Whether text of this kind is page content, whose words observation
+    /// publishes as a [`TextContent`]: content labels, section headings,
+    /// reading text and Markdown blocks, links and Markdown list numbers.
+    /// Other kinds are the text of controls and chrome, such as a button's
+    /// label, which the control's semantic node already names.
+    pub const fn presents_content(self) -> bool {
+        matches!(
+            self,
+            Self::ContentLabel
+                | Self::SectionHeading
+                | Self::ReadingText
+                | Self::Link
+                | Self::ListMarker
+        )
+    }
+}
+
+/// The most characters of one text's content that observation publishes.
+/// Longer text is cut to this many characters and marked with
+/// [`CONTENT_TRUNCATION_MARKER`].
+pub const CONTENT_EXCERPT_CHARS: usize = 256;
+
+/// Follows an excerpt cut at [`CONTENT_EXCERPT_CHARS`].
+pub const CONTENT_TRUNCATION_MARKER: char = '…';
+
+/// The presented words of one content text, as observation publishes them.
+/// Only kinds that [`TextComponentKind::presents_content`] carry it.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TextContent {
+    /// The text as presented, or, when it is longer than
+    /// [`CONTENT_EXCERPT_CHARS`] characters, its first
+    /// [`CONTENT_EXCERPT_CHARS`] characters followed by
+    /// [`CONTENT_TRUNCATION_MARKER`], with `truncated` set.
+    Excerpt { text: String, truncated: bool },
+    /// The application withheld the text from observation, as it does for
+    /// sensitive text; nothing about it, not even its length, is published.
+    Withheld,
+}
+
+impl TextContent {
+    /// A bounded excerpt of `text`.
+    pub fn excerpt(text: &str) -> Self {
+        match text.char_indices().nth(CONTENT_EXCERPT_CHARS) {
+            Some((end, _)) => {
+                let mut excerpt = String::with_capacity(end + CONTENT_TRUNCATION_MARKER.len_utf8());
+                excerpt.push_str(&text[..end]);
+                excerpt.push(CONTENT_TRUNCATION_MARKER);
+                Self::Excerpt {
+                    text: excerpt,
+                    truncated: true,
+                }
+            }
+            None => Self::Excerpt {
+                text: text.to_owned(),
+                truncated: false,
+            },
+        }
+    }
+
+    /// The published excerpt, or `None` when the text was withheld.
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            Self::Excerpt { text, .. } => Some(text),
+            Self::Withheld => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextLayoutObservation {
     pub component_id: TextComponentId,
@@ -185,6 +255,19 @@ pub struct TextLayoutObservation {
     /// Failed requests retain their diagnostic even when the fallback is clipped.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layout_error: Option<TextLayoutError>,
+    /// The presented words, bounded, for kinds that
+    /// [`TextComponentKind::presents_content`]; `None` for other kinds and
+    /// for text wholly scrolled or clipped out of view. A failed layout
+    /// publishes its visible diagnostic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<TextContent>,
+}
+
+impl TextLayoutObservation {
+    /// The published excerpt of this text's content, if it has one.
+    pub fn content_text(&self) -> Option<&str> {
+        self.content.as_ref().and_then(TextContent::text)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -408,5 +491,107 @@ impl Default for TextAuditCoverage {
             observed_native_controls: 0,
             excluded_categories: vec![TextExclusion::OrdinaryEguiLabels],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_content_is_published_whole() {
+        let text = "a".repeat(CONTENT_EXCERPT_CHARS);
+        assert_eq!(
+            TextContent::excerpt(&text),
+            TextContent::Excerpt {
+                text: text.clone(),
+                truncated: false,
+            }
+        );
+        assert_eq!(TextContent::excerpt(&text).text(), Some(text.as_str()));
+        assert_eq!(
+            TextContent::excerpt(""),
+            TextContent::Excerpt {
+                text: String::new(),
+                truncated: false,
+            }
+        );
+    }
+
+    #[test]
+    fn long_content_is_cut_at_the_bound_on_a_character_boundary_and_marked() {
+        // Multi-byte characters: the bound counts characters, not bytes.
+        let text = "é".repeat(CONTENT_EXCERPT_CHARS + 1);
+        let TextContent::Excerpt {
+            text: excerpt,
+            truncated,
+        } = TextContent::excerpt(&text)
+        else {
+            panic!("an excerpt");
+        };
+        assert!(truncated);
+        assert_eq!(excerpt.chars().count(), CONTENT_EXCERPT_CHARS + 1);
+        assert_eq!(excerpt.chars().last(), Some(CONTENT_TRUNCATION_MARKER));
+        assert!(text.starts_with(excerpt.trim_end_matches(CONTENT_TRUNCATION_MARKER)));
+        let long = TextContent::excerpt(&"x".repeat(100_000));
+        assert!(long.text().unwrap().len() <= CONTENT_EXCERPT_CHARS + 3);
+    }
+
+    #[test]
+    fn only_content_kinds_present_content() {
+        use TextComponentKind as Kind;
+        for kind in [
+            Kind::ContentLabel,
+            Kind::SectionHeading,
+            Kind::ReadingText,
+            Kind::Link,
+            Kind::ListMarker,
+        ] {
+            assert!(kind.presents_content(), "{kind:?}");
+        }
+        for kind in [
+            Kind::ActionButton,
+            Kind::DockTab,
+            Kind::NavigationItem,
+            Kind::ListRowTitle,
+            Kind::StatusChip,
+            Kind::GalleryHeading,
+        ] {
+            assert!(!kind.presents_content(), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn content_serialises_compactly_and_older_observations_still_read() {
+        assert_eq!(
+            serde_json::to_value(TextContent::excerpt("Hello")).unwrap(),
+            serde_json::json!({"kind": "excerpt", "text": "Hello", "truncated": false})
+        );
+        assert_eq!(
+            serde_json::to_value(TextContent::Withheld).unwrap(),
+            serde_json::json!({"kind": "withheld"})
+        );
+        // An observation from before content text was published has none.
+        let rect = serde_json::json!({"min_x": 0, "min_y": 0, "max_x": 10, "max_y": 10});
+        let older: TextLayoutObservation = serde_json::from_value(serde_json::json!({
+            "component_id": {"kind": "reading_text", "instance": 1},
+            "parent_id": null,
+            "role": "body",
+            "horizontal_alignment": "start",
+            "vertical_alignment": "top",
+            "allocated_rect": rect,
+            "painted_rect": rect,
+            "clip_rect": rect,
+            "baseline": null,
+            "overflow": "wrap_unbounded",
+            "declared_max_lines": 0,
+            "line_count": 1,
+            "truncated": false
+        }))
+        .unwrap();
+        assert_eq!(older.content, None);
+        assert_eq!(older.content_text(), None);
+        let value = serde_json::to_value(&older).unwrap();
+        assert!(value.get("content").is_none());
     }
 }

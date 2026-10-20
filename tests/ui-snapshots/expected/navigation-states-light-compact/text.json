@@ -63,7 +63,12 @@
       "interaction": "inert",
       "declared_max_lines": 3,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Destination: Home. 12 outstanding tasks; 3 items need attention.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +100,12 @@
       "interaction": "inert",
       "declared_max_lines": 3,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Your application supplies this destination's content.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -415,7 +425,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Home",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

@@ -8,7 +8,7 @@ use stobie_protocol::{
     INSPECTION_VERSION, InspectionError, InspectionErrorCode, InspectionLimits,
     InspectionOperation, InspectionReply, InspectionRequest, InspectionResult, InspectionSelector,
     InvocationReceipt, ObservationValue, ReceiptState, ResolvedTarget, SET_TEXT_CAPABILITY,
-    SemanticUiId, UiNode, UiRect, UiRole, UiSnapshot,
+    SemanticUiId, TextLayoutObservation, UiNode, UiRect, UiRole, UiSnapshot,
 };
 
 use crate::{Client, ClientError, Condition, ErrorClass, InvokeOptions, Transport};
@@ -22,6 +22,7 @@ struct App {
     observation: u64,
     facts: Vec<(String, ObservationValue)>,
     nodes: Vec<UiNode>,
+    text: Vec<TextLayoutObservation>,
     invocations: Vec<(String, serde_json::Value)>,
     /// The expected target's ID for each invocation.
     targets: Vec<String>,
@@ -159,7 +160,7 @@ impl Transport for Fake {
                             pixels_per_point: 1.,
                             root: SemanticUiId::new("root"),
                             nodes: app.nodes.clone(),
-                            text: Vec::new(),
+                            text: app.text.clone(),
                             text_audit: Vec::new(),
                             text_audit_coverage: None,
                             semantic_audit: Vec::new(),
@@ -388,6 +389,52 @@ fn waits_return_the_observation_that_satisfies_them_or_keep_the_last_on_timeout(
     assert_eq!(
         Condition::parse(serde_json::json!({ "condition": "audits_clear" })).unwrap(),
         Condition::AuditsClear {}
+    );
+}
+
+#[test]
+fn content_waits_match_published_excerpts_and_never_withheld_text() {
+    let (client, fake) = client();
+    let mut client = client.with_timeout(Duration::from_millis(200));
+    let text = |content: serde_json::Value| -> TextLayoutObservation {
+        let rect = serde_json::json!({ "min_x": 0., "min_y": 0., "max_x": 10., "max_y": 10. });
+        serde_json::from_value(serde_json::json!({
+            "component_id": { "kind": "reading_text", "instance": 1 },
+            "parent_id": null,
+            "role": "body",
+            "horizontal_alignment": "start",
+            "vertical_alignment": "top",
+            "allocated_rect": rect,
+            "painted_rect": rect,
+            "clip_rect": rect,
+            "baseline": null,
+            "overflow": "wrap_unbounded",
+            "declared_max_lines": 0,
+            "line_count": 1,
+            "truncated": false,
+            "content": content,
+        }))
+        .unwrap()
+    };
+    let condition = Condition::parse(serde_json::json!({
+        "condition": "content",
+        "value": "today's pick"
+    }))
+    .unwrap();
+    fake.0.borrow_mut().text = vec![text(serde_json::json!({ "kind": "withheld" }))];
+    assert_eq!(client.wait(&condition).unwrap_err().code, "timeout");
+    fake.0.borrow_mut().text.push(text(serde_json::json!({
+        "kind": "excerpt",
+        "text": "Here is today's pick: a paper on reasoning",
+        "truncated": false
+    })));
+    let waited = client.wait(&condition).unwrap();
+    assert!(
+        waited
+            .observation
+            .snapshot
+            .content_text()
+            .any(|text| text.contains("today's pick"))
     );
 }
 

@@ -31,7 +31,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Cloud",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -63,7 +68,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Cher",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +105,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Shapes with faces",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +142,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Circle",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +179,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Images",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +216,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "No name",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -223,7 +253,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Strip",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -255,7 +290,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "A name the fonts cannot draw",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -287,7 +327,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Drop",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -319,7 +364,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Sizes",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -351,7 +401,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Hexagon",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -383,7 +438,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Header",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -415,7 +475,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Photo in a hexagon",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -447,7 +512,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Grace Brewster Murray Hopper",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -479,7 +549,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "List",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -511,7 +586,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "People",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -543,7 +623,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Photo",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -575,7 +660,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Triangle",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -607,7 +697,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "émile zola",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -639,7 +734,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Blob",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -671,7 +771,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Ada Lovelace",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -703,7 +808,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Rounded square",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -735,7 +845,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Photo still loading",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

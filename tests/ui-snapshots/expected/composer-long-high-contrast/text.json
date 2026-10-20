@@ -127,7 +127,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Ein langer Hinweis in einer schmalen Spalte",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +164,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Past its four-line limit, the field scrolls",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +201,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Sending: send is disabled with its reason",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

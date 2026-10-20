@@ -363,15 +363,17 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
             let capabilities = all_capabilities(&mut client)?;
             let offset = args.number::<usize>("--offset")?.unwrap_or(0);
             let limit = args.number::<usize>("--limit")?.unwrap_or(200);
+            let extras = output::ObserveExtras {
+                text: args.has("--include-text"),
+                content: args.has("--content"),
+            };
+            let mut text = output::outline(&observation, &capabilities, offset, limit);
+            if extras.content {
+                text.push_str(&output::content_outline(&observation));
+            }
             Ok(Output::new(
-                output::outline(&observation, &capabilities, offset, limit),
-                output::observe_json(
-                    &observation,
-                    &capabilities,
-                    offset,
-                    limit,
-                    args.has("--include-text"),
-                ),
+                text,
+                output::observe_json(&observation, &capabilities, offset, limit, extras),
             ))
         }
         "query" => {

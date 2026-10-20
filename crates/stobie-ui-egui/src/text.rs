@@ -546,6 +546,10 @@ fn position_measured_text(
         // test font atlas has no tessellated mesh bounds.
         positioned
     };
+    let clip_rect = painter.clip_rect().intersect(allocated_rect);
+    // Only text in view presents content: text scrolled out of view or
+    // clipped away publishes none, whatever the host's visibility policy.
+    let in_view = clip_rect.is_positive();
     let observation = TextLayoutObservation {
         component_id,
         parent_id,
@@ -554,7 +558,7 @@ fn position_measured_text(
         vertical_alignment: measured.spec.vertical_alignment,
         allocated_rect: allocated_rect.into(),
         painted_rect: painted.into(),
-        clip_rect: painter.clip_rect().intersect(allocated_rect).into(),
+        clip_rect: clip_rect.into(),
         baseline: None,
         overflow: measured.spec.overflow,
         interaction: measured.spec.interaction,
@@ -562,6 +566,13 @@ fn position_measured_text(
         line_count: u32::try_from(measured.galley.rows.len()).unwrap_or(u32::MAX),
         truncated: measured.galley.elided,
         layout_error: measured.layout_error,
+        content: (in_view && component_id.kind.presents_content()).then(|| {
+            if crate::observation::is_content_withheld(painter.ctx()) {
+                TextContent::Withheld
+            } else {
+                TextContent::excerpt(measured.galley.text())
+            }
+        }),
     };
     (galley_position, observation)
 }
@@ -725,6 +736,7 @@ mod tests {
             line_count: 2,
             truncated: true,
             layout_error: None,
+            content: None,
         };
         let mut sibling = base.clone();
         sibling.component_id = TextComponentId::new(TextComponentKind::DockTab, 2);
