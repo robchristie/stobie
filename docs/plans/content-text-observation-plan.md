@@ -1,7 +1,7 @@
 # Content text in observation
 
 Status: complete
-Delivery: [PR #0](https://github.com/robchristie/stobie/pull/0)
+Delivery: [PR #109](https://github.com/robchristie/stobie/pull/109)
 
 ## Outcome and boundaries
 
