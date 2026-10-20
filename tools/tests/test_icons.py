@@ -91,6 +91,9 @@ class CurveCompilerTests(unittest.TestCase):
                      'M 2 12 C 4 4 8',              # incomplete
                      'M 2 12 Q 30 4 8 8',           # control point off the grid
                      'M 2 12 A 11 11 0 1 1 2 14',  # a computed control off the grid
-                     'A 4 4 0 0 1 8 8']:            # no start
+                     'A 4 4 0 0 1 8 8',             # no start
+                     'M 4 4',                       # a lone move
+                     'M 4 4 M 5 5 L 6 6',
+                     'M 4 4 L 6 6 M 8 8']:
             with self.subTest(data=data), self.assertRaises(ValueError):
                 self.compile(data)

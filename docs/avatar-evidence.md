@@ -29,11 +29,11 @@ that captions are measured while initials are painted but not observed, that
 the photo fills two outlines, and that a narrow column at 150% elides long
 captions without an audit finding. Icon regressions check the compiler
 (quarter-turn arcs, exact quadratics, both sweeps, scaled radii, closed
-curves and ten refusals) and that `Attach`, `Mic` and `User` paint stroked
-cubics with round joins while `Send` and `Copy` stay straight. In the first
-render of the icon vocabulary the paperclip's inner loop closed up at 16
-points, so its loops were widened to radii of 2, 4 and 6 before that
-baseline was accepted.
+curves and fourteen refusals, including a move with no segment) and that
+`Attach`, `Mic` and `User` paint stroked cubics with round joins while
+`Send` and `Copy` stay straight. In the first render of the icon vocabulary
+the paperclip's inner loop closed up at 16 points, so its loops were widened
+to radii of 2, 4 and 6 before that baseline was accepted.
 
 Presentation checks: passed. First critique of the dark comfortable story
 and the narrow light high-contrast column at 150%, before reading the

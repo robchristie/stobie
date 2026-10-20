@@ -108,7 +108,7 @@ def compile_path(path, data):
     while words:
         command = words.pop(0)
         if command == 'M':
-            if segments:
+            if start is not None:
                 emit()
             start, segments, closed = point(), [], False
             continue
@@ -139,7 +139,7 @@ def compile_path(path, data):
             segments += [('C', *cubic) for cubic in cubics]
         else:
             raise ValueError(f'{path}: unsupported path command {command}')
-    if segments:
+    if start is not None:
         emit()
     return geometry
 
