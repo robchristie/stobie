@@ -482,6 +482,50 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present a composer for the application's draft: a field that grows
+    /// with its text, a send control and optional leading and trailing
+    /// controls (see [`PresentationContext::composer`] for its conventions).
+    ///
+    /// The draft stays the application's. An edit emits `edit(text)` with
+    /// the whole new text, to apply in [`Application::apply`]. Sending, by
+    /// Return or the send control, triggers the send action with the draft
+    /// as its text argument, to perform in [`Application::perform_with`]:
+    /// clear the draft there once the message is accepted, and return an
+    /// error to refuse it, which keeps the draft. A leading or trailing
+    /// control triggers its action when clicked.
+    ///
+    /// # Panics
+    ///
+    /// If the send action does not take a text argument.
+    pub fn composer(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::ComposerSpec<'_, A>,
+        draft: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
+        let mut text = draft.to_owned();
+        let response = presentation.composer(ui, key, spec, &mut text, self.availability);
+        if response.changed {
+            self.intents.push(edit(text));
+        }
+        if let Some(sent) = &response.submitted {
+            self.triggers
+                .push((response.send.target, ActionArgument::Text(sent.clone())));
+        }
+        for control in [&response.leading, &response.trailing]
+            .into_iter()
+            .flatten()
+        {
+            if control.response.clicked() {
+                self.triggers.push((control.target, ActionArgument::None));
+            }
+        }
+        response
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn button(
         &mut self,
@@ -495,9 +539,9 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     ) -> Response {
         let target = bound.target();
         let availability = (self.availability)(target, bound.argument());
-        // A row's argument that names nothing, such as a removed row's,
-        // presents no control.
-        if *bound.argument() != ActionArgument::None && !availability.visible() {
+        // A hidden action, such as one whose row argument names nothing,
+        // presents no control and publishes no node.
+        if !availability.visible() {
             return ui.interact(
                 egui::Rect::NOTHING,
                 egui::Id::new((
@@ -1862,6 +1906,8 @@ fn pair_text_fields(
     fields
 }
 
+#[cfg(test)]
+mod composer_tests;
 #[cfg(test)]
 mod link_tests;
 #[cfg(test)]

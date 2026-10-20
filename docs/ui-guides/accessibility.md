@@ -153,7 +153,10 @@ snapshot, is the source.
   zoom, and focuses it inside the gesture, with the caret where egui's
   layout puts the tap. egui focuses the field through AccessKit and, while
   the field has DOM focus, counts the application focused. It stops drawing
-  the text, caret and selection while the field is active. Edits reach egui
+  the text, caret and selection while the field is active. Its text wraps
+  where egui's does, at the field's width less its margins, and a field
+  limited with `max_rows` covers only the part shown and scrolls natively
+  within it. Edits reach egui
   as `SetValue`, as in other layer fields. The field returns to the layer
   when it loses DOM focus to anything but the canvas, or egui's focus leaves
   it; when eframe focuses the canvas for a touch while egui keeps the field,

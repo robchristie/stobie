@@ -151,7 +151,10 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   binding; a row's control needs no value. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
-  as typing (`-` reads standard input; `--text-file PATH` reads a file).
+  as typing (`-` reads standard input; `--text-file PATH` reads a file). A
+  composer's field takes its draft this way, and its send control carries
+  the draft, so `invoke SEND --id ID` then sends it; see
+  [composing and sending](ui-guides/interactions.md#composing-and-sending).
 - `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
   is its URL, in a new browser tab (natively, the default browser), so the
   application stays open. The outline tags links `[open-link]`.

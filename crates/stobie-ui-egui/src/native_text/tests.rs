@@ -70,6 +70,13 @@ fn registers_the_field_each_pass_with_its_geometry_and_style() {
         field.text_rect.min.x > field.rect.min.x,
         "egui's margin pads the text"
     );
+    // The native field wraps where egui does, at the field's width less its
+    // margin, not at the width of the text laid out.
+    assert_eq!(
+        field.rect.max.x - field.text_rect.max.x,
+        field.text_rect.min.x - field.rect.min.x,
+        "{field:?}"
+    );
     assert!(field.line_height >= field.font_size);
     assert_ne!(field.text.a(), 0);
     // A pass that does not show the field registers nothing.
@@ -155,4 +162,100 @@ fn a_tap_places_the_caret_where_egui_would() {
         11
     );
     assert_eq!(field.char_at(field.galley_pos + egui::vec2(-10.0, 1.0)), 0);
+}
+
+/// A frameless field limited to `rows` lines, as a composer shows it.
+fn limited(context: &egui::Context, text: &mut String, rows: usize) -> egui::FullOutput {
+    run(context, |ui| {
+        NativeTextEdit::multiline(text, FIELD)
+            .desired_rows(1)
+            .max_rows(rows)
+            .frame(false)
+            .margin(Margin::symmetric(8, 6))
+            .desired_width(240.0)
+            .show(ui);
+    })
+}
+
+#[test]
+fn a_limited_field_grows_to_its_rows_then_registers_the_part_shown() {
+    let context = egui::Context::default();
+    let mut heights = Vec::new();
+    for text in ["one", "one\ntwo", "one\ntwo\nthree", "1\n2\n3\n4\n5\n6"] {
+        let mut text = text.to_owned();
+        // A second pass settles the scroll area's size.
+        limited(&context, &mut text, 3);
+        limited(&context, &mut text, 3);
+        let fields = registered_in_completed_pass(&context);
+        assert_eq!(fields.len(), 1);
+        let field = &fields[0];
+        assert!(field.rect.contains_rect(field.text_rect), "{field:?}");
+        assert_eq!(
+            field.text_rect.min - field.rect.min,
+            egui::vec2(8.0, 6.0),
+            "the margin pads the text exactly"
+        );
+        assert_eq!(
+            field.rect.max.x - field.text_rect.max.x,
+            8.0,
+            "the text spans the field's width: {field:?}"
+        );
+        // The native field's lines fill exactly the text egui laid out.
+        assert_eq!(
+            field
+                .galley
+                .rows
+                .iter()
+                .map(|_| field.line_height)
+                .sum::<f32>(),
+            field.galley.rect.height(),
+            "{field:?}"
+        );
+        heights.push(field.rect.height());
+    }
+    assert!(
+        heights[0] < heights[1] && heights[1] < heights[2],
+        "{heights:?}"
+    );
+    assert_eq!(
+        heights[3], heights[2],
+        "six lines show exactly three and scroll: {heights:?}"
+    );
+}
+
+#[test]
+fn a_frameless_field_paints_no_frame() {
+    let context = egui::Context::default();
+    let mut text = String::new();
+    let output = limited(&context, &mut text, 3);
+    assert!(
+        !output.shapes.iter().any(|clipped| matches!(
+            &clipped.shape,
+            egui::Shape::Rect(rect) if rect.fill != Color32::TRANSPARENT
+                || rect.stroke.width > 0.0
+        )),
+        "no fill or stroke"
+    );
+}
+
+#[test]
+fn a_limited_fields_hint_shows_on_one_line_elided() {
+    let context = egui::Context::default();
+    let mut text = String::new();
+    let hint = "Message Augusta Ada King, Countess of Lovelace, about the engine";
+    let mut height = |hint: &str| {
+        run(&context, |ui| {
+            NativeTextEdit::multiline(&mut text, FIELD)
+                .hint_text(hint)
+                .desired_rows(1)
+                .max_rows(4)
+                .desired_width(120.0)
+                .show(ui);
+        });
+        registered_in_completed_pass(&context)[0].rect.height()
+    };
+    let short = height("Message");
+    let long = height(hint);
+    assert_eq!(long, short, "the long hint takes one line");
+    assert_eq!(registered_in_completed_pass(&context)[0].hint, hint);
 }

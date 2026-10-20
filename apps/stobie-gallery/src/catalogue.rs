@@ -41,10 +41,12 @@ pub enum StoryId {
     RowsLongNarrow,
     MarkdownDigest,
     MarkdownLongNarrow,
+    ComposerChat,
+    ComposerLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 36] = [
+    pub const ALL: [Self; 38] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -81,6 +83,8 @@ impl StoryId {
         Self::RowsLongNarrow,
         Self::MarkdownDigest,
         Self::MarkdownLongNarrow,
+        Self::ComposerChat,
+        Self::ComposerLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -121,6 +125,8 @@ impl StoryId {
             Self::RowsLongNarrow => "rows/long-narrow",
             Self::MarkdownDigest => "markdown/digest",
             Self::MarkdownLongNarrow => "markdown/long-narrow",
+            Self::ComposerChat => "composer/chat",
+            Self::ComposerLongNarrow => "composer/long-narrow",
         }
     }
 }
@@ -175,6 +181,7 @@ pub enum StoryGroup {
     Navigation,
     Reading,
     Rows,
+    Composer,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -308,6 +315,14 @@ const ROW_STATES: &[StoryState] = &[
     StoryState::Disabled,
     StoryState::Active,
 ];
+const COMPOSER_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Empty,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Active,
+];
 const READING_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -341,7 +356,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 36] = [
+pub static STORIES: [StoryDefinition; 38] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -665,6 +680,24 @@ pub static STORIES: [StoryDefinition; 36] = [
         600,
         READING_NARROW_STATES,
         SCROLL,
+    ),
+    story(
+        StoryId::ComposerChat,
+        "Chat composers: empty with the microphone alone, a draft ready to send and three grown lines.",
+        StoryGroup::Composer,
+        640,
+        520,
+        COMPOSER_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::ComposerLongNarrow,
+        "Narrow composers: a long localised hint, a draft past its line limit and a disabled send.",
+        StoryGroup::Composer,
+        320,
+        560,
+        READING_NARROW_STATES,
+        KEYBOARD,
     ),
 ];
 

@@ -70,7 +70,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges, navigation items and virtual thumbnail cells. Their deterministic examples are the
+badges, navigation items, list rows, composers and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -583,6 +583,56 @@ Buttons, icon actions and toggles carrying a bound action keep their visible
 label and measurements; their accessible name and tooltip add the subject,
 and `PresentationContext::bound_action` is the low-level form. A hidden
 availability for a row's argument presents nothing for it.
+
+## Composer
+
+A composer edits a message and sends it: a multiline field that grows with
+its text, a send control, and optional leading and trailing controls such as
+Attach and a microphone. [Composing and sending](interactions.md#composing-and-sending)
+owns the draft, Return, focus and agent conventions. In a hosted pane:
+
+```text
+let spec = ComposerSpec::new("Message", ComposerControl::icon(Action::Send, IconId::ArrowUp))
+    .hint("Message Ada")
+    .leading(ComposerControl::icon(Action::Attach, IconId::Add))
+    .trailing(ComposerControl::label(Action::Dictate));
+frame.composer(ui, p, "composer", &spec, &self.draft, Intent::Draft);
+```
+
+The send action must take a text argument (`argument = "text"`, normally with
+a `max_length`); the composer panics otherwise. Each `ComposerControl` shows
+its action as an icon (`icon`), its label (`label`) or both (`icon_label`),
+so artwork can replace a label later without other changes; an icon-only
+control is named by its action's label. `in_pane` targets a pane action.
+
+- **Layout.** One surface on the text-field ground, with the control border
+  and corner radius, holds the leading control at the left, the field, then
+  the trailing control and send at the right. Its border takes the focus-ring
+  colour while the field has focus. Controls are quiet and borderless, except send, which is
+  primary; each keeps the token hit height and sits at the bottom of the
+  field, so they stay beside the last line as it grows. A hidden control
+  takes no space: an empty draft with send hidden leaves the trailing
+  control at the right.
+- **The field.** A frameless `NativeTextEdit` in `Body` text, padded so that
+  one line fills the controls' height. It starts at one line, grows with
+  wrapped and typed lines to `max_rows` (`COMPOSER_DEFAULT_MAX_ROWS`, six)
+  and then scrolls; the controls follow its height one pass later. Its hint
+  shows on one line, elided with an ellipsis, while the accessible
+  placeholder keeps the whole hint.
+- **Semantics.** The field is a `MultilineTextInput` node named by the
+  spec's name, whose value is the draft and whose bounds are the part shown.
+  Each control is an ordinary action button node; send carries the draft as
+  its argument.
+- **Responses.** `Frame::composer` returns a `ComposerResponse` with the
+  field's response, whether the draft changed, the text submitted, and each
+  control's target and response. `PresentationContext::composer` is the
+  low-level form: it edits a `&mut String`, takes an availability closure,
+  and leaves the caller to trigger the actions it reports.
+
+Gallery `composer/chat` and `composer/long-narrow` present an empty draft
+with the microphone alone, a draft ready to send, grown lines, a long
+localised hint, a draft past its line limit and a disabled send; the
+[snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
 
 ## Local date and time
 

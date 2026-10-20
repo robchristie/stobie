@@ -1,4 +1,5 @@
 mod buttons;
+mod composer;
 mod data;
 mod dock;
 mod icons;
@@ -33,6 +34,7 @@ pub(crate) struct StoryState {
     pub(crate) navigation: NavigationFixtureState,
     pub(crate) status_chip: StatusChipFixtureState,
     pub(crate) rows: rows::RowFixtureState,
+    pub(crate) composer: composer::ComposerFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -115,6 +117,14 @@ fn present_story(
         StoryId::MarkdownDigest | StoryId::MarkdownLongNarrow => {
             markdown::story(ui, story, tokens, font_scale, &mut report)
         }
+        StoryId::ComposerChat | StoryId::ComposerLongNarrow => composer::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            &mut state.composer,
+            &mut report,
+        ),
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
             icons::actions(ui, story, tokens, font_scale, &mut state.icon, &mut report)

@@ -127,3 +127,16 @@ catalogue entries raised every earlier fixture's native-control count from
 40 to 42 and changed one pixel each of `navigation-long-high-contrast` (at
 824, 423) and `status-chip-treatments-light` (at 863, 140) by one colour
 step as the glyph atlas grew; nothing else changed.
+
+Composer fixtures add chat composers in dark comfortable mode: an empty draft
+whose send is hidden, leaving the microphone alone, a one-line draft ready to
+send and a draft grown to three lines. A narrow light high-contrast column at
+150% adds a long localised hint elided to one line, a draft past its four-line
+limit, scrolled within the field, and a disabled send while a message is
+sending. The physical journeys, typing and sending in headful Chromium with a
+keyboard and a touch screen and through `stobie` natively and in the browser,
+run in `tools/composer-smoke.mjs` during the outside-app stage. Adding the two
+catalogue entries raised every earlier fixture's native-control count from 42
+to 44 and changed one pixel each of `navigation-long-high-contrast` (at 824,
+423) and `navigation-states-light-compact` (at 706, 294) by one colour step
+as the glyph atlas grew; nothing else changed.
