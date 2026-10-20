@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 3479612253283864
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 163.875,
+        "min_y": 468.625,
+        "max_x": 267.40625,
+        "max_y": 510.625
+      },
+      "painted_rect": {
+        "min_x": 163.875,
+        "min_y": 477.125,
+        "max_x": 267.40625,
+        "max_y": 502.125
+      },
+      "clip_rect": {
+        "min_x": 163.875,
+        "min_y": 468.625,
+        "max_x": 267.40625,
+        "max_y": 510.625
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 3647846457480810
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 292.40625,
+        "min_y": 468.625,
+        "max_x": 344,
+        "max_y": 510.625
+      },
+      "painted_rect": {
+        "min_x": 292.40625,
+        "min_y": 477.125,
+        "max_x": 344,
+        "max_y": 502.125
+      },
+      "clip_rect": {
+        "min_x": 292.40625,
+        "min_y": 468.625,
+        "max_x": 344,
+        "max_y": 510.625
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2370377317405471
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 37,
+        "min_y": 381,
+        "max_x": 353,
+        "max_y": 459
+      },
+      "painted_rect": {
+        "min_x": 37,
+        "min_y": 381,
+        "max_x": 308.90625,
+        "max_y": 459
+      },
+      "clip_rect": {
+        "min_x": 37,
+        "min_y": 381,
+        "max_x": 353,
+        "max_y": 459
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "inert",
+      "declared_max_lines": 0,
+      "line_count": 3,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "The routine stops running and its history is removed. This can’t be undone.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 5596193535542921
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 37,
+        "min_y": 339.375,
+        "max_x": 353,
+        "max_y": 370.625
+      },
+      "painted_rect": {
+        "min_x": 37,
+        "min_y": 342,
+        "max_x": 278.28125,
+        "max_y": 368
+      },
+      "clip_rect": {
+        "min_x": 37,
+        "min_y": 339.375,
+        "max_x": 353,
+        "max_y": 370.625
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Delete “Morning briefing”?",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 4,
+    "attempted_components": 7,
+    "successful_components": 7,
+    "failed_components": 0,
+    "native_text_controls": 52,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

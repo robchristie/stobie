@@ -210,3 +210,30 @@ native-control count by two (from 48 to 50, and the composer fixtures' from
 51 to 53) and changed, by one colour step as the glyph atlas grew, one pixel
 each of `avatars-figures-high-contrast` (at 717, 568) and
 `navigation-long-high-contrast` (at 752, 208); nothing else changed.
+
+Dialog fixtures add the routine editor as a centred dialog in dark
+comfortable mode at 1440 by 900, and as a bottom sheet across a 390 by 844
+phone in light compact mode, each over the routine it edits under a scrim;
+and the confirm before deleting that routine, centred, in light compact mode
+at 1440 by 900 and in light high contrast at 150% on the phone, where its
+two buttons still share a row. Their text observations are the dialog's
+own: the title, field captions, schedule and buttons, or the question, its
+message and Keep routine then Delete; nothing behind the scrim is measured.
+The editor's fixtures show the caret in the focused Name field. Captures
+ask for reduced motion, the Gallery follows the browser's preference, and
+under reduced motion Stobie holds the caret steady, so the caret no longer
+depends on when in its blink the capture is taken.
+The physical
+`tools/dialog-browser-smoke.sh` runs through full verification: it checks
+the centred dialog and the bottom sheet's geometry, that focus starts in the
+first field, that Tab and Shift+Tab stay inside and wrap, typing into both
+fields, that the scrim and an agent's invocation reach nothing behind, the
+ARIA layer holding only the modal dialog, Escape, Save and Close by keyboard
+and pointer with focus returned to the opener, the confirm's focused cancel,
+Escape and Enter, deletion by keyboard and pointer, taps on a touch screen,
+and that the page is idle afterwards. Adding the two catalogue entries
+raised every earlier fixture's native-control count by two (from 50 to 52,
+and the composer fixtures' from 53 to 55) and changed, by one colour step as
+the glyph atlas grew, two pixels of `diagnostics-high-contrast` (at 703, 516
+and 699, 522) and one of `navigation-long-high-contrast` (at 752, 208);
+nothing else changed.

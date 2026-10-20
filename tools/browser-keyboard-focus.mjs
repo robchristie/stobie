@@ -1,5 +1,5 @@
 /** Observe the existing browser traversal, including its final allowed action. */
-export async function focusByTab(destination, { target, pressTab, waitForTab, wait, maxTabs = 53, settleMs = 60 }) {
+export async function focusByTab(destination, { target, pressTab, waitForTab, wait, maxTabs = 56, settleMs = 60 }) {
   for (let attempt = 0; attempt < maxTabs; attempt++) {
     const observation = await target(destination);
     if (observation.node.focused) return;

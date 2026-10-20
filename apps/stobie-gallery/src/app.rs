@@ -5,17 +5,18 @@ use serde::{Deserialize, Serialize};
 use stobie_ui_egui::{
     Action, ActionTarget, AppHost, AppearancePreference, Application, ApplicationIdentity,
     ApplicationTheme, Availability, CompletedPass, ContrastPreference, DensityPreference,
-    DesignTokens, Frame, NativeTextControlKind, Observation, SemanticUiId, TextAuditFinding,
-    TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot, application_bar_frame,
-    application_bar_height, application_identity, observe_node, record_native_text_control,
+    DesignTokens, Frame, MotionPreference, NativeTextControlKind, Observation, SemanticUiId,
+    TextAuditFinding, TextLayoutObservation, UiNode, UiPreferences, UiRole, UiSnapshot,
+    application_bar_frame, application_bar_height, application_identity, observe_node,
+    record_native_text_control,
 };
 
 use crate::{
     appearance::AppearanceWorkbench,
     catalogue::{STORIES, StoryId, story_definition},
     stories::{
-        ChatFixtureState, IconFixtureState, NavigationFixtureState, ResponsiveFixtureState,
-        StatusChipFixtureState, StoryState, render_story,
+        ChatFixtureState, DialogFixtureState, IconFixtureState, NavigationFixtureState,
+        ResponsiveFixtureState, StatusChipFixtureState, StoryState, render_story,
     },
 };
 
@@ -228,6 +229,7 @@ pub struct GallerySnapshot {
     pub status_chip_fixture: StatusChipFixtureState,
     pub chat_fixture: ChatFixtureState,
     pub responsive_fixture: ResponsiveFixtureState,
+    pub dialog_fixture: DialogFixtureState,
 }
 
 /// The hosted Gallery: the selected story, its configuration and theme, and
@@ -235,6 +237,9 @@ pub struct GallerySnapshot {
 pub struct Gallery {
     selected: StoryId,
     configuration: GalleryConfiguration,
+    /// The system's motion preference, outside the configuration that
+    /// fixtures and the workbench set.
+    motion: MotionPreference,
     theme: ApplicationTheme,
     snapshot: GallerySnapshot,
 }
@@ -260,13 +265,17 @@ impl Gallery {
             .and_then(|value| serde_json::from_str::<GalleryConfiguration>(&value).ok())
             .map(GalleryConfiguration::validated)
             .unwrap_or_default();
-        Self::with(selected, configuration)
+        Self {
+            motion: system_motion(),
+            ..Self::with(selected, configuration)
+        }
     }
 
     pub fn with(selected: StoryId, configuration: GalleryConfiguration) -> Self {
         Self {
             selected,
             configuration,
+            motion: MotionPreference::Full,
             theme: ApplicationTheme::analytical(),
             snapshot: GallerySnapshot {
                 tab_input_epoch: 0,
@@ -284,6 +293,7 @@ impl Gallery {
                 status_chip_fixture: StatusChipFixtureState::default(),
                 chat_fixture: ChatFixtureState::default(),
                 responsive_fixture: ResponsiveFixtureState::default(),
+                dialog_fixture: DialogFixtureState::default(),
             },
         }
     }
@@ -291,6 +301,27 @@ impl Gallery {
     pub fn snapshot(&self) -> GallerySnapshot {
         self.snapshot.clone()
     }
+}
+
+/// The browser's reduced-motion preference. UI captures ask for it, so a
+/// focused field's caret holds steady instead of depending on when the
+/// capture is taken.
+fn system_motion() -> MotionPreference {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let reduced = web_sys::window()
+            .and_then(|window| {
+                window
+                    .match_media("(prefers-reduced-motion: reduce)")
+                    .ok()
+                    .flatten()
+            })
+            .is_some_and(|query| query.matches());
+        if reduced {
+            return MotionPreference::Reduced;
+        }
+    }
+    MotionPreference::Full
 }
 
 impl Application for Gallery {
@@ -307,7 +338,10 @@ impl Application for Gallery {
     }
 
     fn preferences(&self) -> UiPreferences {
-        self.configuration.preferences()
+        UiPreferences {
+            motion: self.motion,
+            ..self.configuration.preferences()
+        }
     }
 
     fn theme(&self) -> ApplicationTheme {
@@ -472,6 +506,7 @@ impl Application for Gallery {
             status_chip_fixture: view.story.status_chip.clone(),
             chat_fixture: view.story.chat.clone(),
             responsive_fixture: view.story.responsive.clone(),
+            dialog_fixture: view.story.dialog.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]

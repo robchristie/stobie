@@ -49,10 +49,12 @@ pub enum StoryId {
     ChatConversation,
     ChatLongNarrow,
     CopyActions,
+    DialogSheet,
+    DialogConfirm,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 44] = [
+    pub const ALL: [Self; 46] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -97,6 +99,8 @@ impl StoryId {
         Self::ChatConversation,
         Self::ChatLongNarrow,
         Self::CopyActions,
+        Self::DialogSheet,
+        Self::DialogConfirm,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -145,6 +149,8 @@ impl StoryId {
             Self::ChatConversation => "chat/conversation",
             Self::ChatLongNarrow => "chat/long-narrow",
             Self::CopyActions => "copy/actions",
+            Self::DialogSheet => "dialog/sheet",
+            Self::DialogConfirm => "dialog/confirm",
         }
     }
 }
@@ -203,6 +209,7 @@ pub enum StoryGroup {
     Avatar,
     Chat,
     Copy,
+    Dialog,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -379,6 +386,12 @@ const NAVIGATION_RESPONSIVE_STATES: &[StoryState] = &[
     StoryState::Active,
     StoryState::Narrow,
 ];
+const DIALOG_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::KeyboardFocused,
+    StoryState::Active,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -406,7 +419,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 44] = [
+pub static STORIES: [StoryDefinition; 46] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -801,6 +814,24 @@ pub static STORIES: [StoryDefinition; 44] = [
         640,
         720,
         COPY_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::DialogSheet,
+        "A routine editor with text fields and a switch: a bottom sheet on a phone and a centred dialog on a desktop, over the routine it edits.",
+        StoryGroup::Dialog,
+        640,
+        720,
+        DIALOG_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::DialogConfirm,
+        "A confirm before deleting a routine, with its cancel first and focused.",
+        StoryGroup::Dialog,
+        640,
+        720,
+        DIALOG_STATES,
         KEYBOARD,
     ),
 ];

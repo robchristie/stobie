@@ -772,6 +772,9 @@ fn presentation(
     if node.role() == Role::MultilineTextInput {
         attributes.insert("aria-multiline", "true".to_owned());
     }
+    if node.is_modal() && matches!(role, Some("dialog" | "alertdialog")) {
+        attributes.insert("aria-modal", "true".to_owned());
+    }
     if let Some(selected) = node.is_selected()
         && matches!(
             role,

@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 3979074391577321
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 462,
+        "min_y": 572,
+        "max_x": 487.71875,
+        "max_y": 600
+      },
+      "painted_rect": {
+        "min_x": 462,
+        "min_y": 577.5,
+        "max_x": 487.71875,
+        "max_y": 594.5
+      },
+      "clip_rect": {
+        "min_x": 462,
+        "min_y": 572,
+        "max_x": 487.71875,
+        "max_y": 600
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 1122405660645401
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 494,
+        "max_x": 987,
+        "max_y": 511
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 494,
+        "max_x": 542.59375,
+        "max_y": 511
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 494,
+        "max_x": 987,
+        "max_y": 511
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Weekdays at 7:00",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 4225788912024369
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 334,
+        "max_x": 987,
+        "max_y": 350
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 334,
+        "max_x": 482.71875,
+        "max_y": 350
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 334.25,
+        "max_x": 987,
+        "max_y": 350
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Name",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 5401712027326115
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 473,
+        "max_x": 987,
+        "max_y": 489
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 473,
+        "max_x": 499.5625,
+        "max_y": 489
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 473,
+        "max_x": 987,
+        "max_y": 489
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Schedule",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 600180895677835
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 386.25,
+        "max_x": 987,
+        "max_y": 402.25
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 386.25,
+        "max_x": 490.8125,
+        "max_y": 402.25
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 386.25,
+        "max_x": 987,
+        "max_y": 402.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Prompt",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 5600992902640627
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 301.75,
+        "max_x": 950,
+        "max_y": 324.25
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 304,
+        "max_x": 524.03125,
+        "max_y": 322
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 301.75,
+        "max_x": 950,
+        "max_y": 324.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Edit routine",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "switch_label",
+        "instance": 1087943233971251
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 462,
+        "min_y": 521,
+        "max_x": 935,
+        "max_y": 553
+      },
+      "painted_rect": {
+        "min_x": 462,
+        "min_y": 528.5,
+        "max_x": 562.8125,
+        "max_y": 545.5
+      },
+      "clip_rect": {
+        "min_x": 462,
+        "min_y": 521,
+        "max_x": 935,
+        "max_y": 553
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 7,
+    "attempted_components": 10,
+    "successful_components": 10,
+    "failed_components": 0,
+    "native_text_controls": 54,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text",
+      "native_text_edit_text"
+    ]
+  }
+}

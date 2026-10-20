@@ -138,6 +138,40 @@ refusal the failure. Natively the platform clipboard takes the text through
 egui and the control confirms. Only copy controls write this way; selectable
 text keeps egui's own copy.
 
+## Dialogs
+
+A dialog, sheet or confirm ([recipe](components.md#dialogs-sheets-and-confirms))
+is modal: while it is presented, it is the whole of what people, assistive
+technology and agents can reach. The host enforces this; the application only
+presents it while its state says it is open.
+
+- **Focus in.** When it opens, focus moves to its first control: a form's
+  first field, or a confirm's cancel. Focus that lands behind it, as an
+  arrow key can move egui's focus, goes back to where it was in the dialog.
+- **Tab.** Tab and Shift+Tab move through the dialog's controls only, and
+  wrap. The close control comes last, after the content.
+- **Escape and the close control.** Both trigger the dismiss action, as a
+  confirm's Escape triggers cancel, while that action is enabled, from a
+  focused field too. An open popup, such as a combo box's list, closes on
+  Escape first.
+- **Focus back.** When the dialog closes, focus returns to the control that
+  opened it: the one clicked, or focused, as it opened. A dialog that opened
+  with no such control, as one an agent or the application opened, returns
+  focus nowhere. A dialog that takes another's place, such as a confirm
+  after a form, returns focus to the first one's opener.
+- **Pointer.** Controls behind the scrim take no pointer input; a press on
+  the scrim dismisses only a dialog that asks for it.
+- **Agents and shortcuts.** The host observes and binds only the dialog and
+  what it presents. Every other action is disabled while it is open, with
+  the reason `The dialog "<title>" is open`, so an invocation is rejected as
+  `unavailable` and a shortcut for it does nothing; the actions the dialog
+  presents remain invocable, with their shortcuts, including one whose
+  control a long form has scrolled out of view.
+- **Assistive technology.** Everything behind the dialog is hidden from the
+  AccessKit tree, and requests aimed at it are dropped; in the browser the
+  ARIA layer holds only the dialog, a `dialog` or `alertdialog` with
+  `aria-modal`.
+
 ## Keyboard and pointer behaviour
 
 Use the registered shortcut only in its valid scope. Pane shortcuts require an
@@ -157,7 +191,7 @@ drag, preserve the original press position when delayed drag recognition is
 involved, and commit only the completed gesture. Repaint only for a recorded
 reason: interaction, state transition or scheduled work—not an unconditional
 frame loop. Reduced motion removes custom animation timing rather than hiding
-state changes.
+state changes, and holds a focused field's caret steady instead of blinking.
 
 Text selection is an explicit interaction, not a consequence of a text role.
 Selectable measured text uses egui's label-selection state so drag, multi-label

@@ -54,6 +54,7 @@ learn the current API.
   [application composition](api-documentation-evidence.md),
   [application interface](application-interface-evidence.md),
   [browser startup results](browser-startup-results.md),
+  [dialogs, sheets and confirms](modal-sheet-evidence.md),
   [iOS PWA spike](ios-pwa-spike-report.md),
   [Markdown](markdown-evidence.md),
   [navigation items](navigation-item-evidence.md),

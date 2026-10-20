@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.2f22d56b9e42f02c",
+      "parent": "application",
+      "role": "alert_dialog",
+      "name": "Delete “Morning briefing”?",
+      "description": "The routine stops running and its history is removed. This can’t be undone.",
+      "rect": {
+        "min_x": 520,
+        "min_y": 387,
+        "max_x": 920,
+        "max_y": 513.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.3eec5cb05c502618",
+      "parent": "presentation.2f22d56b9e42f02c",
+      "role": "button",
+      "name": "Keep routine",
+      "description": "Keep the routine",
+      "rect": {
+        "min_x": 774.59375,
+        "min_y": 472.25,
+        "max_x": 857.59375,
+        "max_y": 504.25
+      },
+      "enabled": true,
+      "focused": true,
+      "selected": false,
+      "actions": [
+        "gallery.routine.keep"
+      ]
+    },
+    {
+      "id": "presentation.a12cf5b2704b166a",
+      "parent": "presentation.2f22d56b9e42f02c",
+      "role": "button",
+      "name": "Delete",
+      "description": "Delete the routine and its history",
+      "rect": {
+        "min_x": 862.59375,
+        "min_y": 472.25,
+        "max_x": 911,
+        "max_y": 504.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.routine.confirm_delete"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

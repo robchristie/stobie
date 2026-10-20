@@ -597,6 +597,78 @@
       "data_fixture": "gallery-seed-v1",
       "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
       "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "dialog-sheet-dark",
+      "story": "dialog/sheet",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "dialog-sheet-phone-light",
+      "story": "dialog/sheet",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "compact",
+        "font_scale": 1.0,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "dialog-confirm-light",
+      "story": "dialog/confirm",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "compact",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "dialog-confirm-phone-high-contrast",
+      "story": "dialog/confirm",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "high",
+        "density": "comfortable",
+        "font_scale": 1.5,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
     }
   ]
 }

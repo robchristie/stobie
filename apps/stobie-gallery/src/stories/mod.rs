@@ -4,6 +4,7 @@ mod chat;
 mod composer;
 mod copy;
 mod data;
+mod dialogs;
 mod dock;
 mod icons;
 mod markdown;
@@ -25,6 +26,7 @@ use stobie_ui_egui::{
 use crate::catalogue::{StoryId, story_definition};
 
 pub use chat::ChatFixtureState;
+pub use dialogs::DialogFixtureState;
 pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
@@ -43,6 +45,7 @@ pub(crate) struct StoryState {
     pub(crate) composer: composer::ComposerFixtureState,
     pub(crate) chat: ChatFixtureState,
     pub(crate) responsive: ResponsiveFixtureState,
+    pub(crate) dialog: DialogFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -144,6 +147,14 @@ fn present_story(
             tokens,
             font_scale,
             &mut state.responsive,
+            &mut report,
+        ),
+        StoryId::DialogSheet | StoryId::DialogConfirm => dialogs::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            &mut state.dialog,
             &mut report,
         ),
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
