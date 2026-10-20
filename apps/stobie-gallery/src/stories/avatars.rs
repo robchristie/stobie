@@ -31,6 +31,8 @@ const DROP: AvatarOutline<'static> = AvatarOutline::new(
     ],
 );
 
+// 0.318 is a control point's coordinate, not 1/π.
+#[allow(clippy::approx_constant)]
 const CLOUD: AvatarOutline<'static> = AvatarOutline::new(
     [0.27, 0.8],
     &[

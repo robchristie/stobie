@@ -299,7 +299,7 @@ pub fn avatar_initials(name: &str) -> String {
     let initial = |word: &str| word.chars().find(|c| c.is_alphanumeric());
     let mut words = name.split_whitespace().filter_map(initial);
     let first = words.next();
-    let last = words.last();
+    let last = words.next_back();
     first
         .into_iter()
         .chain(last)
@@ -575,7 +575,7 @@ fn triangulate(points: &[Pos2]) -> Vec<[u32; 3]> {
         return Vec::new();
     }
     let area = signed_area(points);
-    if !(area.abs() > 1.0e-6) {
+    if !area.is_finite() || area.abs() <= 1.0e-6 {
         return Vec::new();
     }
     let winding = area.signum();
