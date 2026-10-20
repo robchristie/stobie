@@ -13,7 +13,7 @@ use crate::catalogue::StoryId;
 
 /// Consumer-owned navigation state: the conversation open, whether its
 /// details show, and what the reader did.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct ResponsiveFixtureState {
     #[serde(skip)]
     story: Option<StoryId>,
@@ -24,20 +24,6 @@ pub struct ResponsiveFixtureState {
     pub opened: u32,
     pub backs: u32,
     pub toggles: u32,
-}
-
-impl Default for ResponsiveFixtureState {
-    fn default() -> Self {
-        Self {
-            story: None,
-            open: None,
-            details: false,
-            layout: String::new(),
-            opened: 0,
-            backs: 0,
-            toggles: 0,
-        }
-    }
 }
 
 impl ResponsiveFixtureState {
@@ -156,7 +142,7 @@ const LONG_CONVERSATIONS: [Conversation; 9] = [
     },
     Conversation {
         id: "planner",
-        title: "Weekend planner for the whole household",
+        title: "Weekend planner for the walking group",
         preview: "",
         time: "",
         unread: 0,
@@ -245,7 +231,7 @@ pub(super) fn story(
     let about = open.map(|conversation| format!("About {}", conversation.title));
     let spec = NavigationSpec {
         list_title: if narrow {
-            "Conversations and household helpers"
+            "Conversations and shared assistants"
         } else {
             "Conversations"
         },
@@ -514,7 +500,7 @@ mod tests {
         // The narrow story starts at its root, the list.
         assert_eq!(
             panes(StoryId::NavigationResponsiveNarrow, GalleryWidth::Narrow),
-            ["Conversations and household helpers"]
+            ["Conversations and shared assistants"]
         );
     }
 }

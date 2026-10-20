@@ -139,7 +139,7 @@
       "id": "presentation.dc1de99d36b94ef2",
       "parent": "presentation.fcc3be4a3f58dac3",
       "role": "navigation_item",
-      "name": "Weekend planner for the whole household",
+      "name": "Weekend planner for the walking group",
       "description": "Open the conversation",
       "rect": {
         "min_x": 694,
@@ -159,7 +159,7 @@
       "id": "presentation.fcc3be4a3f58dac3",
       "parent": "gallery.story",
       "role": "pane",
-      "name": "Conversations and household helpers",
+      "name": "Conversations and shared assistants",
       "rect": {
         "min_x": 694,
         "min_y": 288,

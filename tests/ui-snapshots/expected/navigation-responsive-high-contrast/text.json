@@ -310,7 +310,7 @@
       "painted_rect": {
         "min_x": 734,
         "min_y": 397.5,
-        "max_x": 977.0625,
+        "max_x": 976.0625,
         "max_y": 422.5
       },
       "clip_rect": {
@@ -342,7 +342,7 @@
       "painted_rect": {
         "min_x": 701,
         "min_y": 300,
-        "max_x": 975.25,
+        "max_x": 978.25,
         "max_y": 326
       },
       "clip_rect": {
@@ -358,7 +358,7 @@
       "truncated": true,
       "content": {
         "kind": "excerpt",
-        "text": "Conversations and household helpers",
+        "text": "Conversations and shared assistants",
         "truncated": false
       }
     }

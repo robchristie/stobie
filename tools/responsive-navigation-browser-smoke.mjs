@@ -212,16 +212,16 @@ try {
   // A phone, light high contrast at 150%: the root is a list of
   // navigation items with counts; a long title elides beside Back.
   await story('navigation/responsive-narrow', configuration({ appearance: 'light', contrast: 'high', font_scale: 1.5, width: 'narrow' }));
-  await settle(['Conversations and household helpers']);
+  await settle(['Conversations and shared assistants']);
   s = await record('phone-long-list');
   assert(s.text.some(t => t.truncated), 'long destinations elide');
-  await click('Weekend planner for the whole household', 'navigation_item');
-  await settle(['Weekend planner for the whole household']);
+  await click('Weekend planner for the walking group', 'navigation_item');
+  await settle(['Weekend planner for the walking group']);
   s = await record('phone-long-title');
   assert(s.text.some(t => t.truncated), 'the long title elides beside Back');
-  assert.equal(await control('region', 'Weekend planner for the whole household').count(), 1, 'the region carries the whole title');
+  assert.equal(await control('region', 'Weekend planner for the walking group').count(), 1, 'the region carries the whole title');
   await click('Back', 'button');
-  await settle(['Conversations and household helpers']);
+  await settle(['Conversations and shared assistants']);
   s = await snapshot();
   const archived = rows(s).find(n => n.name === 'Katherine Coleman Goble Johnson');
   assert(archived && archived.enabled === false && archived.disabled_reason === 'This conversation is archived', 'the archived row is disabled with its reason');
@@ -239,7 +239,7 @@ try {
   await click('Radia Joy Perlman', 'navigation_item');
   await settle(['Radia Joy Perlman']);
   await click('Back', 'button');
-  await settle(['Conversations and household helpers']);
+  await settle(['Conversations and shared assistants']);
   s = await record('phone-long-returned');
   assert(rows(s).some(n => n.name === 'Radia Joy Perlman'), 'the list kept its scroll position');
   assert.notEqual(rows(s)[0].name, 'Augusta Ada King, Countess of Lovelace', 'the list did not return to its top');
