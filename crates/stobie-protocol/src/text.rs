@@ -136,6 +136,8 @@ pub enum TextComponentKind {
     ContentLabel,
     ReadingText,
     Link,
+    /// A numbered list item's number, beside its reading text.
+    ListMarker,
     ApplicationBarLabel,
     ImageStatus,
     GalleryHeading,

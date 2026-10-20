@@ -39,10 +39,12 @@ pub enum StoryId {
     ReadingLongNarrow,
     RowsActions,
     RowsLongNarrow,
+    MarkdownDigest,
+    MarkdownLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 34] = [
+    pub const ALL: [Self; 36] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -77,6 +79,8 @@ impl StoryId {
         Self::ReadingLongNarrow,
         Self::RowsActions,
         Self::RowsLongNarrow,
+        Self::MarkdownDigest,
+        Self::MarkdownLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -115,6 +119,8 @@ impl StoryId {
             Self::ReadingLongNarrow => "reading/long-narrow",
             Self::RowsActions => "rows/actions",
             Self::RowsLongNarrow => "rows/long-narrow",
+            Self::MarkdownDigest => "markdown/digest",
+            Self::MarkdownLongNarrow => "markdown/long-narrow",
         }
     }
 }
@@ -335,7 +341,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 34] = [
+pub static STORIES: [StoryDefinition; 36] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -639,6 +645,24 @@ pub static STORIES: [StoryDefinition; 34] = [
         StoryGroup::Rows,
         320,
         480,
+        READING_NARROW_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::MarkdownDigest,
+        "A Markdown digest of linked titles with notes, a quote and code.",
+        StoryGroup::Reading,
+        640,
+        560,
+        REFERENCE_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::MarkdownLongNarrow,
+        "Nested lists, unsafe links, raw HTML, long code and a reply still arriving.",
+        StoryGroup::Reading,
+        320,
+        600,
         READING_NARROW_STATES,
         SCROLL,
     ),

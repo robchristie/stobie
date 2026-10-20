@@ -194,6 +194,8 @@ snapshot, is the source.
 | `Section` | As the recipe sets it | `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |
+| Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading | Text, or `heading` with `aria-level` |
+| Markdown list number (no `UiRole`) | `Label` | Text |
 
 Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 `menuitem` and `dialog`. Unknown roles become generic elements.

@@ -11,7 +11,7 @@ use serde::Serialize;
 use super::*;
 use crate::{
     Action, ArgumentContract, CapabilityDescription, InspectionErrorCode, InspectionOperation,
-    InspectionResult, InspectionSelector, InvocationReceipt, LinkSpec, LinkTarget,
+    InspectionResult, InspectionSelector, InvocationReceipt, LinkSpec, LinkTarget, MarkdownSpec,
     OPEN_LINK_CAPABILITY, PresentationScope, ReadingTextSpec, ReceiptState,
 };
 
@@ -28,6 +28,9 @@ struct Reader {
     /// Which source the reply cites; Next moves to another URL.
     source: usize,
 }
+
+const DIGEST: &str = "1. [The survey](https://example.org/papers/survey) is worth a read.\n\
+                      2. Change it in [settings](/settings).";
 
 const SOURCES: [&str; 2] = [
     "https://example.org/papers/first",
@@ -75,6 +78,8 @@ impl Application for Reader {
                 LinkSpec::new("Archived copy", "https://example.org/archive"),
             );
         });
+        // Links inside Markdown, one of them to a relative URL.
+        p.markdown(ui, "digest", DIGEST, MarkdownSpec::default());
         frame.action(ui, &mut p, Act::Next, ActionEmphasis::Normal);
     }
 
@@ -261,7 +266,7 @@ fn presented_links_publish_an_open_link_capability_with_their_url() {
             ..Default::default()
         },
     );
-    assert_eq!(all.len(), 3);
+    assert_eq!(all.len(), 5);
 }
 
 #[test]
@@ -389,5 +394,65 @@ fn a_disabled_or_changed_link_is_not_opened() {
     opened.borrow_mut().clear();
     let error = invoke(&mut harness, "stale", link_selector("source"), stale).unwrap_err();
     assert_eq!(error.code, InspectionErrorCode::StaleTarget);
+    assert!(opened.borrow().is_empty());
+}
+
+/// The selector for the `index`th link in the Markdown digest.
+fn markdown_link(index: usize) -> InspectionSelector {
+    InspectionSelector {
+        id: Some(
+            PresentationScope::new("reader")
+                .instance("digest")
+                .child(("link", index))
+                .semantic_id(),
+        ),
+        capability: Some(OPEN_LINK_CAPABILITY.into()),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn links_inside_markdown_publish_open_link_and_open_a_new_tab() {
+    let (mut harness, opened) = harness();
+    let survey = discover(host(&harness), markdown_link(0));
+    assert_eq!(survey.len(), 1);
+    assert!(survey[0].availability.enabled());
+    assert_eq!(
+        survey[0].target.meaning,
+        "https://example.org/papers/survey"
+    );
+    let relative = discover(host(&harness), markdown_link(1));
+    assert_eq!(
+        relative[0].availability.disabled_reason(),
+        Some(crate::INVALID_LINK_URL)
+    );
+    let snapshot = host(&harness).ui_snapshot();
+    assert!(
+        snapshot.semantic_audit.is_empty(),
+        "{:?}",
+        snapshot.semantic_audit
+    );
+
+    opened.borrow_mut().clear();
+    let receipt = invoke(
+        &mut harness,
+        "survey",
+        markdown_link(0),
+        survey[0].target.clone(),
+    )
+    .unwrap();
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    assert_eq!(
+        std::mem::take(&mut *opened.borrow_mut()),
+        [egui::OpenUrl::new_tab("https://example.org/papers/survey")]
+    );
+    let error = invoke(
+        &mut harness,
+        "relative",
+        markdown_link(1),
+        relative[0].target.clone(),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, InspectionErrorCode::Unavailable);
     assert!(opened.borrow().is_empty());
 }

@@ -92,6 +92,7 @@ Default alignment and overflow are semantic:
 | --- | --- | --- | --- |
 | Names, labels and prose | Start | One in chrome; multiple in content | Truncate in chrome with semantic full text; wrap in content |
 | Reading text and links | Start | Unlimited | Wrap at the available width, never truncate; a parent scroll area clips |
+| Markdown blocks | Start; list numbers end-aligned | Unlimited | As reading text, one measured surface per block; code wraps too |
 | Numeric result columns | End | One | Truncate only after preserving sign, unit and semantic full text |
 | Status and errors | Start | Wrap when persistent | Wrap, or move detail to diagnostics when chrome is narrow |
 | Compact status chips | Start | One | Measured ellipsis with complete semantic value and tooltip |

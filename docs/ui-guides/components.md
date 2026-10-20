@@ -186,9 +186,69 @@ Low-level callers use `reading_text(ui, identity, text, spec, tokens,
 font_scale, observations)` with a stable `PresentationId`. Every reading
 surface shares one measured path from a `LayoutJob`, so later rich text
 (styled runs, links within text, code) is measured, observed and audited the
-same way. Gallery `reading/conversation` and `reading/long-narrow` use the
+same way; [Markdown](#markdown) presents through it. Gallery
+`reading/conversation` and `reading/long-narrow` use the
 production recipe; the [evidence record](../reading-text-evidence.md) retains
 the review.
+
+## Markdown
+
+Use `PresentationContext::markdown(ui, key, source, MarkdownSpec::default())`
+for Markdown a person reads, such as a reply from a model. It presents
+CommonMark with strikethrough on the reading-text path: paragraphs; headings
+(level 1 in the application-title role, level 2 the pane-title role, levels 3
+to 6 the section-heading role); bulleted and numbered lists to any depth;
+block quotes; fenced and indented code; horizontal rules; and, inside text,
+emphasis, strong, strikethrough, inline code and links. Code uses the
+`MonospaceTechnical` role in egui's bundled monospace face (Hack) on the
+raised surface; a code block wraps at the available width rather than
+scrolling sideways. Raw HTML is shown as written and never interpreted; an
+image shows its alternative text and loads nothing; tables are not
+recognised and keep their source text, as do footnotes, task lists and maths.
+Bare URLs are not linked; `<https://…>` and `<name@example.org>` autolinks
+are.
+
+Each block is one measured reading surface, wrapped at its column's width and
+never truncated, observed as `ReadingText` with `TextOverflow::WrapUnbounded`
+and selectable by default, so a drag can select across blocks and copy them.
+A numbered list's numbers are measured, end-aligned `ListMarker` labels in a
+column that always fits two digits; bullets (disc, circle, square by depth)
+and the quote bar are decorative paint. Blocks inside a list item are spaced
+like the items, whatever blank lines the source has, so a list does not
+reflow as a reply streams in. Nesting indents while the column keeps two
+token minimum-hit widths of text; deeper or narrower items keep their marker
+at the start of their text instead, and the model keeps at most 16 levels.
+Headings are AccessKit headings with their level, each block's label carries
+its complete text and the context's stable author ID, and there is no
+separate semantic node for text, as for `reading_text`.
+
+A link inside the text is underlined in `link_colour`, with a heavier
+underline and a pointing hand on hover, and a focus ring that clears its
+glyphs. It opens in a new browser tab (natively, the default browser) from a
+click anywhere on any line it wraps across, a middle or modifier click, Tab
+then Enter or Space (one Tab stop per link), or assistive-technology
+activation. A drag that starts on a link selects text instead. Each link is a
+`UiRole::Link` node named by its text with its URL as its value, so hosts
+offer it as `stobie.open-link`; `MarkdownSpec::link_description` gives every
+link the application's description, such as "Opens in a new tab". Links
+follow the [link recipe's rules](#links): only `http`, `https` and `mailto`
+URLs open. A link to any other URL, a relative one or an empty one keeps its
+text as ordinary text, opens nothing by any route and is published as an
+unavailable link whose reason is `INVALID_LINK_URL`; unlike the standalone
+link, it records no failing text observation, because the URL is content,
+not an application mistake. A disabled `Ui` mutes links and opens nothing.
+
+Any source parses and presents without panicking, including one still
+arriving: an unfinished `**`, link or fence stays text or code until it
+closes. Put long content in a scroll area: blocks and links scrolled fully
+out of view add no observation or node, while coverage counts every attempt.
+Choose `TextInteraction::Inert` only where a parent owns the pointer; links
+stay activatable.
+
+Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
+font_scale, observations)` and publish the returned `link_nodes`. Gallery
+`markdown/digest` and `markdown/long-narrow` use the production recipe; the
+[evidence record](../markdown-evidence.md) retains the review.
 
 ## Links
 

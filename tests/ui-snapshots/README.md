@@ -111,3 +111,19 @@ controls, in Chromium's ARIA layer and through `stobie`, run in
 catalogue entries raised every earlier fixture's native-control count from 38
 to 40, and changed one pixel of `status-chip-treatments-light` by one colour
 step (at 863, 140) as the glyph atlas grew; nothing else changed.
+
+Markdown fixtures add a digest reply in dark comfortable mode (a heading,
+four numbered linked titles with notes, a short list, a quote and a code
+block) and a narrow light high-contrast column at 150% with an unbroken
+identifier, wrapping code, unsafe links and raw HTML kept as text, nested
+lists and, below the fold, a table as text and a reply still arriving. The
+physical `tools/markdown-browser-smoke.sh` runs through full verification
+on WebGPU and WebGL2: it copies a whole list item across its link by drag
+selection, opens links inside the text in a new tab by pointer and by Enter
+and Space after focusing through the ARIA layer, finds the headings with
+their levels in the ARIA layer, checks that unsafe links and a disabled
+region open nothing, and scrolls to the unfinished tail. Adding the two
+catalogue entries raised every earlier fixture's native-control count from
+40 to 42 and changed one pixel each of `navigation-long-high-contrast` (at
+824, 423) and `status-chip-treatments-light` (at 863, 140) by one colour
+step as the glyph atlas grew; nothing else changed.

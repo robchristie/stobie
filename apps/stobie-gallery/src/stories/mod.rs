@@ -2,6 +2,7 @@ mod buttons;
 mod data;
 mod dock;
 mod icons;
+mod markdown;
 mod navigation;
 mod reading;
 mod reference;
@@ -110,6 +111,9 @@ fn present_story(
         }
         StoryId::RowsActions | StoryId::RowsLongNarrow => {
             rows::story(ui, story, tokens, font_scale, &mut state.rows, &mut report)
+        }
+        StoryId::MarkdownDigest | StoryId::MarkdownLongNarrow => {
+            markdown::story(ui, story, tokens, font_scale, &mut report)
         }
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
