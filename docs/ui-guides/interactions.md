@@ -22,7 +22,11 @@ components remain generic over `A`; semantic snapshots retain only a
 do not need the originating application enum. Respect
 `Availability`: enabled, disabled with an observable reason, or hidden are
 different states. Disabled controls retain clear semantic explanation and do
-not silently consume an unavailable action.
+not silently consume an unavailable action. A hidden action presents nothing:
+`Frame::action`, `icon_action`, `toggle` and `PresentationContext::action`
+draw no control and publish no node for it, so a caller need not filter it.
+Its capability stays discoverable with `rendered: false`, and invoking it is
+refused as `unavailable`.
 
 ## Actions on rows
 
@@ -69,6 +73,38 @@ with a removed row's ID is refused by `availability_with` when it hides that
 ID. A custom row that paints itself can carry the same contract: set its
 node's `actions` and `argument` and trigger the bound action with
 `Frame::trigger`.
+
+## Composing and sending
+
+A chat-style message is composed in a composer
+([recipe](components.md#composer)): the application owns the draft, and a
+send action that takes a text argument carries it.
+
+- **The draft.** Keep it in application state. `Frame::composer` presents it
+  and emits the given intent with the new text for each edit; clear it in
+  `perform_with` when the send succeeds. A send the application refuses
+  returns an error and leaves the draft as it was, so nothing typed is lost.
+- **Availability.** `availability_with(send, Text(draft))` decides whether
+  this draft can be sent: hide send for an empty draft to let the trailing
+  control (such as a microphone) stand alone, or disable it with a reason,
+  such as while the previous message is still sending. A draft over the
+  action's `max_length` disables send with the contract's reason.
+- **Return.** With a keyboard, Return sends and Shift+Return types a newline;
+  Cmd or Ctrl+Return also sends. Return does nothing while send is disabled,
+  hidden or the draft is empty: it neither sends nor types a newline. On a
+  touch device a tap makes the field the platform's own text field, whose
+  Return key types a newline; the send control sends. A hardware keyboard's
+  Cmd+Return still sends there.
+- **Focus.** Pressing the send control does not take focus from the field,
+  and the field keeps focus after any send, so typing continues and a phone's
+  keyboard stays up. Other composer controls take focus as any button does.
+- **Agents.** The field is a `multiline_text_input` named by the composer, so
+  `stobie set-text FIELD TEXT` sets the draft through the same edit route as
+  typing. The send control carries the draft as its argument: `stobie invoke
+  SEND --id ID` sends the draft shown. `--value TEXT` sends that text,
+  through the send control when it carries it and otherwise through the
+  action's own binding, under the same availability. A refused send's receipt
+  carries the application's error, and the draft stays.
 
 ## Keyboard and pointer behaviour
 

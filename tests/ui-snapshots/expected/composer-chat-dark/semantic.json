@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "composer/chat",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 574
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.175da0e2ca12cca5",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Send",
+      "description": "Send the message",
+      "rect": {
+        "min_x": 1114,
+        "min_y": 336.5,
+        "max_x": 1146,
+        "max_y": 368.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.send"
+      ],
+      "argument": "Shopping for Saturday:\nbread, milk and eggs\nsomething for dessert"
+    },
+    {
+      "id": "presentation.4bc55325171045c1",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Send",
+      "description": "Send the message",
+      "rect": {
+        "min_x": 1114,
+        "min_y": 224.5,
+        "max_x": 1146,
+        "max_y": 256.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.send"
+      ],
+      "argument": "Can you book the 9:30 train to Adelaide?"
+    },
+    {
+      "id": "presentation.63be45870ae6af3c",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 574,
+        "min_y": 302.5,
+        "max_x": 1050,
+        "max_y": 368.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "Shopping for Saturday:\nbread, milk and eggs\nsomething for dessert"
+    },
+    {
+      "id": "presentation.8418f0b85f239f2c",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 1054.125,
+        "min_y": 336.5,
+        "max_x": 1110,
+        "max_y": 368.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.89c8ffa0dba0103e",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 538,
+        "min_y": 336.5,
+        "max_x": 570,
+        "max_y": 368.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    },
+    {
+      "id": "presentation.92d2ba6276cb56ff",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 1090.125,
+        "min_y": 146.25,
+        "max_x": 1146,
+        "max_y": 178.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.9841b8ce33d5c236",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 574,
+        "min_y": 146,
+        "max_x": 1086,
+        "max_y": 178.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": ""
+    },
+    {
+      "id": "presentation.c433095db245717b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 1054.125,
+        "min_y": 224.5,
+        "max_x": 1110,
+        "max_y": 256.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.df4650e9704202a2",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 538,
+        "min_y": 146,
+        "max_x": 570,
+        "max_y": 178
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    },
+    {
+      "id": "presentation.e902f1269f8fc63c",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 574,
+        "min_y": 224.25,
+        "max_x": 1050,
+        "max_y": 256.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "Can you book the 9:30 train to Adelaide?"
+    },
+    {
+      "id": "presentation.fb1e4338f457791b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 538,
+        "min_y": 224.25,
+        "max_x": 570,
+        "max_y": 256.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

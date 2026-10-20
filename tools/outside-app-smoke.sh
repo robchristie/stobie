@@ -4,8 +4,8 @@
 # `--stobie-path`; it is tested and built natively and with `stobie build-web`,
 # then tools/outside-app-smoke.mjs starts it natively and in Chromium on WebGPU
 # and WebGL2 and operates it with `stobie`. Further applications check Web
-# Push and per-row actions. The release `stobie` binary must already be
-# built.
+# Push, per-row actions and the composer. The release `stobie` binary must
+# already be built.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -81,6 +81,20 @@ cp tools/row-actions-app/lib.rs "$ROWS_APP/src/lib.rs"
   cargo build --release
   "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web-rows.json"
 )
+# A fourth edits an application-owned draft in a composer
+# (tools/composer-app/lib.rs).
+COMPOSER_APP="$OUTSIDE/outside-composer"
+rm -rf "$COMPOSER_APP"
+"$STOBIE" new outside-composer --path "$COMPOSER_APP" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
+cp tools/composer-app/lib.rs "$COMPOSER_APP/src/lib.rs"
+(
+  cd "$COMPOSER_APP"
+  cargo fmt --check
+  cargo clippy --all-targets -- -D warnings
+  cargo clippy --lib --target wasm32-unknown-unknown -- -D warnings
+  cargo build --release
+  "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web-composer.json"
+)
 # The image layer compiles natively and for the web from outside too.
 "$STOBIE" new outside-imaging --imaging --path "$OUTSIDE/outside-imaging" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
 (
@@ -126,3 +140,6 @@ ui_sandbox "$(command -v node)" tools/web-push-smoke.mjs outside-push "$OUTSIDE/
 # Each row's control carries its row's ID through `stobie` natively and in
 # the browser, and the ARIA layer names it after its row.
 ui_sandbox "$(command -v node)" tools/row-actions-smoke.mjs "$STOBIE" "$ROWS_APP" "$CARGO_TARGET_DIR/release/outside-rows" "$EVIDENCE_DIR"
+# A composer's draft is typed and sent by keyboard and by touch in Chromium,
+# and set and sent by agents through `stobie` natively and in the browser.
+ui_sandbox "$(command -v node)" tools/composer-smoke.mjs "$STOBIE" "$COMPOSER_APP" "$CARGO_TARGET_DIR/release/outside-composer" "$EVIDENCE_DIR"

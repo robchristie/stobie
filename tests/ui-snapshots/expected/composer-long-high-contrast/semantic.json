@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "composer/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 633
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.175da0e2ca12cca5",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Send",
+      "description": "Send the message",
+      "rect": {
+        "min_x": 944,
+        "min_y": 516,
+        "max_x": 986,
+        "max_y": 558
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.send"
+      ],
+      "disabled_reason": "The last message is still sending",
+      "argument": "On my way."
+    },
+    {
+      "id": "presentation.4bc55325171045c1",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Send",
+      "description": "Send the message",
+      "rect": {
+        "min_x": 944,
+        "min_y": 419,
+        "max_x": 986,
+        "max_y": 461
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.send"
+      ],
+      "argument": "Größere Schrift, schmale Spalte und hoher Kontrast bleiben lesbar. Every line wraps at the field's width, and once the draft passes its limit the field stops growing and scrolls, so the controls stay in reach."
+    },
+    {
+      "id": "presentation.63be45870ae6af3c",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 744,
+        "min_y": 515,
+        "max_x": 861,
+        "max_y": 558
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "On my way."
+    },
+    {
+      "id": "presentation.8418f0b85f239f2c",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 865.15625,
+        "min_y": 516,
+        "max_x": 940,
+        "max_y": 558
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.89c8ffa0dba0103e",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 698,
+        "min_y": 516,
+        "max_x": 740,
+        "max_y": 558
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    },
+    {
+      "id": "presentation.92d2ba6276cb56ff",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 911.15625,
+        "min_y": 244,
+        "max_x": 986,
+        "max_y": 286
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.9841b8ce33d5c236",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 744,
+        "min_y": 243,
+        "max_x": 907,
+        "max_y": 286
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": ""
+    },
+    {
+      "id": "presentation.c433095db245717b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Dictate",
+      "description": "Dictate a message",
+      "rect": {
+        "min_x": 865.15625,
+        "min_y": 419,
+        "max_x": 940,
+        "max_y": 461
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.dictate"
+      ]
+    },
+    {
+      "id": "presentation.df4650e9704202a2",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 698,
+        "min_y": 243.84375,
+        "max_x": 740,
+        "max_y": 285.84375
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    },
+    {
+      "id": "presentation.e902f1269f8fc63c",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "Message",
+      "rect": {
+        "min_x": 744,
+        "min_y": 340,
+        "max_x": 861,
+        "max_y": 461
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "Größere Schrift, schmale Spalte und hoher Kontrast bleiben lesbar. Every line wraps at the field's width, and once the draft passes its limit the field stops growing and scrolls, so the controls stay in reach."
+    },
+    {
+      "id": "presentation.fb1e4338f457791b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Attach",
+      "description": "Attach a file to the message",
+      "rect": {
+        "min_x": 698,
+        "min_y": 419,
+        "max_x": 740,
+        "max_y": 461
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.message.attach"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

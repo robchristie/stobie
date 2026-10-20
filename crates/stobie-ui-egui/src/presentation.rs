@@ -4,6 +4,13 @@ use std::hash::Hash;
 
 use egui::{Response, Ui};
 
+mod composer;
+
+pub use composer::{
+    COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
+    ComposerSpec,
+};
+
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,
     DesignTokens, DomainReference, IconId, NativeTextControlKind, SemanticUiId, TextAuditCoverage,
@@ -401,7 +408,7 @@ impl PresentationContext {
         self.present_action(ui, &identity, spec, content, name, value)
     }
 
-    fn present_action<A: ActionKey>(
+    pub(crate) fn present_action<A: ActionKey>(
         &mut self,
         ui: &mut Ui,
         identity: &ActionButtonIdentity,

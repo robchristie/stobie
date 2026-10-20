@@ -67,11 +67,12 @@ impl ActionButtonIdentity {
 }
 
 /// Presentation of a typed capability; callers own response handling and mutation.
-/// Hidden availability must be filtered before rendering this control.
+/// A control whose availability is Hidden is neither drawn nor observed: it
+/// allocates no space and returns an empty hover response.
 pub struct ActionButtonSpec<A: ActionKey> {
     /// Typed capability and applicable pane identity.
     pub target: ActionTarget<A>,
-    /// Enabled, disabled with an observable reason, or filtered-out hidden state.
+    /// Enabled, disabled with an observable reason, or hidden (not drawn).
     pub availability: Availability,
     /// Momentary action or current toggle state, also retained in semantics.
     pub state: ActionButtonState,
@@ -161,37 +162,37 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
     )
 }
 
-/// The action button, named `name` for assistive technology and its tooltip
-/// when given, such as "Open Ada" for one row's Open; the visible label stays
-/// the action's.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn present_action_button<A: ActionKey>(
-    ui: &mut egui::Ui,
-    spec: ActionButtonSpec<A>,
-    identity: &ActionButtonIdentity,
-    content: ActionButtonContent,
-    name: Option<&str>,
-    tokens: &DesignTokens,
-    font_scale: f32,
-    observations: &mut Vec<crate::TextLayoutObservation>,
-) -> Response {
-    debug_assert!(spec.availability.visible());
-    let action = spec.target.action.specification();
-    let name = name.unwrap_or(action.label);
-    let visible_label = if spec.compact {
-        action.compact_label.unwrap_or(action.label)
-    } else {
-        action.label
-    };
-    let enabled = spec.availability.enabled();
-    let text_spec = TextSpec {
+fn button_text_spec(content: ActionButtonContent) -> TextSpec {
+    TextSpec {
         horizontal_alignment: if matches!(content, ActionButtonContent::IconLabel(_)) {
             HorizontalTextAlignment::Start
         } else {
             HorizontalTextAlignment::Centre
         },
         ..TextSpec::single_line(TextRole::ButtonLabel, TextOverflow::Ellipsis)
-    };
+    }
+}
+
+/// An action button's height and widths before it is placed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct ButtonSize {
+    /// The hit target's height, at least the minimum hit size.
+    pub hit_height: f32,
+    /// The width that shows the whole label.
+    pub intrinsic: f32,
+    /// The narrowest width it takes, eliding its label.
+    pub minimum_width: f32,
+}
+
+/// The size an action button showing `visible_label` as `content` takes.
+pub(crate) fn action_button_size(
+    ui: &egui::Ui,
+    visible_label: &str,
+    content: ActionButtonContent,
+    tokens: &DesignTokens,
+    font_scale: f32,
+) -> ButtonSize {
+    let text_spec = button_text_spec(content);
     let padding = tokens.geometry.control_padding_x.0 * 2.0;
     let artwork_size = icon_size(tokens, font_scale);
     let icon_reservation = if matches!(content, ActionButtonContent::IconLabel(_)) {
@@ -199,11 +200,7 @@ pub(crate) fn present_action_button<A: ActionKey>(
     } else {
         0.0
     };
-    let hit_height = tokens
-        .geometry
-        .minimum_hit_size
-        .0
-        .max(tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5));
+    let hit_height = action_hit_height(tokens, font_scale);
     let (intrinsic, minimum_width) = if matches!(content, ActionButtonContent::IconOnly(_)) {
         let side = hit_height.max(artwork_size);
         (side, side)
@@ -232,6 +229,61 @@ pub(crate) fn present_action_button<A: ActionKey>(
             minimum,
         )
     };
+    ButtonSize {
+        hit_height,
+        intrinsic,
+        minimum_width,
+    }
+}
+
+/// An action button's hit height: the control height at the font scale, and
+/// never less than the minimum hit size.
+pub(crate) fn action_hit_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    tokens
+        .geometry
+        .minimum_hit_size
+        .0
+        .max(tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5))
+}
+
+/// The action button, named `name` for assistive technology and its tooltip
+/// when given, such as "Open Ada" for one row's Open; the visible label stays
+/// the action's.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn present_action_button<A: ActionKey>(
+    ui: &mut egui::Ui,
+    spec: ActionButtonSpec<A>,
+    identity: &ActionButtonIdentity,
+    content: ActionButtonContent,
+    name: Option<&str>,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
+    if !spec.availability.visible() {
+        // Hidden: no space, paint, focus, semantic node or text observation.
+        return ui.interact(Rect::NOTHING, identity.widget_id, Sense::hover());
+    }
+    let action = spec.target.action.specification();
+    let name = name.unwrap_or(action.label);
+    let visible_label = if spec.compact {
+        action.compact_label.unwrap_or(action.label)
+    } else {
+        action.label
+    };
+    let enabled = spec.availability.enabled();
+    let text_spec = button_text_spec(content);
+    let artwork_size = icon_size(tokens, font_scale);
+    let icon_reservation = if matches!(content, ActionButtonContent::IconLabel(_)) {
+        artwork_size + tokens.spacing.inline.0
+    } else {
+        0.0
+    };
+    let ButtonSize {
+        hit_height,
+        intrinsic,
+        minimum_width,
+    } = action_button_size(ui, visible_label, content, tokens, font_scale);
     let width = intrinsic
         .max(minimum_width)
         .min(ui.available_width().max(minimum_width));

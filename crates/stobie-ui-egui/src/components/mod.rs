@@ -21,13 +21,13 @@ mod status_chip_tests;
 mod thumbnail;
 mod viewport_status;
 
-pub(crate) use action_button::present_action_button;
 pub use action_button::{
     ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     action_button, action_button_with_content, action_button_with_identity,
     action_button_with_identity_and_content, action_semantic_node,
     action_semantic_node_with_identity,
 };
+pub(crate) use action_button::{action_button_size, action_hit_height, present_action_button};
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
