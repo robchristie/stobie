@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 3979074391577321
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 16,
+        "min_y": 807,
+        "max_x": 41.71875,
+        "max_y": 831
+      },
+      "painted_rect": {
+        "min_x": 16,
+        "min_y": 810.5,
+        "max_x": 41.71875,
+        "max_y": 827.5
+      },
+      "clip_rect": {
+        "min_x": 16,
+        "min_y": 807,
+        "max_x": 41.71875,
+        "max_y": 831
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 1122405660645401
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 9,
+        "min_y": 737,
+        "max_x": 381,
+        "max_y": 754
+      },
+      "painted_rect": {
+        "min_x": 9,
+        "min_y": 737,
+        "max_x": 98.59375,
+        "max_y": 754
+      },
+      "clip_rect": {
+        "min_x": 9,
+        "min_y": 737,
+        "max_x": 381,
+        "max_y": 754
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Weekdays at 7:00",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 4225788912024369
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 9,
+        "min_y": 591,
+        "max_x": 381,
+        "max_y": 607
+      },
+      "painted_rect": {
+        "min_x": 9,
+        "min_y": 591,
+        "max_x": 38.71875,
+        "max_y": 607
+      },
+      "clip_rect": {
+        "min_x": 9,
+        "min_y": 591.25,
+        "max_x": 381,
+        "max_y": 607
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Name",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 5401712027326115
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 9,
+        "min_y": 718,
+        "max_x": 381,
+        "max_y": 734
+      },
+      "painted_rect": {
+        "min_x": 9,
+        "min_y": 718,
+        "max_x": 55.5625,
+        "max_y": 734
+      },
+      "clip_rect": {
+        "min_x": 9,
+        "min_y": 718,
+        "max_x": 381,
+        "max_y": 734
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Schedule",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 600180895677835
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 9,
+        "min_y": 637.25,
+        "max_x": 381,
+        "max_y": 653.25
+      },
+      "painted_rect": {
+        "min_x": 9,
+        "min_y": 637.25,
+        "max_x": 46.8125,
+        "max_y": 653.25
+      },
+      "clip_rect": {
+        "min_x": 9,
+        "min_y": 637.25,
+        "max_x": 381,
+        "max_y": 653.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Prompt",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 5600992902640627
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 9,
+        "min_y": 563.75,
+        "max_x": 345,
+        "max_y": 584.25
+      },
+      "painted_rect": {
+        "min_x": 9,
+        "min_y": 565,
+        "max_x": 80.03125,
+        "max_y": 583
+      },
+      "clip_rect": {
+        "min_x": 9,
+        "min_y": 563.75,
+        "max_x": 345,
+        "max_y": 584.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Edit routine",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "switch_label",
+        "instance": 1087943233971251
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 16,
+        "min_y": 760,
+        "max_x": 333,
+        "max_y": 792
+      },
+      "painted_rect": {
+        "min_x": 16,
+        "min_y": 767.5,
+        "max_x": 116.8125,
+        "max_y": 784.5
+      },
+      "clip_rect": {
+        "min_x": 16,
+        "min_y": 760,
+        "max_x": 333,
+        "max_y": 792
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 7,
+    "attempted_components": 10,
+    "successful_components": 10,
+    "failed_components": 0,
+    "native_text_controls": 54,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text",
+      "native_text_edit_text"
+    ]
+  }
+}

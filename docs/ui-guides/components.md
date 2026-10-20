@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, responsive navigation and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -661,6 +661,72 @@ Gallery `navigation/responsive` (conversation rows, messages and details)
 and `navigation/responsive-narrow` (long and localised destinations with
 counts, an archived one, rows below the fold) use this production API at
 every Gallery width; the Desktop width shows the columns.
+
+## Dialogs, sheets and confirms
+
+A modal dialog holds a task the application asks for before anything else:
+a form, or a question. The application's state says whether it is open; its
+actions open and close it. In a hosted application:
+
+```text
+if editing {
+    let spec = DialogSpec::new("Edit routine", Act::CloseEditor).sheet();
+    frame.dialog(ui, p, "editor", &spec, |ui, frame, p| form(ui, frame, p));
+}
+if confirming {
+    frame.confirm(ui, p, "delete", &ConfirmSpec::new(
+        "Delete “Morning briefing”?",
+        "The routine and its schedule are removed. This cannot be undone.",
+        Act::Delete,
+        Act::KeepRoutine,
+    ));
+}
+```
+
+Present it after what is behind it, in every pass while it is open.
+`Frame::dialog` triggers the dismiss action when the close control, Escape
+or (with `backdrop_dismisses`) the scrim dismisses it; `Frame::confirm`
+triggers confirm or cancel. `PresentationContext::dialog` and
+`PresentationContext::confirm` are the scoped forms, which report what
+happened for the caller to route.
+
+- **Layout.** `DialogSpec::new` is centred at every width, 560 points wide
+  at the reference font scale (`width` changes it) and no wider than the
+  screen allows. `.sheet()` is a bottom sheet across the screen below the
+  wide breakpoint (`PaneWidthClass::Wide`, as on a phone) and centred above
+  it; `.full_height()` makes the bottom sheet cover the screen, for a form
+  that needs the room. A confirm is centred, 400 points wide. The title is a
+  fixed header with the close control at its end; content taller than the
+  room scrolls beneath it.
+- **Safe areas and the keyboard.** A dialog sits inside egui's content
+  rectangle, and safe areas are the web shell's: the PWA template pads the
+  page by the device's safe-area insets and, with `fitViewport`, sizes it
+  from the visual viewport (see [browser startup](../browser-startup.md)).
+  A bottom sheet's last control therefore stays above the home indicator,
+  and the sheet above an on-screen keyboard.
+- **Scrim.** What is behind is covered by the canvas colour at partial
+  opacity and takes no pointer input. A press on the scrim does nothing
+  unless `backdrop_dismisses(true)`, so a press beside a form does not lose
+  what was typed; a confirm's scrim never dismisses.
+- **Confirm.** Cancel comes first and takes focus when it opens, so a stray
+  Return does not confirm; Escape cancels. The confirm control is labelled
+  with what it does and is primary unless `confirm_emphasis` says otherwise.
+  The buttons end a row, or stack across the dialog when the row does not
+  fit.
+- **Work under way.** A disabled dismiss action, as while the dialog's work
+  runs, closes it by no route; a hidden one shows no close control.
+- **Semantics.** A dialog is a `Dialog` node named by its title, a confirm an
+  `AlertDialog` named by its title and described by its message, each
+  holding what it presents and marked modal for assistive technology. While
+  one is presented the host observes, binds and shows assistive technology
+  only it (see [interactions](interactions.md#dialogs)).
+- **Fields.** A form's text fields are `NativeTextEdit`s presented through
+  `PresentationContext::native`, labelled for AccessKit and observed as text
+  inputs, as elsewhere; on iOS they edit through the native field.
+
+Gallery `dialog/sheet` (a routine editor with two text fields and a switch,
+over the routine it edits) and `dialog/confirm` (deleting that routine) use
+this production API at every Gallery width; Narrow shows the bottom sheet.
 
 ## Rows and their actions
 

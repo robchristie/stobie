@@ -173,6 +173,9 @@ mod web {
                                 .add_plugin(crate::host::new_tab::NewTabLinks);
                             // Copy controls write inside the pass's own event.
                             crate::clipboard::ClipboardWrites::install(&creation.egui_ctx);
+                            // What a modal dialog hides is hidden before the
+                            // ARIA layer mirrors the tree.
+                            crate::host::modal::install(&creation.egui_ctx);
                             // A restarted host replaces its previous layer.
                             if let Some(previous) = layer.take() {
                                 super::aria_dom::remove(previous);

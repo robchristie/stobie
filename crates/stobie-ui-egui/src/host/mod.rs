@@ -48,6 +48,7 @@ use crate::{
 #[cfg(feature = "eframe")]
 mod entry;
 mod events;
+mod modal;
 mod new_tab;
 mod renderer;
 use crate::ShortcutEgui;
@@ -651,6 +652,55 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present a modal dialog or sheet with `content` inside it (see
+    /// [`PresentationContext::dialog`]), and trigger its dismiss action when
+    /// the close control, Escape or the scrim dismisses it. Present it in
+    /// every pass while the application's state says it is open, after what
+    /// is behind it; dismiss, and the actions inside it, close it.
+    ///
+    /// While it is presented, the host keeps keyboard focus inside it,
+    /// observes and binds only it and what it presents, refuses every other
+    /// action an agent or a shortcut asks for, and hides everything else
+    /// from assistive technology. When it closes, focus returns to the
+    /// control that opened it.
+    pub fn dialog<R>(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::DialogSpec<'_, A>,
+        content: impl FnOnce(&mut Ui, &mut Self, &mut PresentationContext) -> R,
+    ) -> crate::DialogResponse<A, R> {
+        let availability = self.availability;
+        let response = presentation.dialog(ui, key, spec, availability, |ui, presentation| {
+            content(ui, self, presentation)
+        });
+        if response.dismissed {
+            self.triggers.push((response.dismiss, ActionArgument::None));
+        }
+        response
+    }
+
+    /// Present a confirm dialog (see [`PresentationContext::confirm`]) and
+    /// trigger its confirm or cancel action when chosen; Escape cancels.
+    /// Present it in every pass while the application's state says it is
+    /// open; it is modal as [`Self::dialog`] is.
+    pub fn confirm(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::ConfirmSpec<'_, A>,
+    ) -> crate::ConfirmResponse<A> {
+        let response = presentation.confirm(ui, key, spec, self.availability);
+        if response.confirmed {
+            self.triggers.push((response.confirm, ActionArgument::None));
+        } else if response.cancelled {
+            self.triggers.push((response.cancel, ActionArgument::None));
+        }
+        response
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn button(
         &mut self,
@@ -730,6 +780,16 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         }
     }
 }
+
+/// A pass's observations: the snapshot, the text fields and copy controls
+/// agents can use, and the modal dialogs presented.
+type Collected = (
+    UiSnapshot,
+    Vec<(TextFieldBinding, String)>,
+    Vec<CopyBinding>,
+    Vec<crate::observation::DialogRegistration>,
+    Vec<crate::observation::DialogAction>,
+);
 
 /// Pane content inside [`Frame::dock`]. Implement it on a narrow read view
 /// (borrowed fields the panes need), not on the application: a pane receives
@@ -963,6 +1023,12 @@ pub struct AppHost<A: Application> {
     /// Whether sent intents changed state outside a pass that presented it,
     /// as while the viewport is hidden.
     unpresented: bool,
+    /// The modal dialog the latest pass presented, and focus around it.
+    modal: modal::Modal,
+    /// The actions, with their panes, that the latest pass presented without
+    /// an argument inside a modal dialog, including controls scrolled out of
+    /// its view.
+    dialog_actions: Vec<crate::observation::DialogAction>,
     /// Whether the first complete pass was reported to the startup loader.
     #[cfg(target_arch = "wasm32")]
     startup_reported: bool,
@@ -991,6 +1057,7 @@ impl<A: Application> AppHost<A> {
     /// [`Application::report_error`].
     pub fn new(context: &egui::Context, app: A) -> Self {
         crate::observation::enable(context);
+        modal::install(context);
         let identity = app.identity();
         let preferences = app.preferences();
         let theme = app.theme();
@@ -1021,6 +1088,8 @@ impl<A: Application> AppHost<A> {
             sent: Default::default(),
             sent_applied: 0,
             unpresented: false,
+            modal: modal::Modal::default(),
+            dialog_actions: Vec::new(),
             #[cfg(target_arch = "wasm32")]
             startup_reported: false,
         };
@@ -1191,6 +1260,8 @@ impl<A: Application> AppHost<A> {
         // This pass presents everything applied so far.
         self.unpresented = false;
         self.count_tab_presses(&context);
+        // A dialog keeps focus, and assistive technology's requests, to itself.
+        self.modal.begin(root);
         let preferences = self.app.preferences();
         let theme = self.app.theme();
         if preferences != self.preferences || theme != self.theme {
@@ -1252,7 +1323,15 @@ impl<A: Application> AppHost<A> {
             });
         }
         self.passes += 1;
-        (self.snapshot, self.text_fields, self.copies) = self.collect(root.ctx(), root_rect);
+        let dialogs;
+        (
+            self.snapshot,
+            self.text_fields,
+            self.copies,
+            dialogs,
+            self.dialog_actions,
+        ) = self.collect(root.ctx(), root_rect);
+        self.modal.end(&context, &dialogs, &mut self.repaint);
         self.fields_stale = false;
         self.publish(&context);
         self.app.completed(
@@ -1349,6 +1428,23 @@ impl<A: Application> AppHost<A> {
         });
     }
 
+    /// Whether the latest pass presented a control for `target` that takes
+    /// no argument.
+    fn presents(&self, target: ActionTarget<A::Action>) -> bool {
+        self.snapshot.by_action(target.action).any(|node| {
+            node.argument.is_none() && (target.pane.is_none() || node.pane == target.pane)
+        }) || self.dialog_presents(target)
+    }
+
+    /// Whether the latest pass presented `target` inside a modal dialog,
+    /// shown or scrolled out of its view.
+    fn dialog_presents(&self, target: ActionTarget<A::Action>) -> bool {
+        let action = target.action.stable_id();
+        self.dialog_actions
+            .iter()
+            .any(|(id, pane)| id == action && (target.pane.is_none() || *pane == target.pane))
+    }
+
     /// Whether the latest pass observed a focused node with one of `roles`.
     fn observed_focus(&self, roles: &[UiRole]) -> bool {
         self.snapshot
@@ -1387,6 +1483,10 @@ impl<A: Application> AppHost<A> {
                         ActionTarget::pane(action, active_pane?)
                     }
                 };
+                // Behind a modal dialog, only what it presents has shortcuts.
+                if self.modal.presented() && !self.presents(target) {
+                    return None;
+                }
                 Some((shortcut, target))
             })
             .collect();
@@ -1705,6 +1805,15 @@ impl<A: Application> AppHost<A> {
     fn bindings(&self) -> Vec<InspectionBinding<A::Action>> {
         let mut bindings = Vec::new();
         let mut presented = Vec::new();
+        // While a modal dialog is presented, the snapshot holds only it and
+        // its content; every action it does not present is refused.
+        let modal = self
+            .snapshot
+            .nodes
+            .iter()
+            .rev()
+            .find(|node| matches!(node.role, UiRole::Dialog | UiRole::AlertDialog))
+            .map(|node| format!("The dialog \"{}\" is open", node.name));
         for &action in A::Action::ALL {
             let contract = action.argument();
             // Each rendered control with the argument it carries, checked
@@ -1792,6 +1901,17 @@ impl<A: Application> AppHost<A> {
                         ActionArgument::None,
                     ),
                 };
+                // A control the dialog scrolled out of view is still its own.
+                let availability = match (&modal, node) {
+                    (Some(reason), None)
+                        if availability.visible() && !self.dialog_presents(target) =>
+                    {
+                        Availability::Disabled {
+                            reason: reason.clone().into(),
+                        }
+                    }
+                    _ => availability,
+                };
                 let mut binding = InspectionBinding::new(target, availability, semantic, meaning)
                     .with_argument(argument);
                 // A pane target belongs to its pane unless its control names a
@@ -1819,16 +1939,56 @@ impl<A: Application> AppHost<A> {
         bindings
     }
 
-    fn collect(
-        &self,
-        context: &egui::Context,
-        root_rect: Rect,
-    ) -> (
-        UiSnapshot,
-        Vec<(TextFieldBinding, String)>,
-        Vec<CopyBinding>,
-    ) {
-        let observed = crate::observation::take(context);
+    fn collect(&self, context: &egui::Context, root_rect: Rect) -> Collected {
+        let mut observed = crate::observation::take(context);
+        let mut dialog_actions = std::mem::take(&mut observed.dialog_actions);
+        // While a modal dialog is presented, it and what it presents are all
+        // that can be observed: nothing behind it is published or bound.
+        if !observed.dialogs.is_empty() {
+            observed.nodes.retain(|observed| observed.in_dialog);
+            observed.text.retain(|observed| observed.in_dialog);
+            observed.copies.retain(|(_, in_dialog)| *in_dialog);
+            // What the dialog presents without an argument, as `presents`
+            // counts it: the recipes' actions, recorded even where scrolled
+            // out of view, and the application's own nodes, before those
+            // clipped away are dropped below.
+            for observed in &observed.nodes {
+                if observed.node.argument.is_some() {
+                    continue;
+                }
+                for action in &observed.node.actions {
+                    let entry = (action.0.clone(), observed.node.pane);
+                    if !dialog_actions.contains(&entry) {
+                        dialog_actions.push(entry);
+                    }
+                }
+            }
+            // A dialog presented from within a region, such as a pane, sits
+            // above everything: a parent left behind it becomes the root.
+            let kept: std::collections::BTreeSet<SemanticUiId> = observed
+                .nodes
+                .iter()
+                .map(|observed| observed.node.id.clone())
+                .collect();
+            for observed in &mut observed.nodes {
+                if observed
+                    .node
+                    .parent
+                    .as_ref()
+                    .is_some_and(|parent| *parent != SemanticUiId::root() && !kept.contains(parent))
+                {
+                    observed.node.parent = Some(SemanticUiId::root());
+                }
+            }
+        }
+        let dialogs = observed.dialogs;
+        // A modal dialog covers the screen, and so the application does while
+        // one is presented.
+        let root_rect = if dialogs.is_empty() {
+            root_rect
+        } else {
+            root_rect.union(context.content_rect())
+        };
         let mut root_node = UiNode::container(
             SemanticUiId::root(),
             None,
@@ -1840,7 +2000,13 @@ impl<A: Application> AppHost<A> {
         let mut published = BTreeMap::from([(SemanticUiId::root(), (0, Origin::Application))]);
         let mut duplicates = Vec::new();
         let mut non_finite = Vec::new();
-        for (mut node, visibility, origin) in observed.nodes {
+        for crate::observation::ObservedNode {
+            mut node,
+            visibility,
+            origin,
+            ..
+        } in observed.nodes
+        {
             let rect = Rect::from(node.rect);
             // Non-finite geometry would make the whole publication invalid, so
             // report it as an audit finding instead of publishing the node.
@@ -1878,7 +2044,10 @@ impl<A: Application> AppHost<A> {
             }
         }
         let text_fields = pair_text_fields(context, &mut nodes);
-        let copies = copy_bindings(&nodes, observed.copies);
+        let copies = copy_bindings(
+            &nodes,
+            observed.copies.into_iter().map(|(copy, _)| copy).collect(),
+        );
         // Visible-only surfaces scroll, so they submit partially visible text.
         // Audit their measured successes only when complete; keep every failed
         // attempt and all other text as presented. Reading text and links
@@ -1887,6 +2056,7 @@ impl<A: Application> AppHost<A> {
         let text: Vec<_> = observed
             .text
             .into_iter()
+            .map(|observed| (observed.text, observed.visible_only))
             .filter(|(text, visible_only)| {
                 !visible_only
                     || text.layout_error.is_some()
@@ -1919,7 +2089,7 @@ impl<A: Application> AppHost<A> {
                         .map(|id| SemanticAuditFinding::InvalidRect { id }),
                 ),
         );
-        (snapshot, text_fields, copies)
+        (snapshot, text_fields, copies, dialogs, dialog_actions)
     }
 
     fn publish(&self, context: &egui::Context) {
@@ -2103,6 +2273,10 @@ mod composer_tests;
 mod content_tests;
 #[cfg(test)]
 mod copy_tests;
+#[cfg(test)]
+mod dialog_navigation_tests;
+#[cfg(test)]
+mod dialog_tests;
 #[cfg(test)]
 mod link_tests;
 #[cfg(test)]

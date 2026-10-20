@@ -7,6 +7,7 @@ use egui::{Response, Ui};
 mod chat;
 mod composer;
 mod copy;
+mod dialog;
 mod navigation;
 
 pub use chat::{
@@ -18,6 +19,10 @@ pub use composer::{
     ComposerSpec,
 };
 pub use copy::{COPY_CONFIRMATION, COPY_FAILURE, CopyContent, CopyResponse, CopySpec};
+pub use dialog::{
+    CONFIRM_WIDTH, ConfirmResponse, ConfirmSpec, DIALOG_WIDTH, DialogLayout, DialogPlacement,
+    DialogResponse, DialogSpec, SheetHeight,
+};
 pub use navigation::{
     NavigationContent, NavigationControlResponse, NavigationDetail, NavigationLayout,
     NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
@@ -196,6 +201,13 @@ impl PresentationContext {
         }
         self.semantic_nodes.push(node);
         self.node_clips.push(ui.clip_rect());
+    }
+
+    /// The semantic parent of the nodes this context presents, such as the
+    /// dialog whose content it presents. Give an application's own nodes,
+    /// such as a text field's, this parent.
+    pub fn parent(&self) -> &SemanticUiId {
+        &self.parent
     }
 
     /// The pane this context's nodes are associated with, if any.
@@ -452,6 +464,15 @@ impl PresentationContext {
         );
         if let Some(name) = name {
             node.name = name.to_owned();
+        }
+        // A modal dialog's action stays its own while its control is
+        // scrolled out of view and publishes no node.
+        if argument.is_none() {
+            crate::observation::record_dialog_action(
+                ui.ctx(),
+                target.action.stable_id(),
+                node.pane.or(self.pane),
+            );
         }
         node.argument = argument;
         if self.domain_reference.is_some() {

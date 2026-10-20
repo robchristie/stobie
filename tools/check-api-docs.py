@@ -19,7 +19,7 @@ CRATES = (
     "stobie-ui-egui",
 )
 EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["stobie-ui-egui"] = 13  # Composition, derived actions, icon toolbar, navigation, status-chip, reading-text, Markdown, local-time, row-action, avatar, message-bubble, copy and responsive-navigation consumers.
+EXPECTED_EXAMPLES["stobie-ui-egui"] = 14  # Composition, derived actions, icon toolbar, navigation, status-chip, reading-text, Markdown, local-time, row-action, avatar, message-bubble, copy, responsive-navigation and dialog consumers.
 EXPECTED_EXAMPLES["stobie-core"] = 3  # Generic undo history, workspace commands and a small layout.
 EXPECTED_EXAMPLES["stobie-imaging"] = 1  # Image command history.
 SOURCE_CONSUMERS = (
@@ -39,6 +39,7 @@ SOURCE_CONSUMERS = (
     "crates/stobie-ui-egui/src/components/avatar.rs",
     "crates/stobie-ui-egui/src/presentation/copy.rs",
     "crates/stobie-ui-egui/src/presentation/navigation.rs",
+    "crates/stobie-ui-egui/src/presentation/dialog.rs",
 )
 MARKDOWN_CONSUMERS = (
     "README.md",

@@ -74,6 +74,8 @@ pub fn expected_aria_role(role: UiRole) -> Option<&'static str> {
         UiRole::Status => "status",
         UiRole::Link => "link",
         UiRole::Switch => "switch",
+        UiRole::Dialog => "dialog",
+        UiRole::AlertDialog => "alertdialog",
         UiRole::Application
         | UiRole::ApplicationBar
         | UiRole::Toolbar

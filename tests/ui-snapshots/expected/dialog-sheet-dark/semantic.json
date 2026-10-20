@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.routine.name",
+      "parent": "presentation.513b7c3f8200089e",
+      "role": "text_input",
+      "name": "Name",
+      "rect": {
+        "min_x": 453,
+        "min_y": 355,
+        "max_x": 987,
+        "max_y": 376.25
+      },
+      "enabled": true,
+      "focused": true,
+      "selected": false,
+      "actions": [],
+      "value": "Morning briefing"
+    },
+    {
+      "id": "gallery.routine.prompt",
+      "parent": "presentation.513b7c3f8200089e",
+      "role": "multiline_text_input",
+      "name": "Prompt",
+      "rect": {
+        "min_x": 453,
+        "min_y": 407.25,
+        "max_x": 987,
+        "max_y": 463
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "Summarise the weather, my calendar and the overnight news."
+    },
+    {
+      "id": "presentation.49e6ab92b79afea9",
+      "parent": "presentation.513b7c3f8200089e",
+      "role": "button",
+      "name": "Close",
+      "description": "Close the editor without saving",
+      "rect": {
+        "min_x": 955,
+        "min_y": 297,
+        "max_x": 987,
+        "max_y": 329
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.routine.close"
+      ]
+    },
+    {
+      "id": "presentation.513b7c3f8200089e",
+      "parent": "application",
+      "role": "dialog",
+      "name": "Edit routine",
+      "rect": {
+        "min_x": 440,
+        "min_y": 284,
+        "max_x": 1000,
+        "max_y": 615.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.5d4e22f273a512e9",
+      "parent": "presentation.513b7c3f8200089e",
+      "role": "button",
+      "name": "Save",
+      "description": "Save the routine and close the editor",
+      "rect": {
+        "min_x": 453,
+        "min_y": 570,
+        "max_x": 496.71875,
+        "max_y": 602
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.routine.save"
+      ]
+    },
+    {
+      "id": "presentation.c1c3dd7a85ff2433",
+      "parent": "presentation.513b7c3f8200089e",
+      "role": "switch",
+      "name": "Send a notification",
+      "description": "Send a notification when the routine runs",
+      "rect": {
+        "min_x": 453,
+        "min_y": 521,
+        "max_x": 987,
+        "max_y": 553
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.notify"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

@@ -183,6 +183,12 @@ snapshot, is the source.
 - **Shortcuts.** An action button's registered shortcut is its
   `aria-keyshortcuts`. In the browser a Cmd shortcut lists both forms, such
   as `Control+S Meta+S`; native AccessKit gives the platform's form.
+- **Dialogs.** While a modal dialog is presented, the host marks every
+  other top-level layer of the AccessKit tree hidden, so the layer omits
+  everything behind it and holds only the dialog. AccessKit requests aimed
+  at hidden nodes are dropped before the pass sees them. The
+  [interactions guide](interactions.md#dialogs) describes the keyboard and
+  agent rules.
 - **Limits.** The layer is positioned from the canvas's client rectangle on
   each pass. A page that scrolls, or transforms an ancestor, without a pass
   leaves it misaligned until the next pass. It is not a substitute for a text
@@ -208,6 +214,8 @@ snapshot, is the source.
 | `Status` | `Status`, live polite | `status`, a polite live region. A readout that follows the pointer declares live off (`aria-live="off"`) |
 | `StatusChip` | `Label` | Text; never a live region |
 | `Link` | `Link` with its URL | `link`, a hit target while enabled |
+| `Dialog` | `Dialog`, modal, named by its title | `dialog` with `aria-modal="true"`; while it is presented, the layer holds only it |
+| `AlertDialog` | `AlertDialog`, modal, named by its title and described by its message | `alertdialog` with `aria-modal="true"` and its message in `aria-description` |
 | `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender | `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |

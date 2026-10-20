@@ -200,6 +200,14 @@ control is `unavailable`, and a hidden one has no capability. The
 [interactions guide](ui-guides/interactions.md#copying-to-the-clipboard)
 describes each route.
 
+While a modal dialog is presented, the UI snapshot holds the root, the
+dialog and what it presents, and only its controls and the actions it
+presents are enabled. Discovery reports every other action `disabled` with the reason
+`The dialog "<title>" is open`, and invoking one is rejected as
+`unavailable`; close the dialog, through its dismiss action or its own
+controls, first. The
+[interactions guide](ui-guides/interactions.md#dialogs) describes the rule.
+
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
 observation; an intervening publication can return `stale_cursor`. Start a new

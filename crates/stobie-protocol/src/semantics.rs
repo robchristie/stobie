@@ -146,6 +146,14 @@ pub enum UiRole {
     /// An on or off setting, named by its label, whose state is `checked`.
     /// Activating it performs its action, which turns the setting over.
     Switch,
+    /// A modal dialog or sheet, named by its title. While one is presented,
+    /// it and its content are all that is observed below the root, and only
+    /// what it presents can be invoked.
+    Dialog,
+    /// A modal dialog that asks the user to confirm or cancel an action,
+    /// named by its title and described by its message. It is modal as
+    /// [`Self::Dialog`] is.
+    AlertDialog,
 }
 
 /// The domain identity a semantic node presents, published to agents as

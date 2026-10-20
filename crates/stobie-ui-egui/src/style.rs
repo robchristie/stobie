@@ -73,11 +73,15 @@ pub fn apply_design_system_with_theme(
             tokens.geometry.control_padding_y.0,
         );
         style.spacing.interact_size.y = tokens.geometry.control_height.0 * preferences.font_scale;
-        style.animation_time = if matches!(preferences.motion, MotionPreference::Reduced) {
+        let reduced = matches!(preferences.motion, MotionPreference::Reduced);
+        style.animation_time = if reduced {
             0.0
         } else {
             tokens.motion.quick.0 as f32 / 1_000.0
         };
+        // A blinking caret is motion too: reduced, it holds steady at the
+        // same insertion point.
+        style.visuals.text_cursor.blink = !reduced;
         context.set_style_of(theme, style);
     }
 }
@@ -172,6 +176,28 @@ mod tests {
         assert_eq!(first.text_styles, second.text_styles);
         assert_eq!(second.spacing.interact_size.y, 30.0);
         assert_eq!(context.theme(), Theme::Light);
+    }
+
+    #[test]
+    fn reduced_motion_removes_animation_and_steadies_the_caret() {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        apply_design_system(&context, UiPreferences::default());
+        for theme in [Theme::Light, Theme::Dark] {
+            let style = context.style_of(theme);
+            assert!(style.animation_time > 0.0, "{theme:?}");
+            assert!(style.visuals.text_cursor.blink, "{theme:?}");
+        }
+        let reduced = UiPreferences {
+            motion: MotionPreference::Reduced,
+            ..UiPreferences::default()
+        };
+        apply_design_system(&context, reduced);
+        for theme in [Theme::Light, Theme::Dark] {
+            let style = context.style_of(theme);
+            assert_eq!(style.animation_time, 0.0, "{theme:?}");
+            assert!(!style.visuals.text_cursor.blink, "{theme:?}");
+        }
     }
 
     #[test]

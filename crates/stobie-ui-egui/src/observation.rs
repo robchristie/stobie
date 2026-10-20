@@ -11,6 +11,10 @@
 //! report content that is clipped or overflows. Content presented inside
 //! [`observe_visible_only`], which the host applies to each dock pane, is
 //! published only where it is visible.
+//!
+//! Content presented inside a modal dialog is marked as such. While a dialog
+//! is presented, the host publishes only the dialog and what it presents, so
+//! nothing behind it can be observed or invoked.
 
 use egui::{Context, Id, Rect, Ui, ViewportId};
 
@@ -42,9 +46,47 @@ struct Collector {
     pass: u64,
     /// Depth of nested [`observe_visible_only`] regions being presented.
     visible_only: u32,
-    nodes: Vec<(UiNode, Visibility, Origin)>,
-    text: Vec<(TextLayoutObservation, bool)>,
-    copies: Vec<CopyRegistration>,
+    /// Depth of nested modal dialogs being presented.
+    dialog: u32,
+    nodes: Vec<ObservedNode>,
+    text: Vec<ObservedText>,
+    copies: Vec<(CopyRegistration, bool)>,
+    dialogs: Vec<DialogRegistration>,
+    dialog_actions: Vec<DialogAction>,
+}
+
+/// An action a modal dialog presents without an argument, with its pane:
+/// its control may be scrolled out of the dialog's view, and so publish no
+/// node, but it is still the dialog's.
+pub(crate) type DialogAction = (String, Option<stobie_core::PaneId>);
+
+/// One node registered in a pass.
+#[derive(Clone, Debug)]
+pub(crate) struct ObservedNode {
+    pub node: UiNode,
+    pub visibility: Visibility,
+    pub origin: Origin,
+    /// Whether it was presented inside a modal dialog.
+    pub in_dialog: bool,
+}
+
+/// Measured text registered in a pass.
+#[derive(Clone, Debug)]
+pub(crate) struct ObservedText {
+    pub text: TextLayoutObservation,
+    /// Whether only its fully visible successes are audited.
+    pub visible_only: bool,
+    /// Whether it was presented inside a modal dialog.
+    pub in_dialog: bool,
+}
+
+/// A modal dialog presented this pass: its semantic node's ID, the egui
+/// layer it is drawn on and the widget that carries its AccessKit node.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DialogRegistration {
+    pub id: crate::SemanticUiId,
+    pub layer: egui::LayerId,
+    pub widget: Id,
 }
 
 /// A copy control presented this pass: its semantic node's ID, its egui
@@ -60,11 +102,15 @@ pub(crate) struct CopyRegistration {
 /// Observations registered during one UI pass.
 #[derive(Default)]
 pub(crate) struct PassObservations {
-    pub nodes: Vec<(UiNode, Visibility, Origin)>,
-    /// Text, and whether only its fully visible successes are audited.
-    pub text: Vec<(TextLayoutObservation, bool)>,
-    /// Copy controls, bound only where their nodes are published.
-    pub copies: Vec<CopyRegistration>,
+    pub nodes: Vec<ObservedNode>,
+    pub text: Vec<ObservedText>,
+    /// Copy controls, bound only where their nodes are published, and
+    /// whether each was presented inside a modal dialog.
+    pub copies: Vec<(CopyRegistration, bool)>,
+    /// Modal dialogs presented this pass, outermost first.
+    pub dialogs: Vec<DialogRegistration>,
+    /// The actions presented inside them, shown or scrolled out of view.
+    pub dialog_actions: Vec<DialogAction>,
 }
 
 fn collector_id(viewport: ViewportId) -> Id {
@@ -122,6 +168,38 @@ pub fn observe_visible_only<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -
     context.data_mut(|data| data.get_temp_mut_or_default::<Collector>(id).visible_only += 1);
     let _region = Region(context, id);
     add_contents(ui)
+}
+
+/// Present `add_contents` as the content of the modal dialog `dialog`:
+/// everything it observes is marked as inside the dialog.
+pub(crate) fn within_dialog<R>(
+    context: &Context,
+    dialog: DialogRegistration,
+    add_contents: impl FnOnce() -> R,
+) -> R {
+    struct Region(Context, Id);
+    impl Drop for Region {
+        fn drop(&mut self) {
+            self.0.data_mut(|data| {
+                let collector = data.get_temp_mut_or_default::<Collector>(self.1);
+                collector.dialog = collector.dialog.saturating_sub(1);
+            });
+        }
+    }
+    let viewport = context.viewport_id();
+    let pass = context.cumulative_pass_nr();
+    // Start this pass's collection first, so the registration survives it.
+    record_with_origin(context, viewport, pass, [], []);
+    let id = collector_id(viewport);
+    context.data_mut(|data| {
+        let collector = data.get_temp_mut_or_default::<Collector>(id);
+        collector.dialog += 1;
+        if collector.enabled && collector.pass == pass {
+            collector.dialogs.push(dialog);
+        }
+    });
+    let _region = Region(context.clone(), id);
+    add_contents()
 }
 
 fn withheld_id(viewport: ViewportId) -> Id {
@@ -193,9 +271,27 @@ fn record_with_origin(
             collector.nodes.clear();
             collector.text.clear();
             collector.copies.clear();
+            collector.dialogs.clear();
+            collector.dialog_actions.clear();
         }
-        collector.nodes.extend(nodes);
-        collector.text.extend(text);
+        let in_dialog = collector.dialog > 0;
+        collector.nodes.extend(
+            nodes
+                .into_iter()
+                .map(|(node, visibility, origin)| ObservedNode {
+                    node,
+                    visibility,
+                    origin,
+                    in_dialog,
+                }),
+        );
+        collector
+            .text
+            .extend(text.into_iter().map(|(text, visible_only)| ObservedText {
+                text,
+                visible_only,
+                in_dialog,
+            }));
     });
 }
 
@@ -207,7 +303,29 @@ pub(crate) fn record_copy(context: &Context, copy: CopyRegistration) {
     context.data_mut(|data| {
         let collector = data.get_temp_mut_or_default::<Collector>(collector_id(viewport));
         if collector.enabled && collector.pass == pass {
-            collector.copies.push(copy);
+            let in_dialog = collector.dialog > 0;
+            collector.copies.push((copy, in_dialog));
+        }
+    });
+}
+
+/// Register an action presented now without an argument, if inside a modal
+/// dialog, whether or not its control is in view.
+pub(crate) fn record_dialog_action(
+    context: &Context,
+    action: &str,
+    pane: Option<stobie_core::PaneId>,
+) {
+    let viewport = context.viewport_id();
+    let pass = context.cumulative_pass_nr();
+    record_with_origin(context, viewport, pass, [], []);
+    context.data_mut(|data| {
+        let collector = data.get_temp_mut_or_default::<Collector>(collector_id(viewport));
+        if collector.enabled && collector.pass == pass && collector.dialog > 0 {
+            let entry = (action.to_owned(), pane);
+            if !collector.dialog_actions.contains(&entry) {
+                collector.dialog_actions.push(entry);
+            }
         }
     });
 }
@@ -223,12 +341,16 @@ pub(crate) fn take(context: &Context) -> PassObservations {
             collector.nodes.clear();
             collector.text.clear();
             collector.copies.clear();
+            collector.dialogs.clear();
+            collector.dialog_actions.clear();
             return PassObservations::default();
         }
         PassObservations {
             nodes: std::mem::take(&mut collector.nodes),
             text: std::mem::take(&mut collector.text),
             copies: std::mem::take(&mut collector.copies),
+            dialogs: std::mem::take(&mut collector.dialogs),
+            dialog_actions: std::mem::take(&mut collector.dialog_actions),
         }
     })
 }
@@ -306,10 +428,69 @@ mod tests {
             let ids: Vec<_> = taken
                 .nodes
                 .iter()
-                .map(|(node, _, _)| node.id.0.as_str())
+                .map(|observed| observed.node.id.0.as_str())
                 .collect();
             assert_eq!(ids, ["second-pass"]);
             assert!(take(ui.ctx()).nodes.is_empty());
+        });
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn observations_inside_a_dialog_region_are_marked_and_the_dialog_registered() {
+        let context = Context::default();
+        let mut output = context.run_ui(Default::default(), |ui| {
+            enable(ui.ctx());
+            observe_node(ui, node("behind"));
+            let dialog = DialogRegistration {
+                id: SemanticUiId::new("dialog"),
+                layer: ui.layer_id(),
+                widget: ui.id(),
+            };
+            within_dialog(ui.ctx(), dialog, || {
+                observe_node(ui, node("inside"));
+                within_dialog(
+                    ui.ctx(),
+                    DialogRegistration {
+                        id: SemanticUiId::new("nested"),
+                        layer: ui.layer_id(),
+                        widget: ui.id(),
+                    },
+                    || observe_node(ui, node("nested")),
+                );
+                observe_node(ui, node("still-inside"));
+            });
+            observe_node(ui, node("after"));
+            let taken = take(ui.ctx());
+            let nodes: Vec<_> = taken
+                .nodes
+                .iter()
+                .map(|observed| (observed.node.id.0.as_str(), observed.in_dialog))
+                .collect();
+            assert_eq!(
+                nodes,
+                [
+                    ("behind", false),
+                    ("inside", true),
+                    ("nested", true),
+                    ("still-inside", true),
+                    ("after", false),
+                ]
+            );
+            let dialogs: Vec<_> = taken
+                .dialogs
+                .iter()
+                .map(|dialog| dialog.id.0.as_str())
+                .collect();
+            assert_eq!(dialogs, ["dialog", "nested"]);
+        });
+        output.textures_delta.clear();
+        // A pass without a dialog registers none.
+        let mut output = context.run_ui(Default::default(), |ui| {
+            observe_node(ui, node("plain"));
+            let taken = take(ui.ctx());
+            assert!(taken.dialogs.is_empty());
+            assert!(taken.nodes.iter().all(|observed| !observed.in_dialog));
         });
         output.textures_delta.clear();
     }
@@ -357,7 +538,7 @@ mod tests {
             let nodes: Vec<_> = taken
                 .nodes
                 .iter()
-                .map(|(node, visibility, _)| (node.id.0.as_str(), *visibility))
+                .map(|observed| (observed.node.id.0.as_str(), observed.visibility))
                 .collect();
             assert_eq!(
                 nodes,
@@ -371,7 +552,7 @@ mod tests {
             let text: Vec<_> = taken
                 .text
                 .iter()
-                .map(|(text, visible_only)| (text.component_id.instance, *visible_only))
+                .map(|observed| (observed.text.component_id.instance, observed.visible_only))
                 .collect();
             assert_eq!(text, [(1, false), (2, true)]);
         });

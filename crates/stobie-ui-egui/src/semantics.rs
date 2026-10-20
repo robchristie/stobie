@@ -58,6 +58,10 @@ pub enum AccessKitMismatch {
     Url {
         id: SemanticUiId,
     },
+    /// A dialog is not marked modal for assistive technology.
+    Modal {
+        id: SemanticUiId,
+    },
 }
 
 /// Compare the common semantics for Stobie-owned custom controls. Snapshot
@@ -104,6 +108,8 @@ pub fn audit_accesskit(
                 | UiRole::Pane
                 | UiRole::Link
                 | UiRole::Switch
+                | UiRole::Dialog
+                | UiRole::AlertDialog
         )
     }) {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
@@ -150,6 +156,8 @@ pub fn audit_accesskit(
             UiRole::Pane => egui::accesskit::Role::Region,
             UiRole::Link => egui::accesskit::Role::Link,
             UiRole::Switch => egui::accesskit::Role::Switch,
+            UiRole::Dialog => egui::accesskit::Role::Dialog,
+            UiRole::AlertDialog => egui::accesskit::Role::AlertDialog,
             _ => unreachable!(),
         };
         if node.role() != expected_role {
@@ -265,6 +273,11 @@ pub fn audit_accesskit(
                 && supports_click)
         {
             findings.push(AccessKitMismatch::ClickAction {
+                id: semantic.id.clone(),
+            });
+        }
+        if matches!(semantic.role, UiRole::Dialog | UiRole::AlertDialog) != node.is_modal() {
+            findings.push(AccessKitMismatch::Modal {
                 id: semantic.id.clone(),
             });
         }

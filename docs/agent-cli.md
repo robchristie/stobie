@@ -144,7 +144,10 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   [content text](application-interface.md#content-text).
 - `query` and `discover` list nodes or capabilities with `--limit` and
   `--cursor`. `discover` shows each capability's availability, argument
-  contract and shortcut, and what a value-taking capability expects.
+  contract and shortcut, and what a value-taking capability expects. While
+  a modal dialog is open, every action it does not present is disabled with
+  the reason `The dialog "<title>" is open` (see
+  [dialogs](ui-guides/interactions.md#dialogs)).
 - `invoke CAPABILITY [--value VALUE]` discovers one target, checks the value
   against its contract (text, `true`/`false`, a number or a choice ID or label; or
   `--value-json`), sends the mutation once, waits for its receipt and then for
