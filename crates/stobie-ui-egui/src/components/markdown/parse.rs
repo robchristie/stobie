@@ -69,21 +69,19 @@ impl Inline {
         inline
     }
 
-    /// Each link's character range in the text, in order of appearance.
-    pub fn link_chars(&self) -> Vec<(usize, Range<usize>)> {
+    /// Each link's byte range in the text, in order of appearance.
+    pub fn link_bytes(&self) -> Vec<(usize, Range<usize>)> {
         let mut links: Vec<(usize, Range<usize>)> = Vec::new();
-        let mut chars = 0;
         for run in &self.runs {
-            let count = self.text[run.bytes.clone()].chars().count();
-            if let Some(link) = run.link {
-                match links.last_mut() {
-                    Some((last, range)) if *last == link && range.end == chars => {
-                        range.end = chars + count;
-                    }
-                    _ => links.push((link, chars..chars + count)),
+            let Some(link) = run.link else {
+                continue;
+            };
+            match links.last_mut() {
+                Some((last, range)) if *last == link && range.end == run.bytes.start => {
+                    range.end = run.bytes.end;
                 }
+                _ => links.push((link, run.bytes.clone())),
             }
-            chars += count;
         }
         links
     }
@@ -431,17 +429,9 @@ mod tests {
         );
         assert_eq!(
             inline
-                .link_chars()
+                .link_bytes()
                 .iter()
-                .map(|(link, chars)| (
-                    *link,
-                    inline
-                        .text
-                        .chars()
-                        .skip(chars.start)
-                        .take(chars.len())
-                        .collect::<String>()
-                ))
+                .map(|(link, bytes)| (*link, inline.text[bytes.clone()].to_owned()))
                 .collect::<Vec<_>>(),
             [
                 (0, "link".to_owned()),

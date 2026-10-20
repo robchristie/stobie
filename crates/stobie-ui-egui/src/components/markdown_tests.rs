@@ -37,8 +37,7 @@ and <https://example.org/b> and <someone@example.org>.\n\n\
 ---\n\n\
 After the rule.";
 
-/// A digest of ten linked titles, each with a note, as a research Bot
-/// writes it.
+/// A digest of ten linked titles, each with a note.
 fn digest() -> String {
     let mut source = String::from("## Morning digest\n\nTen items today, **top pick first**.\n\n");
     for item in 1..=10 {
@@ -817,4 +816,34 @@ fn the_text_audit_still_catches_markdown_text_outside_its_allocation() {
             .iter()
             .any(|finding| matches!(finding, TextAuditFinding::TextOutsideAllocation { .. }))
     );
+}
+
+#[test]
+fn links_after_and_inside_non_ascii_text_keep_their_hit_area_and_label() {
+    const SOURCE: &str =
+        "Größere Schrift 👩‍💻 é: [Bericht über Größen](https://example.org/de) danach.";
+    let presented = present(SOURCE, DESKTOP, 1.0);
+    let links = presented.links();
+    assert_eq!(links[0].name, "Bericht über Größen");
+    let (mut harness, rects, opened) = link_harness(SOURCE, DESKTOP, true, MarkdownSpec::default());
+    let link = rects[0];
+    // The hit area covers the label, measured from the galley, not the text before it.
+    let words_before = present("Größere Schrift 👩‍💻 é: ", DESKTOP, 1.0)
+        .kind(TextComponentKind::ReadingText)[0]
+        .painted_rect;
+    assert!(
+        link.left() >= words_before.max_x - 1.0,
+        "{link:?} {words_before:?}"
+    );
+    click(&mut harness, link.center(), egui::PointerButton::Primary);
+    assert_eq!(
+        take(&opened),
+        [egui::OpenUrl::new_tab("https://example.org/de")]
+    );
+    click(
+        &mut harness,
+        egui::pos2(link.right() + 12.0, link.center().y),
+        egui::PointerButton::Primary,
+    );
+    assert!(take(&opened).is_empty());
 }

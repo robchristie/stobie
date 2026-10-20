@@ -67,7 +67,7 @@ accepted two-pass critique, with at most one refinement.
 
 | Increment | Status | Evidence |
 | --- | --- | --- |
-| Parser, recipe, scoped API and open-link through hosts | Complete | 4 parser, 14 recipe, 1 host and 2 Gallery regressions |
+| Parser, recipe, scoped API and open-link through hosts | Complete | 4 parser, 15 recipe, 1 host and 2 Gallery regressions |
 | Gallery, documentation and physical evidence | Complete | [UI evidence](../markdown-evidence.md), two inspected baselines, browser journeys on WebGPU and WebGL2, size measurement |
 | Candidate qualification | Complete | `cargo xtask verify` on the candidate; review, CI and merge retained in the PR |
 

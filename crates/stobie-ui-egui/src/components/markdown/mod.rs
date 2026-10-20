@@ -74,7 +74,7 @@ struct TextPiece {
     job: LayoutJob,
     /// The document link each section of `job` belongs to.
     section_links: Vec<Option<usize>>,
-    /// Each link in the text, by character range.
+    /// Each link in the text, by byte range.
     links: Vec<(usize, Range<usize>)>,
     measured: MeasuredText,
     heading: Option<u8>,
@@ -85,7 +85,7 @@ struct Styled {
     job: LayoutJob,
     /// The document link each section of `job` belongs to.
     section_links: Vec<Option<usize>>,
-    /// Each link in the text, by character range.
+    /// Each link in the text, by byte range.
     links: Vec<(usize, Range<usize>)>,
     heading: Option<u8>,
 }
@@ -273,7 +273,7 @@ impl Layout<'_> {
         let styled = Styled {
             job,
             section_links,
-            links: inline.link_chars(),
+            links: inline.link_bytes(),
             heading,
         };
         self.text(path, x, width, role, styled);
@@ -477,7 +477,9 @@ impl Layout<'_> {
 }
 
 /// Each link's fragments in a galley positioned at `origin`: one rectangle
-/// per row the link's text occupies, without trailing spaces.
+/// per row the link's text occupies, without trailing spaces. `links` are
+/// byte ranges of the galley's text; each glyph lays out one character, and
+/// a row ending in a newline omits it.
 fn link_fragments(
     galley: &Galley,
     origin: Pos2,
@@ -485,15 +487,17 @@ fn link_fragments(
 ) -> Vec<(usize, Vec<Rect>)> {
     let mut fragments: Vec<(usize, Vec<Rect>)> =
         links.iter().map(|(link, _)| (*link, Vec::new())).collect();
-    let mut char_index = 0;
+    let mut row_start = 0;
     for row in &galley.rows {
         for (slot, (_, range)) in links.iter().enumerate() {
             let mut span: Option<(f32, f32)> = None;
-            for (offset, glyph) in row.glyphs.iter().enumerate() {
-                if range.contains(&(char_index + offset)) && !glyph.chr.is_whitespace() {
+            let mut byte = row_start;
+            for glyph in &row.glyphs {
+                if range.contains(&byte) && !glyph.chr.is_whitespace() {
                     let (left, right) = span.unwrap_or((glyph.pos.x, glyph.max_x()));
                     span = Some((left.min(glyph.pos.x), right.max(glyph.max_x())));
                 }
+                byte += glyph.chr.len_utf8();
             }
             if let Some((left, right)) = span {
                 let top = origin.y + row.pos.y;
@@ -503,7 +507,12 @@ fn link_fragments(
                 ));
             }
         }
-        char_index += row.glyphs.len() + usize::from(row.ends_with_newline);
+        row_start += row
+            .glyphs
+            .iter()
+            .map(|glyph| glyph.chr.len_utf8())
+            .sum::<usize>()
+            + usize::from(row.ends_with_newline);
     }
     fragments
 }
@@ -714,23 +723,14 @@ fn present_text(
         observations.push(observation);
     }
 
-    for ((link, rects), (_, chars)) in fragments.iter().zip(&text.links) {
+    for ((link, rects), (_, bytes)) in fragments.iter().zip(&text.links) {
         if rects.is_empty() {
             continue;
         }
         let url = links[*link].as_str();
         let valid = link_url_allowed(url);
         let active = enabled && valid;
-        let label = {
-            let full: String = text
-                .job
-                .text
-                .chars()
-                .skip(chars.start)
-                .take(chars.len())
-                .collect();
-            full.trim().to_owned()
-        };
+        let label = text.job.text[bytes.clone()].trim().to_owned();
         let identity = document.child(("link", *link));
         let clip = ui.clip_rect();
         let visible = union(

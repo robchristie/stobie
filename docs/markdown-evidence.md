@@ -28,7 +28,7 @@ the text audit; a link opening a new tab by click, middle click, Tab then
 Enter or Space, and AccessKit, while clicks beside it open nothing; a link
 wrapped over several lines opening from each line as one Tab stop; disabled
 and inert presentations; a drag across a paragraph copying it with the link's
-label; hover keeping the layout; a scroll area publishing only visible blocks
+label; a link after and inside non-ASCII text keeping its label and hit area; hover keeping the layout; a scroll area publishing only visible blocks
 and links; identities stable across widths and appearances; and the parser's
 block model, raw HTML kept as text and hostile nesting bounded. A host
 regression publishes Markdown links as `stobie.open-link`, opens one in a new
