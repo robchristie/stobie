@@ -6,6 +6,7 @@ use egui::{Response, Ui};
 
 mod chat;
 mod composer;
+mod copy;
 
 pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
@@ -15,6 +16,7 @@ pub use composer::{
     COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
     ComposerSpec,
 };
+pub use copy::{COPY_CONFIRMATION, COPY_FAILURE, CopyContent, CopyResponse, CopySpec};
 
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,

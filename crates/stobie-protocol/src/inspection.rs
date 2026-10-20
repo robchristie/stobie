@@ -265,6 +265,11 @@ pub const SET_TEXT_CAPABILITY: &str = "stobie.set-text";
 /// The framework capability that opens a link's URL as activating it would.
 pub const OPEN_LINK_CAPABILITY: &str = "stobie.open-link";
 
+/// The framework capability that copies a copy control's text to the
+/// clipboard as pressing it would. The text is never published: an agent
+/// observes the control's confirmation or failure instead.
+pub const COPY_TEXT_CAPABILITY: &str = "stobie.copy-text";
+
 /// The value a capability takes, published by discovery. An action takes at
 /// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
 /// as `"none"`; the others as objects tagged by `kind`.

@@ -30,7 +30,9 @@ pub use action_button::{
     action_button_with_identity_and_content, action_semantic_node,
     action_semantic_node_with_identity,
 };
-pub(crate) use action_button::{action_button_size, action_hit_height, present_action_button};
+pub(crate) use action_button::{
+    ButtonFace, action_button_size, action_hit_height, present_action_button, present_button,
+};
 pub use avatar::{
     AvatarFace, AvatarFigure, AvatarOutline, AvatarOutlineError, AvatarSize, AvatarSpec,
     OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_size, paint_avatar,

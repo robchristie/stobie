@@ -110,7 +110,11 @@ snapshot, is the source.
   widget that senses clicks, and a triggered action still rechecks its
   availability before `perform`. A disabled control therefore does nothing; it
   carries `aria-disabled` and its reason in `aria-description`. A hidden
-  capability renders no widget, so it has no element.
+  capability renders no widget, so it has no element. A copy control is the
+  exception to waiting for the next pass: a click on its element, and Enter
+  or Space on the canvas while it has egui focus, write its text to the
+  clipboard inside that event, as Safari requires; see
+  [copying to the clipboard](interactions.md#copying-to-the-clipboard).
 - **Focus.** DOM focus stays on the canvas, which owns keyboard and IME input
   together with eframe's text agent. The canvas's `aria-activedescendant` names
   egui's focused element, so a Tab move is announced. Focusable controls carry

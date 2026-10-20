@@ -187,6 +187,19 @@ longer presented by then, the receipt is rejected. Hosts publish each text
 field's text as its node's optional `value`; a combo box's `value` is its
 selected option's label.
 
+Every copy control, presented through `PresentationContext::copy`, is bound
+to the framework capability `stobie.copy-text`. Its identity is the
+control's semantic ID and it takes no argument. Its meaning is
+`text-revision:N`, a counter that moves on whenever the control's text
+changes, so a target discovered before a change is `stale_target`; neither
+the meaning nor any other observation carries the text. Invoking it copies
+the text as a press does, on the host's next pass and outside any user
+gesture: a browser that refuses that write leaves the control showing its
+failure, which the next observation presents as a `status` node. A disabled
+control is `unavailable`, and a hidden one has no capability. The
+[interactions guide](ui-guides/interactions.md#copying-to-the-clipboard)
+describes each route.
+
 Queries and discovery default to 64 entries and accept at most 256. JavaScript
 callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
 observation; an intervening publication can return `stale_cursor`. Start a new
@@ -238,8 +251,14 @@ presented words rather than its source, cut to the first 256 characters
 still publishes its excerpt, since the elision is presentation. With the
 bound of 512 text observations, content adds at most about 128 Ki characters
 to an observation. Only text in view publishes content: text wholly scrolled
-out of view or clipped away publishes none, whatever the host's visibility
-policy, and partly visible text publishes its whole excerpt.
+out of view or clipped away publishes none, and empty or zero-size text
+publishes none either. Partly visible text publishes its whole excerpt, with
+one exception: inside a visible-only region (`observe_visible_only`, which
+the host applies to each dock pane), a heading, content label or other
+bounded text publishes its observation, and so its content, only once it is
+wholly visible. Reading text, Markdown and links there still publish their
+whole excerpt while partly visible. To read a partly scrolled heading in a
+pane, scroll it fully into view.
 
 Text presented inside `withhold_content_text(ui, |ui| ...)` publishes
 `{"kind":"withheld"}`, with neither its words nor its length; its layout is

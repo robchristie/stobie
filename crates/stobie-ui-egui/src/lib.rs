@@ -62,6 +62,7 @@ pub mod __private {
 mod actions;
 mod agreement;
 mod application_theme;
+mod clipboard;
 // The agreement check projects the layer natively too; only the browser host
 // applies its DOM operations.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -96,6 +97,7 @@ pub use agreement::{
     AgreementField, AgreementNode, Disagreement, expected_aria_role, semantic_agreement,
 };
 pub use application_theme::*;
+pub use clipboard::CopyState;
 pub use components::*;
 pub use generated_tokens::*;
 pub use host::*;

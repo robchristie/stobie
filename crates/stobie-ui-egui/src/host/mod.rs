@@ -26,7 +26,7 @@
 //!    scheduled reason requests a pass after its delay instead. Sent intents
 //!    need none: the pass that applies them presents them.
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::hash::Hash;
 
 use egui::{Rect, Response, Ui};
@@ -36,13 +36,13 @@ use crate::observation::{Origin, Visibility};
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionScope, ActionSet, ActionTarget, ApplicationIdentity, ApplicationTheme,
-    Availability, CollectionMetadata, CollectionObservation, DesignTokens, DockBehaviour,
-    DockTextContext, DomainReference, Execution, IconId, Inspection, InspectionBinding,
-    InspectionError, InspectionReply, InspectionRequest, IntoActionTarget, Invocation, LinkBinding,
-    ObservationValue, PanePresenter, PresentationContext, PresentationScope, SemanticAuditFinding,
-    SemanticUiId, ShortcutKey, TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode,
-    UiPreferences, UiRole, UiSnapshot, apply_design_system_with_theme, audit_text_layouts,
-    text_audit_coverage,
+    Availability, CollectionMetadata, CollectionObservation, CopyBinding, DesignTokens,
+    DockBehaviour, DockTextContext, DomainReference, Execution, FrameworkBindings, IconId,
+    Inspection, InspectionBinding, InspectionError, InspectionReply, InspectionRequest,
+    IntoActionTarget, Invocation, LinkBinding, ObservationValue, PanePresenter,
+    PresentationContext, PresentationScope, SemanticAuditFinding, SemanticUiId, ShortcutKey,
+    TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode, UiPreferences, UiRole,
+    UiSnapshot, apply_design_system_with_theme, audit_text_layouts, text_audit_coverage,
 };
 
 #[cfg(feature = "eframe")]
@@ -888,6 +888,8 @@ pub struct AppHost<A: Application> {
     fields_stale: bool,
     /// URLs that open-link invocations asked for, opened in the next pass.
     links_to_open: Vec<String>,
+    /// The latest pass's presented copy controls.
+    copies: Vec<CopyBinding>,
     /// Intents sent from outside passes, applied at the start of the next.
     sent: events::IntentQueue<A::Intent>,
     /// Sent intents applied since the previous completed pass.
@@ -949,6 +951,7 @@ impl<A: Application> AppHost<A> {
             completing: None,
             fields_stale: false,
             links_to_open: Vec::new(),
+            copies: Vec::new(),
             sent: Default::default(),
             sent_applied: 0,
             unpresented: false,
@@ -1183,7 +1186,7 @@ impl<A: Application> AppHost<A> {
             });
         }
         self.passes += 1;
-        (self.snapshot, self.text_fields) = self.collect(root.ctx(), root_rect);
+        (self.snapshot, self.text_fields, self.copies) = self.collect(root.ctx(), root_rect);
         self.fields_stale = false;
         self.publish(&context);
         self.app.completed(
@@ -1222,11 +1225,15 @@ impl<A: Application> AppHost<A> {
         let reasons = self.repaint.len();
         let fields = self.text_field_bindings();
         let links = self.link_bindings();
-        let reply = inspection.dispatch_invocation_with_links(
+        let copies = self.copies.clone();
+        let reply = inspection.dispatch_invocation_with_framework(
             request,
             &bindings,
-            &fields,
-            &links,
+            FrameworkBindings {
+                text_fields: &fields,
+                links: &links,
+                copies: &copies,
+            },
             |invocation| self.run_invocation(invocation),
         );
         // Only a state change repaints; reads never do.
@@ -1432,6 +1439,13 @@ impl<A: Application> AppHost<A> {
                 self.repaint.push(HostRepaint::Application("open link"));
                 Ok(Execution::Completed)
             }
+            // The control copies on its next pass, as a press would, and
+            // shows the outcome.
+            Invocation::CopyText { copy } => {
+                crate::clipboard::request(&self.context, copy.widget);
+                self.repaint.push(HostRepaint::Application("copy text"));
+                Ok(Execution::Completed)
+            }
         }
     }
 
@@ -1603,7 +1617,13 @@ impl<A: Application> AppHost<A> {
             let bindings = self.bindings();
             let fields = self.text_field_bindings();
             let links = self.link_bindings();
-            if !inspection.drain_invocation_with_links(&bindings, &fields, &links, |invocation| {
+            let copies = self.copies.clone();
+            let framework = FrameworkBindings {
+                text_fields: &fields,
+                links: &links,
+                copies: &copies,
+            };
+            if !inspection.drain_invocation_with_framework(&bindings, framework, |invocation| {
                 self.run_invocation(invocation)
             }) {
                 break;
@@ -1737,7 +1757,11 @@ impl<A: Application> AppHost<A> {
         &self,
         context: &egui::Context,
         root_rect: Rect,
-    ) -> (UiSnapshot, Vec<(TextFieldBinding, String)>) {
+    ) -> (
+        UiSnapshot,
+        Vec<(TextFieldBinding, String)>,
+        Vec<CopyBinding>,
+    ) {
         let observed = crate::observation::take(context);
         let mut root_node = UiNode::container(
             SemanticUiId::root(),
@@ -1788,6 +1812,7 @@ impl<A: Application> AppHost<A> {
             }
         }
         let text_fields = pair_text_fields(context, &mut nodes);
+        let copies = copy_bindings(&nodes, observed.copies);
         // Visible-only surfaces scroll, so they submit partially visible text.
         // Audit their measured successes only when complete; keep every failed
         // attempt and all other text as presented. Reading text and links
@@ -1828,7 +1853,7 @@ impl<A: Application> AppHost<A> {
                         .map(|id| SemanticAuditFinding::InvalidRect { id }),
                 ),
         );
-        (snapshot, text_fields)
+        (snapshot, text_fields, copies)
     }
 
     fn publish(&self, context: &egui::Context) {
@@ -1848,12 +1873,15 @@ impl<A: Application> AppHost<A> {
             collections: observation.collections,
             ..Default::default()
         };
-        if let Err(error) = inspection.stage_completed_with_links(
+        if let Err(error) = inspection.stage_completed_with_framework(
             context,
             self.snapshot.clone(),
             &self.bindings(),
-            &self.text_field_bindings(),
-            &self.link_bindings(),
+            FrameworkBindings {
+                text_fields: &self.text_field_bindings(),
+                links: &self.link_bindings(),
+                copies: &self.copies,
+            },
             metadata,
             observation.facts,
         ) {
@@ -1869,6 +1897,42 @@ type Candidate<'a, A> = (
     Option<&'a UiNode>,
     Result<ActionArgument, String>,
 );
+
+/// Bind each registered copy control whose button node this pass published,
+/// with that node's pane, domain and availability. A control clipped out of
+/// view, or registered twice, is not bound.
+fn copy_bindings(
+    nodes: &[UiNode],
+    copies: Vec<crate::observation::CopyRegistration>,
+) -> Vec<CopyBinding> {
+    let mut bound = BTreeSet::new();
+    copies
+        .into_iter()
+        .filter_map(|copy| {
+            let node = nodes
+                .iter()
+                .find(|node| node.id == copy.id && node.role == UiRole::Button)?;
+            bound.insert(copy.id.clone()).then(|| CopyBinding {
+                id: copy.id,
+                widget: copy.widget,
+                revision: copy.revision,
+                pane: node.pane,
+                domain: node.domain_reference.clone(),
+                availability: if node.enabled {
+                    Availability::Enabled
+                } else {
+                    Availability::Disabled {
+                        reason: node
+                            .disabled_reason
+                            .clone()
+                            .unwrap_or_else(|| "The control is unavailable".into())
+                            .into(),
+                    }
+                },
+            })
+        })
+        .collect()
+}
 
 /// Pair this pass's recorded egui text edits with the observed text input
 /// nodes that present them, publish each paired field's text as its node's
@@ -1971,6 +2035,8 @@ mod chat_tests;
 mod composer_tests;
 #[cfg(test)]
 mod content_tests;
+#[cfg(test)]
+mod copy_tests;
 #[cfg(test)]
 mod link_tests;
 #[cfg(test)]

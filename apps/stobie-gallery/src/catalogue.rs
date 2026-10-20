@@ -46,10 +46,11 @@ pub enum StoryId {
     AvatarsFigures,
     ChatConversation,
     ChatLongNarrow,
+    CopyActions,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 41] = [
+    pub const ALL: [Self; 42] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -91,6 +92,7 @@ impl StoryId {
         Self::AvatarsFigures,
         Self::ChatConversation,
         Self::ChatLongNarrow,
+        Self::CopyActions,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -136,6 +138,7 @@ impl StoryId {
             Self::AvatarsFigures => "avatars/figures",
             Self::ChatConversation => "chat/conversation",
             Self::ChatLongNarrow => "chat/long-narrow",
+            Self::CopyActions => "copy/actions",
         }
     }
 }
@@ -193,6 +196,7 @@ pub enum StoryGroup {
     Composer,
     Avatar,
     Chat,
+    Copy,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -355,6 +359,14 @@ const CHAT_STATES: &[StoryState] = &[
     StoryState::Selected,
     StoryState::Active,
 ];
+const COPY_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::LongText,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -382,7 +394,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 41] = [
+pub static STORIES: [StoryDefinition; 42] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -751,6 +763,15 @@ pub static STORIES: [StoryDefinition; 41] = [
         720,
         READING_NARROW_STATES,
         SCROLL,
+    ),
+    story(
+        StoryId::CopyActions,
+        "Copy controls beside a code and under a message, with long localised words and unavailable.",
+        StoryGroup::Copy,
+        640,
+        720,
+        COPY_STATES,
+        KEYBOARD,
     ),
 ];
 
