@@ -1,7 +1,7 @@
 # Chat icons and avatars
 
 Status: complete
-Delivery: [PR #PENDING](https://github.com/robchristie/stobie/pulls)
+Delivery: [PR #106](https://github.com/robchristie/stobie/pull/106)
 
 ## Outcome and boundaries
 
