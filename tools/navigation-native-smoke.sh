@@ -105,7 +105,10 @@ def fixture(**expected):
 def focus(control):
     state = snapshot()
     target = next(t["id"] for t in state["navigation_fixture"]["targets"] if t["destination"] == control)
-    focus_navigation_target(snapshot, lambda: xdo("key", "Tab"), target, focus_transitions)
+    # Tab passes every catalogue story in the sidebar before the story itself,
+    # so the bound grows with the catalogue.
+    focus_navigation_target(snapshot, lambda: xdo("key", "Tab"), target, focus_transitions,
+                            max_actions=state["story_count"] + 16, timeout_seconds=20)
 
 def record(name):
     state = snapshot()
