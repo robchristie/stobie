@@ -409,17 +409,20 @@ impl PresentationContext {
     /// observation: name the person or thing in the row, heading or control
     /// beside it.
     ///
-    /// ```no_run
-    /// # use stobie_ui_egui::{AvatarFace, AvatarOutline, AvatarSize, AvatarSpec, PresentationContext};
-    /// # fn header(ui: &mut egui::Ui, p: &mut PresentationContext) {
-    /// p.avatar(ui, &AvatarSpec::shape(
-    ///     AvatarOutline::HEXAGON,
-    ///     egui::Color32::from_rgb(242, 178, 51),
-    ///     AvatarFace::EYES,
-    ///     AvatarSize::Header,
-    /// ));
-    /// p.avatar(ui, &AvatarSpec::person("Ada Lovelace", AvatarSize::List));
-    /// # }
+    /// ```
+    /// use stobie_ui_egui::{AvatarFace, AvatarOutline, AvatarSize, AvatarSpec,
+    ///     PresentationContext};
+    ///
+    /// // The shape, its colour and the people belong to the application.
+    /// fn header(ui: &mut egui::Ui, p: &mut PresentationContext) {
+    ///     p.avatar(ui, &AvatarSpec::shape(
+    ///         AvatarOutline::HEXAGON,
+    ///         egui::Color32::from_rgb(242, 178, 51),
+    ///         AvatarFace::EYES,
+    ///         AvatarSize::Header,
+    ///     ));
+    ///     p.avatar(ui, &AvatarSpec::person("Ada Lovelace", AvatarSize::List));
+    /// }
     /// ```
     pub fn avatar(&mut self, ui: &mut Ui, spec: &AvatarSpec<'_>) -> Response {
         avatar(ui, spec, self.tokens(), self.font_scale())
