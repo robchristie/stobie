@@ -190,3 +190,23 @@ native-control count by one (from 47 to 48, and the composer fixtures' from
 each of `avatars-figures-high-contrast` (at 717, 568) and
 `rows-actions-light-compact` (at 538, 309) and two of
 `diagnostics-high-contrast` (at 703, 516 and 699, 522); nothing else changed.
+
+Responsive navigation fixtures add the conversation list, the open
+conversation and its details as three columns in dark comfortable mode at
+the Gallery's Desktop width; the same story in light compact mode at the Wide
+width, where the shown details take the conversation's place beside the
+list with Back; and the phone story's root in light high contrast at 150%,
+a list of long and localised destinations with counts and an archived one,
+under an eliding title. Panes publish as `Pane` nodes named by their titles
+under the story, the open row is `selected`, and the conversation's pane
+and its nodes carry its domain reference. The physical
+`tools/responsive-navigation-browser-smoke.sh` runs through full
+verification: it resizes between the columns, the split and the stack with
+the same conversation open, opens rows, goes back by pointer and by Enter
+with focus following, toggles the details, scrolls the phone list and
+returns to its place, and checks that no history entries are pushed.
+Adding the two catalogue entries raised every earlier fixture's
+native-control count by two (from 48 to 50, and the composer fixtures' from
+51 to 53) and changed, by one colour step as the glyph atlas grew, one pixel
+each of `avatars-figures-high-contrast` (at 717, 568) and
+`navigation-long-high-contrast` (at 752, 208); nothing else changed.

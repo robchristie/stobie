@@ -10,6 +10,7 @@ mod markdown;
 mod navigation;
 mod reading;
 mod reference;
+mod responsive;
 mod rows;
 mod status_chips;
 mod toolbars;
@@ -27,6 +28,7 @@ pub use chat::ChatFixtureState;
 pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
+pub use responsive::ResponsiveFixtureState;
 pub use status_chips::StatusChipFixtureState;
 
 /// Per-story fixture state. Selecting another story resets it.
@@ -40,6 +42,7 @@ pub(crate) struct StoryState {
     pub(crate) rows: rows::RowFixtureState,
     pub(crate) composer: composer::ComposerFixtureState,
     pub(crate) chat: ChatFixtureState,
+    pub(crate) responsive: ResponsiveFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -135,6 +138,14 @@ fn present_story(
             chat::story(ui, story, tokens, font_scale, &mut state.chat, &mut report)
         }
         StoryId::CopyActions => copy::story(ui, tokens, font_scale, &mut report),
+        StoryId::NavigationResponsive | StoryId::NavigationResponsiveNarrow => responsive::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            &mut state.responsive,
+            &mut report,
+        ),
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.
@@ -404,6 +415,10 @@ mod tests {
                 contrast: stobie_ui_egui::ContrastPreference::High,
                 font_scale: 1.5,
                 width: GalleryWidth::Wide,
+                ..GalleryConfiguration::default()
+            },
+            GalleryConfiguration {
+                width: GalleryWidth::Desktop,
                 ..GalleryConfiguration::default()
             },
         ];

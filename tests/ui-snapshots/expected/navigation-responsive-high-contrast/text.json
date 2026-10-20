@@ -1,0 +1,381 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "navigation_badge",
+        "instance": 3021463123918378
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 3021463123918378
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 947.15625,
+        "min_y": 342,
+        "max_x": 974,
+        "max_y": 384
+      },
+      "painted_rect": {
+        "min_x": 965.0625,
+        "min_y": 351,
+        "max_x": 974,
+        "max_y": 375
+      },
+      "clip_rect": {
+        "min_x": 947.15625,
+        "min_y": 342,
+        "max_x": 974,
+        "max_y": 384
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "navigation_badge",
+        "instance": 3055341384145160
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 3055341384145160
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 947.15625,
+        "min_y": 436,
+        "max_x": 974,
+        "max_y": 478
+      },
+      "painted_rect": {
+        "min_x": 947.15625,
+        "min_y": 445,
+        "max_x": 974,
+        "max_y": 469
+      },
+      "clip_rect": {
+        "min_x": 947.15625,
+        "min_y": 436,
+        "max_x": 974,
+        "max_y": 478
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "navigation_badge",
+        "instance": 4421952859082499
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 4421952859082499
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 947.15625,
+        "min_y": 530,
+        "max_x": 974,
+        "max_y": 572
+      },
+      "painted_rect": {
+        "min_x": 965.0625,
+        "min_y": 539,
+        "max_x": 974,
+        "max_y": 563
+      },
+      "clip_rect": {
+        "min_x": 947.15625,
+        "min_y": 530,
+        "max_x": 974,
+        "max_y": 572
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 2456761753464917
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 2456761753464917
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 483,
+        "max_x": 981,
+        "max_y": 525
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 491.5,
+        "max_x": 980.0625,
+        "max_y": 516.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 483,
+        "max_x": 981,
+        "max_y": 525
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 3021463123918378
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 3021463123918378
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 342,
+        "max_x": 933.15625,
+        "max_y": 384
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 350.5,
+        "max_x": 931.0625,
+        "max_y": 375.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 342,
+        "max_x": 933.15625,
+        "max_y": 384
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 3055341384145160
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 3055341384145160
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 436,
+        "max_x": 933.15625,
+        "max_y": 478
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 444.5,
+        "max_x": 932.0625,
+        "max_y": 469.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 436,
+        "max_x": 933.15625,
+        "max_y": 478
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 4421952859082499
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 4421952859082499
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 530,
+        "max_x": 933.15625,
+        "max_y": 572
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 538.5,
+        "max_x": 924.0625,
+        "max_y": 563.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 530,
+        "max_x": 933.15625,
+        "max_y": 572
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 6340876426822818
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 6340876426822818
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 577,
+        "max_x": 981,
+        "max_y": 619
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 585.5,
+        "max_x": 902.34375,
+        "max_y": 610.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 577,
+        "max_x": 981,
+        "max_y": 619
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "navigation_label",
+        "instance": 8419635761860338
+      },
+      "parent_id": {
+        "kind": "navigation_item",
+        "instance": 8419635761860338
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 389,
+        "max_x": 981,
+        "max_y": 431
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 397.5,
+        "max_x": 977.0625,
+        "max_y": 422.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 389,
+        "max_x": 981,
+        "max_y": 431
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 762212722797242
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 701,
+        "min_y": 297.375,
+        "max_x": 983,
+        "max_y": 328.625
+      },
+      "painted_rect": {
+        "min_x": 701,
+        "min_y": 300,
+        "max_x": 975.25,
+        "max_y": 326
+      },
+      "clip_rect": {
+        "min_x": 701,
+        "min_y": 297.375,
+        "max_x": 983,
+        "max_y": 328.625
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Conversations and household helpers",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 10,
+    "attempted_components": 14,
+    "successful_components": 14,
+    "failed_components": 0,
+    "native_text_controls": 50,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

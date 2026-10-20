@@ -47,8 +47,8 @@ pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
 pub use markdown::{MarkdownResponse, MarkdownSpec, markdown};
 pub use navigation::{
-    NavigationBadge, NavigationItemSpec, navigation_item, navigation_item_minimum_width,
-    navigation_item_semantic_node,
+    DestinationSpec, NavigationBadge, NavigationItemSpec, navigation_item,
+    navigation_item_minimum_width, navigation_item_semantic_node,
 };
 pub use property::property_row;
 pub use range::range_control;

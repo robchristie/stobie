@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "navigation/responsive-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 633
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.195686fe56fc44a2",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Edsger Wybe Dijkstra",
+      "description": "Open the conversation",
+      "rect": {
+        "min_x": 694,
+        "min_y": 577,
+        "max_x": 990,
+        "max_y": 619
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "edsger"
+    },
+    {
+      "id": "presentation.4f8abc013433fe2a",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Augusta Ada King, Countess of Lovelace",
+      "description": "Open the conversation; 3 unread messages",
+      "rect": {
+        "min_x": 694,
+        "min_y": 342,
+        "max_x": 990,
+        "max_y": 384
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "augusta"
+    },
+    {
+      "id": "presentation.5308ba696b9cf055",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Katherine Coleman Goble Johnson",
+      "description": "Open the conversation",
+      "rect": {
+        "min_x": 694,
+        "min_y": 483,
+        "max_x": 990,
+        "max_y": 525
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "disabled_reason": "This conversation is archived",
+      "argument": "katherine"
+    },
+    {
+      "id": "presentation.b06fb5be21610f03",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Grace Brewster Murray Hopper",
+      "description": "Open the conversation; 1 unread messages",
+      "rect": {
+        "min_x": 694,
+        "min_y": 530,
+        "max_x": 990,
+        "max_y": 572
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "grace"
+    },
+    {
+      "id": "presentation.d64adad119de9908",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Küchenhilfe für die Wochenendeinkäufe",
+      "description": "Open the conversation; 125 unread messages",
+      "rect": {
+        "min_x": 694,
+        "min_y": 436,
+        "max_x": 990,
+        "max_y": 478
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "kueche"
+    },
+    {
+      "id": "presentation.dc1de99d36b94ef2",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Weekend planner for the whole household",
+      "description": "Open the conversation",
+      "rect": {
+        "min_x": 694,
+        "min_y": 389,
+        "max_x": 990,
+        "max_y": 431
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "planner"
+    },
+    {
+      "id": "presentation.fcc3be4a3f58dac3",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Conversations and household helpers",
+      "rect": {
+        "min_x": 694,
+        "min_y": 288,
+        "max_x": 990,
+        "max_y": 621
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

@@ -35,6 +35,8 @@ pub enum StoryId {
     NavigationSidebar,
     NavigationStates,
     NavigationLongNarrow,
+    NavigationResponsive,
+    NavigationResponsiveNarrow,
     ReadingConversation,
     ReadingLongNarrow,
     RowsActions,
@@ -50,7 +52,7 @@ pub enum StoryId {
 }
 
 impl StoryId {
-    pub const ALL: [Self; 42] = [
+    pub const ALL: [Self; 44] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -81,6 +83,8 @@ impl StoryId {
         Self::NavigationSidebar,
         Self::NavigationStates,
         Self::NavigationLongNarrow,
+        Self::NavigationResponsive,
+        Self::NavigationResponsiveNarrow,
         Self::ReadingConversation,
         Self::ReadingLongNarrow,
         Self::RowsActions,
@@ -127,6 +131,8 @@ impl StoryId {
             Self::NavigationSidebar => "navigation/sidebar",
             Self::NavigationStates => "navigation/states",
             Self::NavigationLongNarrow => "navigation/long-narrow",
+            Self::NavigationResponsive => "navigation/responsive",
+            Self::NavigationResponsiveNarrow => "navigation/responsive-narrow",
             Self::ReadingConversation => "reading/conversation",
             Self::ReadingLongNarrow => "reading/long-narrow",
             Self::RowsActions => "rows/actions",
@@ -367,6 +373,12 @@ const COPY_STATES: &[StoryState] = &[
     StoryState::Disabled,
     StoryState::LongText,
 ];
+const NAVIGATION_RESPONSIVE_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Selected,
+    StoryState::Active,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -394,7 +406,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 42] = [
+pub static STORIES: [StoryDefinition; 44] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -635,6 +647,24 @@ pub static STORIES: [StoryDefinition; 42] = [
         StoryGroup::Navigation,
         320,
         400,
+        ICON_NARROW_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::NavigationResponsive,
+        "Responsive navigation: the conversation list, the open conversation and its details as columns, a split or a stack with Back, following the width.",
+        StoryGroup::Navigation,
+        1120,
+        560,
+        NAVIGATION_RESPONSIVE_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::NavigationResponsiveNarrow,
+        "Responsive navigation on a phone: its root, a list of long and localised destinations with counts, an archived one and rows below the fold; opening one pushes it with Back.",
+        StoryGroup::Navigation,
+        320,
+        560,
         ICON_NARROW_STATES,
         SCROLL,
     ),

@@ -482,6 +482,72 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present one destination, such as a section of the application or
+    /// one of a dynamic list with one per person, `selected` while it is the
+    /// one on show (see [`crate::navigation_item`]). Clicking it triggers
+    /// the action; pass a [`BoundAction`](crate::BoundAction) carrying the
+    /// destination's ID for a dynamic list, so each item carries its own
+    /// argument and agents open it by that ID. A hidden destination presents
+    /// nothing.
+    pub fn navigation_item(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: crate::DestinationSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.bound_navigation_item(
+            ui,
+            bound.action(),
+            crate::NavigationItemSpec {
+                target,
+                icon: spec.icon,
+                label: spec.label,
+                description: spec.description,
+                selected: spec.selected,
+                availability,
+                badge: spec.badge,
+            },
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
+    }
+
+    /// Present a list, the item open from it and that item's detail:
+    /// stacked with Back on a phone, the list beside the item on a tablet
+    /// and all three side by side on a desktop (see
+    /// [`PresentationContext::navigation`] for the layouts and their
+    /// breakpoints). The application owns what is open; `render` presents
+    /// each pane shown, and receives this frame to trigger actions, such as
+    /// [`Self::navigation_item`] or [`Self::conversation_row`] in the list.
+    /// Back and the detail toggle trigger their actions when clicked.
+    pub fn navigation(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::NavigationSpec<'_, A>,
+        mut render: impl FnMut(&mut Ui, &mut PresentationContext, &mut Self, crate::NavigationPane),
+    ) -> crate::NavigationResponse<A> {
+        let availability = self.availability;
+        let response =
+            presentation.navigation(ui, key, spec, availability, |ui, presentation, pane| {
+                render(ui, presentation, self, pane)
+            });
+        for control in [&response.back, &response.toggle].into_iter().flatten() {
+            if control.response.clicked() {
+                self.triggers.push((control.target, ActionArgument::None));
+            }
+        }
+        response
+    }
+
     /// Present one conversation in a list: its avatar, name, one-line
     /// preview, time and unread dot, `selected` while it is the one on show
     /// (see [`crate::conversation_row`]). Clicking it triggers the action
@@ -2039,6 +2105,8 @@ mod content_tests;
 mod copy_tests;
 #[cfg(test)]
 mod link_tests;
+#[cfg(test)]
+mod navigation_tests;
 #[cfg(test)]
 mod row_tests;
 #[cfg(test)]

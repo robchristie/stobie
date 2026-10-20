@@ -52,6 +52,21 @@ pub struct NavigationItemSpec<'a, A: ActionKey> {
     pub badge: Option<NavigationBadge<'a>>,
 }
 
+/// One destination as a hosted application describes it to
+/// [`Frame::navigation_item`](crate::Frame::navigation_item), which supplies
+/// the target and its availability.
+#[derive(Clone, Copy, Debug)]
+pub struct DestinationSpec<'a> {
+    pub icon: IconId,
+    /// The destination's name, such as a person's or a section's.
+    pub label: &'a str,
+    /// What opening it does, such as the action's description.
+    pub description: &'a str,
+    /// Whether this is the current destination, the one on show.
+    pub selected: bool,
+    pub badge: Option<NavigationBadge<'a>>,
+}
+
 impl<A: ActionKey> NavigationItemSpec<'_, A> {
     fn description(&self) -> String {
         let mut description = self.description.to_owned();
