@@ -196,6 +196,7 @@ impl LinkBinding {
 
     fn describe(&self, observation: u64) -> CapabilityDescription {
         let target = ResolvedTarget {
+            argument: None,
             id: self.id.clone(),
             capability: OPEN_LINK_CAPABILITY.into(),
             pane: self.pane,
@@ -204,6 +205,7 @@ impl LinkBinding {
             observation,
         };
         CapabilityDescription {
+            argument: None,
             id: self.id.clone(),
             capability: OPEN_LINK_CAPABILITY.into(),
             pane: self.pane,
