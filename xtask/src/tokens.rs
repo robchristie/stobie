@@ -668,6 +668,30 @@ impl DesignTokens {{
         Points({avatar_strip_size})
     }}
 
+    /// Message bubble corner radius at reference font scale.
+    pub const fn chat_bubble_radius(&self) -> Points {{
+        Points({chat_bubble_radius})
+    }}
+
+    /// Widest message bubble at reference font scale.
+    pub const fn chat_bubble_max_width(&self) -> Points {{
+        Points({chat_bubble_max_width})
+    }}
+
+    /// Unread dot diameter at reference font scale.
+    pub const fn unread_dot_size(&self) -> Points {{
+        Points({unread_dot_size})
+    }}
+
+    /// Switch track size at reference font scale.
+    pub const fn switch_track_width(&self) -> Points {{
+        Points({switch_track_width})
+    }}
+
+    pub const fn switch_track_height(&self) -> Points {{
+        Points({switch_track_height})
+    }}
+
     /// Bounded content width at reference font scale, without changing struct literals.
     pub const fn status_chip_max_width(&self) -> Points {{
         Points({chip_max_width})
@@ -734,6 +758,11 @@ const MOTION: MotionTokens = MotionTokens {{
         avatar_header_size = number_literal(required_number(&common, "avatar.headerSize")?),
         avatar_list_size = number_literal(required_number(&common, "avatar.listSize")?),
         avatar_strip_size = number_literal(required_number(&common, "avatar.stripSize")?),
+        chat_bubble_radius = number_literal(required_number(&common, "chat.bubbleRadius")?),
+        chat_bubble_max_width = number_literal(required_number(&common, "chat.bubbleMaxWidth")?),
+        unread_dot_size = number_literal(required_number(&common, "chat.unreadDotSize")?),
+        switch_track_width = number_literal(required_number(&common, "switch.trackWidth")?),
+        switch_track_height = number_literal(required_number(&common, "switch.trackHeight")?),
         application_title_size =
             number_literal(required_number(&common, "typography.applicationTitleSize")?),
         pane_title_size = number_literal(required_number(&common, "typography.paneTitleSize")?),

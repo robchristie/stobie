@@ -37,7 +37,7 @@ normally the row's stable ID (`BoundAction::new(Action::Open, person.id)`),
 and the row's name as its subject (`.with_subject(&person.name)`). Declare the
 action's `argument` as for any value-taking action. Pass the bound action
 wherever a hosted `Frame` takes a target: `action`, `icon_action`, `toggle`,
-`list_row`, `trigger` and `availability`. Do not hand-build a button, observe
+`list_row`, `conversation_row`, `switch`, `trigger` and `availability`. Do not hand-build a button, observe
 it by hand or call `trigger_with` from a row's click.
 
 - **Identity.** The control's identity combines its key with the argument, so
@@ -46,7 +46,8 @@ it by hand or call `trigger_with` from a row's click.
 - **Names.** A button's accessible name is the action's label followed by the
   subject ("Open Ada Lovelace"); its visible label stays the action's. A list
   row is named by its title. Each row's control therefore has a distinct name
-  in AccessKit, the snapshot and the browser ARIA layer.
+  in AccessKit, the snapshot and the browser ARIA layer. A conversation row is
+  named by its title and a switch by its label in the same way.
 - **Semantics.** The control's node publishes the argument as `UiNode.argument`
   (the JSON value an invocation would send). The host binds each such control
   as its own capability carrying that argument, and keeps the action's own

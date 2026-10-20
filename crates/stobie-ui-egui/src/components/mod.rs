@@ -1,6 +1,7 @@
 mod action_button;
 mod avatar;
 mod choice;
+mod conversation_row;
 mod icon;
 #[cfg(test)]
 mod icon_action_tests;
@@ -19,6 +20,7 @@ mod status;
 mod status_chip;
 #[cfg(test)]
 mod status_chip_tests;
+mod switch;
 mod thumbnail;
 mod viewport_status;
 
@@ -34,6 +36,11 @@ pub use avatar::{
     OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_size, paint_avatar,
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
+pub(crate) use conversation_row::muted_text_on;
+pub use conversation_row::{
+    ConversationRowSpec, conversation_row, conversation_row_height, conversation_row_semantic_node,
+    paint_unread_dot, unread_dot, unread_dot_colour, unread_dot_size,
+};
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
 pub use markdown::{MarkdownResponse, MarkdownSpec, markdown};
@@ -54,6 +61,9 @@ pub use status::{StatusTone, status_badge};
 pub use status_chip::{
     StatusChipColours, StatusChipResponse, StatusChipSpec, StatusChipWidth, status_chip,
     status_chip_colours, status_chip_semantic_node,
+};
+pub use switch::{
+    SwitchSpec, paint_switch_track, switch, switch_height, switch_semantic_node, switch_track_size,
 };
 pub use thumbnail::{ThumbnailCellSpec, ThumbnailState, thumbnail_cell, thumbnail_cell_side};
 pub use viewport_status::{ImageStatusSpec, image_status_height, paint_image_status};

@@ -254,6 +254,25 @@ points) are tokens that grow with text up to 150%. An avatar is decorative,
 like an icon: the row, heading or control beside it names the person or
 thing. See [component contracts](ui-guides/components.md#avatars).
 
+## Chat
+
+A conversation reads as two voices. The person's own messages sit at the end
+of the line in bubbles on the selection tint; everyone else's, people and
+assistants alike, sit at the start on the quiet raised surface. Bubbles are
+rounded, carry a subtle border, take at most 85% of the column and a
+token width that grows with text, hug short messages and wrap long ones,
+and hold any content, such as Markdown with lists, links and code. A
+conversation list is a column of full-width rows: a decorative avatar, the
+name, a one-line preview, the time and, while there is something unread, a
+small accent dot; the current conversation keeps the selection fill and
+marker, and a hovered row takes the raised surface so it never looks
+current. A switch is a settings row whose label always shows; its state is
+the track and thumb (an accent track with the thumb at the end for on, an
+outlined track with the thumb at the start for off), never the row's fill.
+Names, previews, times, unread words and states are stated in words for
+agents and assistive technology; the dot and the avatar are decorative. See
+[component contracts](ui-guides/components.md#chat-recipes).
+
 ## Destination navigation
 
 A navigation item is one full-width action row: leading typed decorative icon,
@@ -400,7 +419,7 @@ generated from its checked-in source.
 ## Gallery and reference recipes
 
 `stobie-gallery` is a native and browser application, not a second widget
-implementation. Its typed Rust catalogue has 27 stable story IDs and fixed
+implementation. Its typed Rust catalogue has 41 stable story IDs and fixed
 metadata for description, component group, recommended viewport, applicable
 appearance/density variants and interaction scenarios. It supports the four
 light/dark and standard/high-contrast combinations, both densities, 100%, 125%

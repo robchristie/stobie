@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "chat/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 793
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.017c0f3022cbc585",
+      "parent": "gallery.story",
+      "role": "switch",
+      "name": "Notifications",
+      "description": "Turn notifications for new messages on or off",
+      "rect": {
+        "min_x": 694,
+        "min_y": 548,
+        "max_x": 990,
+        "max_y": 588
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.settings.notifications"
+      ]
+    },
+    {
+      "id": "presentation.03656846e2464fbc",
+      "parent": "gallery.story",
+      "role": "switch",
+      "name": "Archive old conversations",
+      "description": "Archive conversations without a message for a month",
+      "rect": {
+        "min_x": 694,
+        "min_y": 638,
+        "max_x": 990,
+        "max_y": 678
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.settings.archive"
+      ],
+      "disabled_reason": "The household's administrator sets this"
+    },
+    {
+      "id": "presentation.0f2c2ed9a1131089",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Katherine Coleman Goble Johnson",
+      "description": "Trajectory checked by hand; 1 Sep 2026; Open the conversation with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 386,
+        "max_x": 990,
+        "max_y": 456
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "disabled_reason": "This conversation is archived",
+      "argument": "katherine"
+    },
+    {
+      "id": "presentation.477e6ecda2995040",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Augusta Ada King, Countess of Lovelace",
+      "description": "3 unread messages; Die Anmerkungen zur Analytischen Maschine sind fertig und liegen bei; gestern; Open the conversation with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 236,
+        "max_x": 990,
+        "max_y": 306
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "augusta"
+    },
+    {
+      "id": "presentation.a23bc0b29969caed",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 759,
+        "min_y": 694,
+        "max_x": 990,
+        "max_y": 781
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.aa77bd1dedf5125c",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Grace Brewster Murray Hopper",
+      "description": "1 unread message; Mon; Open the conversation with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 461,
+        "max_x": 990,
+        "max_y": 531
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "grace-long"
+    },
+    {
+      "id": "presentation.addaea028ed06ffe",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Weekend planner for the whole household",
+      "description": "Saturday: market at nine, swimming at eleven, then lunch; 23:59; Open the conversation with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 311,
+        "max_x": 990,
+        "max_y": 381
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "planner"
+    },
+    {
+      "id": "presentation.b59cafb481c758b5",
+      "parent": "gallery.story",
+      "role": "switch",
+      "name": "Keep this conversation at the top of the list, above newer ones",
+      "description": "Keep this conversation at the top of the list",
+      "rect": {
+        "min_x": 694,
+        "min_y": 593,
+        "max_x": 990,
+        "max_y": 633
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.conversation.pin"
+      ]
+    }
+  ],
+  "semantic_audit": []
+}

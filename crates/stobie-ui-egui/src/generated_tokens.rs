@@ -141,6 +141,30 @@ impl DesignTokens {
         Points(56.0)
     }
 
+    /// Message bubble corner radius at reference font scale.
+    pub const fn chat_bubble_radius(&self) -> Points {
+        Points(12.0)
+    }
+
+    /// Widest message bubble at reference font scale.
+    pub const fn chat_bubble_max_width(&self) -> Points {
+        Points(560.0)
+    }
+
+    /// Unread dot diameter at reference font scale.
+    pub const fn unread_dot_size(&self) -> Points {
+        Points(8.0)
+    }
+
+    /// Switch track size at reference font scale.
+    pub const fn switch_track_width(&self) -> Points {
+        Points(36.0)
+    }
+
+    pub const fn switch_track_height(&self) -> Points {
+        Points(20.0)
+    }
+
     /// Bounded content width at reference font scale, without changing struct literals.
     pub const fn status_chip_max_width(&self) -> Points {
         Points(192.0)

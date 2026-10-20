@@ -166,11 +166,14 @@ pub(super) fn story(
         );
         let spec = ComposerSpec::new(
             "Message",
-            ComposerControl::icon(ComposerAction::Send, IconId::ArrowUp),
+            ComposerControl::icon(ComposerAction::Send, IconId::Send),
         )
         .hint(example.hint)
         .max_rows(example.max_rows)
-        .leading(ComposerControl::icon(ComposerAction::Attach, IconId::Add))
+        .leading(ComposerControl::icon(
+            ComposerAction::Attach,
+            IconId::Attach,
+        ))
         .trailing(ComposerControl::label(ComposerAction::Dictate));
         let sending = example.sending;
         let availability = |target: ActionTarget<ComposerAction>, argument: &ActionArgument| {

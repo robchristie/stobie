@@ -44,10 +44,12 @@ pub enum StoryId {
     ComposerChat,
     ComposerLongNarrow,
     AvatarsFigures,
+    ChatConversation,
+    ChatLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 39] = [
+    pub const ALL: [Self; 41] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -87,6 +89,8 @@ impl StoryId {
         Self::ComposerChat,
         Self::ComposerLongNarrow,
         Self::AvatarsFigures,
+        Self::ChatConversation,
+        Self::ChatLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -130,6 +134,8 @@ impl StoryId {
             Self::ComposerChat => "composer/chat",
             Self::ComposerLongNarrow => "composer/long-narrow",
             Self::AvatarsFigures => "avatars/figures",
+            Self::ChatConversation => "chat/conversation",
+            Self::ChatLongNarrow => "chat/long-narrow",
         }
     }
 }
@@ -186,6 +192,7 @@ pub enum StoryGroup {
     Rows,
     Composer,
     Avatar,
+    Chat,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -340,6 +347,14 @@ const AVATAR_STATES: &[StoryState] = &[
     StoryState::Narrow,
     StoryState::HighTextScale,
 ];
+const CHAT_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Selected,
+    StoryState::Active,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -367,7 +382,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 39] = [
+pub static STORIES: [StoryDefinition; 41] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -717,6 +732,24 @@ pub static STORIES: [StoryDefinition; 39] = [
         640,
         720,
         AVATAR_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::ChatConversation,
+        "Conversation rows with avatars, unread dots and the current one, switches, and messages in bubbles on both sides.",
+        StoryGroup::Chat,
+        960,
+        720,
+        CHAT_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::ChatLongNarrow,
+        "Long and localised conversations, an archived row, a long switch label and a disabled one, and bubbles holding a long link and code.",
+        StoryGroup::Chat,
+        320,
+        720,
+        READING_NARROW_STATES,
         SCROLL,
     ),
 ];

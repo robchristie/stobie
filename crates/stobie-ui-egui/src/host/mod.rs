@@ -482,6 +482,65 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present one conversation in a list: its avatar, name, one-line
+    /// preview, time and unread dot, `selected` while it is the one on show
+    /// (see [`crate::conversation_row`]). Clicking it triggers the action
+    /// with the conversation's argument: pass a
+    /// [`BoundAction`](crate::BoundAction) carrying the conversation's ID.
+    /// A hidden row presents nothing.
+    pub fn conversation_row(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: crate::ConversationRowSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.conversation_row(
+            ui,
+            bound.action(),
+            spec,
+            target,
+            &availability,
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
+    }
+
+    /// Present an on or off setting named by `spec.label`, showing
+    /// `spec.on` (see [`crate::switch`]). Clicking it triggers the action,
+    /// with the argument a [`BoundAction`](crate::BoundAction) carries; the
+    /// action turns the setting over and the application presents the new
+    /// state on a later pass. A hidden switch presents nothing.
+    pub fn switch(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: crate::SwitchSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.switch(
+            ui,
+            bound.action(),
+            spec,
+            target,
+            &availability,
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
+    }
+
     /// Present a composer for the application's draft: a field that grows
     /// with its text, a send control and optional leading and trailing
     /// controls (see [`PresentationContext::composer`] for its conventions).
@@ -1906,6 +1965,8 @@ fn pair_text_fields(
     fields
 }
 
+#[cfg(test)]
+mod chat_tests;
 #[cfg(test)]
 mod composer_tests;
 #[cfg(test)]

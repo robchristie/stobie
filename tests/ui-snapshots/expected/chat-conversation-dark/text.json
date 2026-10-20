@@ -1,0 +1,775 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "conversation_row_preview",
+        "instance": 348737010259113
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 348737010259113
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 146,
+        "max_x": 645,
+        "max_y": 162.875
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 145.9375,
+        "max_x": 610.90625,
+        "max_y": 162.9375
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 146,
+        "max_x": 645,
+        "max_y": 162.875
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_preview",
+        "instance": 3945665028380421
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 3945665028380421
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 311,
+        "max_x": 645,
+        "max_y": 327.875
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 310.9375,
+        "max_x": 542.96875,
+        "max_y": 327.9375
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 311,
+        "max_x": 645,
+        "max_y": 327.875
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_preview",
+        "instance": 4000460753208252
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 4000460753208252
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 201,
+        "max_x": 630,
+        "max_y": 217.875
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 200.9375,
+        "max_x": 626.84375,
+        "max_y": 217.9375
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 201,
+        "max_x": 630,
+        "max_y": 217.875
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_preview",
+        "instance": 5610960252962224
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 5610960252962224
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 256,
+        "max_x": 630,
+        "max_y": 272.875
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 255.9375,
+        "max_x": 581.59375,
+        "max_y": 272.9375
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 256,
+        "max_x": 630,
+        "max_y": 272.875
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_time",
+        "instance": 348737010259113
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 348737010259113
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 618.15625,
+        "min_y": 129.125,
+        "max_x": 645,
+        "max_y": 146
+      },
+      "painted_rect": {
+        "min_x": 618.15625,
+        "min_y": 129.5625,
+        "max_x": 645,
+        "max_y": 145.5625
+      },
+      "clip_rect": {
+        "min_x": 618.15625,
+        "min_y": 129.125,
+        "max_x": 645,
+        "max_y": 146
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_time",
+        "instance": 3945665028380421
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 3945665028380421
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 613.28125,
+        "min_y": 294.125,
+        "max_x": 645,
+        "max_y": 311
+      },
+      "painted_rect": {
+        "min_x": 613.28125,
+        "min_y": 294.5625,
+        "max_x": 645,
+        "max_y": 310.5625
+      },
+      "clip_rect": {
+        "min_x": 613.28125,
+        "min_y": 294.125,
+        "max_x": 645,
+        "max_y": 311
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_time",
+        "instance": 4000460753208252
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 4000460753208252
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 618.15625,
+        "min_y": 184.125,
+        "max_x": 645,
+        "max_y": 201
+      },
+      "painted_rect": {
+        "min_x": 618.15625,
+        "min_y": 184.5625,
+        "max_x": 645,
+        "max_y": 200.5625
+      },
+      "clip_rect": {
+        "min_x": 618.15625,
+        "min_y": 184.125,
+        "max_x": 645,
+        "max_y": 201
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_time",
+        "instance": 5610960252962224
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 5610960252962224
+      },
+      "role": "caption",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 623.21875,
+        "min_y": 239.125,
+        "max_x": 645,
+        "max_y": 256
+      },
+      "painted_rect": {
+        "min_x": 623.21875,
+        "min_y": 239.5625,
+        "max_x": 645,
+        "max_y": 255.5625
+      },
+      "clip_rect": {
+        "min_x": 623.21875,
+        "min_y": 239.125,
+        "max_x": 645,
+        "max_y": 256
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_title",
+        "instance": 348737010259113
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 348737010259113
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 129.125,
+        "max_x": 611.15625,
+        "max_y": 146
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 129.0625,
+        "max_x": 504.96875,
+        "max_y": 146.0625
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 129.125,
+        "max_x": 611.15625,
+        "max_y": 146
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_title",
+        "instance": 3945665028380421
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 3945665028380421
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 294.125,
+        "max_x": 606.28125,
+        "max_y": 311
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 294.0625,
+        "max_x": 515.1875,
+        "max_y": 311.0625
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 294.125,
+        "max_x": 606.28125,
+        "max_y": 311
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_title",
+        "instance": 4000460753208252
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 4000460753208252
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 184.125,
+        "max_x": 611.15625,
+        "max_y": 201
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 184.0625,
+        "max_x": 513.375,
+        "max_y": 201.0625
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 184.125,
+        "max_x": 611.15625,
+        "max_y": 201
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "conversation_row_title",
+        "instance": 5610960252962224
+      },
+      "parent_id": {
+        "kind": "conversation_row",
+        "instance": 5610960252962224
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 435,
+        "min_y": 239.125,
+        "max_x": 616.21875,
+        "max_y": 256
+      },
+      "painted_rect": {
+        "min_x": 435,
+        "min_y": 239.0625,
+        "max_x": 508.1875,
+        "max_y": 256.0625
+      },
+      "clip_rect": {
+        "min_x": 435,
+        "min_y": 239.125,
+        "max_x": 616.21875,
+        "max_y": 256
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1422292014374155
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 702.6875,
+        "min_y": 331,
+        "max_x": 895,
+        "max_y": 349
+      },
+      "painted_rect": {
+        "min_x": 702.6875,
+        "min_y": 331,
+        "max_x": 754.5625,
+        "max_y": 349
+      },
+      "clip_rect": {
+        "min_x": 702.6875,
+        "min_y": 331,
+        "max_x": 895,
+        "max_y": 349
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "B3 is 1/30",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1915774213681480
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 686,
+        "min_y": 361,
+        "max_x": 895,
+        "max_y": 379
+      },
+      "painted_rect": {
+        "min_x": 686,
+        "min_y": 361,
+        "max_x": 894.125,
+        "max_y": 379
+      },
+      "clip_rect": {
+        "min_x": 686,
+        "min_y": 361,
+        "max_x": 895,
+        "max_y": 379
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "The full table is in the published notes.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2316670428063582
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 686,
+        "min_y": 128,
+        "max_x": 1104,
+        "max_y": 146
+      },
+      "painted_rect": {
+        "min_x": 686,
+        "min_y": 128,
+        "max_x": 1104,
+        "max_y": 146
+      },
+      "clip_rect": {
+        "min_x": 686,
+        "min_y": 128,
+        "max_x": 1104,
+        "max_y": 146
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "The notes on the engine are ready. Note G has the table of Bernoulli numbers.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4271557133675548
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 1237,
+        "min_y": 172,
+        "max_x": 1298,
+        "max_y": 190
+      },
+      "painted_rect": {
+        "min_x": 1237,
+        "min_y": 172,
+        "max_x": 1297.625,
+        "max_y": 190
+      },
+      "clip_rect": {
+        "min_x": 1237,
+        "min_y": 172,
+        "max_x": 1298,
+        "max_y": 190
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Thank you!",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4430219041492635
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 686,
+        "min_y": 278,
+        "max_x": 895,
+        "max_y": 296
+      },
+      "painted_rect": {
+        "min_x": 686,
+        "min_y": 278,
+        "max_x": 740.40625,
+        "max_y": 296
+      },
+      "clip_rect": {
+        "min_x": 686,
+        "min_y": 278,
+        "max_x": 895,
+        "max_y": 296
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Of course:",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4488243279056935
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 805,
+        "min_y": 216,
+        "max_x": 1298,
+        "max_y": 252
+      },
+      "painted_rect": {
+        "min_x": 805,
+        "min_y": 216,
+        "max_x": 1297.59375,
+        "max_y": 252
+      },
+      "clip_rect": {
+        "min_x": 805,
+        "min_y": 216,
+        "max_x": 1298,
+        "max_y": 252
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Could you send the table as well, so I can check the third and fifth numbers against my own working before Friday?",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6451590403443845
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 702.6875,
+        "min_y": 308,
+        "max_x": 895,
+        "max_y": 326
+      },
+      "painted_rect": {
+        "min_x": 702.6875,
+        "min_y": 308,
+        "max_x": 748.125,
+        "max_y": 326
+      },
+      "clip_rect": {
+        "min_x": 702.6875,
+        "min_y": 308,
+        "max_x": 895,
+        "max_y": 326
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "B1 is 1/6",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "switch_label",
+        "instance": 7897998764524933
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 383,
+        "min_y": 353,
+        "max_x": 602,
+        "max_y": 385
+      },
+      "painted_rect": {
+        "min_x": 383,
+        "min_y": 360.5,
+        "max_x": 451.75,
+        "max_y": 377.5
+      },
+      "clip_rect": {
+        "min_x": 383,
+        "min_y": 353,
+        "max_x": 602,
+        "max_y": 385
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "switch_label",
+        "instance": 8074489154197685
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 383,
+        "min_y": 390,
+        "max_x": 602,
+        "max_y": 422
+      },
+      "painted_rect": {
+        "min_x": 383,
+        "min_y": 397.5,
+        "max_x": 464.34375,
+        "max_y": 414.5
+      },
+      "clip_rect": {
+        "min_x": 383,
+        "min_y": 390,
+        "max_x": 602,
+        "max_y": 422
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 21,
+    "attempted_components": 21,
+    "successful_components": 21,
+    "failed_components": 0,
+    "native_text_controls": 47,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

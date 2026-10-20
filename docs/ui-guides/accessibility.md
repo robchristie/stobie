@@ -190,6 +190,7 @@ snapshot, is the source.
 | `ApplicationBar`, `Toolbar` | As the recipe sets it | `toolbar` when its node has the AccessKit toolbar role; otherwise flattened |
 | `Button` | `Button` | `button` with `aria-keyshortcuts` for its shortcut; a toggle adds `aria-pressed`; a disabled control adds `aria-disabled` and its reason in `aria-description` |
 | `NavigationItem` | `Button` with current state | `button` with `aria-current` |
+| `Switch` | `Switch` with toggled state | `switch` with `aria-checked`; a disabled switch adds `aria-disabled` and its reason in `aria-description` |
 | `RadioButton` | `RadioButton` | `radio` with `aria-checked` |
 | `ComboBox` | `ComboBox` | `combobox` with its value as text and `aria-expanded` (`false` when unset) |
 | `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | Focusable `input` or `textarea` (implicit `textbox`) whose `value` is the current text |
@@ -203,7 +204,7 @@ snapshot, is the source.
 | `Status` | `Status`, live polite | `status`, a polite live region. A readout that follows the pointer declares live off (`aria-live="off"`) |
 | `StatusChip` | `Label` | Text; never a live region |
 | `Link` | `Link` with its URL | `link`, a hit target while enabled |
-| `Section` | As the recipe sets it | `group` when named; otherwise flattened |
+| `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender | `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |
 | Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading | Text, or `heading` with `aria-level` |

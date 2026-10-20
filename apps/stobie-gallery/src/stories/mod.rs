@@ -1,5 +1,6 @@
 mod avatars;
 mod buttons;
+mod chat;
 mod composer;
 mod data;
 mod dock;
@@ -21,6 +22,7 @@ use stobie_ui_egui::{
 
 use crate::catalogue::{StoryId, story_definition};
 
+pub use chat::ChatFixtureState;
 pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
@@ -36,6 +38,7 @@ pub(crate) struct StoryState {
     pub(crate) status_chip: StatusChipFixtureState,
     pub(crate) rows: rows::RowFixtureState,
     pub(crate) composer: composer::ComposerFixtureState,
+    pub(crate) chat: ChatFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -127,6 +130,9 @@ fn present_story(
             &mut report,
         ),
         StoryId::AvatarsFigures => avatars::story(ui, tokens, font_scale, &mut report),
+        StoryId::ChatConversation | StoryId::ChatLongNarrow => {
+            chat::story(ui, story, tokens, font_scale, &mut state.chat, &mut report)
+        }
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.

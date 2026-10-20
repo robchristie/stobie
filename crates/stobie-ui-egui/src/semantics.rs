@@ -103,6 +103,7 @@ pub fn audit_accesskit(
                 | UiRole::Status
                 | UiRole::Pane
                 | UiRole::Link
+                | UiRole::Switch
         )
     }) {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
@@ -148,6 +149,7 @@ pub fn audit_accesskit(
             UiRole::Status => egui::accesskit::Role::Status,
             UiRole::Pane => egui::accesskit::Role::Region,
             UiRole::Link => egui::accesskit::Role::Link,
+            UiRole::Switch => egui::accesskit::Role::Switch,
             _ => unreachable!(),
         };
         if node.role() != expected_role {
@@ -233,7 +235,10 @@ pub fn audit_accesskit(
                 egui::accesskit::Toggled::False
             }
         });
-        if node.toggled() != expected_toggled {
+        // A switch is always on or off.
+        if node.toggled() != expected_toggled
+            || (semantic.role == UiRole::Switch && semantic.checked.is_none())
+        {
             findings.push(AccessKitMismatch::Checked {
                 id: semantic.id.clone(),
             });
@@ -248,13 +253,14 @@ pub fn audit_accesskit(
                     | UiRole::ResultRow
                     | UiRole::ThumbnailCell
                     | UiRole::Link
+                    | UiRole::Switch
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
         if (semantic.role == UiRole::StatusChip && supports_click)
             || (should_click && !supports_click)
             || (matches!(
                 semantic.role,
-                UiRole::Button | UiRole::NavigationItem | UiRole::Link
+                UiRole::Button | UiRole::NavigationItem | UiRole::Link | UiRole::Switch
             ) && !semantic.enabled
                 && supports_click)
         {

@@ -152,3 +152,25 @@ to 45, and the composer fixtures' from 47 to 48) and changed one pixel of
 glyph atlas grew. The five new icons (`Attach`, `Copy`, `Mic`, `Send` and
 `User`) changed `icon-vocabulary-light`'s picture and added five measured
 captions to it; nothing else changed.
+
+Chat fixtures add a conversation list beside a conversation in dark
+comfortable mode at desktop width, with an unread, a current and plain rows,
+switches on and off, and messages on both sides holding text, Markdown, a
+list and a link; the same story in light compact mode at a regular width,
+where the list stacks above the conversation; and a narrow column in dark
+comfortable mode and in light high contrast at 150% with long and localised
+names and previews, a row without a preview, an archived row, a long switch
+label, a disabled switch, and bubbles holding a long link and code below the
+fold. Rows and switches are measured with their own text kinds and publish
+their names, previews, times, unread words and states in semantics; the
+messages' words are content text. The physical `tools/chat-browser-smoke.sh`
+runs through full verification: it reads rows, switches and bubbles through
+observation and the ARIA layer, opens a conversation by pointer and by Tab
+and Enter, turns a switch over by pointer, Space and Enter, and scrolls the
+narrow column. Adding the two catalogue entries raised every earlier
+fixture's native-control count by two (from 45 to 47, and the composer
+fixtures' from 48 to 50) and changed one pixel of
+`rows-actions-light-compact` (at 538, 309) by one colour step as the glyph
+atlas grew. The composer's send and attach controls now draw the `Send` and
+`Attach` icons, which changed the pictures of `composer-chat-dark` and
+`composer-long-high-contrast`; nothing else changed.

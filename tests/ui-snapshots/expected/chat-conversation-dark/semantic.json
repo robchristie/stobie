@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "chat/conversation",
+      "rect": {
+        "min_x": 362,
+        "min_y": 54,
+        "max_x": 1322,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.017c0f3022cbc585",
+      "parent": "gallery.story",
+      "role": "switch",
+      "name": "Notifications",
+      "description": "Turn notifications for new messages on or off",
+      "rect": {
+        "min_x": 374,
+        "min_y": 353,
+        "max_x": 654,
+        "max_y": 385
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.settings.notifications"
+      ]
+    },
+    {
+      "id": "presentation.0ad15fbc57bd6a66",
+      "parent": "presentation.43ce04c281b04ff1",
+      "role": "link",
+      "name": "the published notes",
+      "rect": {
+        "min_x": 783,
+        "min_y": 361,
+        "max_x": 890.447021484375,
+        "max_y": 379
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/notes"
+    },
+    {
+      "id": "presentation.259582bf3027eaf8",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 1225,
+        "min_y": 165,
+        "max_x": 1310,
+        "max_y": 197
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.3393ef237cba05b0",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Grace Hopper",
+      "description": "1 unread message; The hall is booked for Friday; Mon; Open the conversation with this ID",
+      "rect": {
+        "min_x": 374,
+        "min_y": 231,
+        "max_x": 654,
+        "max_y": 281
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "grace"
+    },
+    {
+      "id": "presentation.43ce04c281b04ff1",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 674,
+        "min_y": 271,
+        "max_x": 907,
+        "max_y": 386
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.6d6e3665da2203bc",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Kitchen helper",
+      "description": "2 unread messages; Three dinners that use the leftover rice; 08:15; Open the conversation with this ID",
+      "rect": {
+        "min_x": 374,
+        "min_y": 176,
+        "max_x": 654,
+        "max_y": 226
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "helper"
+    },
+    {
+      "id": "presentation.7965abd952c3151e",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 674,
+        "min_y": 121,
+        "max_x": 1116,
+        "max_y": 153
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.b59cafb481c758b5",
+      "parent": "gallery.story",
+      "role": "switch",
+      "name": "Keep at the top",
+      "description": "Keep this conversation at the top of the list",
+      "rect": {
+        "min_x": 374,
+        "min_y": 390,
+        "max_x": 654,
+        "max_y": 422
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.conversation.pin"
+      ]
+    },
+    {
+      "id": "presentation.d5ce048fba6b5705",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Edsger Dijkstra",
+      "description": "Shortest route found; 12 Oct; Open the conversation with this ID",
+      "rect": {
+        "min_x": 374,
+        "min_y": 286,
+        "max_x": 654,
+        "max_y": 336
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "edsger"
+    },
+    {
+      "id": "presentation.e8013d2ca99dd4a9",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Ada Lovelace",
+      "description": "The notes on the engine are ready; 09:41; Open the conversation with this ID",
+      "rect": {
+        "min_x": 374,
+        "min_y": 121,
+        "max_x": 654,
+        "max_y": 171
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.conversation.open"
+      ],
+      "argument": "ada"
+    },
+    {
+      "id": "presentation.ec012008a8bcf68f",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 793,
+        "min_y": 209,
+        "max_x": 1310,
+        "max_y": 259
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

@@ -143,6 +143,9 @@ pub enum UiRole {
     /// A link to an external URL, carried as the node's `value`. Hosts offer
     /// it as the `stobie.open-link` capability.
     Link,
+    /// An on or off setting, named by its label, whose state is `checked`.
+    /// Activating it performs its action, which turns the setting over.
+    Switch,
 }
 
 /// The domain identity a semantic node presents, published to agents as

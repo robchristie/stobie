@@ -151,11 +151,11 @@ impl Application for Chat {
         }
         let spec = ComposerSpec::new(
             "Message",
-            ComposerControl::icon(ChatAct::Send, IconId::ArrowUp),
+            ComposerControl::icon(ChatAct::Send, IconId::Send),
         )
         .hint("Message Ada")
         .max_rows(self.max_rows)
-        .leading(ComposerControl::icon(ChatAct::Attach, IconId::Add))
+        .leading(ComposerControl::icon(ChatAct::Attach, IconId::Attach))
         .trailing(ComposerControl::label(ChatAct::Dictate));
         let response = frame.composer(ui, &mut p, "composer", &spec, &self.draft, Intent::Draft);
         view.field = Some(response.field);
