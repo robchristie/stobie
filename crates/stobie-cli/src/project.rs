@@ -735,8 +735,8 @@ mod tests {
     }
 
     fn test_directory(name: &str) -> PathBuf {
-        // Outside any Cargo workspace, so that only the test's own
-        // manifests count.
+        // Generated manifests declare or join their own workspace, so an
+        // enclosing one (with TMPDIR inside a checkout) does not count.
         let directory = std::env::temp_dir()
             .join("stobie-cli-tests")
             .join(format!("{name}-{}", std::process::id()));
@@ -1006,11 +1006,14 @@ mod tests {
         let root = test_directory("enclosing");
         let nested = root.join("apps/inner");
         fs::create_dir_all(&nested).unwrap();
-        assert_eq!(enclosing_workspace(&nested), None);
+        // Whatever encloses the temporary directory, such as a checkout
+        // when verification points TMPDIR inside it.
+        let outside = enclosing_workspace(&root);
+        assert_eq!(enclosing_workspace(&nested), outside);
         fs::write(root.join("Cargo.toml"), "[package]\nname = \"x\"\n").unwrap();
         assert_eq!(
             enclosing_workspace(&nested),
-            None,
+            outside,
             "a package is not a workspace"
         );
         fs::write(
