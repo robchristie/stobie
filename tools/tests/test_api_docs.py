@@ -18,7 +18,7 @@ class ApiDocsTests(unittest.TestCase):
         for consumer in DOCS.SOURCE_CONSUMERS:
             path = root / consumer
             path.parent.mkdir(parents=True, exist_ok=True)
-            examples = {"presentation.rs": 4, "dock.rs": 2, "history.rs": 1, "local_time.rs": 1, "actions.rs": 1, "lib.rs": 2 if "stobie-ui-egui" in consumer else 1}
+            examples = {"presentation.rs": 5, "dock.rs": 2, "history.rs": 1, "local_time.rs": 1, "actions.rs": 1, "lib.rs": 2 if "stobie-ui-egui" in consumer else 1}
             path.write_text("//! ```\n//! assert!(true);\n//! ```\n" * examples.get(path.name, 0))
         for consumer in DOCS.MARKDOWN_CONSUMERS:
             path = root / consumer

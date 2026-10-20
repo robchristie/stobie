@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "markdown/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 673
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.2ff4a1d9cf3618bc",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "relative",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 845,
+        "min_y": 494,
+        "max_x": 905.6719970703125,
+        "max_y": 520
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "disabled_reason": "The link's address is not an http, https or mailto URL",
+      "value": "/settings"
+    },
+    {
+      "id": "presentation.ac40a9bc6aef0746",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "long link label that wraps across lines",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 746.8125,
+        "min_y": 615,
+        "max_x": 976.4649658203125,
+        "max_y": 661
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/reports/nightly"
+    },
+    {
+      "id": "presentation.d644829f33cfa1d0",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "run script",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 759,
+        "min_y": 494,
+        "max_x": 836.5910034179688,
+        "max_y": 520
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "disabled_reason": "The link's address is not an http, https or mailto URL",
+      "value": "javascript:alert(1)"
+    }
+  ],
+  "semantic_audit": []
+}

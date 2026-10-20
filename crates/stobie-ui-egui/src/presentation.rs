@@ -47,6 +47,12 @@ impl PresentationId {
         self.0.value() & ((1_u64 << 53) - 1)
     }
 
+    /// A distinct identity within this one, such as a part of a composite
+    /// recipe.
+    pub(crate) fn child(self, key: impl Hash + std::fmt::Debug) -> Self {
+        Self(self.0.with(key))
+    }
+
     pub fn action_identity(self) -> ActionButtonIdentity {
         ActionButtonIdentity {
             widget_id: self.egui_id(),
@@ -698,6 +704,55 @@ impl PresentationContext {
             self.push_node(ui, node);
         }
         response
+    }
+
+    /// Markdown, such as a reply from a model: CommonMark blocks and inline
+    /// styles on the reading-text path, each block measured, wrapped and
+    /// selectable, with links inside the text that open in a new browser tab.
+    /// Every link's semantic `Link` node is recorded, so hosts offer it to
+    /// agents as the `stobie.open-link` capability.
+    ///
+    /// ```
+    /// use stobie_ui_egui::{DesignTokens, MarkdownSpec, PresentationContext,
+    ///     PresentationObservations, PresentationScope, SemanticUiId};
+    ///
+    /// // A reply that may still be arriving: an incomplete source is safe.
+    /// fn reply(ui: &mut egui::Ui, tokens: DesignTokens, scale: f32, message_id: u64,
+    ///          source: &str) -> PresentationObservations {
+    ///     let mut p = PresentationContext::new(ui, tokens, scale,
+    ///         PresentationScope::new("conversation").child(message_id), SemanticUiId::root());
+    ///     egui::ScrollArea::vertical().show(ui, |ui| {
+    ///         p.markdown(ui, "body", source, MarkdownSpec {
+    ///             link_description: Some("Opens in a new tab"),
+    ///             ..MarkdownSpec::default()
+    ///         });
+    ///     });
+    ///     p.finish(ui)
+    /// }
+    /// ```
+    pub fn markdown(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        source: &str,
+        spec: crate::MarkdownSpec<'_>,
+    ) -> Response {
+        self.check_pass(ui);
+        let presented = crate::markdown(
+            ui,
+            self.scope.instance(key),
+            source,
+            spec,
+            self.parent.clone(),
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        for mut node in presented.link_nodes {
+            node.domain_reference = self.domain_reference.clone();
+            self.push_node(ui, node);
+        }
+        presented.response
     }
 
     /// Reserve the existing measured line slot for a fixed-height row.

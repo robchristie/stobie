@@ -4,6 +4,9 @@ mod icon;
 #[cfg(test)]
 mod icon_action_tests;
 mod list_row;
+mod markdown;
+#[cfg(test)]
+mod markdown_tests;
 mod navigation;
 mod property;
 mod range;
@@ -28,6 +31,7 @@ pub use action_button::{
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
+pub use markdown::{MarkdownResponse, MarkdownSpec, markdown};
 pub use navigation::{
     NavigationBadge, NavigationItemSpec, navigation_item, navigation_item_minimum_width,
     navigation_item_semantic_node,

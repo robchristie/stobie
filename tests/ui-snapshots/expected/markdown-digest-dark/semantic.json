@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "markdown/digest",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 614
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.09d214850d866a1d",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Probing attention heads for retrieval",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 557.15625,
+        "min_y": 358,
+        "max_x": 752.4712524414062,
+        "max_y": 376
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/retrieval-heads"
+    },
+    {
+      "id": "presentation.2ff4a1d9cf3618bc",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Evaluating agents that call tools",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 557.15625,
+        "min_y": 294,
+        "max_x": 728.603271484375,
+        "max_y": 312
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/evaluating-tool-agents"
+    },
+    {
+      "id": "presentation.5a69b81a7319d1d3",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "discussion",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 774.6875,
+        "min_y": 429,
+        "max_x": 831.7984619140625,
+        "max_y": 447
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/discussions/reward-models"
+    },
+    {
+      "id": "presentation.ac40a9bc6aef0746",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Speculative decoding on a phone",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 557.15625,
+        "min_y": 335,
+        "max_x": 736.604248046875,
+        "max_y": 353
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/speculative-decoding-phone"
+    },
+    {
+      "id": "presentation.d644829f33cfa1d0",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "Flat-memory attention for long documents",
+      "description": "Opens in a new tab",
+      "rect": {
+        "min_x": 557.15625,
+        "min_y": 253,
+        "max_x": 787.603271484375,
+        "max_y": 271
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "https://example.org/papers/flat-memory-attention"
+    }
+  ],
+  "semantic_audit": []
+}
