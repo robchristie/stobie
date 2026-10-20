@@ -1,3 +1,4 @@
+mod avatars;
 mod buttons;
 mod composer;
 mod data;
@@ -125,6 +126,7 @@ fn present_story(
             &mut state.composer,
             &mut report,
         ),
+        StoryId::AvatarsFigures => avatars::story(ui, tokens, font_scale, &mut report),
         StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
             icons::actions(ui, story, tokens, font_scale, &mut state.icon, &mut report)

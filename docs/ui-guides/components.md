@@ -633,6 +633,69 @@ Gallery `composer/chat` and `composer/long-narrow` present an empty draft
 with the microphone alone, a draft ready to send, grown lines, a long
 localised hint, a draft past its line limit and a disabled send; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
+## Avatars
+
+`PresentationContext::avatar(ui, &spec)` allocates and paints one avatar at
+its size and returns a hover-only response. An `AvatarSpec` holds a figure,
+an `AvatarSize` and an optional image:
+
+```rust
+use stobie_ui_egui::{
+    AvatarFace, AvatarOutline, AvatarSize, AvatarSpec, OutlineSegment, PresentationContext,
+};
+
+// An application's own shape, checked when the program is built.
+const DROP: AvatarOutline<'static> = AvatarOutline::new([0.5, 0.04], &[
+    OutlineSegment::Cubic([0.62, 0.22], [0.9, 0.45], [0.9, 0.62]),
+    OutlineSegment::Cubic([0.9, 0.85], [0.72, 0.98], [0.5, 0.98]),
+    OutlineSegment::Cubic([0.28, 0.98], [0.1, 0.85], [0.1, 0.62]),
+    OutlineSegment::Cubic([0.1, 0.45], [0.38, 0.22], [0.5, 0.04]),
+]);
+
+fn people(ui: &mut egui::Ui, p: &mut PresentationContext, photo: Option<egui::load::SizedTexture>) {
+    let bot = AvatarSpec::shape(DROP, egui::Color32::from_rgb(150, 122, 228),
+        AvatarFace::Eyes { centre: [0.5, 0.64] }, AvatarSize::List);
+    p.avatar(ui, &bot);
+    let mut person = AvatarSpec::person("Ada Lovelace", AvatarSize::List);
+    person.image = photo; // None while loading or after a failure.
+    p.avatar(ui, &person);
+}
+```
+
+- **Figures.** `AvatarFigure::Person { name }` shows up to two initials, the
+  first letter or digit of the name's first and last words in upper case, in
+  semibold text on the raised surface with a decorative border, shrinking to
+  fit and centred by their ink. A name without letters or digits, or one the
+  fonts cannot draw, shows the `IconId::User` glyph instead.
+  `AvatarFigure::Shape { outline, fill, face }` fills an `AvatarOutline` with
+  the colour and draws `AvatarFace::EYES`, eyes at a chosen centre, or
+  `AvatarFace::None`.
+- **Outlines.** An outline is a start point and at least two `Line`,
+  `Quadratic` or `Cubic` segments in the unit square, closing back to its
+  start; concave outlines fill correctly. `AvatarOutline::new` is `const`
+  and fails the build for points outside the square; `try_new` returns an
+  `AvatarOutlineError` for outlines from data. `CIRCLE`, `ROUNDED_SQUARE`
+  and `HEXAGON` are built in. The application owns its shapes and colours,
+  including their contrast with the surface behind them.
+- **Images.** An image (`egui::load::SizedTexture`) fills the figure's
+  outline, cropped to its centred square, with a decorative border. The
+  application loads it; pass `None` while it loads or after it fails and the
+  figure is drawn.
+- **Sizes.** `avatar_size(tokens, size, font_scale)` gives the diameter:
+  `avatar.headerSize`, `avatar.listSize` and `avatar.stripSize` (32, 40 and
+  56 points) times the font scale clamped to 100–150%.
+- **Semantics.** An avatar publishes no node and no measured text, and its
+  initials are not observed: it is decorative, like an icon, and the row,
+  heading or control beside it names the person or thing. An avatar that
+  acts (a pinned person who opens a conversation) belongs inside a control
+  with that name.
+
+Low-level callers use `avatar(ui, &spec, tokens, font_scale)`, or
+`paint_avatar(painter, &spec, rect, tokens)` to paint into the largest
+square in `rect`; `avatar_initials` and `avatar_eye_colour` expose the
+derivations. Gallery `avatars/figures` shows each size, people (including
+the glyph fallback), the built-in and application shapes, and images; the
+[snapshot guide](../../tests/ui-snapshots/README.md) lists its fixtures.
 
 ## Local date and time
 

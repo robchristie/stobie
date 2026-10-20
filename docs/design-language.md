@@ -221,8 +221,9 @@ initial vocabulary should cover global actions, pane tools, disclosure,
 status, overflow and directional movement. Prefer project-authored geometric
 SVG paths under Apache-2.0. Any third-party icon set requires a checked-in
 licence and attribution record before its paths enter the generated or source
-tree. The first implementation contains 30 project-authored SVGs, compiled into static
-vector geometry by an offline, closed-subset compiler. Both native and WASM use
+tree. The vocabulary contains 35 project-authored SVGs, compiled into static
+vector geometry by an offline, closed-subset compiler of lines, circles,
+Bézier curves and unrotated arcs. Both native and WASM use
 the same egui painter. `icon.size` resolves 16-point artwork independently
 of hit geometry, with the same 100–150% scale as action typography. Round caps,
 round joins and two-unit strokes share a 24-unit view box.
@@ -235,6 +236,23 @@ Minimum useful labelled width includes measured ellipsis; callers must wrap,
 provide that width or explicitly choose icon-only/overflow. Icons never silently
 replace a label. See [component contracts](ui-guides/components.md#typed-icons-and-action-presentations)
 and the [artwork/licence record](../crates/stobie-ui-egui/assets/icons/README.md).
+
+## Avatars
+
+An avatar stands for a person or for something an application gives a
+character, such as an assistant. A person's avatar is their initials, or a
+person glyph when the name offers none, on a quiet raised disc with a
+decorative border; it never invents a colour for a person. A generated avatar
+is a soft shape in one solid colour with a small face, so that several read
+as a family: the application supplies the outline (a closed path in the unit
+square, which may be concave) and the colour as data, or picks a built-in
+circle, rounded square or hexagon. The face is two upright eyes in near-black
+or white, whichever contrasts more with the fill. An image fills the
+avatar's outline, cropped to a centred square, and the figure stands in
+while it loads or when it fails. Header, list and strip sizes (32, 40 and 56
+points) are tokens that grow with text up to 150%. An avatar is decorative,
+like an icon: the row, heading or control beside it names the person or
+thing. See [component contracts](ui-guides/components.md#avatars).
 
 ## Destination navigation
 

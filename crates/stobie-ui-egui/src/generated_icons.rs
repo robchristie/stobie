@@ -8,18 +8,21 @@ pub enum IconId {
     ArrowLeft,
     ArrowRight,
     ArrowUp,
+    Attach,
     Calendar,
     Check,
     ChevronDown,
     ChevronRight,
     Clock,
     Close,
+    Copy,
     Edit,
     Error,
     FitView,
     Home,
     Info,
     Link,
+    Mic,
     Navigate,
     Notifications,
     Overflow,
@@ -29,9 +32,11 @@ pub enum IconId {
     Remove,
     Save,
     Search,
+    Send,
     Settings,
     Tasks,
     Undo,
+    User,
     Warning,
 }
 impl IconId {
@@ -42,18 +47,21 @@ impl IconId {
         Self::ArrowLeft,
         Self::ArrowRight,
         Self::ArrowUp,
+        Self::Attach,
         Self::Calendar,
         Self::Check,
         Self::ChevronDown,
         Self::ChevronRight,
         Self::Clock,
         Self::Close,
+        Self::Copy,
         Self::Edit,
         Self::Error,
         Self::FitView,
         Self::Home,
         Self::Info,
         Self::Link,
+        Self::Mic,
         Self::Navigate,
         Self::Notifications,
         Self::Overflow,
@@ -63,9 +71,11 @@ impl IconId {
         Self::Remove,
         Self::Save,
         Self::Search,
+        Self::Send,
         Self::Settings,
         Self::Tasks,
         Self::Undo,
+        Self::User,
         Self::Warning,
     ];
     fn geometry(self) -> &'static [IconGeometry] {
@@ -90,6 +100,22 @@ impl IconId {
                 IconGeometry::Path(&[[5.0, 10.0], [12.0, 3.0], [19.0, 10.0]], false),
                 IconGeometry::Path(&[[12.0, 3.0], [12.0, 21.0]], false),
             ],
+            Self::Attach => &[IconGeometry::Curve(
+                [12.71, 8.46],
+                &[
+                    IconSegment::Line([9.88, 11.29]),
+                    IconSegment::Cubic([9.099, 12.071], [9.099, 13.339], [9.88, 14.12]),
+                    IconSegment::Cubic([10.661, 14.901], [11.929, 14.901], [12.71, 14.12]),
+                    IconSegment::Line([17.3, 9.53]),
+                    IconSegment::Cubic([18.796, 7.959], [18.766, 5.482], [17.233, 3.946]),
+                    IconSegment::Cubic([15.701, 2.411], [13.224, 2.377], [11.65, 3.87]),
+                    IconSegment::Line([5.64, 9.88]),
+                    IconSegment::Cubic([3.437, 12.244], [3.502, 15.928], [5.787, 18.213]),
+                    IconSegment::Cubic([8.072, 20.498], [11.756, 20.563], [14.12, 18.36]),
+                    IconSegment::Line([18.36, 14.12]),
+                ],
+                false,
+            )],
             Self::Calendar => &[
                 IconGeometry::Path(&[[4.0, 5.0], [20.0, 5.0], [20.0, 21.0], [4.0, 21.0]], true),
                 IconGeometry::Path(&[[8.0, 3.0], [8.0, 7.0]], false),
@@ -118,6 +144,19 @@ impl IconId {
             Self::Close => &[
                 IconGeometry::Path(&[[5.0, 5.0], [19.0, 19.0]], false),
                 IconGeometry::Path(&[[19.0, 5.0], [5.0, 19.0]], false),
+            ],
+            Self::Copy => &[
+                IconGeometry::Path(&[[8.0, 8.0], [21.0, 8.0], [21.0, 21.0], [8.0, 21.0]], true),
+                IconGeometry::Path(
+                    &[
+                        [16.0, 8.0],
+                        [16.0, 3.0],
+                        [3.0, 3.0],
+                        [3.0, 16.0],
+                        [8.0, 16.0],
+                    ],
+                    false,
+                ),
             ],
             Self::Edit => &[
                 IconGeometry::Path(
@@ -193,6 +232,29 @@ impl IconId {
                     false,
                 ),
                 IconGeometry::Path(&[[8.0, 16.0], [16.0, 8.0]], false),
+            ],
+            Self::Mic => &[
+                IconGeometry::Curve(
+                    [9.0, 6.0],
+                    &[
+                        IconSegment::Cubic([9.0, 4.343], [10.343, 3.0], [12.0, 3.0]),
+                        IconSegment::Cubic([13.657, 3.0], [15.0, 4.343], [15.0, 6.0]),
+                        IconSegment::Line([15.0, 11.0]),
+                        IconSegment::Cubic([15.0, 12.657], [13.657, 14.0], [12.0, 14.0]),
+                        IconSegment::Cubic([10.343, 14.0], [9.0, 12.657], [9.0, 11.0]),
+                    ],
+                    true,
+                ),
+                IconGeometry::Curve(
+                    [5.0, 11.0],
+                    &[
+                        IconSegment::Cubic([5.0, 14.866], [8.134, 18.0], [12.0, 18.0]),
+                        IconSegment::Cubic([15.866, 18.0], [19.0, 14.866], [19.0, 11.0]),
+                    ],
+                    false,
+                ),
+                IconGeometry::Path(&[[12.0, 18.0], [12.0, 21.0]], false),
+                IconGeometry::Path(&[[9.0, 21.0], [15.0, 21.0]], false),
             ],
             Self::Navigate => &[
                 IconGeometry::Path(&[[12.0, 2.0], [12.0, 22.0]], false),
@@ -274,6 +336,10 @@ impl IconId {
                 IconGeometry::Circle([10.0, 10.0], 6.0, false),
                 IconGeometry::Path(&[[15.0, 15.0], [21.0, 21.0]], false),
             ],
+            Self::Send => &[
+                IconGeometry::Path(&[[4.0, 4.0], [21.0, 12.0], [4.0, 20.0], [7.0, 12.0]], true),
+                IconGeometry::Path(&[[7.0, 12.0], [13.0, 12.0]], false),
+            ],
             Self::Settings => &[
                 IconGeometry::Path(
                     &[
@@ -323,6 +389,17 @@ impl IconId {
                         [20.0, 13.0],
                         [20.0, 17.0],
                         [16.0, 21.0],
+                    ],
+                    false,
+                ),
+            ],
+            Self::User => &[
+                IconGeometry::Circle([12.0, 8.0], 3.5, false),
+                IconGeometry::Curve(
+                    [5.0, 20.0],
+                    &[
+                        IconSegment::Cubic([5.0, 16.686], [8.134, 14.0], [12.0, 14.0]),
+                        IconSegment::Cubic([15.866, 14.0], [19.0, 16.686], [19.0, 20.0]),
                     ],
                     false,
                 ),

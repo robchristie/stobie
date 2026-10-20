@@ -84,6 +84,11 @@
   "icon": {
     "size": { "$type": "dimension", "$value": 16, "$description": "Common square artwork size, independent of density and hit target" }
   },
+  "avatar": {
+    "headerSize": { "$type": "dimension", "$value": 32, "$description": "Avatar beside a conversation's title, at 100% text scale" },
+    "listSize": { "$type": "dimension", "$value": 40, "$description": "Avatar leading a list or conversation row, at 100% text scale" },
+    "stripSize": { "$type": "dimension", "$value": 56, "$description": "Avatar in a strip of pinned people or Bots, at 100% text scale" }
+  },
   "typography": {
     "applicationTitleSize": { "$type": "fontSize", "$value": 18 },
     "paneTitleSize": { "$type": "fontSize", "$value": 16 },
