@@ -909,7 +909,7 @@ mod tests {
         let manifest: FixtureManifest =
             serde_json::from_str(include_str!("../../tests/ui-snapshots/fixtures.json")).unwrap();
         validate_manifest(&manifest).unwrap();
-        assert_eq!(manifest.fixtures.len(), 23);
+        assert_eq!(manifest.fixtures.len(), 26);
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
         validate_evaluation_seed(&root).unwrap();
     }

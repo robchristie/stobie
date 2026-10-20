@@ -390,6 +390,60 @@
       "data_fixture": "gallery-seed-v1",
       "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
       "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "avatars-figures-dark",
+      "story": "avatars/figures",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "avatars-figures-light",
+      "story": "avatars/figures",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "compact",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "avatars-figures-high-contrast",
+      "story": "avatars/figures",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "high",
+        "density": "comfortable",
+        "font_scale": 1.5,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
     }
   ]
 }

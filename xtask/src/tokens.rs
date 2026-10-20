@@ -655,6 +655,19 @@ impl DesignTokens {{
         ICON_SIZE
     }}
 
+    /// Avatar diameters at reference font scale, by where the avatar sits.
+    pub const fn avatar_header_size(&self) -> Points {{
+        Points({avatar_header_size})
+    }}
+
+    pub const fn avatar_list_size(&self) -> Points {{
+        Points({avatar_list_size})
+    }}
+
+    pub const fn avatar_strip_size(&self) -> Points {{
+        Points({avatar_strip_size})
+    }}
+
     /// Bounded content width at reference font scale, without changing struct literals.
     pub const fn status_chip_max_width(&self) -> Points {{
         Points({chip_max_width})
@@ -718,6 +731,9 @@ const MOTION: MotionTokens = MotionTokens {{
         chip_radius = number_literal(required_number(&common, "statusChip.radius")?),
         chip_max_width = number_literal(required_number(&common, "statusChip.maxWidth")?),
         icon_size = number_literal(required_number(&common, "icon.size")?),
+        avatar_header_size = number_literal(required_number(&common, "avatar.headerSize")?),
+        avatar_list_size = number_literal(required_number(&common, "avatar.listSize")?),
+        avatar_strip_size = number_literal(required_number(&common, "avatar.stripSize")?),
         application_title_size =
             number_literal(required_number(&common, "typography.applicationTitleSize")?),
         pane_title_size = number_literal(required_number(&common, "typography.paneTitleSize")?),

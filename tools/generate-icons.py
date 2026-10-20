@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compile Stobie's closed SVG subset into dependency-free vector geometry."""
 import argparse
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -12,11 +13,135 @@ OUTPUT = ROOT / 'crates/stobie-ui-egui/src/generated_icons.rs'
 NS = '{http://www.w3.org/2000/svg}'
 
 
-def number(value):
+def coordinate(value):
     result = float(value)
     if not 0 <= result <= 24:
         raise ValueError(f'coordinate outside icon grid: {value}')
-    return repr(result)
+    return result
+
+
+def number(value):
+    return repr(coordinate(value))
+
+
+def literal(point):
+    # Computed control points are rounded so generated geometry stays stable.
+    return '[' + ', '.join(repr(round(coordinate(value), 3) + 0.0) for value in point) + ']'
+
+
+def arc_to_cubics(start, rx, ry, rotation, large, sweep, end):
+    """Elliptical arc (SVG implementation notes F.6.5, no rotation) as cubic Béziers
+    of at most a quarter turn each."""
+    if rotation != 0:
+        raise ValueError('rotated arcs are unsupported')
+    if large not in (0, 1) or sweep not in (0, 1):
+        raise ValueError('arc flags must be 0 or 1')
+    if rx <= 0 or ry <= 0 or start == end:
+        raise ValueError('degenerate arc')
+    (x1, y1), (x2, y2) = start, end
+    hx, hy = (x1 - x2) / 2, (y1 - y2) / 2
+    scale = hx * hx / (rx * rx) + hy * hy / (ry * ry)
+    if scale > 1:
+        rx, ry = rx * math.sqrt(scale), ry * math.sqrt(scale)
+    numerator = rx * rx * ry * ry - rx * rx * hy * hy - ry * ry * hx * hx
+    denominator = rx * rx * hy * hy + ry * ry * hx * hx
+    factor = math.sqrt(max(0.0, numerator / denominator))
+    if large == sweep:
+        factor = -factor
+    cx = factor * rx * hy / ry + (x1 + x2) / 2
+    cy = -factor * ry * hx / rx + (y1 + y2) / 2
+    first = math.atan2((y1 - cy) / ry, (x1 - cx) / rx)
+    turn = math.atan2((y2 - cy) / ry, (x2 - cx) / rx) - first
+    if sweep and turn <= 0:
+        turn += 2 * math.pi
+    elif not sweep and turn >= 0:
+        turn -= 2 * math.pi
+    count = max(1, math.ceil(abs(turn) / (math.pi / 2) - 1e-9))
+    step = turn / count
+    handle = 4 / 3 * math.tan(step / 4)
+    cubics = []
+    for index in range(count):
+        a, b = first + step * index, first + step * (index + 1)
+        p0 = (cx + rx * math.cos(a), cy + ry * math.sin(a))
+        p3 = end if index == count - 1 else (cx + rx * math.cos(b), cy + ry * math.sin(b))
+        c1 = (p0[0] - handle * rx * math.sin(a), p0[1] + handle * ry * math.cos(a))
+        c2 = (p3[0] + handle * rx * math.sin(b), p3[1] - handle * ry * math.cos(b))
+        cubics.append((c1, c2, p3))
+    return cubics
+
+
+def compile_path(path, data):
+    """Absolute M, L, Q, C, A and Z commands, with explicit command letters and
+    whitespace. Straight paths keep the polyline form; curves become cubics."""
+    words = data.split()
+    geometry = []
+    start = None
+    segments = []
+    closed = False
+
+    def take(count):
+        if len(words) < count:
+            raise ValueError(f'{path}: incomplete path command')
+        return [words.pop(0) for _ in range(count)]
+
+    def point():
+        x, y = take(2)
+        return (coordinate(x), coordinate(y))
+
+    def emit():
+        if not segments:
+            raise ValueError(f'{path}: path needs at least two points')
+        if all(kind == 'L' for kind, *_ in segments):
+            points = [start] + [end for _, end in segments]
+            coords = ', '.join(f'[{x!r}, {y!r}]' for x, y in points)
+            geometry.append(f'IconGeometry::Path(&[{coords}], {str(closed).lower()})')
+            return
+        parts = []
+        for kind, *values in segments:
+            if kind == 'L':
+                parts.append(f'IconSegment::Line({literal(values[0])})')
+            else:
+                parts.append('IconSegment::Cubic(' + ', '.join(literal(v) for v in values) + ')')
+        geometry.append(f'IconGeometry::Curve({literal(start)}, &[{", ".join(parts)}], '
+                        f'{str(closed).lower()})')
+
+    while words:
+        command = words.pop(0)
+        if command == 'M':
+            if start is not None:
+                emit()
+            start, segments, closed = point(), [], False
+            continue
+        if start is None:
+            raise ValueError(f'{path}: unsupported path command {command}')
+        current = segments[-1][-1] if segments else start
+        if command == 'Z':
+            closed = True
+            emit()
+            start, segments, closed = None, [], False
+        elif command == 'L':
+            segments.append(('L', point()))
+        elif command == 'Q':
+            control, end = point(), point()
+            # The exact cubic form of a quadratic Bézier.
+            c1 = tuple(current[i] + 2 / 3 * (control[i] - current[i]) for i in range(2))
+            c2 = tuple(end[i] + 2 / 3 * (control[i] - end[i]) for i in range(2))
+            segments.append(('C', c1, c2, end))
+        elif command == 'C':
+            segments.append(('C', point(), point(), point()))
+        elif command == 'A':
+            rx, ry, rotation, large, sweep = (float(word) for word in take(5))
+            end = point()
+            try:
+                cubics = arc_to_cubics(current, rx, ry, rotation, large, sweep, end)
+            except ValueError as error:
+                raise ValueError(f'{path}: {error}') from None
+            segments += [('C', *cubic) for cubic in cubics]
+        else:
+            raise ValueError(f'{path}: unsupported path command {command}')
+    if start is not None:
+        emit()
+    return geometry
 
 
 def compile_svg(path):
@@ -28,31 +153,7 @@ def compile_svg(path):
     geometry = []
     for shape in svg:
         if shape.tag == NS + 'path' and set(shape.attrib) == {'d'}:
-            # Absolute M/L/Z only, with explicit command letters and whitespace.
-            words = shape.attrib['d'].split()
-            points = []
-            closed = False
-            def emit():
-                if len(points) < 2:
-                    raise ValueError(f'{path}: path needs at least two points')
-                coords = ', '.join(f'[{x}, {y}]' for x, y in points)
-                geometry.append(f'IconGeometry::Path(&[{coords}], {str(closed).lower()})')
-            while words:
-                command = words.pop(0)
-                if command == 'M':
-                    if points:
-                        emit()
-                    points, closed = [], False
-                elif command == 'Z':
-                    closed = True
-                    emit()
-                    points, closed = [], False
-                    continue
-                elif command != 'L' or not points:
-                    raise ValueError(f'{path}: unsupported path command {command}')
-                points.append((number(words.pop(0)), number(words.pop(0))))
-            if points:
-                emit()
+            geometry += compile_path(path, shape.attrib['d'])
         elif shape.tag == NS + 'circle':
             filled = shape.attrib.get('fill') == 'currentColor'
             expected_keys = {'cx', 'cy', 'r'} | ({'fill', 'stroke'} if filled else set())

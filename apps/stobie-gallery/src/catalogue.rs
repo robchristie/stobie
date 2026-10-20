@@ -43,10 +43,11 @@ pub enum StoryId {
     MarkdownLongNarrow,
     ComposerChat,
     ComposerLongNarrow,
+    AvatarsFigures,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 39] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -85,6 +86,7 @@ impl StoryId {
         Self::MarkdownLongNarrow,
         Self::ComposerChat,
         Self::ComposerLongNarrow,
+        Self::AvatarsFigures,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -127,6 +129,7 @@ impl StoryId {
             Self::MarkdownLongNarrow => "markdown/long-narrow",
             Self::ComposerChat => "composer/chat",
             Self::ComposerLongNarrow => "composer/long-narrow",
+            Self::AvatarsFigures => "avatars/figures",
         }
     }
 }
@@ -182,6 +185,7 @@ pub enum StoryGroup {
     Reading,
     Rows,
     Composer,
+    Avatar,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -329,6 +333,13 @@ const READING_NARROW_STATES: &[StoryState] = &[
     StoryState::HighTextScale,
     StoryState::Disabled,
 ];
+const AVATAR_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Loading,
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -356,7 +367,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 38] = [
+pub static STORIES: [StoryDefinition; 39] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -698,6 +709,15 @@ pub static STORIES: [StoryDefinition; 38] = [
         560,
         READING_NARROW_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::AvatarsFigures,
+        "People, shapes with faces and images at header, list and strip sizes.",
+        StoryGroup::Avatar,
+        640,
+        720,
+        AVATAR_STATES,
+        SCROLL,
     ),
 ];
 

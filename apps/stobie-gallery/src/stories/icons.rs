@@ -420,3 +420,46 @@ pub(super) fn actions(
         report.repaint = Some("icon fixture activated");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use stobie_ui_egui::{ApplicationTheme, DensityVariant, ThemeVariant};
+
+    use super::*;
+    use crate::stories::probe::{StoryProbe, render};
+
+    fn vocabulary_in(size: egui::Vec2) -> stobie_ui_egui::UiSnapshot {
+        let context = egui::Context::default();
+        let (snapshot, mut output) = render(
+            &context,
+            StoryProbe {
+                story: StoryId::IconsVocabulary,
+                tokens: DesignTokens::resolve(ThemeVariant::Light, DensityVariant::Compact),
+                scale: 1.0,
+                clip: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                theme: ApplicationTheme::analytical(),
+                preferences: Default::default(),
+                heading: false,
+            },
+            size,
+        );
+        output.textures_delta.clear();
+        snapshot
+    }
+
+    #[test]
+    fn a_scrolled_vocabulary_audits_only_its_visible_captions() {
+        let tall = vocabulary_in(egui::vec2(616.0, 1200.0));
+        assert!(tall.text_audit.is_empty(), "{:#?}", tall.text_audit);
+        assert_eq!(tall.text.len(), IconId::ALL.len());
+
+        // Rows below the fold are scrolled out of view, not clipped text.
+        let short = vocabulary_in(egui::vec2(616.0, 120.0));
+        assert!(short.text_audit.is_empty(), "{:#?}", short.text_audit);
+        assert!(
+            (1..IconId::ALL.len()).contains(&short.text.len()),
+            "{}",
+            short.text.len()
+        );
+    }
+}

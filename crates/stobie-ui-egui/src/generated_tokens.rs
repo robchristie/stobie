@@ -128,6 +128,19 @@ impl DesignTokens {
         ICON_SIZE
     }
 
+    /// Avatar diameters at reference font scale, by where the avatar sits.
+    pub const fn avatar_header_size(&self) -> Points {
+        Points(32.0)
+    }
+
+    pub const fn avatar_list_size(&self) -> Points {
+        Points(40.0)
+    }
+
+    pub const fn avatar_strip_size(&self) -> Points {
+        Points(56.0)
+    }
+
     /// Bounded content width at reference font scale, without changing struct literals.
     pub const fn status_chip_max_width(&self) -> Points {
         Points(192.0)

@@ -302,7 +302,7 @@ try {
   await record('long-narrow-activation', false);
   await story('icons/vocabulary');
   const vocabulary = await record('vocabulary');
-  assert.equal(vocabulary.text.length, 30, 'complete measured vocabulary captions');
+  assert.equal(vocabulary.text.length, 35, 'complete measured vocabulary captions');
   for (const scale of [1.25, 2]) {
     const scaledContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: scale });
     try {

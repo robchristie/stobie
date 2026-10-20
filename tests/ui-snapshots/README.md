@@ -140,3 +140,15 @@ catalogue entries raised every earlier fixture's native-control count from 42
 to 44 and changed one pixel each of `navigation-long-high-contrast` (at 824,
 423) and `navigation-states-light-compact` (at 706, 294) by one colour step
 as the glyph atlas grew; nothing else changed.
+
+Avatar fixtures add people, shapes with faces and images at every size in
+dark comfortable and light compact modes, and a narrow light high-contrast
+column at 150% where long names elide. Avatars are decorative, so the
+fixtures carry no avatar node and measure only headings and captions; there
+is no physical journey, because an avatar does not act. Adding the catalogue
+entry raised every earlier fixture's native-control count by one (from 44
+to 45, and the composer fixtures' from 47 to 48) and changed one pixel of
+`navigation-states-light-compact` (at 706, 294) by one colour step as the
+glyph atlas grew. The five new icons (`Attach`, `Copy`, `Mic`, `Send` and
+`User`) changed `icon-vocabulary-light`'s picture and added five measured
+captions to it; nothing else changed.
