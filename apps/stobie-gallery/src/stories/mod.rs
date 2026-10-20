@@ -16,7 +16,7 @@ mod typography;
 use eframe::egui;
 use stobie_ui_egui::{
     DesignTokens, PresentationObservations, TextInteraction, TextLayoutObservation, observe_node,
-    observe_text,
+    observe_text, observe_visible_only,
 };
 
 use crate::catalogue::{StoryId, story_definition};
@@ -127,7 +127,15 @@ fn present_story(
             &mut report,
         ),
         StoryId::AvatarsFigures => avatars::story(ui, tokens, font_scale, &mut report),
-        StoryId::IconsVocabulary => icons::vocabulary(ui, tokens, font_scale, &mut observations),
+        StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
+            // The vocabulary scrolls at large display scales: audit only the
+            // captions that are fully visible.
+            let mut captions = Vec::new();
+            icons::vocabulary(ui, tokens, font_scale, &mut captions);
+            for caption in captions {
+                observe_text(ui, caption);
+            }
+        }),
         StoryId::IconsActionPresentations | StoryId::IconsToolbar | StoryId::IconsLongNarrow => {
             icons::actions(ui, story, tokens, font_scale, &mut state.icon, &mut report)
         }
