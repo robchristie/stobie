@@ -336,6 +336,14 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "lab,gallery",
                 ],
             )?;
+            size::report(
+                &[(
+                    "browser-production".into(),
+                    "target/browser-production".into(),
+                )],
+                None,
+                &evidence.join("web-size/browser-production.json"),
+            )?;
         }
         "ui" => {
             build_gallery_web()?;
@@ -405,6 +413,15 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "bash",
                     &["tools/outside-app-smoke.sh"],
                     &evidence_environment,
+                )?;
+                // The template application's production package, as built.
+                size::report(
+                    &[(
+                        "template".into(),
+                        evidence.join("outside-app/production-manifest.json"),
+                    )],
+                    None,
+                    &evidence.join("web-size/template.json"),
                 )?;
             }
         }

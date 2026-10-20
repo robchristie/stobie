@@ -1,6 +1,12 @@
 //! {{title}}: a Stobie application. It declares its state, actions, UI and how
 //! it applies changes; the framework host owns observation, shortcuts, agent
-//! inspection and repaint. The same code runs natively and in the browser.
+//! inspection and repaint.
+{{#native}}
+//! The same code runs natively and in the browser.
+{{/native}}
+{{#browser_only}}
+//! It runs in the browser; natively, the library builds for `cargo test`.
+{{/browser_only}}
 
 use serde::Serialize;
 use stobie_core::{PaneId, Workspace, WorkspaceChange};

@@ -30,7 +30,8 @@ pub struct BuildOptions {
     /// The web root holding `index.html`; `web/` beside the package manifest
     /// when absent.
     pub web_dir: Option<PathBuf>,
-    /// Build with the dev profile instead of release.
+    /// Build with the dev profile instead of release. [`build_with_profile`]
+    /// names any other profile.
     pub debug: bool,
     /// Pass `--locked` to cargo.
     pub locked: bool,
@@ -253,8 +254,77 @@ fn stage_files(
     Ok(())
 }
 
+/// The Cargo profile a build uses: `dev` for a debug build, the named
+/// profile, or `release`.
+fn profile_name<'a>(options: &BuildOptions, profile: Option<&'a str>) -> Result<&'a str, Error> {
+    match (options.debug, profile) {
+        (true, Some(profile)) if profile != "dev" => Err(Error::new(
+            format!("a debug build uses the dev profile, not {profile}"),
+            "pass either the debug option or a profile",
+        )),
+        (true, _) => Ok("dev"),
+        (false, Some("")) => Err(Error::new(
+            "the profile name is empty",
+            "name a profile, such as release",
+        )),
+        (false, profile) => Ok(profile.unwrap_or("release")),
+    }
+}
+
+/// Cargo's arguments that select `profile`.
+fn profile_arguments(profile: &str) -> Vec<&str> {
+    match profile {
+        "dev" => Vec::new(),
+        "release" => vec!["--release"],
+        profile => vec!["--profile", profile],
+    }
+}
+
+/// What a production package's source identity records of the profile:
+/// its name, the workspace manifest that defines a member's profiles, and
+/// any `CARGO_PROFILE_*` environment that overrides them. A standalone
+/// build without overrides records only the name, as before.
+fn profile_identity(
+    profile: &str,
+    workspace_manifest: Option<String>,
+    environment: impl IntoIterator<Item = (String, String)>,
+) -> serde_json::Map<String, Value> {
+    let mut identity = serde_json::Map::new();
+    identity.insert("profile".into(), profile.into());
+    if let Some(text) = workspace_manifest {
+        identity.insert("workspaceManifest".into(), text.into());
+    }
+    let mut overrides = environment
+        .into_iter()
+        .filter(|(key, _)| key.starts_with("CARGO_PROFILE_"))
+        .collect::<Vec<_>>();
+    overrides.sort();
+    if !overrides.is_empty() {
+        identity.insert(
+            "profileEnvironment".into(),
+            overrides
+                .into_iter()
+                .map(|(key, value)| (key, Value::from(value)))
+                .collect::<serde_json::Map<_, _>>()
+                .into(),
+        );
+    }
+    identity
+}
+
+/// The workspace root manifest's text when the package is a member of a
+/// workspace rooted elsewhere; Cargo reads profiles only from that root.
+fn workspace_manifest(metadata: &Value, package_manifest: &Path) -> Option<String> {
+    let root = Path::new(metadata["workspace_root"].as_str()?).join("Cargo.toml");
+    let same = match (fs::canonicalize(&root), fs::canonicalize(package_manifest)) {
+        (Ok(root), Ok(package)) => root == package,
+        _ => root == package_manifest,
+    };
+    (!same).then(|| fs::read_to_string(&root).unwrap_or_default())
+}
+
 /// Build the library for the wasm target and return the `.wasm` it produced.
-fn build_wasm(options: &BuildOptions, package: &Value) -> Result<PathBuf, Error> {
+fn build_wasm(options: &BuildOptions, profile: &str, package: &Value) -> Result<PathBuf, Error> {
     let mut command = cargo();
     command.args([
         "build",
@@ -264,9 +334,7 @@ fn build_wasm(options: &BuildOptions, package: &Value) -> Result<PathBuf, Error>
         "--message-format",
         "json-render-diagnostics",
     ]);
-    if !options.debug {
-        command.arg("--release");
-    }
+    command.args(profile_arguments(profile));
     if options.locked {
         command.arg("--locked");
     }
@@ -355,6 +423,18 @@ fn app_name(package: &str) -> String {
 /// `manifest.webmanifest`, the manifest and service worker. With production
 /// options, also package a clean copy of it.
 pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
+    build_with_profile(options, None)
+}
+
+/// [`build`] with a named Cargo profile, such as a `[profile.web]` that
+/// inherits `release`. The production package's source identity records the
+/// profile, so packages built with different profiles have different content
+/// identities. A debug build accepts only `dev`.
+pub fn build_with_profile(
+    options: &BuildOptions,
+    profile: Option<&str>,
+) -> Result<BuildReport, Error> {
+    let profile = profile_name(options, profile)?;
     let metadata = cargo_metadata(options.manifest_path.as_deref(), options.locked)?;
     let package = application(&metadata, options.package.as_deref())?.clone();
     let name = package["name"].as_str().unwrap_or_default().to_owned();
@@ -374,7 +454,7 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
         )
     })?;
     ensure_wasm_bindgen(&version)?;
-    let wasm = build_wasm(options, &package)?;
+    let wasm = build_wasm(options, profile, &package)?;
     bindgen(&wasm, &web_dir.join("pkg"))?;
     write_startup_loader(&web_dir)?;
     let installable = write_pwa(&web_dir, &app_name(&name))?;
@@ -398,17 +478,24 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
                 .output()
                 .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
                 .unwrap_or_default();
-            let identity = serde_json::json!({
+            let mut identity = serde_json::json!({
                 "revision": git(&root, &["rev-parse", "HEAD"]),
                 "dirty": git(&root, &["status", "--porcelain"]).map(|status| !status.is_empty()),
                 "rustc": rustc,
                 "wasmBindgen": version,
-                "profile": if options.debug { "dev" } else { "release" },
                 "packageManifest": fs::read_to_string(&manifest).unwrap_or_default(),
                 "target": "wasm32-unknown-unknown",
                 "rustflags": std::env::var("RUSTFLAGS").ok(),
                 "cargoEncodedRustflags": std::env::var("CARGO_ENCODED_RUSTFLAGS").ok(),
             });
+            identity
+                .as_object_mut()
+                .expect("an object")
+                .extend(profile_identity(
+                    profile,
+                    workspace_manifest(&metadata, &manifest),
+                    std::env::vars(),
+                ));
             let manifest = package::package(&package::Options {
                 apps: vec![package::App {
                     name: app_name(&name),
@@ -439,6 +526,89 @@ pub fn build(options: &BuildOptions) -> Result<BuildReport, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_profile_selects_cargo_arguments_and_conflicts_with_debug() {
+        let release = BuildOptions::default();
+        let debug = BuildOptions {
+            debug: true,
+            ..BuildOptions::default()
+        };
+        assert_eq!(profile_name(&release, None).unwrap(), "release");
+        assert_eq!(profile_name(&release, Some("web")).unwrap(), "web");
+        assert_eq!(profile_name(&debug, None).unwrap(), "dev");
+        assert_eq!(profile_name(&debug, Some("dev")).unwrap(), "dev");
+        assert!(profile_name(&debug, Some("web")).is_err());
+        assert!(profile_name(&release, Some("")).is_err());
+        assert!(profile_arguments("dev").is_empty());
+        assert_eq!(profile_arguments("release"), ["--release"]);
+        assert_eq!(profile_arguments("web"), ["--profile", "web"]);
+    }
+
+    #[test]
+    fn the_source_identity_records_the_profile_its_workspace_and_overrides() {
+        let environment = |pairs: &[(&str, &str)]| {
+            pairs
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                .collect::<Vec<_>>()
+        };
+        // A standalone release build without overrides records what it did
+        // before this option existed, so its content identity is unchanged.
+        let plain = profile_identity("release", None, environment(&[("PATH", "/bin")]));
+        assert_eq!(
+            Value::from(plain),
+            serde_json::json!({"profile": "release"})
+        );
+        let named = profile_identity(
+            "web",
+            Some("[profile.web]\ninherits = \"release\"\n".into()),
+            environment(&[
+                ("CARGO_PROFILE_WEB_LTO", "fat"),
+                ("CARGO_PROFILE_RELEASE_OPT_LEVEL", "s"),
+                ("CARGO_HOME", "/cargo"),
+            ]),
+        );
+        assert_eq!(
+            Value::from(named),
+            serde_json::json!({
+                "profile": "web",
+                "workspaceManifest": "[profile.web]\ninherits = \"release\"\n",
+                "profileEnvironment": {
+                    "CARGO_PROFILE_RELEASE_OPT_LEVEL": "s",
+                    "CARGO_PROFILE_WEB_LTO": "fat",
+                },
+            })
+        );
+    }
+
+    /// A member's profiles live in the workspace root's manifest, which the
+    /// identity records; a standalone package's own manifest is its root.
+    #[test]
+    fn a_member_records_its_workspace_manifest() {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/stobie-build-tests")
+            .join(format!("member-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        let root = "[workspace]\nmembers = [\"app\"]\nresolver = \"3\"\n\n[profile.web]\ninherits = \"release\"\n";
+        fs::create_dir_all(directory.join("app/src")).unwrap();
+        fs::write(directory.join("Cargo.toml"), root).unwrap();
+        fs::write(directory.join("app/src/lib.rs"), "").unwrap();
+        let member = directory.join("app/Cargo.toml");
+        fs::write(
+            &member,
+            "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+        )
+        .unwrap();
+        let metadata = cargo_metadata(Some(&member), false).unwrap();
+        assert_eq!(
+            workspace_manifest(&metadata, &member).as_deref(),
+            Some(root)
+        );
+        let standalone = directory.join("Cargo.toml");
+        assert_eq!(workspace_manifest(&metadata, &standalone), None);
+        fs::remove_dir_all(&directory).unwrap();
+    }
 
     /// `--locked` must refuse a stale lockfile rather than rewrite it.
     #[test]

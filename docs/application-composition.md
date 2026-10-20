@@ -34,6 +34,10 @@ enum NoteAction {
 }
 ```
 
+An application with no actions yet declares an enum with no variants, such as
+`enum NoAction {}`, with the same derives and prefix; its `availability` and
+`perform` are `match target.action {}`.
+
 **State and availability.** Implement `Application` for your state. One
 `availability` rule serves buttons, shortcuts, discovery and agents.
 
@@ -391,6 +395,13 @@ wgpu's WebGPU and WebGL2 backends. Record Desk's
 Image applications add `stobie-imaging`, the tile runtime and renderer, and
 the UI crate's `image-rendering` feature, as described in
 [Compose an image application](image-application-composition.md).
+
+An application that runs only in the browser declares eframe and the UI
+crate's `eframe` feature under `[target.'cfg(target_arch = "wasm32")'.dependencies]`
+and depends natively on the UI crate with `default-features = false`. Its
+library then builds natively without a window system, for its tests, and
+`web_handle!` remains its only entry point. `stobie new --browser-only` writes
+this; see [Start a new app](start-a-new-app.md#a-browser-only-application).
 
 ## Generate and check the API documentation
 

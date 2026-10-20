@@ -22,25 +22,35 @@ library, `stobie-build`, and `cargo xtask architecture` enforces that.
 
 - `new NAME` creates a standalone application in its own Cargo workspace,
   depending on Stobie through git pinned to the CLI's commit
-  (`--stobie-rev COMMIT` pins another). `--imaging` adds the image layer, and
+  (`--stobie-rev COMMIT` pins another). `--imaging` adds the image layer,
+  `--browser-only` leaves out the native entry point and native eframe,
+  `--member` writes a member of the Cargo workspace above the directory, and
   `--stobie-path CHECKOUT` writes `.cargo/config.toml` to build against a
   local checkout. [Start a new app](start-a-new-app.md) walks through it.
-- `build-web` builds an application for the browser: a release
-  `wasm32-unknown-unknown` build, `wasm-bindgen` into `web/pkg/` and the
+- `build-web` builds an application for the browser: a
+  `wasm32-unknown-unknown` build with the `release` profile (`--debug` for
+  `dev`, `--profile NAME` for another), `wasm-bindgen` into `web/pkg/` and the
   shared startup loader beside `index.html`. It fails, with the install
   command, unless the `wasm-bindgen` CLI is exactly the version of the
   `wasm-bindgen` crate the project locks. `--production` also packages the
-  build with compressed, immutable assets; see the
-  [browser startup guide](browser-startup.md).
+  build with compressed, immutable assets, records the profile in the
+  package's source identity and reports its sizes; see the
+  [browser startup guide](browser-startup.md) and
+  [Build profiles](start-a-new-app.md#build-profiles).
 - `serve [DIR]` serves a built web root, or a `--production` package (its
   applications at `/NAME/`; `/NAME` redirects there), on `127.0.0.1` without
   caching, for local preview; it does not negotiate compressed
   representations. `--port 0` picks a free port; `--json` prints its URL.
 - `package-web NAME=DIR...` packages already built web roots, such as an
-  application and its worker, into one production directory.
+  application and its worker, into one production directory, and reports
+  each application's sizes.
 
 Stobie's own `cargo xtask build-web`, its production build and Record Desk's
-`build-web.sh` use the same implementation.
+`build-web.sh` use the same implementation. `cargo xtask web-size` reports the
+sizes of the repository's production package and of a template application
+built with `stobie new`, raw and with Brotli and gzip; `--baseline` compares
+with an earlier report. CI's `production` and `outside-app` stages write the
+same report to their evidence and step summary. It is a report, not a gate.
 
 ## Reach an application
 
