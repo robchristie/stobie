@@ -86,19 +86,21 @@ pull request retains the results.
 
 pulldown-cmark 0.13.4 (MIT) and its new dependency unicase 2.10.0 (MIT or
 Apache-2.0), without the HTML renderer or command-line features, are the
-only additions to the lockfiles. The Gallery's release WASM after
-wasm-bindgen grew from 11,453,072 to 11,725,743 bytes (+272,671; 4,062,514 to
-4,161,332 gzip, +98,818; 2,873,477 to 2,947,504 Brotli, +74,027). After
+only additions to the lockfiles. Measured against `c6527963`, before the
+per-row actions landed, the Gallery's release WASM after wasm-bindgen grew
+from 11,453,072 to 11,725,743 bytes (+272,671; 4,062,514 to 4,161,332 gzip,
++98,818; 2,873,477 to 2,947,504 Brotli, +74,027). After
 `wasm-opt -Oz` it grew from 9,062,661 to 9,297,496 bytes (+234,835, +2.6%;
 Brotli +71,098, +2.6%). Both figures include the recipe and the two Gallery
 stories as well as the parser.
 
 ## Baseline decision and qualification
 
-All 18 fixture text audits passed. The 16 existing fixtures keep
-byte-identical pixels, metadata and semantics and identical measured
-observations; only the native-control count rises from 38 to 40 for the two
-new catalogue entries. Both new fixtures' visual, semantic and text artefacts
+All 21 fixture text audits passed. The 19 existing fixtures keep identical
+metadata, semantics and measured observations; the native-control count
+rises from 40 to 42 for the two new catalogue entries, and one pixel each of
+`navigation-long-high-contrast` and `status-chip-treatments-light` moves by
+one colour step as the glyph atlas grows. Both new fixtures' visual, semantic and text artefacts
 were inspected outside `expected/` and accepted explicitly. Frozen evaluation
 tasks, fixture definitions and scoring are unchanged. Verification never
 updates baselines.

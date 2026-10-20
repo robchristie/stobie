@@ -124,4 +124,6 @@ and Space after focusing through the ARIA layer, finds the headings with
 their levels in the ARIA layer, checks that unsafe links and a disabled
 region open nothing, and scrolls to the unfinished tail. Adding the two
 catalogue entries raised every earlier fixture's native-control count from
-40 to 42 and changed nothing else.
+40 to 42 and changed one pixel each of `navigation-long-high-contrast` (at
+824, 423) and `status-chip-treatments-light` (at 863, 140) by one colour
+step as the glyph atlas grew; nothing else changed.

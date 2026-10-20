@@ -43,7 +43,7 @@ class ApiDocsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            self.assertEqual(sum(DOCS.coverage(root).values()), 14)
+            self.assertEqual(sum(DOCS.coverage(root).values()), 15)
             source = root / DOCS.SOURCE_CONSUMERS[0]
             source.write_text("")
             with self.assertRaisesRegex(ValueError, "explicitly accounted"):
