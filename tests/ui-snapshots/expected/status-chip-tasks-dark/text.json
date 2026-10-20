@@ -63,7 +63,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Prepare field notes",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +100,12 @@
       "interaction": "selectable",
       "declared_max_lines": 2,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Capture observations and attach the approved collection record.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +137,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Survey northern site",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +174,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Archive approved records",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +211,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Check collection metadata",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -223,7 +248,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Upload regional report",
+        "truncated": false
+      }
     },
     {
       "component_id": {

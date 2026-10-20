@@ -31,7 +31,12 @@
       "interaction": "selectable",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "You",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -63,7 +68,12 @@
       "interaction": "selectable",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Assistant",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +105,12 @@
       "interaction": "selectable",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "You",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +142,12 @@
       "interaction": "inert",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Flat-memory attention for long documents",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +179,12 @@
       "interaction": "inert",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Evaluating agents that call tools: a survey",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +216,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 10,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Two papers stand out this morning.\n\nThe first describes an attention layout for long documents that keeps memory use flat as the context grows. Its evaluation covers question answering over books and retrieval across a hundred thousand tokens, and the gain…",
+        "truncated": true
+      }
     },
     {
       "component_id": {
@@ -223,7 +253,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Summarise this morning's papers and link the sources.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -255,7 +290,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Thanks. I'll read the survey after lunch.",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

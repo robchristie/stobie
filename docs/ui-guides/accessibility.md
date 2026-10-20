@@ -35,6 +35,15 @@ Each visible string has one AccessKit owner. Standalone content uses its text
 node; label/value pairs expose adjacent label and value nodes without repeating
 the pair on an aggregate container; interactive chrome owns its painted text.
 
+Agents read presented page content, such as headings, labels, reading text,
+Markdown and links, from the measured-text observations' bounded
+[content excerpts](../application-interface.md#content-text), not from the
+AccessKit or ARIA tree. Wrap text that observation must not publish, such as
+a one-time code, in `withhold_content_text(ui, |ui| ...)`: it is still
+presented, laid out, audited and exposed to assistive technology, so it stays
+in a browser page's ARIA layer, but its observation says only `withheld`. A
+password field needs no region; its text is never observed.
+
 ## Browser ARIA layer
 
 In the browser, `WebHost` mirrors each completed pass's AccessKit tree into

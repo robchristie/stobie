@@ -136,7 +136,12 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
   containment. A text field's value
 is its text and a combo box's is its selected option's label. Capabilities without a
   rendered control follow as `other capabilities`. `--limit` and `--offset`
-  page through long outlines.
+  page through long outlines. `--content` adds the presented content text:
+  each heading, content label, reading text, rendered Markdown block, list
+  marker and link, in presentation order, as an excerpt of at most 256
+  characters that ends in `…` when cut, or `withheld` where the application
+  withholds it. Only text in view is published, and a password never is; see
+  [content text](application-interface.md#content-text).
 - `query` and `discover` list nodes or capabilities with `--limit` and
   `--cursor`. `discover` shows each capability's availability, argument
   contract and shortcut, and what a value-taking capability expects.
@@ -160,8 +165,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   application stays open. The outline tags links `[open-link]`.
 - `wait CONDITION` polls until a condition holds: `present`, `absent`,
   `enabled`, `capability_enabled`, `focused`, `selected`, `checked`, `name`,
-  `value`, `status`, `selection_changed`, `fact` (`--key K --value V`) or
-  `audits_clear`, with selector flags; `--condition JSON` gives the whole
+  `value`, `status`, `selection_changed`, `fact` (`--key K --value V`),
+  `audits_clear` or `content` (`--value TEXT`: a published content excerpt
+  contains the text; withheld text never matches), with selector flags; `--condition JSON` gives the whole
   condition. Unknown condition fields are rejected.
 - `capture --output PNG` writes a screenshot between two observations: the
   browser canvas through DevTools, or a launched native window through X11
@@ -179,7 +185,9 @@ command's payload. Lists say how many entries there are, whether they are
 `truncated`, and the cursor or offset to continue from. Outputs list what they
 leave out in `omitted`, such as node geometry and text layout measurements
 (`observe --include-text` adds the measurements: geometry, line counts and
-overflow, not the strings). Budgets are tested: Record Desk's default
+overflow, not the strings unless `--content` is also given) and presented
+content (`observe --content` adds a `content` array of each text's
+`component`, `role` and `content`). Budgets are tested: Record Desk's default
 `observe` stays under 8 KB and the Lab's under 16 KB.
 
 Errors go to standard error. With `--json` they are

@@ -7,17 +7,17 @@ use std::fmt::Write as _;
 use serde::Serialize;
 use stobie_client::protocol::{
     ArgumentContract, Availability, CapabilityDescription, CompletedObservation, DomainReference,
-    OPEN_LINK_CAPABILITY, ObservationValue, PaneId, SET_TEXT_CAPABILITY, SemanticUiId, UiNode,
-    UiRole,
+    OPEN_LINK_CAPABILITY, ObservationValue, PaneId, SET_TEXT_CAPABILITY, SemanticUiId,
+    TextComponentKind, TextContent, TextLayoutObservation, TextRole, UiNode, UiRole,
 };
 
 /// Longest name or value shown in text output, in characters.
 const TEXT_LIMIT: usize = 80;
 
-/// Shorten `text` to `TEXT_LIMIT` characters on one line, marking a cut.
-pub fn clip(text: &str) -> String {
-    let flat: String = text
-        .chars()
+/// `text` on one line: newlines shown as `⏎`, other control characters as
+/// spaces.
+fn flatten(text: &str) -> String {
+    text.chars()
         .map(|c| {
             if c == '\n' {
                 '⏎'
@@ -27,7 +27,12 @@ pub fn clip(text: &str) -> String {
                 c
             }
         })
-        .collect();
+        .collect()
+}
+
+/// Shorten `text` to `TEXT_LIMIT` characters on one line, marking a cut.
+pub fn clip(text: &str) -> String {
+    let flat = flatten(text);
     match flat.char_indices().nth(TEXT_LIMIT) {
         Some((index, _)) => format!("{}…", &flat[..index]),
         None => flat,
@@ -35,10 +40,7 @@ pub fn clip(text: &str) -> String {
 }
 
 pub fn role_name(role: UiRole) -> String {
-    serde_json::to_value(role)
-        .ok()
-        .and_then(|value| value.as_str().map(ToOwned::to_owned))
-        .unwrap_or_default()
+    snake_case(role)
 }
 
 /// A capability's argument in short form: `text`, `bool`, `number 0..1`,
@@ -195,6 +197,33 @@ fn ordered(observation: &CompletedObservation) -> Vec<(usize, &UiNode)> {
                 stack.push((child_depth, child));
             }
         }
+    }
+    out
+}
+
+fn snake_case(value: impl Serialize) -> String {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|value| value.as_str().map(ToOwned::to_owned))
+        .unwrap_or_default()
+}
+
+/// The content section of the outline: each presented content text's kind
+/// and its whole published excerpt on one line, in presentation order.
+pub fn content_outline(observation: &CompletedObservation) -> String {
+    let content: Vec<(&TextLayoutObservation, &TextContent)> = observation
+        .snapshot
+        .text
+        .iter()
+        .filter_map(|text| text.content.as_ref().map(|content| (text, content)))
+        .collect();
+    let mut out = format!("content: {} texts\n", content.len());
+    for (text, content) in content {
+        let kind = snake_case(text.component_id.kind);
+        let _ = match content {
+            TextContent::Excerpt { text, .. } => writeln!(out, "- {kind} {:?}", flatten(text)),
+            TextContent::Withheld => writeln!(out, "- {kind} withheld"),
+        };
     }
     out
 }
@@ -365,8 +394,30 @@ pub struct ObserveOutput<'a> {
     pub capabilities_not_rendered: Vec<&'a str>,
     /// What this output leaves out.
     pub omitted: Vec<&'static str>,
+    /// Each presented content text in presentation order, with `--content`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub text_observations: Option<&'a [stobie_client::protocol::TextLayoutObservation]>,
+    pub content: Option<Vec<ContentOutput<'a>>>,
+    /// Text layout measurements, with `--include-text`; their content only
+    /// with `--content` as well.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_observations: Option<Vec<TextLayoutObservation>>,
+}
+
+/// One presented content text in JSON output.
+#[derive(Serialize)]
+pub struct ContentOutput<'a> {
+    pub component: TextComponentKind,
+    pub role: TextRole,
+    pub content: &'a TextContent,
+}
+
+/// What `observe` adds to its outline of nodes.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ObserveExtras {
+    /// Text layout measurements (`--include-text`).
+    pub text: bool,
+    /// Presented content text (`--content`).
+    pub content: bool,
 }
 
 pub fn observe_json<'a>(
@@ -374,7 +425,7 @@ pub fn observe_json<'a>(
     capabilities: &'a [CapabilityDescription],
     offset: usize,
     limit: usize,
-    include_text: bool,
+    extras: ObserveExtras,
 ) -> ObserveOutput<'a> {
     let nodes = ordered(observation);
     let shown: Vec<NodeOutput> = nodes
@@ -386,8 +437,11 @@ pub fn observe_json<'a>(
     let end = offset + shown.len();
     let snapshot = &observation.snapshot;
     let mut omitted = vec!["geometry"];
-    if !include_text {
+    if !extras.text {
         omitted.push("text_observations");
+    }
+    if !extras.content {
+        omitted.push("content");
     }
     ObserveOutput {
         instance: &observation.instance,
@@ -411,7 +465,33 @@ pub fn observe_json<'a>(
             .map(|capability| capability.capability.as_str())
             .collect(),
         omitted,
-        text_observations: include_text.then_some(snapshot.text.as_slice()),
+        content: extras.content.then(|| {
+            snapshot
+                .text
+                .iter()
+                .filter_map(|text| {
+                    Some(ContentOutput {
+                        component: text.component_id.kind,
+                        role: text.role,
+                        content: text.content.as_ref()?,
+                    })
+                })
+                .collect()
+        }),
+        text_observations: extras.text.then(|| {
+            snapshot
+                .text
+                .iter()
+                .map(|text| TextLayoutObservation {
+                    content: if extras.content {
+                        text.content.clone()
+                    } else {
+                        None
+                    },
+                    ..text.clone()
+                })
+                .collect()
+        }),
     }
 }
 

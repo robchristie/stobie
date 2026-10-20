@@ -80,11 +80,16 @@ pub enum Condition {
     },
     /// Semantic and text audits are empty, with coverage retained.
     AuditsClear {},
+    /// A presented content text's published excerpt contains `value`, such
+    /// as a reply that has arrived. Excerpts are bounded, so text beyond
+    /// the first `CONTENT_EXCERPT_CHARS` characters of a long text never
+    /// matches, and withheld text never does.
+    Content { value: String },
 }
 
 impl Condition {
     /// Every condition name, for `capabilities`.
-    pub const NAMES: [&'static str; 13] = [
+    pub const NAMES: [&'static str; 14] = [
         "present",
         "absent",
         "enabled",
@@ -98,6 +103,7 @@ impl Condition {
         "selection_changed",
         "fact",
         "audits_clear",
+        "content",
     ];
 
     /// Parse a condition object, explaining what is wrong with a bad one.
@@ -118,7 +124,8 @@ impl Condition {
             | Self::CapabilityEnabled { .. }
             | Self::SelectionChanged { .. }
             | Self::Fact { .. }
-            | Self::AuditsClear {} => None,
+            | Self::AuditsClear {}
+            | Self::Content { .. } => None,
             Self::Status { selector, .. } => Some(InspectionSelector {
                 role: Some(UiRole::Status),
                 ..selector.clone()

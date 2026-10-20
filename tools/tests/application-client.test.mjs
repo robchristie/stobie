@@ -201,6 +201,21 @@ test('fact waits compare published primitive values and keep absent facts pendin
   await client.wait({ condition: 'fact', key: 'draft_dirty', value: false });
 });
 
+test('content waits find text in published excerpts and never in withheld text', async () => {
+  const scheduler = fakeClock();
+  const text = (content) => ({ component_id: { kind: 'reading_text', instance: 1 }, content });
+  const { client } = await bound(() => ({ kind: 'observe', observation: { ...observation(), snapshot: {
+    ...observation().snapshot, text: [
+      text({ kind: 'withheld' }),
+      ...scheduler.elapsed >= 50 ? [text({ kind: 'excerpt', text: 'The reply has arrived.', truncated: false })] : [],
+    ] } } }), scheduler);
+  await client.wait({ condition: 'content', value: 'reply has arrived' });
+  assert.equal(scheduler.elapsed, 50);
+  await assert.rejects(client.wait({ condition: 'content', value: 'secret' }, { timeoutMs: 200 }),
+    error => error.code === 'timeout');
+  await assert.rejects(client.wait({ condition: 'content' }), error => error.code === 'invalid_request');
+});
+
 test('ambiguous semantic physical selectors fail instead of selecting the first action', async () => {
   const { client } = await bound(() => ({ kind: 'observe', observation: observation([node(), node({ id: 'other' })]) }));
   await assert.rejects(client.target({ capability: 'record.apply' }), { code: 'ambiguous' });

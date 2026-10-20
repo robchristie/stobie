@@ -221,9 +221,14 @@ stobie invoke my-app.select --argument ada
 ## What agents can read
 
 `stobie observe` lists each control's role, name, state and value and the
-facts your application publishes. It does not export page content such as
-headings or note text, and it leaves out geometry. To let an agent confirm an
-effect, publish a bounded fact for it in `Application::observe`.
+facts your application publishes, and leaves out geometry. `stobie observe
+--content` adds the page content in view, such as headings, labels, note text,
+Markdown and links, each as an excerpt of at most 256 characters; `stobie wait
+content --value TEXT` waits for it to appear. Wrap anything observation must
+not publish in `withhold_content_text`; see
+[content text](application-interface.md#content-text). To let an agent confirm
+an effect it cannot read from a bounded excerpt, publish a bounded fact for it
+in `Application::observe`.
 
 Address controls by their capability IDs (`my-app.add`) or by the semantic
 IDs you give them (`my-app.draft`). Generated presentation IDs, such as

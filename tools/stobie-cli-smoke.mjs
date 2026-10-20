@@ -66,6 +66,8 @@ async function runParity(startNode, startCli, finish) {
   const scenarios = [
     ['select a record', ['invoke', 'record-desk.select-record', '--value', '1013'],
       () => client.invoke({ capability: 'record-desk.select-record' }, { arguments: { value: '1013' } })],
+    ['wait for presented content', ['wait', 'content', '--value', 'Record detail'],
+      () => client.wait({ condition: 'content', value: 'Record detail' })],
     ['set notes as typing would', ['set-text', 'record-desk.notes.1013', 'Parity notes'],
       () => client.invoke({ id: 'record-desk.notes.1013', capability: 'stobie.set-text' }, { arguments: { value: 'Parity notes' } })],
     ['choose a category', ['invoke', 'record-desk.edit-category', '--value', 'ideas'],
@@ -163,8 +165,8 @@ try {
     assert.ok(launch(`${app}-sizes`));
     const session = ['--session', `${app}-sizes`];
     const budgets = app === 'record-desk'
-      ? { 'observe': 8192, 'observe --json': 24576, 'discover': 6144, 'discover --json': 49152, 'query --role result_row': 4096, 'hello': 512 }
-      : { 'observe': 16384, 'observe --json': 49152, 'discover': 12288, 'discover --json': 98304, 'query --role tab': 2048, 'hello': 512 };
+      ? { 'observe': 8192, 'observe --json': 24576, 'observe --content': 8192, 'discover': 6144, 'discover --json': 49152, 'query --role result_row': 4096, 'hello': 512 }
+      : { 'observe': 16384, 'observe --json': 49152, 'observe --content': 16384, 'discover': 12288, 'discover --json': 98304, 'query --role tab': 2048, 'hello': 512 };
     for (const [command, budget] of Object.entries(budgets)) {
       const args = command.split(' ');
       const json = args.includes('--json');

@@ -1909,6 +1909,8 @@ fn pair_text_fields(
 #[cfg(test)]
 mod composer_tests;
 #[cfg(test)]
+mod content_tests;
+#[cfg(test)]
 mod link_tests;
 #[cfg(test)]
 mod row_tests;

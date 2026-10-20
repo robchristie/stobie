@@ -353,7 +353,7 @@ export class ApplicationClient {
     const deadline = this.scheduler.now() + timeout(timeoutMs);
     interval(intervalMs);
     const selected = selector(condition.selector ?? {});
-    const kinds = ['present', 'absent', 'enabled', 'capability_enabled', 'focused', 'selected', 'checked', 'selection_changed', 'name', 'value', 'status', 'fact', 'audits_clear'];
+    const kinds = ['present', 'absent', 'enabled', 'capability_enabled', 'focused', 'selected', 'checked', 'selection_changed', 'name', 'value', 'status', 'fact', 'audits_clear', 'content'];
     if (!kinds.includes(condition.condition)) throw failure('invalid_request', 'Unsupported observation wait condition');
     let baseline = condition.previous;
     let last;
@@ -371,7 +371,7 @@ export class ApplicationClient {
         lastError = undefined;
         let capability;
         let capabilityObservation;
-        const node = ['selection_changed', 'fact', 'audits_clear', 'capability_enabled'].includes(condition.condition) ? undefined
+        const node = ['selection_changed', 'fact', 'audits_clear', 'capability_enabled', 'content'].includes(condition.condition) ? undefined
           : oneNode(last, condition.condition === 'status' ? { ...selected, role: 'status' } : selected);
         let done = false;
         if (condition.condition === 'present') done = Boolean(node);
@@ -401,6 +401,10 @@ export class ApplicationClient {
         }
         if (condition.condition === 'audits_clear') done = last.snapshot.semantic_audit.length === 0
           && last.snapshot.text_audit.length === 0 && last.snapshot.text_audit_coverage != null;
+        if (condition.condition === 'content') {
+          if (typeof condition.value !== 'string') throw failure('invalid_request', 'A content wait requires text to find');
+          done = last.snapshot.text.some(text => text.content?.kind === 'excerpt' && text.content.text.includes(condition.value));
+        }
         if (condition.condition === 'selection_changed') {
           const current = nodesFor(last, selected).filter(candidate => candidate.selected).map(candidate => candidate.id).sort();
           if (baseline === undefined) baseline = current;

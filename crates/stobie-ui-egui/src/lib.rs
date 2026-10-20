@@ -103,7 +103,7 @@ pub use host::*;
 pub use image_rendering::*;
 pub use inspection::*;
 pub use native_text::{NativeTextEdit, native_text_active};
-pub use observation::{observe_node, observe_text, observe_visible_only};
+pub use observation::{observe_node, observe_text, observe_visible_only, withhold_content_text};
 pub use pane_content::*;
 pub use preferences::*;
 pub use preferences_control::*;

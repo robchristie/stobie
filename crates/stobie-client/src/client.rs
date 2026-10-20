@@ -746,6 +746,12 @@ impl<T: Transport> Client<T> {
                 .then(|| waited(None))
                 .flatten()
             }
+            Condition::Content { value } => observation
+                .snapshot
+                .content_text()
+                .any(|text| text.contains(value.as_str()))
+                .then(|| waited(None))
+                .flatten(),
             Condition::CapabilityEnabled { selector } => {
                 let page = self.discover(
                     selector.clone(),

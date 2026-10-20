@@ -127,7 +127,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Empty: the microphone stands in for send",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +164,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "A draft ready to send",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +201,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Three lines, grown to fit",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

@@ -31,7 +31,12 @@
       "interaction": "selectable",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": true
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Assistant · Markdown in a narrow column",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -63,7 +68,12 @@
       "interaction": "inert",
       "declared_max_lines": 1,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "1.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -95,7 +105,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Vollständiger Bericht",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -127,7 +142,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 1,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "First level",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -159,7 +179,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 4,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Größere Schrift, schmale Spalte: evaluation-run-2026-10-19-reasoning-coding-retrieval-final-candidate.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -191,7 +216,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 4,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "let run = \"evaluation-run-2026-10-19-reasoning-coding-retrieval\";",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -223,7 +253,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 3,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Unsafe: run script, relative and <b>raw HTML</b> stay text; a chart of results shows its description.",
+        "truncated": false
+      }
     },
     {
       "component_id": {
@@ -255,7 +290,12 @@
       "interaction": "selectable",
       "declared_max_lines": 0,
       "line_count": 2,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Second level with a long link label that wraps across lines",
+        "truncated": false
+      }
     }
   ],
   "audit": [],

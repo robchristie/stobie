@@ -562,6 +562,13 @@ fn position_measured_text(
         line_count: u32::try_from(measured.galley.rows.len()).unwrap_or(u32::MAX),
         truncated: measured.galley.elided,
         layout_error: measured.layout_error,
+        content: component_id.kind.presents_content().then(|| {
+            if crate::observation::is_content_withheld(painter.ctx()) {
+                TextContent::Withheld
+            } else {
+                TextContent::excerpt(measured.galley.text())
+            }
+        }),
     };
     (galley_position, observation)
 }
@@ -725,6 +732,7 @@ mod tests {
             line_count: 2,
             truncated: true,
             layout_error: None,
+            content: None,
         };
         let mut sibling = base.clone();
         sibling.component_id = TextComponentId::new(TextComponentKind::DockTab, 2);

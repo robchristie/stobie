@@ -352,16 +352,21 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         name: "observe",
-        usage: "stobie observe [--limit N] [--offset N] [--include-text] [TARGET FLAGS]",
+        usage: "stobie observe [--limit N] [--offset N] [--content] [--include-text] [TARGET FLAGS]",
         summary: "Outline the current UI: role, name, state, value, stable ID and capabilities of each node, with application facts",
         connects: true,
         flags: &[
             flag("--limit", Some("N"), "Nodes to show (default 200)"),
             flag("--offset", Some("N"), "Skip this many nodes"),
             flag(
+                "--content",
+                None,
+                "Add the presented content text: headings, labels, reading text, Markdown and links, each an excerpt of at most 256 characters ending in … when cut; withheld text is marked withheld",
+            ),
+            flag(
                 "--include-text",
                 None,
-                "Include text layout measurements: geometry, line counts and overflow, not the strings (JSON only)",
+                "Include text layout measurements: geometry, line counts and overflow, not the strings unless --content is also given (JSON only)",
             ),
         ],
         output_schema_version: SCHEMA_VERSION,
@@ -426,13 +431,13 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "wait",
         usage: "stobie wait CONDITION [SELECTOR FLAGS] [--value VALUE] [--key KEY] [--condition JSON] [TARGET FLAGS]",
-        summary: "Wait until a condition holds: present, absent, enabled, capability_enabled, focused, selected, checked, name, value, status, selection_changed, fact or audits_clear",
+        summary: "Wait until a condition holds: present, absent, enabled, capability_enabled, focused, selected, checked, name, value, status, selection_changed, fact, audits_clear or content",
         connects: true,
         flags: &[
             flag(
                 "--value",
                 Some("VALUE"),
-                "Expected text, or true/false for checked; for fact, a JSON value or text",
+                "Expected text, or true/false for checked; for fact, a JSON value or text; for content, text that a presented content excerpt contains",
             ),
             flag("--key", Some("KEY"), "Fact name, for the fact condition"),
             flag(

@@ -95,7 +95,12 @@
       "interaction": "inert",
       "declared_max_lines": 3,
       "line_count": 2,
-      "truncated": false
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Completed actions: 0. Linked views: on. Selected tool: Navigate.",
+        "truncated": false
+      }
     }
   ],
   "audit": [],
