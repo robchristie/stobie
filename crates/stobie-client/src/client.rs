@@ -480,7 +480,7 @@ impl<T: Transport> Client<T> {
     /// `uncertain_completion`: read the receipt instead of repeating it.
     pub fn invoke(
         &mut self,
-        selector: InspectionSelector,
+        mut selector: InspectionSelector,
         options: InvokeOptions,
     ) -> Result<Invoked, ClientError> {
         let deadline = self.deadline();
@@ -494,6 +494,9 @@ impl<T: Transport> Client<T> {
                 capability
                     .parse_arguments(&arguments)
                     .map_err(ClientError::protocol)?;
+                // Address the binding discovery chose, so that the
+                // application resolves the same one.
+                selector.id = Some(capability.id.clone());
                 capability.target
             }
         };

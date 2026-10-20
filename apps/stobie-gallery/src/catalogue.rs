@@ -37,10 +37,12 @@ pub enum StoryId {
     NavigationLongNarrow,
     ReadingConversation,
     ReadingLongNarrow,
+    RowsActions,
+    RowsLongNarrow,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 32] = [
+    pub const ALL: [Self; 34] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -73,6 +75,8 @@ impl StoryId {
         Self::NavigationLongNarrow,
         Self::ReadingConversation,
         Self::ReadingLongNarrow,
+        Self::RowsActions,
+        Self::RowsLongNarrow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -109,6 +113,8 @@ impl StoryId {
             Self::NavigationLongNarrow => "navigation/long-narrow",
             Self::ReadingConversation => "reading/conversation",
             Self::ReadingLongNarrow => "reading/long-narrow",
+            Self::RowsActions => "rows/actions",
+            Self::RowsLongNarrow => "rows/long-narrow",
         }
     }
 }
@@ -162,6 +168,7 @@ pub enum StoryGroup {
     Icon,
     Navigation,
     Reading,
+    Rows,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -287,6 +294,14 @@ const ICON_ACTION_STATES: &[StoryState] = &[
     StoryState::Disabled,
     StoryState::KeyboardFocused,
 ];
+const ROW_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Active,
+];
 const READING_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -320,7 +335,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 32] = [
+pub static STORIES: [StoryDefinition; 34] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -606,6 +621,24 @@ pub static STORIES: [StoryDefinition; 32] = [
         StoryGroup::Reading,
         320,
         600,
+        READING_NARROW_STATES,
+        SCROLL,
+    ),
+    story(
+        StoryId::RowsActions,
+        "People rows that each select their person, with Open, Pinned and Remove per row.",
+        StoryGroup::Rows,
+        640,
+        520,
+        ROW_STATES,
+        POINTER,
+    ),
+    story(
+        StoryId::RowsLongNarrow,
+        "Long and localised rows, elided titles and details, a disabled row and scrolling.",
+        StoryGroup::Rows,
+        320,
+        480,
         READING_NARROW_STATES,
         SCROLL,
     ),

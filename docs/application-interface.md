@@ -147,10 +147,14 @@ that value; the action keeps its own binding, without an `argument`, which
 takes any value the contract allows. A selector's `argument` matches only
 nodes and capabilities carrying an equal value (numbers compare by value).
 Invoke a row's control with no `arguments`, which means its value, or with
-that same value; any other value is `invalid_arguments`. A value also
-chooses among the controls a selector matches: a control carrying another
-value cannot take it, and the one carrying it is preferred over the action's
-own binding. So `{"capability":"people.open"}` with `{"value":2}` invokes the
+that same value; any other value sent to a selector that matches that
+control alone is `invalid_arguments`. A value also chooses among the
+controls a selector matches: a control carrying another value cannot take
+it, the one carrying it is preferred over the action's own binding, and a
+value none of several can take is `no_match`. The Rust client and `stobie`
+apply the same choice, then address the chosen control by its ID; the
+JavaScript client's `invoke` needs a selector that discovers one binding,
+such as one with `argument`. So `{"capability":"people.open"}` with `{"value":2}` invokes the
 row carrying 2 when it is presented, and otherwise the action's binding:
 
 ```sh

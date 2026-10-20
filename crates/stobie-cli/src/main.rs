@@ -469,7 +469,7 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
         }
         "invoke" => {
             let (mut client, _, _) = connect(args)?;
-            let selector = args.selector(
+            let mut selector = args.selector(
                 args.positional
                     .first()
                     .map(|capability| ("capability", capability.as_str())),
@@ -499,6 +499,9 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
                         .discover_for_invocation(selector.clone(), |capability| {
                             argument(args, capability)
                         })?;
+                    // Address the control discovery chose, so that the
+                    // application resolves the same one.
+                    selector.id = Some(capability.id.clone());
                     (Some(capability.target), arguments)
                 }
             };

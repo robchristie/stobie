@@ -52,11 +52,13 @@ same accessible name unless the application composed one.
   are unchanged.
 - **Invocation by argument.** A selector's `argument` matches controls
   carrying an equal value, comparing numbers by value. A row's binding takes
-  no value, meaning its own, or that same value; any other is
-  `invalid_arguments`. A sent value also chooses among the bindings a
-  selector matches (`select_invocation_target`, shared by the host and the
-  Rust client): bindings carrying another value cannot take it, and the one
-  carrying it is preferred over the action's own binding. `stobie invoke
+  no value, meaning its own, or that same value; any other sent to a
+  selector that matches it alone is `invalid_arguments`. A sent value also
+  chooses among the bindings a selector matches (`select_invocation_target`,
+  shared by the host and the Rust client, which then addresses the binding
+  it chose by ID): bindings carrying another value cannot take it, the one
+  carrying it is preferred over the action's own binding, and a value none
+  of several can take is `no_match`. `stobie invoke
   CAPABILITY --value V` therefore reaches the row carrying `V` when it is
   presented and the action's binding otherwise, and the new `--argument`
   selector flag names a row's control without a value. `observe` shows
@@ -127,6 +129,14 @@ same accessible name unless the application composed one.
   names every row's control after its person, each name once, with the
   inspection interface's ID, and a plain Playwright click on each name acts
   on that person.
+- Component tests (`components::list_row`): long titles and details elide
+  to one line each with complete semantics, the row keeps at least the hit
+  height, and a disabled row keeps its reason.
+- Gallery `rows/actions` and `rows/long-narrow`, with inspected fixtures
+  `rows-actions-dark`, `rows-actions-light-compact` and
+  `rows-long-high-contrast` (light high contrast at 150% and narrow): no
+  semantic or text audit findings, and each control carries its person's ID
+  under its own name.
 - `cargo xtask verify` passes.
 
 ## Delivery increments
@@ -136,6 +146,7 @@ same accessible name unless the application composed one.
 | Protocol, recipes, host bindings and clients | Complete | Host, inspection, protocol, component, client, CLI and JavaScript client tests |
 | Outside application, browser and agent checks | Complete | `tools/row-actions-smoke.mjs` in the outside-app stage, natively and in Chromium |
 | Documentation, critique and full verification | Complete | Guides, a compiled rustdoc example and `cargo xtask verify` |
+| Review repair | Complete | Another value sent to one selected row's control is `invalid_arguments`; clients address the binding they chose; Gallery stories and three fixtures |
 
 ## Design review
 
@@ -144,8 +155,10 @@ Task and reference: scan, open, pin and remove people in the outside-rows
   application; navigation items and the action button recipes as reference.
 Behavioural checks: passed (host tests; stobie natively and in Chromium;
   Playwright clicks by ARIA name).
-Presentation checks: passed at 1000 and 360 px wide, dark theme; resting,
-  focus, hover, toggled and disabled states.
+Presentation checks: passed at 1000 and 360 px wide in the outside
+  application, dark theme, with resting, focus, hover, toggled and disabled
+  states; and in the Gallery fixtures, dark comfortable, light compact, and
+  light high contrast at 150% and narrow.
 Design decision: accepted after one revision.
 Main reason and remaining trade-off: the first critique found the row's
   title weaker than its actions, so the title now uses ButtonLabel as
@@ -155,8 +168,9 @@ Main reason and remaining trade-off: the first critique found the row's
   that a quiet button's hover fill matches a toggled-on fill, and that a
   disabled icon action only dims its glyph; these belong to the existing
   recipes and are later work.
-Exact candidate evidence links: captures under the outside-app stage's
-  evidence directory (row-actions.png, row-actions-narrow.png), not retained.
+Exact candidate evidence links: the three rows fixtures under
+  tests/ui-snapshots/expected; the outside application's captures were not
+  retained.
 ```
 
 ## Closeout

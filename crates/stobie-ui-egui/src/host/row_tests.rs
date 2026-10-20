@@ -627,7 +627,7 @@ fn agents_discover_each_rows_control_and_invoke_it_by_argument() {
     assert_eq!(refused.state, ReceiptState::Rejected);
     assert_eq!(
         refused.error.map(|error| error.code),
-        Some(InspectionErrorCode::NoMatch)
+        Some(InspectionErrorCode::InvalidArguments)
     );
     // Without a value, the controls and the action's binding are ambiguous.
     let ambiguous = invoke(

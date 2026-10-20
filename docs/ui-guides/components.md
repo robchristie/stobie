@@ -515,6 +515,10 @@ callers use `list_row` with a stable `PresentationId` and publish
 `list_row_semantic_node` for positive interaction bounds, and
 `PresentationContext::list_row` handles ordinary publication.
 
+Gallery `rows/actions` and `rows/long-narrow` present list rows with their
+actions, including a disabled action, a disabled row, elision and scrolling;
+the [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
+
 Buttons, icon actions and toggles carrying a bound action keep their visible
 label and measurements; their accessible name and tooltip add the subject,
 and `PresentationContext::bound_action` is the low-level form. A hidden

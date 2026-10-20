@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "rows/long-narrow",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 553
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.078369720164ce69",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Augusta Ada King, Countess of Lovelace",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 275.625,
+        "max_x": 755.21875,
+        "max_y": 317.625
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 11
+    },
+    {
+      "id": "presentation.5b30d34441f7818b",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Grace Brewster Murray Hopper",
+      "description": "Contre-amirale, informaticienne et autrice du premier compilateur; Select the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 333.625,
+        "max_x": 990,
+        "max_y": 394.25
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "disabled_reason": "Grace Brewster Murray Hopper is away",
+      "argument": 12
+    },
+    {
+      "id": "presentation.5d3d7f10c30569cb",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Grace Brewster Murray Hopper",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 844.125,
+        "min_y": 399.25,
+        "max_x": 886.125,
+        "max_y": 441.25
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "disabled_reason": "Grace Brewster Murray Hopper is away",
+      "argument": 12
+    },
+    {
+      "id": "presentation.613e6d4f90ea48d1",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Grace Brewster Murray Hopper",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 762.21875,
+        "min_y": 399.25,
+        "max_x": 837.125,
+        "max_y": 441.25
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "disabled_reason": "Grace Brewster Murray Hopper is away",
+      "argument": 12
+    },
+    {
+      "id": "presentation.6ac142c89209c639",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Edsger Wybe Dijkstra",
+      "description": "Informaticus; Select the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 457.25,
+        "max_x": 990,
+        "max_y": 517.875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 13
+    },
+    {
+      "id": "presentation.6c3f3dee24af20ae",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Edsger Wybe Dijkstra",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 522.875,
+        "max_x": 755.21875,
+        "max_y": 541
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "argument": 13
+    },
+    {
+      "id": "presentation.74c216120d49da41",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Augusta Ada King, Countess of Lovelace",
+      "description": "Mathematikerin und Verfasserin der ersten veröffentlichten Programme; Select the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 210,
+        "max_x": 990,
+        "max_y": 270.625
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.select"
+      ],
+      "argument": 11
+    },
+    {
+      "id": "presentation.8e3113a36d4b543c",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Augusta Ada King, Countess of Lovelace",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 844.125,
+        "min_y": 275.625,
+        "max_x": 886.125,
+        "max_y": 317.625
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "disabled_reason": "Unpin Augusta Ada King, Countess of Lovelace first",
+      "argument": 11
+    },
+    {
+      "id": "presentation.9c45480276571b0f",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Edsger Wybe Dijkstra",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 762.21875,
+        "min_y": 522.875,
+        "max_x": 837.125,
+        "max_y": 541
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 13
+    },
+    {
+      "id": "presentation.ba778843660f11cd",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Remove Edsger Wybe Dijkstra",
+      "description": "Remove the person with this ID",
+      "rect": {
+        "min_x": 844.125,
+        "min_y": 522.875,
+        "max_x": 886.125,
+        "max_y": 541
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.remove"
+      ],
+      "argument": 13
+    },
+    {
+      "id": "presentation.d39b4d9cff02f8fd",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Open Grace Brewster Murray Hopper",
+      "description": "Open the person with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 399.25,
+        "max_x": 755.21875,
+        "max_y": 441.25
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.person.open"
+      ],
+      "disabled_reason": "Grace Brewster Murray Hopper is away",
+      "argument": 12
+    },
+    {
+      "id": "presentation.df6fa327792e9512",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Augusta Ada King, Countess of Lovelace",
+      "description": "Keep the person with this ID at the top",
+      "rect": {
+        "min_x": 762.21875,
+        "min_y": 275.625,
+        "max_x": 837.125,
+        "max_y": 317.625
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.person.pin"
+      ],
+      "argument": 11
+    }
+  ],
+  "semantic_audit": []
+}

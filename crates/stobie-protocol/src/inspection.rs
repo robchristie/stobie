@@ -755,7 +755,10 @@ fn sent_value(arguments: &serde_json::Value) -> Option<&serde_json::Value> {
 /// matches. A value sent with the invocation also selects: a binding whose
 /// control carries another value cannot take it, and one whose control
 /// carries that value, such as the row with that ID, is preferred over the
-/// action's own binding that takes any value.
+/// action's own binding that takes any value. A selector that matches one
+/// binding alone keeps it, so that its own contract refuses another value
+/// ([`CapabilityDescription::parse_arguments`]); among several, a value that
+/// none can take matches nothing.
 pub fn select_invocation_target<'a, T>(
     candidates: &'a [T],
     describe: impl Fn(&T) -> &CapabilityDescription,
@@ -777,6 +780,7 @@ pub fn select_invocation_target<'a, T>(
     };
     match chosen.as_slice() {
         [one] => Ok(one),
+        [] if candidates.len() == 1 => Ok(&candidates[0]),
         [] if candidates.is_empty() => Err(InspectionError::new(
             InspectionErrorCode::NoMatch,
             "selector resolves no capability binding",
@@ -1260,6 +1264,18 @@ mod tests {
         assert_eq!(
             select(serde_json::Value::Null),
             Err(InspectionErrorCode::Ambiguous)
+        );
+        // A control selected alone is kept, so that its own contract
+        // refuses another value.
+        let grace = &candidates[1..2];
+        let chosen =
+            select_invocation_target(grace, |candidate| candidate, &json!({ "value": 9 })).unwrap();
+        assert_eq!(
+            chosen
+                .parse_arguments(&json!({ "value": 9 }))
+                .unwrap_err()
+                .code,
+            InspectionErrorCode::InvalidArguments
         );
         // Without the action's binding, a value no row carries matches nothing.
         let rows = &candidates[..2];
