@@ -1,7 +1,7 @@
 # Responsive navigation
 
 Status: complete
-Delivery: [PR #114](https://github.com/robchristie/stobie/pull/114)
+Delivery: [PR #115](https://github.com/robchristie/stobie/pull/115)
 
 ## Outcome and boundaries
 
