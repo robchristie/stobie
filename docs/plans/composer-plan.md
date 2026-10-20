@@ -1,7 +1,7 @@
 # Composer recipe and hidden actions
 
 Status: complete
-Delivery: [PR #PENDING](https://github.com/robchristie/stobie/pull/PENDING)
+Delivery: [PR #105](https://github.com/robchristie/stobie/pull/105)
 
 Framework work item 6 of the [iOS PWA spike report](../ios-pwa-spike-report.md#framework-work):
 a chat application needs a multiline composer that grows with its message,
