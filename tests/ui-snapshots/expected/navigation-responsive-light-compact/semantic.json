@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "navigation/responsive",
+      "rect": {
+        "min_x": 362,
+        "min_y": 48,
+        "max_x": 1322,
+        "max_y": 608
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.195686fe56fc44a2",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Edsger Dijkstra",
+      "description": "Shortest route found; 12 Oct; Open the conversation with this ID",
+      "rect": {
+        "min_x": 370,
+        "min_y": 247,
+        "max_x": 690,
+        "max_y": 293
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "edsger"
+    },
+    {
+      "id": "presentation.5308ba696b9cf055",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Katherine Johnson",
+      "description": "Trajectory checked by hand; 1 Sep; Open the conversation with this ID",
+      "rect": {
+        "min_x": 370,
+        "min_y": 296,
+        "max_x": 690,
+        "max_y": 342
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "katherine"
+    },
+    {
+      "id": "presentation.b06fb5be21610f03",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Grace Hopper",
+      "description": "1 unread message; The hall is booked for Friday; Mon; Open the conversation with this ID",
+      "rect": {
+        "min_x": 370,
+        "min_y": 198,
+        "max_x": 690,
+        "max_y": 244
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "grace"
+    },
+    {
+      "id": "presentation.d62ad5e36d7e4a7d",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Ada Lovelace",
+      "description": "The notes on the engine are ready; 09:41; Open the conversation with this ID",
+      "rect": {
+        "min_x": 370,
+        "min_y": 149,
+        "max_x": 690,
+        "max_y": 195
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "ada"
+    },
+    {
+      "id": "presentation.dd187035b38b584c",
+      "parent": "presentation.fcff741c5fffca27",
+      "role": "button",
+      "name": "Back",
+      "description": "Return to the previous level",
+      "rect": {
+        "min_x": 695,
+        "min_y": 109,
+        "max_x": 727,
+        "max_y": 141
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.back"
+      ]
+    },
+    {
+      "id": "presentation.fcc3be4a3f58dac3",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Conversations",
+      "rect": {
+        "min_x": 370,
+        "min_y": 105,
+        "max_x": 690,
+        "max_y": 600
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.fcff741c5fffca27",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "About Ada Lovelace",
+      "rect": {
+        "min_x": 690,
+        "min_y": 105,
+        "max_x": 1314,
+        "max_y": 600
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

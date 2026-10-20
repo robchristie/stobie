@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "navigation/responsive",
+      "rect": {
+        "min_x": 282,
+        "min_y": 54,
+        "max_x": 1402,
+        "max_y": 614
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.1923012b6d64c01c",
+      "parent": "presentation.a6d9de8b8ffe5963",
+      "role": "button",
+      "name": "Details",
+      "description": "Show or hide this conversation's details",
+      "rect": {
+        "min_x": 1031,
+        "min_y": 125,
+        "max_x": 1063,
+        "max_y": 157
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.conversation",
+          "id": "ada"
+        }
+      },
+      "actions": [
+        "gallery.navigation.details"
+      ]
+    },
+    {
+      "id": "presentation.195686fe56fc44a2",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Edsger Dijkstra",
+      "description": "Shortest route found; 12 Oct; Open the conversation with this ID",
+      "rect": {
+        "min_x": 294,
+        "min_y": 275,
+        "max_x": 614,
+        "max_y": 325
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "edsger"
+    },
+    {
+      "id": "presentation.5308ba696b9cf055",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Katherine Johnson",
+      "description": "Trajectory checked by hand; 1 Sep; Open the conversation with this ID",
+      "rect": {
+        "min_x": 294,
+        "min_y": 330,
+        "max_x": 614,
+        "max_y": 380
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "katherine"
+    },
+    {
+      "id": "presentation.a6d9de8b8ffe5963",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 614,
+        "min_y": 121,
+        "max_x": 1070,
+        "max_y": 602
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.conversation",
+          "id": "ada"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.b06fb5be21610f03",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Grace Hopper",
+      "description": "1 unread message; The hall is booked for Friday; Mon; Open the conversation with this ID",
+      "rect": {
+        "min_x": 294,
+        "min_y": 220,
+        "max_x": 614,
+        "max_y": 270
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "grace"
+    },
+    {
+      "id": "presentation.d62ad5e36d7e4a7d",
+      "parent": "presentation.fcc3be4a3f58dac3",
+      "role": "navigation_item",
+      "name": "Ada Lovelace",
+      "description": "The notes on the engine are ready; 09:41; Open the conversation with this ID",
+      "rect": {
+        "min_x": 294,
+        "min_y": 165,
+        "max_x": 614,
+        "max_y": 215
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.navigation.open"
+      ],
+      "argument": "ada"
+    },
+    {
+      "id": "presentation.e1de5060035242c9",
+      "parent": "presentation.a6d9de8b8ffe5963",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 626,
+        "min_y": 217,
+        "max_x": 833,
+        "max_y": 249
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.conversation",
+          "id": "ada"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.f05656526e643b24",
+      "parent": "presentation.a6d9de8b8ffe5963",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 977,
+        "min_y": 173,
+        "max_x": 1058,
+        "max_y": 205
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "domain_reference": {
+        "kind": "external",
+        "value": {
+          "namespace": "gallery.conversation",
+          "id": "ada"
+        }
+      },
+      "actions": []
+    },
+    {
+      "id": "presentation.fcc3be4a3f58dac3",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Conversations",
+      "rect": {
+        "min_x": 294,
+        "min_y": 121,
+        "max_x": 614,
+        "max_y": 602
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.fcff741c5fffca27",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "About Ada Lovelace",
+      "rect": {
+        "min_x": 1070,
+        "min_y": 121,
+        "max_x": 1390,
+        "max_y": 602
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

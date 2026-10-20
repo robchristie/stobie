@@ -14,8 +14,8 @@ use crate::{
     appearance::AppearanceWorkbench,
     catalogue::{STORIES, StoryId, story_definition},
     stories::{
-        ChatFixtureState, IconFixtureState, NavigationFixtureState, StatusChipFixtureState,
-        StoryState, render_story,
+        ChatFixtureState, IconFixtureState, NavigationFixtureState, ResponsiveFixtureState,
+        StatusChipFixtureState, StoryState, render_story,
     },
 };
 
@@ -131,6 +131,8 @@ pub enum GalleryWidth {
     #[default]
     Regular,
     Wide,
+    /// Wide enough for a desktop's three navigation panes.
+    Desktop,
 }
 
 impl GalleryWidth {
@@ -139,6 +141,7 @@ impl GalleryWidth {
             Self::Narrow => 320.0,
             Self::Regular => 640.0,
             Self::Wide => 960.0,
+            Self::Desktop => 1120.0,
         }
     }
 }
@@ -224,6 +227,7 @@ pub struct GallerySnapshot {
     pub navigation_fixture: NavigationFixtureState,
     pub status_chip_fixture: StatusChipFixtureState,
     pub chat_fixture: ChatFixtureState,
+    pub responsive_fixture: ResponsiveFixtureState,
 }
 
 /// The hosted Gallery: the selected story, its configuration and theme, and
@@ -279,6 +283,7 @@ impl Gallery {
                 navigation_fixture: NavigationFixtureState::default(),
                 status_chip_fixture: StatusChipFixtureState::default(),
                 chat_fixture: ChatFixtureState::default(),
+                responsive_fixture: ResponsiveFixtureState::default(),
             },
         }
     }
@@ -466,6 +471,7 @@ impl Application for Gallery {
             navigation_fixture: view.story.navigation.clone(),
             status_chip_fixture: view.story.status_chip.clone(),
             chat_fixture: view.story.chat.clone(),
+            responsive_fixture: view.story.responsive.clone(),
         };
 
         #[cfg(target_arch = "wasm32")]
@@ -608,6 +614,12 @@ fn gallery_bar(
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                         let option =
                             ui.selectable_value(&mut edited.width, GalleryWidth::Wide, "Wide");
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                        let option = ui.selectable_value(
+                            &mut edited.width,
+                            GalleryWidth::Desktop,
+                            "Desktop",
+                        );
                         record_native_text_control(&option, NativeTextControlKind::Selectable);
                     });
                 name_control(&combo.response, "Gallery width");
@@ -912,6 +924,7 @@ mod tests {
                             GalleryWidth::Narrow,
                             GalleryWidth::Regular,
                             GalleryWidth::Wide,
+                            GalleryWidth::Desktop,
                         ] {
                             let configuration = GalleryConfiguration {
                                 appearance,

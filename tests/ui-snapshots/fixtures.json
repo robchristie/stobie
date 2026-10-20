@@ -176,6 +176,51 @@
       "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
     },
     {
+      "id": "navigation-responsive-dark",
+      "story": "navigation/responsive",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "desktop"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "navigation-responsive-light-compact",
+      "story": "navigation/responsive",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "compact",
+        "font_scale": 1.0,
+        "width": "wide"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "navigation-responsive-high-contrast",
+      "story": "navigation/responsive-narrow",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "high",
+        "density": "comfortable",
+        "font_scale": 1.5,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
       "id": "status-chip-tasks-dark",
       "story": "status-chip/tasks",
       "viewport": {

@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, responsive navigation and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -589,6 +589,78 @@ bounds. Gallery audits its fully visible text allocation subset, retaining all
 measurement attempts in coverage. Production observations include partial clips.
 Preserve the viewport/pass inventory when filtering clipped successful text; never discard failed measurements. The scoped method handles ordinary
 publication and inherits the context's explicit domain reference and target pane.
+
+## Responsive navigation
+
+A chat-style application's list, open item and detail are one navigation
+recipe. In a hosted application:
+
+```text
+let spec = NavigationSpec {
+    list_title: "Conversations",
+    content: open.map(|bot| NavigationContent {
+        title: &bot.name,
+        reference: Some(DomainReference::External { namespace: "bot".into(), id: bot.id.clone() }),
+        detail: Some(NavigationDetail { title: "About", shown, toggle: Act::Details, icon: IconId::Info }),
+    }),
+    back: Act::Back,
+};
+frame.navigation(ui, p, "bots", &spec, |ui, p, frame, pane| match pane {
+    NavigationPane::List => for bot in &bots {
+        frame.conversation_row(ui, p, BoundAction::new(Act::Open, bot.id.as_str()), row(bot));
+    },
+    NavigationPane::Content => conversation(ui, p, frame),
+    NavigationPane::Detail => details(ui, p, frame),
+    NavigationPane::Empty => prompt(ui, p),
+});
+```
+
+`Frame::navigation` lays the panes out by `NavigationLayout::for_width` (see
+[panes](panes.md#responsive-navigation) for the breakpoints), presents each
+pane's header, and calls the closure once per pane shown with a child
+context and the `Frame`. It triggers Back and the detail toggle itself; the
+application's `perform` closes the deepest open level on Back (the detail
+when shown, the item otherwise) and turns the detail over on the toggle.
+`PresentationContext::navigation` is the scoped form: it returns the header
+controls' responses for the caller to route, and each pane's observations,
+which it has already registered.
+
+- Destinations are a dynamic list: one row per item, each a `BoundAction`
+  with the item's ID as its argument, so one action opens any of them.
+  Use `Frame::conversation_row` for rows with an avatar, a preview and a
+  time, or `Frame::navigation_item` with a `DestinationSpec` for plain
+  destinations with an icon and an optional badge
+  (`PresentationContext::bound_navigation_item` is the scoped form). Mark the
+  open item's row `selected`; it is a `NavigationItem` with `aria-current`.
+- Headers are the application bar's height. Back is an `ArrowLeft` icon
+  named by the Back action's label, at the start, wherever the level it
+  closes covers the one beneath: every pushed level in the stack, and the
+  detail in the split. The title is a section heading that elides, and the
+  content's header carries the detail toggle, an icon toggle named by its
+  action's label whose pressed state says whether the detail shows. A
+  hidden availability presents no control.
+- Semantics: each pane but the empty content is a `Pane` node and an
+  AccessKit region named by its title, holding its header's controls and
+  its body's nodes; the content's pane carries `NavigationContent.reference`,
+  so agents read which item is open by querying panes. Pane bodies publish
+  only what is visible, so they may scroll.
+- Agents navigate with the ordinary capabilities: they observe the panes
+  and the current row, open an item by invoking the open action with a
+  row's argument (or, while the list is covered, with any item's ID, which
+  the action's own binding takes), and go back with the Back action, which
+  is invocable in every layout, shown or not.
+- Keyboard focus follows the reader. Opening a level that shows Back moves
+  focus that was somewhere to Back; Back returns focus to the control that
+  opened the level, such as its row or the detail toggle. Agents' changes
+  take no focus that nobody had. Each control is an ordinary Tab stop.
+- The recipe pushes no browser history. The in-app Back is the way back;
+  the browser's Back and the platform's back gesture leave the page as they
+  do for any page.
+
+Gallery `navigation/responsive` (conversation rows, messages and details)
+and `navigation/responsive-narrow` (long and localised destinations with
+counts, an archived one, rows below the fold) use this production API at
+every Gallery width; the Desktop width shows the columns.
 
 ## Rows and their actions
 

@@ -308,6 +308,14 @@ secondary context but must not materialise complete result or thumbnail
 collections. Exact breakpoints are typed component policy, not token aliases;
 later gallery stories and physical checks will calibrate them.
 
+The navigation recipe's own breakpoints (`NavigationLayout`) follow the
+wide class: it stacks one level at a time with Back below 720 points, sets
+the list beside the content from 720 and adds the detail beside both from
+1040, the first width at which the list, the content and the detail each
+keep their own width. Panes beside one another share a subtle edge; the list
+and the detail sit on the panel surface and the content on the canvas, and
+a stacked level takes the canvas. See [panes](ui-guides/panes.md#responsive-navigation).
+
 `PaneWidthClass`, `PaneHeightClass` and `PaneSizeClass` encode these exact
 breakpoints. The gallery exercises narrow and regular/wide reference recipes;
 complete application migration remains later work.

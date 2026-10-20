@@ -7,6 +7,7 @@ use egui::{Response, Ui};
 mod chat;
 mod composer;
 mod copy;
+mod navigation;
 
 pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
@@ -17,6 +18,10 @@ pub use composer::{
     ComposerSpec,
 };
 pub use copy::{COPY_CONFIRMATION, COPY_FAILURE, CopyContent, CopyResponse, CopySpec};
+pub use navigation::{
+    NavigationContent, NavigationControlResponse, NavigationDetail, NavigationLayout,
+    NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
+};
 
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,
@@ -516,6 +521,42 @@ impl PresentationContext {
     ) -> Response {
         self.check_pass(ui);
         let identity = self.scope.instance(key);
+        self.present_navigation_item(ui, identity, spec, None)
+    }
+
+    /// Present one of a dynamic list of destinations, such as one per
+    /// person, carrying `argument`, such as the destination's ID. Its
+    /// identity combines `key` with the argument and its semantic node
+    /// publishes the argument, so agents open it by its ID; otherwise it is
+    /// [`Self::navigation_item`]. Hosted applications use
+    /// [`Frame::navigation_item`](crate::Frame::navigation_item) with a
+    /// [`BoundAction`](crate::BoundAction), which also triggers the action
+    /// with its argument when clicked.
+    pub fn bound_navigation_item<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: crate::NavigationItemSpec<'_, A>,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let value = argument.to_value();
+        let identity = match &value {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        self.present_navigation_item(ui, identity, spec, value)
+    }
+
+    fn present_navigation_item<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        identity: PresentationId,
+        spec: crate::NavigationItemSpec<'_, A>,
+        argument: Option<serde_json::Value>,
+    ) -> Response {
         if !spec.availability.visible() {
             return ui.interact(
                 egui::Rect::NOTHING,
@@ -538,6 +579,7 @@ impl PresentationContext {
                 identity,
                 self.parent.clone(),
             );
+            node.argument = argument;
             if self.domain_reference.is_some() {
                 node.domain_reference = self.domain_reference.clone();
             }
