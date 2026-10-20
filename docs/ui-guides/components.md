@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -301,6 +301,55 @@ for example "Opens in a new tab"; Stobie adds no text of its own.
 
 Low-level callers use `link(ui, spec, identity, tokens, font_scale,
 observations)` and publish `link_semantic_node` while it returns a node.
+
+## Copy
+
+Use `PresentationContext::copy(ui, key, &CopySpec::new(text, label,
+confirmation, failure))` for a button that copies a given text, such as an
+invitation code, a link or a message, to the clipboard. All four strings are
+the application's own words; Stobie adds none. Copying changes no
+application state, so the control needs no action or intent.
+
+```text
+p.content(ui, "code", &code, ContentTextSpec { interaction: TextInteraction::Selectable, ..CODE });
+p.copy(ui, "copy-code", &CopySpec::new(&code, "Copy code", "Copied", "Couldn't copy"));
+```
+
+- **Faces.** `content` shows the copy glyph and label (`IconLabel`, the
+  default), the label alone (`Label`) or the glyph alone (`Icon`, named by the
+  label and with the label as its tooltip); `emphasis` is any action emphasis,
+  `Quiet` by default. Prefer a face with the label wherever a failure must be
+  read, because an icon-only control shows a failure only as its warning
+  glyph. The control is as wide as the widest of its label, confirmation and
+  failure, so nothing beside it moves when it confirms. `description` adds an
+  accessible description and a tooltip line; `availability` disables the
+  control with a reason or hides it, taking no space.
+- **Outcome.** On success the face shows a check and the confirmation for
+  `COPY_CONFIRMATION` (two seconds), then returns to the label; when the
+  platform refuses the write it shows a warning and the failure for
+  `COPY_FAILURE` (five seconds). New text drops an earlier outcome. The
+  accessible name stays the label throughout; a polite status beside the
+  control, present and empty before any outcome, takes the confirmation or
+  failure as its name, so assistive technology announces it once. Snapshots
+  show that status only while it has a message. `CopyResponse` gives the
+  button's response and the `CopyState` shown.
+- **The gesture.** Pointer release, Tab then Enter or Space, an
+  assistive-technology activation and an agent's invocation all copy. In the
+  web host each tap, click, key press and ARIA layer click writes inside its
+  own event, which Safari requires on iOS; [Interactions](interactions.md#copying-to-the-clipboard)
+  owns the route. Natively, egui hands the text to the platform clipboard and
+  the control confirms, because it cannot observe a failure.
+- **Privacy.** The text is never published: the control is a `Button` node
+  named by its label, and agents discover it as `stobie.copy-text`, whose
+  target meaning is a revision (`text-revision:N`) that moves on whenever the
+  text changes, never the text or a digest of it. Show the text itself, if
+  the user should read it, with content text; an application that must not
+  publish a secret withholds that content text and keeps the copy control.
+
+Gallery `copy/actions` presents a copy control beside a code, an icon-only
+control under a message, a long localised label and confirmation, and a
+disabled control; the [snapshot guide](../../tests/ui-snapshots/README.md)
+lists its fixtures.
 
 ## Scoped presentation
 

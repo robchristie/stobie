@@ -265,13 +265,59 @@ pub(crate) fn present_action_button<A: ActionKey>(
         return ui.interact(Rect::NOTHING, identity.widget_id, Sense::hover());
     }
     let action = spec.target.action.specification();
-    let name = name.unwrap_or(action.label);
-    let visible_label = if spec.compact {
-        action.compact_label.unwrap_or(action.label)
-    } else {
-        action.label
+    let face = ButtonFace {
+        name: name.unwrap_or(action.label),
+        visible_label: if spec.compact {
+            action.compact_label.unwrap_or(action.label)
+        } else {
+            action.label
+        },
+        description: Some(action.description),
+        shortcut: action.shortcut.map(|shortcut| shortcut.aria_keyshortcuts()),
+        availability: &spec.availability,
+        state: spec.state,
+        emphasis: spec.emphasis,
+        content,
+        also_fits: &[],
+        tooltip: spec.compact,
     };
-    let enabled = spec.availability.enabled();
+    present_button(ui, &face, identity, tokens, font_scale, observations)
+}
+
+/// What a button shows and how it is named and described, apart from any
+/// action: the action button's and the copy recipe's shared face.
+pub(crate) struct ButtonFace<'a> {
+    /// The accessible name, and the tooltip's first line.
+    pub name: &'a str,
+    pub visible_label: &'a str,
+    pub description: Option<&'a str>,
+    /// The `aria-keyshortcuts` form of the button's shortcut.
+    pub shortcut: Option<String>,
+    pub availability: &'a Availability,
+    pub state: ActionButtonState,
+    pub emphasis: ActionEmphasis,
+    pub content: ActionButtonContent,
+    /// Other labels the button shows in turn, whose width it keeps, so that
+    /// changing between them moves nothing.
+    pub also_fits: &'a [&'a str],
+    /// Show the tooltip even when the whole label shows.
+    pub tooltip: bool,
+}
+
+/// Present a visible button's face: allocate it, sense clicks when enabled,
+/// set its AccessKit node and paint it.
+pub(crate) fn present_button(
+    ui: &mut egui::Ui,
+    face: &ButtonFace<'_>,
+    identity: &ActionButtonIdentity,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<crate::TextLayoutObservation>,
+) -> Response {
+    let content = face.content;
+    let name = face.name;
+    let visible_label = face.visible_label;
+    let enabled = face.availability.enabled();
     let text_spec = button_text_spec(content);
     let artwork_size = icon_size(tokens, font_scale);
     let icon_reservation = if matches!(content, ActionButtonContent::IconLabel(_)) {
@@ -281,9 +327,13 @@ pub(crate) fn present_action_button<A: ActionKey>(
     };
     let ButtonSize {
         hit_height,
-        intrinsic,
+        mut intrinsic,
         minimum_width,
     } = action_button_size(ui, visible_label, content, tokens, font_scale);
+    for label in face.also_fits {
+        intrinsic =
+            intrinsic.max(action_button_size(ui, label, content, tokens, font_scale).intrinsic);
+    }
     let width = intrinsic
         .max(minimum_width)
         .min(ui.available_width().max(minimum_width));
@@ -307,8 +357,8 @@ pub(crate) fn present_action_button<A: ActionKey>(
             node.set_role(Role::Button);
             node.set_label(name);
             node.set_author_id(identity.semantic_id.0.clone());
-            if let Some(shortcut) = action.shortcut {
-                node.set_keyboard_shortcut(shortcut.aria_keyshortcuts());
+            if let Some(shortcut) = &face.shortcut {
+                node.set_keyboard_shortcut(shortcut.clone());
             }
             // Match the current pointer target when a scroll area clips the control.
             if response.interact_rect.is_positive() {
@@ -319,17 +369,20 @@ pub(crate) fn present_action_button<A: ActionKey>(
                     y1: f64::from(response.interact_rect.max.y),
                 });
             }
-            let description = spec.availability.disabled_reason().map_or_else(
-                || action.description.to_owned(),
-                |reason| format!("{}; unavailable: {reason}", action.description),
-            );
-            node.set_description(description);
+            match (face.description, face.availability.disabled_reason()) {
+                (description, Some(reason)) => node.set_description(format!(
+                    "{}; unavailable: {reason}",
+                    description.unwrap_or_default()
+                )),
+                (Some(description), None) => node.set_description(description),
+                (None, None) => node.clear_description(),
+            }
             if !enabled {
                 node.set_disabled();
             }
             node.clear_selected();
             node.clear_toggled();
-            if let Some(pressed) = spec.state.toggled() {
+            if let Some(pressed) = face.state.toggled() {
                 node.set_toggled(if pressed {
                     Toggled::True
                 } else {
@@ -351,13 +404,13 @@ pub(crate) fn present_action_button<A: ActionKey>(
     let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(visual_width, visual_height));
     let fill = if !enabled {
         Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
-    } else if spec.emphasis == ActionEmphasis::Primary {
+    } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_background.into()
-    } else if spec.state.pressed() || response.is_pointer_button_down_on() {
+    } else if face.state.pressed() || response.is_pointer_button_down_on() {
         tokens.colours.selection_background.into()
     } else if response.hovered() {
         if matches!(
-            spec.emphasis,
+            face.emphasis,
             ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
         ) {
             tokens.colours.action_quiet_hover.into()
@@ -365,7 +418,7 @@ pub(crate) fn present_action_button<A: ActionKey>(
             tokens.colours.surface_hover.into()
         }
     } else if matches!(
-        spec.emphasis,
+        face.emphasis,
         ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
     ) {
         Color32::TRANSPARENT
@@ -376,16 +429,16 @@ pub(crate) fn present_action_button<A: ActionKey>(
         visual,
         tokens.geometry.control_radius.0,
         fill,
-        if spec.emphasis == ActionEmphasis::QuietBorderless {
+        if face.emphasis == ActionEmphasis::QuietBorderless {
             Stroke::NONE
-        } else if enabled && spec.emphasis == ActionEmphasis::Primary && response.hovered() {
+        } else if enabled && face.emphasis == ActionEmphasis::Primary && response.hovered() {
             Stroke::new(1.0, tokens.colours.action_primary_foreground)
         } else {
             Stroke::new(1.0, tokens.colours.border_control)
         },
         egui::StrokeKind::Inside,
     );
-    if enabled && (spec.state.pressed() || response.is_pointer_button_down_on()) {
+    if enabled && (face.state.pressed() || response.is_pointer_button_down_on()) {
         // The reference theme aliases hover and selection fills. Keep active
         // feedback explicit, with geometry distinct from the outer focus ring.
         let inset = tokens.spacing.unit.0 * 0.5;
@@ -394,7 +447,7 @@ pub(crate) fn present_action_button<A: ActionKey>(
             (tokens.geometry.control_radius.0 - inset).max(0.0),
             Stroke::new(
                 1.0,
-                if spec.emphasis == ActionEmphasis::Primary {
+                if face.emphasis == ActionEmphasis::Primary {
                     tokens.colours.action_primary_foreground
                 } else {
                     tokens.colours.selection_indicator
@@ -415,7 +468,7 @@ pub(crate) fn present_action_button<A: ActionKey>(
     let mut label_tokens = *tokens;
     label_tokens.colours.text_primary = if !enabled {
         tokens.colours.text_muted
-    } else if spec.emphasis == ActionEmphasis::Primary {
+    } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_foreground
     } else {
         tokens.colours.text_primary
@@ -468,10 +521,13 @@ pub(crate) fn present_action_button<A: ActionKey>(
             observations.push(observation);
         }
     }
-    if matches!(content, ActionButtonContent::IconOnly(_)) || truncated || spec.compact || !enabled
+    if matches!(content, ActionButtonContent::IconOnly(_)) || truncated || face.tooltip || !enabled
     {
-        let mut tooltip = format!("{name}\n{}", action.description);
-        if let Some(reason) = spec.availability.disabled_reason() {
+        let mut tooltip = name.to_owned();
+        if let Some(description) = face.description {
+            tooltip.push_str(&format!("\n{description}"));
+        }
+        if let Some(reason) = face.availability.disabled_reason() {
             tooltip.push_str(&format!("\nUnavailable: {reason}"));
         }
         response.clone().on_hover_text(tooltip);

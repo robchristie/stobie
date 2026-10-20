@@ -107,6 +107,37 @@ send action that takes a text argument carries it.
   action's own binding, under the same availability. A refused send's receipt
   carries the application's error, and the draft stays.
 
+## Copying to the clipboard
+
+A copy control ([recipe](components.md#copy)) copies a given text when
+pressed; it is not an action, because copying changes no application state.
+Browsers let a page write to the clipboard only inside a user's gesture, and
+Safari on iOS only inside the gesture's own event, so the web host writes in
+that event rather than on a later frame:
+
+- **Tap or click.** eframe runs the pass that handles a pointer release
+  inside the browser's `pointerup` handler, and the host's clipboard route
+  calls `navigator.clipboard.writeText` at the end of that pass, so the write
+  is inside the tap.
+- **Keyboard.** A key press reaches egui only on the next frame, so the host
+  writes inside the `keydown` itself when Enter or Space reaches the canvas
+  while a copy control has keyboard focus, with the text that control
+  presented in the latest pass. The pass that then sees the press does not
+  write again.
+- **Assistive technology.** A click on a copy control's ARIA layer element,
+  as VoiceOver's double tap or a screen reader's activation sends, writes
+  inside that click in the same way; the layer's request still reaches egui.
+- **Agents and AccessKit actions.** `stobie invoke stobie.copy-text --id ID`
+  and AccessKit actions from outside the layer press the control on the next
+  pass, outside any gesture. Chromium allows that write while the page holds
+  clipboard permission, and a browser that refuses it makes the control show
+  its failure.
+
+The browser's answer settles the control: success shows the confirmation,
+refusal the failure. Natively the platform clipboard takes the text through
+egui and the control confirms. Only copy controls write this way; selectable
+text keeps egui's own copy.
+
 ## Keyboard and pointer behaviour
 
 Use the registered shortcut only in its valid scope. Pane shortcuts require an

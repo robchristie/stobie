@@ -44,6 +44,17 @@ struct Collector {
     visible_only: u32,
     nodes: Vec<(UiNode, Visibility, Origin)>,
     text: Vec<(TextLayoutObservation, bool)>,
+    copies: Vec<CopyRegistration>,
+}
+
+/// A copy control presented this pass: its semantic node's ID, its egui
+/// widget and the revision of its text. The text itself stays with the
+/// control.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CopyRegistration {
+    pub id: crate::SemanticUiId,
+    pub widget: Id,
+    pub revision: u64,
 }
 
 /// Observations registered during one UI pass.
@@ -52,6 +63,8 @@ pub(crate) struct PassObservations {
     pub nodes: Vec<(UiNode, Visibility, Origin)>,
     /// Text, and whether only its fully visible successes are audited.
     pub text: Vec<(TextLayoutObservation, bool)>,
+    /// Copy controls, bound only where their nodes are published.
+    pub copies: Vec<CopyRegistration>,
 }
 
 fn collector_id(viewport: ViewportId) -> Id {
@@ -179,9 +192,23 @@ fn record_with_origin(
             collector.pass = pass;
             collector.nodes.clear();
             collector.text.clear();
+            collector.copies.clear();
         }
         collector.nodes.extend(nodes);
         collector.text.extend(text);
+    });
+}
+
+/// Register a copy control presented in the current pass.
+pub(crate) fn record_copy(context: &Context, copy: CopyRegistration) {
+    let viewport = context.viewport_id();
+    let pass = context.cumulative_pass_nr();
+    record_with_origin(context, viewport, pass, [], []);
+    context.data_mut(|data| {
+        let collector = data.get_temp_mut_or_default::<Collector>(collector_id(viewport));
+        if collector.enabled && collector.pass == pass {
+            collector.copies.push(copy);
+        }
     });
 }
 
@@ -195,11 +222,13 @@ pub(crate) fn take(context: &Context) -> PassObservations {
         if collector.pass != pass {
             collector.nodes.clear();
             collector.text.clear();
+            collector.copies.clear();
             return PassObservations::default();
         }
         PassObservations {
             nodes: std::mem::take(&mut collector.nodes),
             text: std::mem::take(&mut collector.text),
+            copies: std::mem::take(&mut collector.copies),
         }
     })
 }

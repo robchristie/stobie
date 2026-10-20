@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "copy/actions",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.2359c913bfb18f5d",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Copy message",
+      "rect": {
+        "min_x": 534,
+        "min_y": 280,
+        "max_x": 566,
+        "max_y": 312
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.9c62bf0775101754",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Link kopieren",
+      "rect": {
+        "min_x": 534,
+        "min_y": 352,
+        "max_x": 712.25,
+        "max_y": 384
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.c3c2f38653960376",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Copy code",
+      "rect": {
+        "min_x": 534,
+        "min_y": 167,
+        "max_x": 649.40625,
+        "max_y": 199
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.d21fd288cc445727",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Copy code",
+      "rect": {
+        "min_x": 534,
+        "min_y": 424,
+        "max_x": 649.40625,
+        "max_y": 456
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "disabled_reason": "The invitation has expired"
+    }
+  ],
+  "semantic_audit": []
+}

@@ -547,9 +547,10 @@ fn position_measured_text(
         positioned
     };
     let clip_rect = painter.clip_rect().intersect(allocated_rect);
-    // Only text in view presents content: text scrolled out of view or
-    // clipped away publishes none, whatever the host's visibility policy.
-    let in_view = clip_rect.is_positive();
+    // Only text in view presents content: text scrolled out of view, clipped
+    // away or given a zero-size slot publishes none, and neither does empty
+    // text.
+    let in_view = clip_rect.is_positive() && !measured.galley.job.text.is_empty();
     let observation = TextLayoutObservation {
         component_id,
         parent_id,
@@ -651,6 +652,32 @@ mod tests {
         assert_eq!(truncated.line_count, 1);
         assert!(truncated.truncated);
         assert!(audit_text_layouts(&[expanded, wrapped, truncated]).is_empty());
+    }
+
+    #[test]
+    fn empty_or_zero_size_content_text_publishes_no_content() {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let spec = TextSpec::single_line(TextRole::Body, TextOverflow::Ellipsis);
+        let mut contents = Vec::new();
+        let mut output = context.run_ui(Default::default(), |ui| {
+            for (text, width) in [("", 120.0_f32), ("Squeezed", 0.0), ("Shown", 120.0)] {
+                let measured =
+                    measure_text(ui.painter(), text, spec, &tokens, 1.0, width.max(1.0)).unwrap();
+                let allocation = Rect::from_min_size(Pos2::ZERO, egui::vec2(width, 20.0));
+                let observation = paint_measured_text(
+                    ui.painter(),
+                    &measured,
+                    allocation,
+                    TextComponentId::new(TextComponentKind::ContentLabel, 1),
+                    None,
+                );
+                contents.push(observation.content);
+            }
+        });
+        output.textures_delta.clear();
+        assert_eq!(contents, [None, None, Some(TextContent::excerpt("Shown"))]);
     }
 
     #[test]

@@ -2,6 +2,7 @@ mod avatars;
 mod buttons;
 mod chat;
 mod composer;
+mod copy;
 mod data;
 mod dock;
 mod icons;
@@ -133,6 +134,7 @@ fn present_story(
         StoryId::ChatConversation | StoryId::ChatLongNarrow => {
             chat::story(ui, story, tokens, font_scale, &mut state.chat, &mut report)
         }
+        StoryId::CopyActions => copy::story(ui, tokens, font_scale, &mut report),
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.

@@ -378,6 +378,24 @@ impl Layer {
             )?;
             document_listeners.push((event_name, listener));
         }
+        // Enter or Space on the canvas presses a focused copy control on the
+        // next pass; the control writes inside this key press instead.
+        let target = canvas.clone();
+        let keys = context.clone();
+        let listener = Listener::new(move |event: Event| {
+            let on_canvas = event
+                .target()
+                .is_some_and(|node| JsValue::from(node) == JsValue::from(target.clone()));
+            if let (true, Some(keyboard)) = (on_canvas, event.dyn_ref::<KeyboardEvent>()) {
+                crate::clipboard::key_pressed(&keys, &keyboard.key());
+            }
+        });
+        document.add_event_listener_with_callback_and_bool(
+            "keydown",
+            listener.as_ref().unchecked_ref(),
+            true,
+        )?;
+        document_listeners.push(("keydown", listener));
         // Taps that end on a text field focus it inside the gesture; the
         // capture phase runs before eframe's own `touchend` on the document.
         for (event_name, handler) in [
@@ -695,6 +713,10 @@ fn request(key: u32, event: &Event, action: Action) {
             return;
         };
         let text_field = element.tag != "div";
+        // A copy control writes inside the click, as Safari requires.
+        if action == Action::Click {
+            crate::clipboard::layer_clicked(&layer.context, element.node);
+        }
         layer.requests.push(ActionRequest {
             action,
             target_node: element.node,

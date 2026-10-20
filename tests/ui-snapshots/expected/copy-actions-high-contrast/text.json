@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 772988703086420
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 703,
+        "min_y": 561,
+        "max_x": 943.40625,
+        "max_y": 603
+      },
+      "painted_rect": {
+        "min_x": 768.296875,
+        "min_y": 569.5,
+        "max_x": 878.109375,
+        "max_y": 594.5
+      },
+      "clip_rect": {
+        "min_x": 703,
+        "min_y": 561,
+        "max_x": 943.40625,
+        "max_y": 603
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 830708206928758
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 272,
+        "max_x": 845.59375,
+        "max_y": 314
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 280.5,
+        "max_x": 817.1875,
+        "max_y": 305.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 272,
+        "max_x": 845.59375,
+        "max_y": 314
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 8957209262446375
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 734,
+        "min_y": 651,
+        "max_x": 845.59375,
+        "max_y": 693
+      },
+      "painted_rect": {
+        "min_x": 734,
+        "min_y": 659.5,
+        "max_x": 817.1875,
+        "max_y": 684.5
+      },
+      "clip_rect": {
+        "min_x": 734,
+        "min_y": 651,
+        "max_x": 845.59375,
+        "max_y": 693
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 1672107909387361
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 331,
+        "max_x": 990,
+        "max_y": 357
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 331,
+        "max_x": 770.46875,
+        "max_y": 357
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 331,
+        "max_x": 990,
+        "max_y": 357
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Message",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 2079966943950803
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 620,
+        "max_x": 990,
+        "max_y": 646
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 620,
+        "max_x": 853.4375,
+        "max_y": 646
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 620,
+        "max_x": 990,
+        "max_y": 646
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Expired invitation",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 466146296140377
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 241,
+        "max_x": 990,
+        "max_y": 267
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 241,
+        "max_x": 846.625,
+        "max_y": 267
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 241,
+        "max_x": 990,
+        "max_y": 267
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "QX7-4410-KM2P",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 5059971861625566
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 210,
+        "max_x": 990,
+        "max_y": 236
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 210,
+        "max_x": 829,
+        "max_y": 236
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 210,
+        "max_x": 990,
+        "max_y": 236
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Invitation code",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 8513612416480043
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 530,
+        "max_x": 990,
+        "max_y": 556
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 530,
+        "max_x": 828.25,
+        "max_y": 556
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 530,
+        "max_x": 990,
+        "max_y": 556
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Einladungslink",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 767539946325024
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 362,
+        "max_x": 990,
+        "max_y": 466
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 362,
+        "max_x": 987.90625,
+        "max_y": 466
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 362,
+        "max_x": 990,
+        "max_y": 466
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 4,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "The meeting moved to Thursday at 10:30. Bring the printed agenda and the two reports; the room is on the third floor.",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 9,
+    "attempted_components": 9,
+    "successful_components": 9,
+    "failed_components": 0,
+    "native_text_controls": 48,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

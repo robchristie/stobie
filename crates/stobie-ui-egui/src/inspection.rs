@@ -228,6 +228,67 @@ impl LinkBinding {
     }
 }
 
+/// A presented copy control that agents can press: its semantic identity,
+/// the egui widget that copies and the revision of its text. Hosts bind every
+/// presented copy control, without application code. The text is never
+/// published; its revision is the target's meaning, so a control whose text
+/// changed after discovery is stale.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CopyBinding {
+    pub id: SemanticUiId,
+    pub widget: egui::Id,
+    pub revision: u64,
+    pub pane: Option<PaneId>,
+    pub domain: Option<DomainReference>,
+    pub availability: Availability,
+}
+
+impl CopyBinding {
+    fn describe(&self, observation: u64) -> CapabilityDescription {
+        let target = ResolvedTarget {
+            argument: None,
+            id: self.id.clone(),
+            capability: COPY_TEXT_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            meaning: format!("text-revision:{}", self.revision),
+            observation,
+        };
+        CapabilityDescription {
+            argument: None,
+            id: self.id.clone(),
+            capability: COPY_TEXT_CAPABILITY.into(),
+            pane: self.pane,
+            domain: self.domain.clone(),
+            label: "Copy text".into(),
+            description:
+                "Copy the control's text to the clipboard through the same route as pressing it"
+                    .into(),
+            scope: if self.pane.is_some() {
+                ActionScope::Pane
+            } else {
+                ActionScope::Application
+            },
+            shortcut: None,
+            availability: self.availability.clone(),
+            rendered: false,
+            control_enabled: None,
+            semantic_invocable: true,
+            arguments: ArgumentContract::None,
+            target,
+        }
+    }
+}
+
+/// The framework's own bindings for one pass: text fields, links and copy
+/// controls, which hosts bind without application code.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FrameworkBindings<'a> {
+    pub text_fields: &'a [TextFieldBinding],
+    pub links: &'a [LinkBinding],
+    pub copies: &'a [CopyBinding],
+}
+
 /// One admitted invocation, executed on the application thread.
 #[derive(Clone, Debug)]
 pub enum Invocation<A: ActionKey> {
@@ -247,6 +308,10 @@ pub enum Invocation<A: ActionKey> {
     /// Open a presented link's URL. A semantic open always asks for a new
     /// browser tab, so the application under inspection stays open.
     OpenLink { link: LinkBinding },
+    /// Copy a copy control's text, as pressing it would. The control copies
+    /// on its next pass and shows its confirmation or failure, which the
+    /// receipt does not wait for.
+    CopyText { copy: CopyBinding },
 }
 
 /// How far an executed invocation got.
@@ -456,8 +521,33 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<(), InspectionError> {
-        let publication =
-            prepare_publication(snapshot, bindings, text_fields, links, metadata, facts)?;
+        self.stage_completed_with_framework(
+            context,
+            snapshot,
+            bindings,
+            FrameworkBindings {
+                text_fields,
+                links,
+                copies: &[],
+            },
+            metadata,
+            facts,
+        )
+    }
+
+    /// [`Self::stage_completed`] with the pass's framework bindings, which
+    /// discovery publishes as `stobie.set-text`, `stobie.open-link` and
+    /// `stobie.copy-text` capabilities.
+    pub fn stage_completed_with_framework<A: ActionKey>(
+        &self,
+        context: &egui::Context,
+        snapshot: UiSnapshot,
+        bindings: &[InspectionBinding<A>],
+        framework: FrameworkBindings<'_>,
+        metadata: CollectionMetadata,
+        facts: BTreeMap<String, ObservationValue>,
+    ) -> Result<(), InspectionError> {
+        let publication = prepare_publication(snapshot, bindings, framework, metadata, facts)?;
         self.state.lock().expect("inspection mutex poisoned").staged = Some(StagedPublication {
             viewport: context.viewport_id(),
             pass: context.cumulative_pass_nr(),
@@ -475,7 +565,13 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<u64, InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, &[], &[], metadata, facts)?;
+        let publication = prepare_publication(
+            snapshot,
+            bindings,
+            FrameworkBindings::default(),
+            metadata,
+            facts,
+        )?;
         Ok(self
             .state
             .lock()
@@ -635,6 +731,24 @@ impl Inspection {
         current: &[InspectionBinding<A>],
         text_fields: &[TextFieldBinding],
         links: &[LinkBinding],
+        execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
+    ) -> bool {
+        self.drain_invocation_with_framework(
+            current,
+            FrameworkBindings {
+                text_fields,
+                links,
+                copies: &[],
+            },
+            execute,
+        )
+    }
+
+    /// [`Self::drain_invocation`] with the current framework bindings.
+    pub fn drain_invocation_with_framework<A: ActionKey>(
+        &self,
+        current: &[InspectionBinding<A>],
+        framework: FrameworkBindings<'_>,
         mut execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> bool {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
@@ -657,8 +771,7 @@ impl Inspection {
         };
         let validation = state.resolve_current(
             current,
-            text_fields,
-            links,
+            framework,
             &request_id,
             &selector,
             &expected,
@@ -742,13 +855,33 @@ impl Inspection {
         links: &[LinkBinding],
         execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
     ) -> InspectionReply {
+        self.dispatch_invocation_with_framework(
+            request,
+            current,
+            FrameworkBindings {
+                text_fields,
+                links,
+                copies: &[],
+            },
+            execute,
+        )
+    }
+
+    /// [`Self::dispatch_invocation`] with the current framework bindings.
+    pub fn dispatch_invocation_with_framework<A: ActionKey>(
+        &self,
+        request: InspectionRequest,
+        current: &[InspectionBinding<A>],
+        framework: FrameworkBindings<'_>,
+        execute: impl FnMut(Invocation<A>) -> Result<Execution, InspectionError>,
+    ) -> InspectionReply {
         let invocation = matches!(request.operation, InspectionOperation::Invoke { .. });
         let request_id = request.request_id.clone();
         let reply = self.handle(request);
         let queued = matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
             if receipt.state == ReceiptState::Queued);
         if invocation && queued {
-            self.drain_invocation_with_links(current, text_fields, links, execute);
+            self.drain_invocation_with_framework(current, framework, execute);
             let state = self.state.lock().expect("inspection mutex poisoned");
             if let Some(entry) = state.ledger.get(&request_id) {
                 return state.reply(
@@ -1108,12 +1241,10 @@ impl InspectionState {
         capability.parse_arguments(arguments).map(drop)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn resolve_current<A: ActionKey>(
         &self,
         bindings: &[InspectionBinding<A>],
-        text_fields: &[TextFieldBinding],
-        links: &[LinkBinding],
+        framework: FrameworkBindings<'_>,
         request_id: &str,
         selector: &InspectionSelector,
         expected: &ResolvedTarget,
@@ -1125,15 +1256,22 @@ impl InspectionState {
         let actions = bindings
             .iter()
             .map(|binding| (binding.describe(observation), Current::Action(binding)));
-        let fields = text_fields
+        let fields = framework
+            .text_fields
             .iter()
             .map(|field| (field.describe(observation), Current::Field(field)));
-        let links = links
+        let links = framework
+            .links
             .iter()
             .map(|link| (link.describe(observation), Current::Link(link)));
+        let copies = framework
+            .copies
+            .iter()
+            .map(|copy| (copy.describe(observation), Current::Copy(copy)));
         let candidates: Vec<_> = actions
             .chain(fields)
             .chain(links)
+            .chain(copies)
             .filter(|(description, ..)| {
                 selector_matches_binding(selector, description, snapshot.node(&description.id))
             })
@@ -1172,6 +1310,9 @@ impl InspectionState {
             Current::Link(link) => Invocation::OpenLink {
                 link: (*link).clone(),
             },
+            Current::Copy(copy) => Invocation::CopyText {
+                copy: (*copy).clone(),
+            },
         })
     }
 }
@@ -1181,20 +1322,24 @@ enum Current<'a, A: ActionKey> {
     Action(&'a InspectionBinding<A>),
     Field(&'a TextFieldBinding),
     Link(&'a LinkBinding),
+    Copy(&'a CopyBinding),
 }
 
 fn prepare_publication<A: ActionKey>(
     snapshot: UiSnapshot,
     bindings: &[InspectionBinding<A>],
-    text_fields: &[TextFieldBinding],
-    links: &[LinkBinding],
+    framework: FrameworkBindings<'_>,
     metadata: CollectionMetadata,
     facts: BTreeMap<String, ObservationValue>,
 ) -> Result<Publication, InspectionError> {
     use InspectionErrorCode as Code;
     if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
         || snapshot.text.len() > INSPECTION_TEXT_LIMIT
-        || bindings.len() + text_fields.len() + links.len() > INSPECTION_NODE_LIMIT
+        || bindings.len()
+            + framework.text_fields.len()
+            + framework.links.len()
+            + framework.copies.len()
+            > INSPECTION_NODE_LIMIT
         || metadata.collections.len() > 256
         || facts.len() > 256
     {
@@ -1236,7 +1381,7 @@ fn prepare_publication<A: ActionKey>(
             ));
         }
     }
-    for field in text_fields {
+    for field in framework.text_fields {
         let presented = snapshot.node(&field.id).is_some_and(|node| {
             matches!(node.role, UiRole::TextInput | UiRole::MultilineTextInput)
         });
@@ -1247,7 +1392,7 @@ fn prepare_publication<A: ActionKey>(
             ));
         }
     }
-    for link in links {
+    for link in framework.links {
         let presented = snapshot
             .node(&link.id)
             .is_some_and(|node| node.role == UiRole::Link);
@@ -1260,11 +1405,23 @@ fn prepare_publication<A: ActionKey>(
             ));
         }
     }
+    for copy in framework.copies {
+        let presented = snapshot
+            .node(&copy.id)
+            .is_some_and(|node| node.role == UiRole::Button);
+        if !presented || !targets.insert((&copy.id, COPY_TEXT_CAPABILITY)) {
+            return Err(InspectionError::new(
+                Code::InvalidRequest,
+                "copy controls require a unique, presented button node",
+            ));
+        }
+    }
     let capabilities = bindings
         .iter()
         .map(|binding| binding.describe(0))
-        .chain(text_fields.iter().map(|field| field.describe(0)))
-        .chain(links.iter().map(|link| link.describe(0)))
+        .chain(framework.text_fields.iter().map(|field| field.describe(0)))
+        .chain(framework.links.iter().map(|link| link.describe(0)))
+        .chain(framework.copies.iter().map(|copy| copy.describe(0)))
         .collect();
     let publication = Publication {
         observation: CompletedObservation {

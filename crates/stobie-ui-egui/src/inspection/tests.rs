@@ -1186,8 +1186,10 @@ fn typed_fixture(
     let publication = prepare_publication(
         snapshot,
         &bindings,
-        &fields,
-        &[],
+        FrameworkBindings {
+            text_fields: &fields,
+            ..Default::default()
+        },
         CollectionMetadata::default(),
         BTreeMap::new(),
     )
@@ -1510,8 +1512,10 @@ fn text_fields_must_present_a_text_input_node() {
     let error = prepare_publication(
         snapshot,
         &bindings,
-        &[field],
-        &[],
+        FrameworkBindings {
+            text_fields: &[field],
+            ..Default::default()
+        },
         CollectionMetadata::default(),
         BTreeMap::new(),
     )

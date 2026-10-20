@@ -171,6 +171,8 @@ mod web {
                             creation
                                 .egui_ctx
                                 .add_plugin(crate::host::new_tab::NewTabLinks);
+                            // Copy controls write inside the pass's own event.
+                            crate::clipboard::ClipboardWrites::install(&creation.egui_ctx);
                             // A restarted host replaces its previous layer.
                             if let Some(previous) = layer.take() {
                                 super::aria_dom::remove(previous);

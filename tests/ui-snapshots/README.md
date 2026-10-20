@@ -174,3 +174,19 @@ fixtures' from 48 to 50) and changed one pixel of
 atlas grew. The composer's send and attach controls now draw the `Send` and
 `Attach` icons, which changed the pictures of `composer-chat-dark` and
 `composer-long-high-contrast`; nothing else changed.
+
+Copy fixtures add copy controls in dark comfortable mode, beside an
+invitation code, icon-only under a message, label-only with a long German
+label and confirmation, and disabled with a reason; a narrow light
+high-contrast column at 150% holds them all. The fixtures show the ready
+faces, so they carry no status node, and no button carries the text it
+copies. The physical journeys, copying by mouse, touch screen, Enter after
+focusing through the ARIA layer, a click on the layer element and an agent
+in headful Chromium with clipboard permission, and a refused write, run in
+`tools/copy-browser-smoke.sh` through full verification on WebGPU and
+WebGL2. Adding the catalogue entry raised every earlier fixture's
+native-control count by one (from 47 to 48, and the composer fixtures' from
+50 to 51) and changed, by one colour step as the glyph atlas grew, one pixel
+each of `avatars-figures-high-contrast` (at 717, 568) and
+`rows-actions-light-compact` (at 538, 309) and two of
+`diagnostics-high-contrast` (at 703, 516 and 699, 522); nothing else changed.

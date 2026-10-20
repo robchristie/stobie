@@ -163,6 +163,11 @@ is its text and a combo box's is its selected option's label. Capabilities witho
 - `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
   is its URL, in a new browser tab (natively, the default browser), so the
   application stays open. The outline tags links `[open-link]`.
+- `invoke stobie.copy-text --id ID` copies a copy control's text to the
+  clipboard, as pressing it does; the control's polite `status` node then
+  carries its confirmation or failure. Neither the outline nor discovery
+  shows the text: the target's meaning is a text revision. The outline tags
+  copy controls `[copy-text]`.
 - `wait CONDITION` polls until a condition holds: `present`, `absent`,
   `enabled`, `capability_enabled`, `focused`, `selected`, `checked`, `name`,
   `value`, `status`, `selection_changed`, `fact` (`--key K --value V`),
