@@ -202,7 +202,12 @@ fn a_limited_field_grows_to_its_rows_then_registers_the_part_shown() {
         );
         // The native field's lines fill exactly the text egui laid out.
         assert_eq!(
-            field.line_height * field.galley.rows.len() as f32,
+            field
+                .galley
+                .rows
+                .iter()
+                .map(|_| field.line_height)
+                .sum::<f32>(),
             field.galley.rect.height(),
             "{field:?}"
         );
