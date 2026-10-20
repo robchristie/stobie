@@ -176,6 +176,11 @@ pub struct InspectionSelector {
     pub capability: Option<String>,
     pub pane: Option<PaneId>,
     pub domain: Option<DomainReference>,
+    /// The argument a control carries, such as the ID of the row it acts on.
+    /// It matches only controls bound to an equal value; numbers compare by
+    /// value, so `7` matches `7.0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub argument: Option<serde_json::Value>,
 }
 
 impl InspectionSelector {
@@ -187,7 +192,12 @@ impl InspectionSelector {
         let domain_bytes = self.domain.as_ref().map_or(0, |domain| {
             serde_json::to_vec(domain).expect("domain serialises").len()
         });
-        if text_bytes + domain_bytes > 4096 {
+        let argument_bytes = self.argument.as_ref().map_or(0, |argument| {
+            serde_json::to_vec(argument)
+                .expect("argument serialises")
+                .len()
+        });
+        if text_bytes + domain_bytes + argument_bytes > 4096 {
             Err(InspectionError::new(
                 InspectionErrorCode::InvalidRequest,
                 "selector exceeds 4096 bytes",
@@ -212,6 +222,22 @@ impl InspectionSelector {
                 .domain
                 .as_ref()
                 .is_none_or(|domain| Some(domain) == node.domain_reference.as_ref())
+            && self.argument.as_ref().is_none_or(|argument| {
+                node.argument
+                    .as_ref()
+                    .is_some_and(|bound| same_argument(argument, bound))
+            })
+    }
+}
+
+/// Whether two argument values are equal, comparing numbers by value so that
+/// `7`, `7.0` and `7e0` agree.
+pub fn same_argument(left: &serde_json::Value, right: &serde_json::Value) -> bool {
+    match (left, right) {
+        (serde_json::Value::Number(left), serde_json::Value::Number(right)) => {
+            left.as_f64() == right.as_f64()
+        }
+        _ => left == right,
     }
 }
 
@@ -227,6 +253,10 @@ pub struct ResolvedTarget {
     pub domain: Option<DomainReference>,
     pub meaning: String,
     pub observation: u64,
+    /// The argument the target's control carries, such as its row's ID. A
+    /// target whose control now carries another argument, or none, is stale.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub argument: Option<serde_json::Value>,
 }
 
 /// The framework capability that replaces a text field's text as typing would.
@@ -353,6 +383,35 @@ pub enum ActionArgument {
 }
 
 impl ActionArgument {
+    /// A whole-number argument, such as a row's ID. Numbers travel as `f64`,
+    /// so an ID must lie within ±(2^53 − 1) to stay exact.
+    pub fn integer(value: i64) -> Self {
+        debug_assert!(
+            value.unsigned_abs() < 1 << 53,
+            "{value} cannot be represented exactly"
+        );
+        Self::Number(value as f64)
+    }
+
+    /// The argument as the JSON value an invocation sends in
+    /// `{"value": …}`, or `None` for no argument. A whole number within
+    /// ±(2^53 − 1) is an integer.
+    pub fn to_value(&self) -> Option<serde_json::Value> {
+        match self {
+            Self::None => None,
+            Self::Text(text) | Self::Choice(text) => Some(serde_json::Value::String(text.clone())),
+            Self::Boolean(value) => Some(serde_json::Value::Bool(*value)),
+            Self::Number(value) => Some(
+                if value.fract() == 0.0 && value.abs() < 9_007_199_254_740_992.0 {
+                    serde_json::Value::from(*value as i64)
+                } else {
+                    serde_json::Number::from_f64(*value)
+                        .map_or(serde_json::Value::Null, serde_json::Value::Number)
+                },
+            ),
+        }
+    }
+
     /// A choice argument for `value`, as a control presenting the choice
     /// would trigger it.
     pub fn choice<C: ChoiceArgument>(value: C) -> Self {
@@ -398,6 +457,51 @@ impl ActionArgument {
             Self::Number(_) => "a number",
             Self::Choice(_) => "a choice",
         }
+    }
+}
+
+impl From<i32> for ActionArgument {
+    fn from(value: i32) -> Self {
+        Self::Number(value.into())
+    }
+}
+
+impl From<u32> for ActionArgument {
+    fn from(value: u32) -> Self {
+        Self::Number(value.into())
+    }
+}
+
+/// See [`ActionArgument::integer`]: the value must lie within ±(2^53 − 1).
+impl From<i64> for ActionArgument {
+    fn from(value: i64) -> Self {
+        Self::integer(value)
+    }
+}
+
+/// See [`ActionArgument::integer`]: the value must be below 2^53.
+impl From<u64> for ActionArgument {
+    fn from(value: u64) -> Self {
+        debug_assert!(value < 1 << 53, "{value} cannot be represented exactly");
+        Self::Number(value as f64)
+    }
+}
+
+impl From<bool> for ActionArgument {
+    fn from(value: bool) -> Self {
+        Self::Boolean(value)
+    }
+}
+
+impl From<&str> for ActionArgument {
+    fn from(value: &str) -> Self {
+        Self::Text(value.to_owned())
+    }
+}
+
+impl From<String> for ActionArgument {
+    fn from(value: String) -> Self {
+        Self::Text(value)
     }
 }
 
@@ -591,7 +695,101 @@ pub struct CapabilityDescription {
     pub control_enabled: Option<bool>,
     pub semantic_invocable: bool,
     pub arguments: ArgumentContract,
+    /// The argument this binding's control carries, such as the ID of the row
+    /// it acts on. Invoking it sends no value, or this one; absent for a
+    /// binding that takes any value its contract allows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub argument: Option<serde_json::Value>,
     pub target: ResolvedTarget,
+}
+
+impl CapabilityDescription {
+    /// Validate a wire `arguments` value for this binding. A binding whose
+    /// control carries an argument takes no value, which means that argument,
+    /// or the same value again; any other value is invalid.
+    pub fn parse_arguments(
+        &self,
+        arguments: &serde_json::Value,
+    ) -> Result<ActionArgument, InspectionError> {
+        let Some(bound) = &self.argument else {
+            return self.arguments.parse(arguments);
+        };
+        let empty =
+            arguments.is_null() || arguments.as_object().is_some_and(serde_json::Map::is_empty);
+        let carried = self
+            .arguments
+            .parse(&serde_json::json!({ "value": bound }))?;
+        if empty {
+            return Ok(carried);
+        }
+        let given = self.arguments.parse(arguments)?;
+        if given == carried {
+            Ok(given)
+        } else {
+            Err(invalid_arguments(format!(
+                "this control acts on {bound}; send no value, or that value"
+            )))
+        }
+    }
+
+    /// Whether this binding can take the value in wire `arguments`: any
+    /// binding when no value is sent, and otherwise an unbound binding or one
+    /// whose control carries an equal value.
+    pub fn accepts_value(&self, arguments: &serde_json::Value) -> bool {
+        match (sent_value(arguments), &self.argument) {
+            (Some(value), Some(bound)) => same_argument(value, bound),
+            _ => true,
+        }
+    }
+}
+
+/// The value in wire `arguments` of the form `{"value": …}`, if any.
+fn sent_value(arguments: &serde_json::Value) -> Option<&serde_json::Value> {
+    arguments
+        .as_object()
+        .filter(|object| object.len() == 1)
+        .and_then(|object| object.get("value"))
+}
+
+/// Choose the one binding an invocation addresses among those its selector
+/// matches. A value sent with the invocation also selects: a binding whose
+/// control carries another value cannot take it, and one whose control
+/// carries that value, such as the row with that ID, is preferred over the
+/// action's own binding that takes any value.
+pub fn select_invocation_target<'a, T>(
+    candidates: &'a [T],
+    describe: impl Fn(&T) -> &CapabilityDescription,
+    arguments: &serde_json::Value,
+) -> Result<&'a T, InspectionError> {
+    let accepting: Vec<&T> = candidates
+        .iter()
+        .filter(|candidate| describe(candidate).accepts_value(arguments))
+        .collect();
+    let carrying: Vec<&T> = accepting
+        .iter()
+        .copied()
+        .filter(|candidate| describe(candidate).argument.is_some())
+        .collect();
+    let chosen = if sent_value(arguments).is_some() && carrying.len() == 1 {
+        &carrying
+    } else {
+        &accepting
+    };
+    match chosen.as_slice() {
+        [one] => Ok(one),
+        [] if candidates.is_empty() => Err(InspectionError::new(
+            InspectionErrorCode::NoMatch,
+            "selector resolves no capability binding",
+        )),
+        [] => Err(InspectionError::new(
+            InspectionErrorCode::NoMatch,
+            "no matching control carries this value",
+        )),
+        _ => Err(InspectionError::new(
+            InspectionErrorCode::Ambiguous,
+            "selector resolves multiple capability bindings",
+        )),
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -927,4 +1125,156 @@ pub fn resolve_physical_target(
         centre,
         pixels_per_point: scale,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn binding(id: &str, argument: Option<serde_json::Value>) -> CapabilityDescription {
+        let target = ResolvedTarget {
+            id: SemanticUiId::new(id),
+            capability: "open".into(),
+            pane: None,
+            domain: None,
+            meaning: "stable".into(),
+            observation: 1,
+            argument: argument.clone(),
+        };
+        CapabilityDescription {
+            id: target.id.clone(),
+            capability: target.capability.clone(),
+            pane: None,
+            domain: None,
+            label: "Open".into(),
+            description: "Open the row with this ID".into(),
+            scope: ActionScope::Application,
+            shortcut: None,
+            availability: Availability::Enabled,
+            rendered: argument.is_some(),
+            control_enabled: None,
+            semantic_invocable: true,
+            arguments: ArgumentContract::Number {
+                minimum: 1.0,
+                maximum: 100.0,
+                integer: true,
+            },
+            argument,
+            target,
+        }
+    }
+
+    #[test]
+    fn arguments_have_one_wire_value_and_compare_numbers_by_value() {
+        assert_eq!(ActionArgument::None.to_value(), None);
+        assert_eq!(ActionArgument::from(42_u32).to_value(), Some(json!(42)));
+        assert_eq!(ActionArgument::integer(-3).to_value(), Some(json!(-3)));
+        assert_eq!(ActionArgument::Number(2.5).to_value(), Some(json!(2.5)));
+        assert_eq!(ActionArgument::from("1013").to_value(), Some(json!("1013")));
+        assert_eq!(ActionArgument::from(true).to_value(), Some(json!(true)));
+        assert_eq!(
+            ActionArgument::Choice("ideas".into()).to_value(),
+            Some(json!("ideas"))
+        );
+        assert!(same_argument(&json!(7), &json!(7.0)));
+        assert!(!same_argument(&json!(7), &json!("7")));
+        assert!(same_argument(&json!("a"), &json!("a")));
+    }
+
+    #[test]
+    fn selectors_match_the_argument_a_node_carries() {
+        let selector: InspectionSelector =
+            serde_json::from_value(json!({ "capability": "open", "argument": 2 })).unwrap();
+        let mut node = UiNode::container(
+            SemanticUiId::new("row-2"),
+            None,
+            UiRole::Button,
+            UiRect::default(),
+        );
+        node.actions.push(crate::SemanticActionId("open".into()));
+        assert!(
+            !selector.matches_node(&node),
+            "an unbound node carries nothing"
+        );
+        node.argument = Some(json!(2.0));
+        assert!(selector.matches_node(&node));
+        node.argument = Some(json!(3));
+        assert!(!selector.matches_node(&node));
+        // Selectors without an argument keep their wire form.
+        assert_eq!(
+            serde_json::to_value(InspectionSelector::default()).unwrap(),
+            json!({ "id": null, "role": null, "name": null, "capability": null, "pane": null, "domain": null })
+        );
+        assert!(
+            InspectionSelector {
+                argument: Some(json!("x".repeat(4097))),
+                ..Default::default()
+            }
+            .validate()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn a_rows_binding_takes_no_value_or_its_own() {
+        let row = binding("row-2", Some(json!(2)));
+        assert_eq!(
+            row.parse_arguments(&serde_json::Value::Null),
+            Ok(ActionArgument::Number(2.0))
+        );
+        assert_eq!(
+            row.parse_arguments(&json!({ "value": 2.0 })),
+            Ok(ActionArgument::Number(2.0))
+        );
+        let refused = row.parse_arguments(&json!({ "value": 3 })).unwrap_err();
+        assert_eq!(refused.code, InspectionErrorCode::InvalidArguments);
+        assert_eq!(
+            refused.message,
+            "this control acts on 2; send no value, or that value"
+        );
+        // The action's own binding takes any value its contract allows.
+        let action = binding("action.open", None);
+        assert_eq!(
+            action.parse_arguments(&json!({ "value": 3 })),
+            Ok(ActionArgument::Number(3.0))
+        );
+        assert!(action.parse_arguments(&serde_json::Value::Null).is_err());
+    }
+
+    #[test]
+    fn a_value_selects_the_control_carrying_it_before_the_actions_binding() {
+        let candidates = [
+            binding("row-1", Some(json!(1))),
+            binding("row-2", Some(json!(2))),
+            binding("action.open", None),
+        ];
+        let select = |arguments: serde_json::Value| {
+            select_invocation_target(&candidates, |candidate| candidate, &arguments)
+                .map(|chosen| chosen.id.0.as_str())
+                .map_err(|error| error.code)
+        };
+        assert_eq!(select(json!({ "value": 2 })), Ok("row-2"));
+        assert_eq!(select(json!({ "value": 9 })), Ok("action.open"));
+        assert_eq!(
+            select(serde_json::Value::Null),
+            Err(InspectionErrorCode::Ambiguous)
+        );
+        // Without the action's binding, a value no row carries matches nothing.
+        let rows = &candidates[..2];
+        assert_eq!(
+            select_invocation_target(rows, |candidate| candidate, &json!({ "value": 9 }))
+                .map_err(|error| error.code)
+                .unwrap_err(),
+            InspectionErrorCode::NoMatch
+        );
+        let none: [CapabilityDescription; 0] = [];
+        assert_eq!(
+            select_invocation_target(&none, |candidate| candidate, &serde_json::Value::Null)
+                .unwrap_err()
+                .code,
+            InspectionErrorCode::NoMatch
+        );
+    }
 }

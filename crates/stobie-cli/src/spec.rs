@@ -97,6 +97,11 @@ pub const SELECTOR_FLAGS: &[Flag] = &[
         "Domain reference, such as {\"kind\":\"pane\",\"value\":1}",
     ),
     flag(
+        "--argument",
+        Some("VALUE"),
+        "The argument a row's control carries, such as its ID: a JSON number, boolean or quoted string, or else text",
+    ),
+    flag(
         "--selector",
         Some("JSON"),
         "The whole selector as JSON, for example {\"role\":\"tab\",\"pane\":2}",

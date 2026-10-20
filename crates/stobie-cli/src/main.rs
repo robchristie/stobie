@@ -442,6 +442,7 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
                 // What a value means is in the description, such as which ID
                 // to give.
                 if capability.arguments != ArgumentContract::None
+                    && capability.argument.is_none()
                     && !capability.description.is_empty()
                 {
                     let _ = writeln!(text, "  {}", output::clip(&capability.description));
@@ -492,9 +493,12 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
                     Some(expected),
                     json_value(args)?.map(|value| serde_json::json!({ "value": value })),
                 ),
+                // A value also chooses among the controls each row presents.
                 None => {
-                    let capability = client.discover_one(selector.clone())?;
-                    let arguments = argument(args, &capability)?;
+                    let (capability, arguments) = client
+                        .discover_for_invocation(selector.clone(), |capability| {
+                            argument(args, capability)
+                        })?;
                     (Some(capability.target), arguments)
                 }
             };
@@ -697,6 +701,9 @@ fn node_text(node: &stobie_client::protocol::UiNode, tags: &[String]) -> String 
     if let Some(value) = &node.value {
         let _ = write!(text, " = {:?}", output::clip(value));
     }
+    if let Some(argument) = &node.argument {
+        let _ = write!(text, " carrying {}", output::clip(&argument.to_string()));
+    }
     let _ = write!(text, " #{}", node.id.0);
     if !tags.is_empty() {
         let _ = write!(text, " [{}]", tags.join("; "));
@@ -777,6 +784,8 @@ fn argument(
                 }
             }
         }),
+        // A row's control carries its own value.
+        (None, None) if capability.argument.is_some() => None,
         (None, None) => {
             if let Some(summary) = output::argument_summary(&capability.arguments) {
                 let mut message = format!("{} needs --value ({summary})", capability.capability);

@@ -239,6 +239,7 @@ impl PanePresenter for GalleryDockPresenter<'_> {
     }
     fn record_tab_rect(&mut self, pane: PaneId, rect: egui::Rect, selected: bool, focused: bool) {
         self.semantic_nodes.push(UiNode {
+            argument: None,
             value: None,
             id: SemanticUiId::tab(pane),
             parent: Some(SemanticUiId::new("gallery.story")),
@@ -266,6 +267,7 @@ impl PanePresenter for GalleryDockPresenter<'_> {
         focused: bool,
     ) {
         self.semantic_nodes.push(UiNode {
+            argument: None,
             value: None,
             id: SemanticUiId::splitter(node),
             parent: Some(SemanticUiId::new("gallery.story")),

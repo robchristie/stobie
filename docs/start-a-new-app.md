@@ -169,6 +169,55 @@ self.sort.choice_id())`) so that agents can wait for it. The `Action` derive's
 and `Application`'s rustdoc (`cargo doc --open` in your application) give the
 exact contracts.
 
+## Present an action on each row
+
+When each row of a list offers the same action, such as Open on each
+person, declare the action with an argument for the row's ID and present it
+once per row as a `BoundAction`. Each row's control then carries its ID: a
+click performs the action for that row, agents discover one control per row
+carrying its ID, and assistive technology hears a distinct name per row
+("Open Ada Lovelace"):
+
+```text
+#[action(label = "Open", description = "Open the person with this ID",
+         argument = "number", minimum = 1, maximum = 999, integer = true)]
+Open,
+```
+
+```text
+for person in &self.people {
+    // The row itself, named by its title, selects the person.
+    frame.list_row(ui, &mut p, BoundAction::new(PeopleAction::Select, person.key),
+        ListRowSpec { title: &person.name, detail: Some(&person.role) });
+    frame.action(ui, &mut p,
+        BoundAction::new(PeopleAction::Open, person.id).with_subject(&person.name),
+        ActionEmphasis::Normal);
+}
+```
+
+`icon_action` and `toggle` take a `BoundAction` too. `perform_with` receives
+the row's ID as the argument. Implement `availability_with` to decide each
+row's availability and to hide an ID that names no row, so that a click or
+an agent acting on a removed row is refused before `perform_with`:
+
+```text
+fn availability_with(&self, target: ActionTarget<PeopleAction>,
+                     argument: &ActionArgument) -> Availability {
+    match argument.as_number().and_then(|id| self.person(id as u32)) {
+        Some(_) => Availability::Enabled,
+        None => Availability::Hidden,
+    }
+}
+```
+
+Agents choose a row by the value its control carries:
+
+```sh
+stobie discover my-app.open              # one per row, such as `my-app.open = 2`
+stobie invoke my-app.open --value 2      # the row carrying 2
+stobie invoke my-app.select --argument ada
+```
+
 ## What agents can read
 
 `stobie observe` lists each control's role, name, state and value and the

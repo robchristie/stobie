@@ -120,8 +120,10 @@ client is Lantern's `lantern-core`, pinned to an exact revision.
 ## Selectors
 
 Commands that name controls take `--id`, `--role`, `--name`,
-`--capability`, `--pane`, `--domain JSON` or `--selector JSON`. All given
-properties must match. A positional argument fills the obvious field:
+`--capability`, `--pane`, `--domain JSON`, `--argument VALUE` or
+`--selector JSON`. All given properties must match. `--argument` selects the
+control that carries a value, such as a row's ID: a JSON number, boolean or
+quoted string, or else the text given. A positional argument fills the obvious field:
 `invoke CAPABILITY`, `query ID`, `discover CAPABILITY`, `set-text ID TEXT`.
 Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
 `link` and `result_row`. Add `--id` or `--pane` when a capability has several controls.
@@ -129,8 +131,9 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
 ## Commands
 
 - `observe` outlines the latest observation: application facts, collections,
-  audits, then one line per node with its role, name, state, value, stable
-  `#ID` and `[capabilities]`, indented by containment. A text field's value
+  audits, then one line per node with its role, name, state, value, the
+  argument it carries, stable `#ID` and `[capabilities]`, indented by
+  containment. A text field's value
 is its text and a combo box's is its selected option's label. Capabilities without a
   rendered control follow as `other capabilities`. `--limit` and `--offset`
   page through long outlines.
@@ -143,7 +146,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   the observation that presents its effect, and reports the facts that
   changed and up to six nodes whose name, state or value `changed`, or that
   were `added` or `removed` (`--json` lists up to 32). A choice value may also be its option's
-  label, in any case. `--request-id` makes a retry safe; `--no-wait` returns once the
+  label, in any case. When a capability is presented on several rows, the
+  value chooses the row's control that carries it, or else the action's own
+  binding; a row's control needs no value. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file).

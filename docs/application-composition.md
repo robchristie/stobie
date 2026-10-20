@@ -117,7 +117,11 @@ Every action is invocable unless it declares `physical_only = "reason"`, for
 example because it opens a menu. An action that chooses a value declares an
 `argument` (text, boolean, bounded number or a `ChoiceArgument` choice) and
 implements `Application::perform_with`, which receives the validated value;
-apply the same intent its control emits. Every text field presented through
+apply the same intent its control emits. An action presented once per row,
+such as Open on each person, passes a `BoundAction` carrying the row's ID to
+the frame's recipes, and `Application::availability_with` decides
+availability for each row; see
+[Actions on rows](ui-guides/interactions.md#actions-on-rows). Every text field presented through
 `PresentationContext::native` and observed as a text input can be set through
 the framework's `stobie.set-text` capability without application code, and
 every link presented through `PresentationContext::link` can be opened through

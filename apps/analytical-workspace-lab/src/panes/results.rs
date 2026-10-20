@@ -143,6 +143,7 @@ pub fn show(
                                 },
                             );
                             outputs.ui_geometry.record_node(UiNode {
+                                argument: None,
                                 value: None,
                                 id: SemanticUiId::new(format!("stobie.result-row.{}", result.id.0)),
                                 parent: Some(SemanticUiId::pane(PaneId(5))),

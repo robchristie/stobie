@@ -9,7 +9,7 @@ import { dirname, resolve } from 'node:path';
 const runFile = promisify(execFile);
 const REQUEST_BYTES = 256 * 1024;
 const RESPONSE_BYTES = 2 * 1024 * 1024;
-const SELECTOR_KEYS = new Set(['id', 'role', 'name', 'capability', 'pane', 'domain']);
+const SELECTOR_KEYS = new Set(['id', 'role', 'name', 'capability', 'pane', 'domain', 'argument']);
 const clock = { now: () => performance.now(), sleep: sleep };
 
 export class ApplicationError extends Error {
@@ -87,6 +87,7 @@ function selector(value = {}) {
     }
     if (key === 'pane' && (!Number.isSafeInteger(value[key]) || value[key] < 0)) throw failure('invalid_request', 'Selector pane must be a non-negative integer');
     if (key === 'domain' && (!value[key] || typeof value[key] !== 'object' || Array.isArray(value[key]))) throw failure('invalid_request', 'Selector domain must be a tagged domain object');
+    if (key === 'argument' && !['number', 'string', 'boolean'].includes(typeof value[key])) throw failure('invalid_request', 'Selector argument must be a number, string or boolean');
   }
   return value;
 }
@@ -102,6 +103,8 @@ export function matchesSelector(node, selected) {
   return Object.entries(selected).every(([key, value]) => {
     if (key === 'capability') return node.actions.includes(value);
     if (key === 'domain') return same(node.domain_reference, value);
+    // The argument a row's control carries; numbers compare by value.
+    if (key === 'argument') return node.argument !== undefined && node.argument === value;
     return same(node[key], value);
   });
 }

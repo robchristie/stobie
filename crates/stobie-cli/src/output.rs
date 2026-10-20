@@ -80,7 +80,11 @@ pub fn capability_tag(capability: &CapabilityDescription) -> String {
     } else {
         capability.capability.clone()
     };
-    if capability.capability != SET_TEXT_CAPABILITY
+    // A row's control carries its value; other value-taking capabilities
+    // say what they accept.
+    if let Some(argument) = &capability.argument {
+        let _ = write!(tag, " = {argument}");
+    } else if capability.capability != SET_TEXT_CAPABILITY
         && let Some(argument) = argument_summary(&capability.arguments)
     {
         let _ = write!(tag, ": {argument}");
@@ -304,6 +308,9 @@ pub struct NodeOutput<'a> {
     pub value: Option<&'a str>,
     pub pane: Option<PaneId>,
     pub domain: Option<&'a DomainReference>,
+    /// The argument the node's control carries, such as its row's ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub argument: Option<&'a serde_json::Value>,
     pub capabilities: Vec<&'a str>,
 }
 
@@ -323,6 +330,7 @@ impl<'a> NodeOutput<'a> {
             value: node.value.as_deref(),
             pane: node.pane,
             domain: node.domain_reference.as_ref(),
+            argument: node.argument.as_ref(),
             capabilities: capabilities
                 .iter()
                 .filter(|capability| capability.id == node.id)
