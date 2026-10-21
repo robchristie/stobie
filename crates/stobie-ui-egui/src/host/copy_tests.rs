@@ -435,3 +435,220 @@ fn the_copied_text_never_reaches_observation() {
     assert!(snapshot.node(&id("hidden").semantic_id()).is_none());
     assert!(harness.query_by_label("Copy hidden code").is_none());
 }
+
+/// A reply in a message bubble whose code blocks each carry a copy control.
+struct Reply {
+    source: String,
+}
+
+const REPLY: &str = "Install it, then check it:\n\n```sh\npip install example\n```\n\n\
+Tabs become spaces and the final line break goes:\n\n```\nfor x in xs:\n\tprint(x)\n\n```\n";
+
+impl Application for Reply {
+    type Action = Act;
+    type Intent = ();
+    type UiState = Vec<(Rect, Vec<Rect>)>;
+
+    fn identity(&self) -> ApplicationIdentity {
+        crate::application_identity!("Reply")
+    }
+
+    fn availability(&self, _target: ActionTarget<Act>) -> Availability {
+        Availability::Enabled
+    }
+
+    fn ui(&self, ui: &mut Ui, layouts: &mut Self::UiState, frame: &mut Frame<'_, Act, ()>) {
+        let mut p = frame.presentation(ui, PresentationScope::new("chat"), SemanticUiId::root());
+        let spec = crate::MessageBubbleSpec {
+            side: crate::MessageSide::Other,
+            sender: "Assistant",
+        };
+        p.message_bubble(ui, ("message", 7), spec, |ui, p| {
+            p.markdown_with_code_copy(
+                ui,
+                "body",
+                &self.source,
+                crate::MarkdownSpec::default(),
+                &crate::CodeCopySpec::new("Copy code", "Copied", "Couldn't copy"),
+            );
+        });
+        // Where the bubble and each control were, pass by pass.
+        let observed = p.finish(ui);
+        let bubble = observed
+            .semantic_nodes
+            .iter()
+            .find(|node| node.role == UiRole::Section)
+            .map_or(Rect::NOTHING, |node| node.rect.into());
+        let controls = observed
+            .semantic_nodes
+            .iter()
+            .filter(|node| node.role == UiRole::Button)
+            .map(|node| node.rect.into())
+            .collect();
+        layouts.push((bubble, controls));
+    }
+
+    fn apply(&mut self, _intent: (), _: &mut Self::UiState) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn perform(
+        &mut self,
+        _target: ActionTarget<Act>,
+        _: &mut Self::UiState,
+    ) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn report_error(&mut self, message: String) {
+        panic!("{message}");
+    }
+}
+
+fn reply_harness(width: f32, source: &str) -> (Harness<'static, Option<AppHost<Reply>>>, Copied) {
+    let copied = Copied::default();
+    let recorded = copied.clone();
+    let mut harness = Harness::builder()
+        .with_size(Vec2::new(width, 700.0))
+        .build_ui_state(
+            move |ui, host: &mut Option<AppHost<Reply>>| {
+                if let Some(host) = host {
+                    host.present(ui);
+                }
+                ui.ctx().output(|output| {
+                    recorded
+                        .borrow_mut()
+                        .extend(output.commands.iter().filter_map(|command| match command {
+                            egui::OutputCommand::CopyText(text) => Some(text.clone()),
+                            _ => None,
+                        }));
+                });
+            },
+            None,
+        );
+    crate::install_typography_fonts(&harness.ctx);
+    let context = harness.ctx.clone();
+    *harness.state_mut() = Some(AppHost::new(
+        &context,
+        Reply {
+            source: source.to_owned(),
+        },
+    ));
+    harness.run();
+    (harness, copied)
+}
+
+fn reply<'a>(harness: &'a Harness<'_, Option<AppHost<Reply>>>) -> &'a AppHost<Reply> {
+    harness.state().as_ref().unwrap()
+}
+
+/// The bubble and its controls in the last pass, asserting that every pass
+/// since `since` put them in the same place.
+fn settled(harness: &Harness<'_, Option<AppHost<Reply>>>, since: usize) -> (Rect, Vec<Rect>) {
+    let passes = &reply(harness).ui_state()[since..];
+    let last = passes.last().unwrap().clone();
+    for (bubble, controls) in passes {
+        assert!(
+            (bubble.min - last.0.min).length() < 0.5
+                && (bubble.size() - last.0.size()).length() < 0.5
+        );
+        assert_eq!(controls.len(), last.1.len());
+        for (control, now) in controls.iter().zip(&last.1) {
+            assert!(
+                (control.min - now.min).length() < 0.5,
+                "{control:?} {now:?}"
+            );
+        }
+    }
+    last
+}
+
+#[test]
+fn each_code_block_in_a_message_bubble_copies_its_own_text() {
+    for width in [390.0, 900.0] {
+        let (mut harness, copied) = reply_harness(width, REPLY);
+        let snapshot = reply(&harness).ui_snapshot();
+        let controls: Vec<_> = snapshot
+            .nodes
+            .iter()
+            .filter(|node| node.role == UiRole::Button)
+            .collect();
+        let names: Vec<_> = controls.iter().map(|node| node.name.as_str()).collect();
+        assert_eq!(names, ["Copy code 1", "Copy code 2"]);
+        // The controls are inside the bubble, which holds them.
+        let bubble = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.role == UiRole::Section)
+            .unwrap();
+        for control in &controls {
+            assert_eq!(control.parent.as_ref(), Some(&bubble.id));
+            assert!(Rect::from(bubble.rect).contains_rect(control.rect.into()));
+        }
+        assert!(snapshot.audit().is_empty(), "{:?}", snapshot.audit());
+        let since = reply(&harness).ui_state().len();
+        harness.run();
+        let before = settled(&harness, since);
+
+        harness.get_by_label("Copy code 2").click();
+        harness.run();
+        assert_eq!(
+            std::mem::take(&mut *copied.borrow_mut()),
+            ["for x in xs:\n    print(x)\n"]
+        );
+        harness.get_by_label("Copy code 1").click();
+        harness.run();
+        assert_eq!(
+            std::mem::take(&mut *copied.borrow_mut()),
+            ["pip install example"]
+        );
+        // Both confirm; neither the bubble nor a control moves, and the
+        // bubble settles while confirming and once the confirmations end.
+        assert_eq!(harness.query_all_by_label("Copied").count(), 2);
+        let since = reply(&harness).ui_state().len();
+        harness.run();
+        assert_eq!(settled(&harness, since), before, "{width}");
+        for _ in 0..12 {
+            harness.step();
+        }
+        assert!(harness.query_by_label("Copied").is_none());
+        let since = reply(&harness).ui_state().len();
+        harness.run();
+        assert_eq!(settled(&harness, since), before, "{width}");
+    }
+}
+
+#[test]
+fn a_growing_reply_keeps_each_controls_key_and_confirmation() {
+    let first = "```sh\npip install example\n```\n";
+    let (mut harness, copied) = reply_harness(390.0, first);
+    harness.get_by_label("Copy code").click();
+    harness.run();
+    assert_eq!(copied.borrow().as_slice(), ["pip install example"]);
+    let id = |index: usize| {
+        PresentationScope::new("chat")
+            .child(("message", 7))
+            .instance((&"body", "stobie.code-copy", index))
+    };
+    let status = |harness: &Harness<'_, Option<AppHost<Reply>>>, index: usize| {
+        reply(harness)
+            .ui_snapshot()
+            .node(&id(index).child("status").semantic_id())
+            .map(|node| node.name.clone())
+    };
+    assert_eq!(status(&harness, 0).as_deref(), Some("Copied"));
+    // A second block arrives while the first confirms.
+    harness.state_mut().as_mut().unwrap().app_mut().source = REPLY.to_owned();
+    harness.run();
+    let snapshot = reply(&harness).ui_snapshot();
+    assert_eq!(
+        snapshot.node(&id(0).semantic_id()).unwrap().name,
+        "Copy code 1"
+    );
+    assert_eq!(
+        snapshot.node(&id(1).semantic_id()).unwrap().name,
+        "Copy code 2"
+    );
+    assert_eq!(status(&harness, 0).as_deref(), Some("Copied"));
+    assert_eq!(status(&harness, 1), None);
+}

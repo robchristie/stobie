@@ -53,10 +53,11 @@ pub enum StoryId {
     DialogConfirm,
     FormTextFields,
     AvatarsStrip,
+    MarkdownCodeCopy,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 48] = [
+    pub const ALL: [Self; 49] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -105,6 +106,7 @@ impl StoryId {
         Self::DialogConfirm,
         Self::FormTextFields,
         Self::AvatarsStrip,
+        Self::MarkdownCodeCopy,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -157,6 +159,7 @@ impl StoryId {
             Self::DialogConfirm => "dialog/confirm",
             Self::FormTextFields => "form/text-fields",
             Self::AvatarsStrip => "avatars/strip",
+            Self::MarkdownCodeCopy => "markdown/code-copy",
         }
     }
 }
@@ -422,6 +425,14 @@ const AVATAR_STRIP_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
 ];
+const CODE_COPY_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::LongText,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -449,7 +460,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 48] = [
+pub static STORIES: [StoryDefinition; 49] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -880,6 +891,15 @@ pub static STORIES: [StoryDefinition; 48] = [
         640,
         360,
         AVATAR_STRIP_STATES,
+        SCROLL_KEYBOARD,
+    ),
+    story(
+        StoryId::MarkdownCodeCopy,
+        "A reply in a message bubble whose two code blocks each carry a copy control, the longer one wrapping in a narrow column.",
+        StoryGroup::Copy,
+        640,
+        720,
+        CODE_COPY_STATES,
         SCROLL_KEYBOARD,
     ),
 ];

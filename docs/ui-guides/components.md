@@ -246,10 +246,37 @@ out of view add no observation or node, while coverage counts every attempt.
 Choose `TextInteraction::Inert` only where a parent owns the pointer; links
 stay activatable.
 
+### Copying a code block
+
+Use `PresentationContext::markdown_with_code_copy(ui, key, source, spec,
+&CodeCopySpec::new(label, confirmation, failure))` to give each code block
+its own [copy control](#copy), such as a reply whose commands a person will
+paste. Plain `markdown` presents none. Each block gains a strip across its
+top, inside its raised surface and in place of its top padding, as tall as an
+action's hit height; the control sits at the strip's trailing end with
+`QuietBorderless` emphasis, and the code wraps beneath it at its full width,
+so the control never covers code. Every other block keeps its place.
+
+Each control copies exactly the block's text as Stobie's Markdown parses it:
+without its fences, its language or its final line break, with tabs as four
+spaces. It is named by the application's label, such as "Copy code", when
+there is one code block, and by the label and the block's number from 1,
+such as "Copy code 2", when there are several (`CodeCopySpec::name`), so the
+names stay distinct. Controls are keyed by their block's position among the
+code blocks, so in a reply still arriving each keeps its identity, and any
+confirmation it shows, as later blocks arrive; the first control's name moves
+from "Copy code" to "Copy code 1" when a second block arrives.
+`CodeCopySpec` shows the glyph alone by default; `content` chooses a face with
+the label and `description` adds an accessible description. The controls
+behave as any copy control does, inside a message bubble too: they confirm
+without moving the bubble or each other.
+
 Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
-font_scale, observations)` and publish the returned `link_nodes`. Gallery
-`markdown/digest` and `markdown/long-narrow` use the production recipe; the
-[evidence record](../markdown-evidence.md) retains the review.
+font_scale, observations)` and publish the returned `link_nodes`; it presents
+no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
+production recipe and `markdown/code-copy` a reply with a copy control on
+each of its code blocks; the [evidence record](../markdown-evidence.md)
+retains the review.
 
 ## Links
 
@@ -349,6 +376,8 @@ p.copy(ui, "copy-code", &CopySpec::new(&code, "Copy code", "Copied", "Couldn't c
   text changes, never the text or a digest of it. Show the text itself, if
   the user should read it, with content text; an application that must not
   publish a secret withholds that content text and keeps the copy control.
+
+[Markdown code blocks](#copying-a-code-block) can each carry a copy control.
 
 Gallery `copy/actions` presents a copy control beside a code, an icon-only
 control under a message, a long localised label and confirmation, and a

@@ -2,6 +2,7 @@ mod avatar_strip;
 mod avatars;
 mod buttons;
 mod chat;
+mod code_copy;
 mod composer;
 mod copy;
 mod data;
@@ -166,6 +167,7 @@ fn present_story(
         StoryId::AvatarsStrip => {
             avatar_strip::story(ui, tokens, font_scale, &mut state.avatar_strip, &mut report)
         }
+        StoryId::MarkdownCodeCopy => code_copy::story(ui, tokens, font_scale, &mut report),
         StoryId::FormTextFields => {
             fields::story(ui, tokens, font_scale, &mut state.fields, &mut report)
         }

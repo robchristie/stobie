@@ -46,6 +46,7 @@ pub use conversation_row::{
 };
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
+pub(crate) use markdown::present_markdown;
 pub use markdown::{MarkdownResponse, MarkdownSpec, markdown};
 pub use navigation::{
     DestinationSpec, NavigationBadge, NavigationItemSpec, navigation_item,

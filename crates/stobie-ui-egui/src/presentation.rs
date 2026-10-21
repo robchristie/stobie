@@ -5,6 +5,7 @@ use std::hash::Hash;
 use egui::{Response, Ui};
 
 mod chat;
+mod code_copy;
 mod composer;
 mod copy;
 mod dialog;
@@ -15,6 +16,7 @@ pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
     message_bubble_tokens,
 };
+pub use code_copy::CodeCopySpec;
 pub use composer::{
     COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
     ComposerSpec,

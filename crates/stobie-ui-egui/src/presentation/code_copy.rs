@@ -1,0 +1,159 @@
+//! Markdown whose code blocks each carry a copy control.
+
+use std::hash::Hash;
+
+use egui::{Response, Ui, UiBuilder};
+
+use super::PresentationContext;
+use crate::components::{action_hit_height, present_markdown};
+use crate::{ActionEmphasis, Availability, CopyContent, CopySpec, MarkdownSpec};
+
+/// The words and face of the copy control on each code block in
+/// [`PresentationContext::markdown_with_code_copy`]. The application
+/// supplies every word, so it owns their language.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CodeCopySpec<'a> {
+    label: &'a str,
+    confirmation: &'a str,
+    failure: &'a str,
+    description: Option<&'a str>,
+    content: CopyContent,
+}
+
+impl<'a> CodeCopySpec<'a> {
+    /// Controls named `label`, such as "Copy code", showing their icon, and
+    /// showing and announcing `confirmation` once copied, such as "Copied",
+    /// or `failure` when the platform refuses, such as "Couldn't copy".
+    pub const fn new(label: &'a str, confirmation: &'a str, failure: &'a str) -> Self {
+        Self {
+            label,
+            confirmation,
+            failure,
+            description: None,
+            content: CopyContent::Icon,
+        }
+    }
+
+    /// A description for assistive technology and the tooltip.
+    #[must_use]
+    pub const fn description(mut self, description: &'a str) -> Self {
+        self.description = Some(description);
+        self
+    }
+
+    /// Show the label, or the icon and the label, instead of the icon alone.
+    #[must_use]
+    pub const fn content(mut self, content: CopyContent) -> Self {
+        self.content = content;
+        self
+    }
+
+    /// The accessible name of the control on the code block at `index`, in
+    /// document order counting from 0, among `count` code blocks: the label
+    /// alone for one block, and the label and the block's number from 1 for
+    /// several, so each name is distinct.
+    pub fn name(&self, index: usize, count: usize) -> String {
+        if count > 1 {
+            format!("{} {}", self.label, index + 1)
+        } else {
+            self.label.to_owned()
+        }
+    }
+}
+
+impl PresentationContext {
+    /// [`Self::markdown`] with a copy control ([`Self::copy`]) on each code
+    /// block, at the trailing end of a strip across the block's top, inside
+    /// its surface. Each control copies exactly the block's text as the
+    /// Markdown parses it: without its fences, its language or its final
+    /// line break, with tabs as four spaces. Its name is
+    /// [`CodeCopySpec::name`], such as "Copy code", or "Copy code 2" when
+    /// there are several. Controls are keyed by the block's position among
+    /// the code blocks, so a reply still arriving keeps each control, and
+    /// any confirmation it shows, as later blocks arrive.
+    ///
+    /// ```
+    /// use stobie_ui_egui::{CodeCopySpec, DesignTokens, MarkdownSpec,
+    ///     PresentationContext, PresentationObservations, PresentationScope,
+    ///     SemanticUiId};
+    ///
+    /// fn reply(ui: &mut egui::Ui, tokens: DesignTokens, scale: f32,
+    ///          source: &str) -> PresentationObservations {
+    ///     let mut p = PresentationContext::new(ui, tokens, scale,
+    ///         PresentationScope::new("reply"), SemanticUiId::root());
+    ///     p.markdown_with_code_copy(ui, "body", source, MarkdownSpec::default(),
+    ///         &CodeCopySpec::new("Copy code", "Copied", "Couldn't copy"));
+    ///     p.finish(ui)
+    /// }
+    /// ```
+    pub fn markdown_with_code_copy(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        source: &str,
+        spec: MarkdownSpec<'_>,
+        copy: &CodeCopySpec<'_>,
+    ) -> Response {
+        self.check_pass(ui);
+        let header = action_hit_height(&self.tokens, self.font_scale);
+        let (presented, blocks) = present_markdown(
+            ui,
+            self.scope.instance(&key),
+            source,
+            spec,
+            Some(header),
+            self.parent.clone(),
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        for mut node in presented.link_nodes {
+            node.domain_reference = self.domain_reference.clone();
+            self.push_node(ui, node);
+        }
+        let inset = self.tokens.spacing.unit.0;
+        for (index, block) in blocks.iter().enumerate() {
+            let name = copy.name(index, blocks.len());
+            let strip = egui::Rect::from_min_max(
+                block.header.min,
+                egui::pos2(
+                    (block.header.max.x - inset).max(block.header.min.x),
+                    block.header.max.y,
+                ),
+            );
+            let mut strip = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(strip)
+                    .layout(egui::Layout::right_to_left(egui::Align::Center)),
+            );
+            self.copy(
+                &mut strip,
+                (&key, "stobie.code-copy", index),
+                &CopySpec {
+                    text: &block.text,
+                    label: &name,
+                    description: copy.description,
+                    confirmation: copy.confirmation,
+                    failure: copy.failure,
+                    content: copy.content,
+                    emphasis: ActionEmphasis::QuietBorderless,
+                    availability: Availability::Enabled,
+                },
+            );
+        }
+        presented.response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_block_is_named_by_the_label_and_several_by_their_numbers() {
+        let spec = CodeCopySpec::new("Copy code", "Copied", "Couldn't copy");
+        assert_eq!(spec.name(0, 1), "Copy code");
+        let names: Vec<_> = (0..3).map(|index| spec.name(index, 3)).collect();
+        assert_eq!(names, ["Copy code 1", "Copy code 2", "Copy code 3"]);
+    }
+}
