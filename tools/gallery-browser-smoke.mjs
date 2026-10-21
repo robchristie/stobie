@@ -23,7 +23,9 @@ const server = createServer(async (request, response) => {
     response.writeHead(404); response.end('not found');
   }
 });
-await new Promise((resolve) => server.listen(4174, '127.0.0.1', resolve));
+// Any free port, so that another verification on this host can run too.
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const origin = `http://127.0.0.1:${server.address().port}`;
 
 const errors = [];
 const installedChromium = chromium.executablePath();
@@ -73,7 +75,7 @@ if (process.env.STOBIE_USE_SYSTEM_UI_LIBS === '1') {
 }
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
-  origin: 'http://127.0.0.1:4174',
+  origin,
 });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack ?? error}`));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
@@ -130,7 +132,7 @@ const selectStory = async (story) => {
 };
 
 try {
-  await page.goto(rendererUrl('http://127.0.0.1:4174/'), { waitUntil: 'domcontentloaded' });
+  await page.goto(rendererUrl(`${origin}/`), { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.body.classList.contains('ready')
     && window.__STOBIE_GALLERY_HANDLE?.snapshot().frame > 0, null, { timeout: 30_000 });
   releaseObservations.initial_ready_wall_ms = Date.now() - launchStartedMs;

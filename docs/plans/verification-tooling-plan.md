@@ -43,6 +43,12 @@ host, and keeps one contributor's change from touching unrelated checks.
   network, and so its abstract X sockets) do the same. Concurrent smokes in
   one checkout share `.tools/sysroot`, so `tools/bootstrap-linux-ui.sh`
   extracts it under a lock and stamps it with the script's hash.
+- **Free ports per run.** The browser and Gallery browser smokes served on
+  fixed ports (4173 and 4174), and the CLI smokes gave Chromium a DevTools
+  port derived from their process ID, so another verification on the host
+  could take them first (`EADDRINUSE` in the browser smoke, met here). The
+  servers listen on port 0, and the DevTools ports come from
+  `freeLoopbackPort()` in `tools/browser-launch.mjs`.
 - **A Tab walk with no count.** egui's Tab order is a cycle, so
   `focusByTab` fails when focus returns to an observed control it already
   visited (the target is not in the cycle) or stays on one control for eight
@@ -145,7 +151,7 @@ host, and keeps one contributor's change from touching unrelated checks.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Target directory and locked consumer checks | Complete | Target directory tests, xtask test, stale lockfile check |
-| Free Xvfb displays | Complete | Xvfb lifecycle tests, concurrent verification |
+| Free Xvfb displays and ports | Complete | Xvfb lifecycle tests, concurrent verification |
 | Tab walks, launch errors and baselines | Complete | Focus, launch failure and fixture manifest tests |
 | Long `TMPDIR`, idle under load and neutral examples | Complete | Client, idle and push tests, `cargo xtask verify` |
 | Dialog Tab samples and browser parity start | Complete | Repeated dialog and parity runs |

@@ -71,7 +71,7 @@ try {
     for (const renderer of ['webgpu', 'webgl2']) {
       process.env.STOBIE_BROWSER_RENDERER = renderer;
       const options = launch.hostedLinuxWebGpuLaunchOptions();
-      const port = 9300 + (process.pid % 400) + (renderer === 'webgl2' ? 1 : 0);
+      const port = await launch.freeLoopbackPort();
       const browser = await chromium.launch({ ...options, args: [...options.args, `--remote-debugging-port=${port}`], env: launch.uiLibraryEnvironment() });
       try {
         const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

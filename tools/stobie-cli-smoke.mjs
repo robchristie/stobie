@@ -112,7 +112,7 @@ try {
     // Serve the web build and open it with ?automation=1 in Chromium with a
     // DevTools endpoint, as a Lantern-managed browser provides one.
     const { chromium } = await import('playwright');
-    const { assertBrowserRenderer, expectedBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl, uiLibraryEnvironment } = await import('./browser-launch.mjs');
+    const { assertBrowserRenderer, expectedBrowserRenderer, freeLoopbackPort, hostedLinuxWebGpuLaunchOptions, rendererUrl, uiLibraryEnvironment } = await import('./browser-launch.mjs');
     const root = resolve(binary);
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm' };
     server = createServer(async (request, response) => {
@@ -125,7 +125,7 @@ try {
     });
     await new Promise(done => server.listen(0, '127.0.0.1', done));
     const options = hostedLinuxWebGpuLaunchOptions();
-    const port = 9400 + (process.pid % 500);
+    const port = await freeLoopbackPort();
     browser = await chromium.launch({ ...options, args: [...options.args, `--remote-debugging-port=${port}`], env: uiLibraryEnvironment() });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const url = rendererUrl(`http://127.0.0.1:${server.address().port}/?automation=1`);
