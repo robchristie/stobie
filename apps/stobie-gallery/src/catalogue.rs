@@ -51,10 +51,12 @@ pub enum StoryId {
     CopyActions,
     DialogSheet,
     DialogConfirm,
+    HeadingControls,
+    NavigationHeader,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 46] = [
+    pub const ALL: [Self; 48] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -101,6 +103,8 @@ impl StoryId {
         Self::CopyActions,
         Self::DialogSheet,
         Self::DialogConfirm,
+        Self::HeadingControls,
+        Self::NavigationHeader,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -151,6 +155,8 @@ impl StoryId {
             Self::CopyActions => "copy/actions",
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
+            Self::HeadingControls => "heading/controls",
+            Self::NavigationHeader => "navigation/header",
         }
     }
 }
@@ -386,6 +392,18 @@ const NAVIGATION_RESPONSIVE_STATES: &[StoryState] = &[
     StoryState::Active,
     StoryState::Narrow,
 ];
+const HEADING_CONTROL_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Selected,
+    StoryState::LongText,
+    StoryState::Narrow,
+];
+const NAVIGATION_HEADER_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Selected,
+    StoryState::LongText,
+    StoryState::Narrow,
+];
 const DIALOG_STATES: &[StoryState] = &[
     StoryState::Default,
     StoryState::KeyboardFocused,
@@ -419,7 +437,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 46] = [
+pub static STORIES: [StoryDefinition; 48] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -832,6 +850,24 @@ pub static STORIES: [StoryDefinition; 46] = [
         640,
         720,
         DIALOG_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::HeadingControls,
+        "Section headings with controls at a phone's width: one beside a short title, a toggle and a labelled control beside a long title that elides, and five that take a line of their own.",
+        StoryGroup::Reading,
+        390,
+        520,
+        HEADING_CONTROL_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::NavigationHeader,
+        "A conversation's header in the navigation recipe: Back, an avatar, a long title that elides over a status line, Pinned, Hide and Edit profile, and the details toggle.",
+        StoryGroup::Navigation,
+        390,
+        720,
+        NAVIGATION_HEADER_STATES,
         KEYBOARD,
     ),
 ];

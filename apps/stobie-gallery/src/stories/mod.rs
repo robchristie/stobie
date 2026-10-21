@@ -6,6 +6,7 @@ mod copy;
 mod data;
 mod dialogs;
 mod dock;
+mod headers;
 mod icons;
 mod markdown;
 mod navigation;
@@ -46,6 +47,7 @@ pub(crate) struct StoryState {
     pub(crate) chat: ChatFixtureState,
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
+    pub(crate) header: headers::HeaderFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -155,6 +157,14 @@ fn present_story(
             tokens,
             font_scale,
             &mut state.dialog,
+            &mut report,
+        ),
+        StoryId::HeadingControls | StoryId::NavigationHeader => headers::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            &mut state.header,
             &mut report,
         ),
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
