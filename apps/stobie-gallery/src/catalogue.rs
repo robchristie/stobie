@@ -51,10 +51,11 @@ pub enum StoryId {
     CopyActions,
     DialogSheet,
     DialogConfirm,
+    ChoiceSegmented,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 46] = [
+    pub const ALL: [Self; 47] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -101,6 +102,7 @@ impl StoryId {
         Self::CopyActions,
         Self::DialogSheet,
         Self::DialogConfirm,
+        Self::ChoiceSegmented,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -151,6 +153,7 @@ impl StoryId {
             Self::CopyActions => "copy/actions",
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
+            Self::ChoiceSegmented => "choice/segmented",
         }
     }
 }
@@ -210,6 +213,7 @@ pub enum StoryGroup {
     Chat,
     Copy,
     Dialog,
+    Choice,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -392,6 +396,15 @@ const DIALOG_STATES: &[StoryState] = &[
     StoryState::Active,
     StoryState::Narrow,
 ];
+const CHOICE_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Selected,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -419,7 +432,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 46] = [
+pub static STORIES: [StoryDefinition; 47] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -832,6 +845,15 @@ pub static STORIES: [StoryDefinition; 46] = [
         640,
         720,
         DIALOG_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::ChoiceSegmented,
+        "Segmented choices in a routine editor: a radio group focused at its chosen option beside an unavailable one, weekday toggles with short labels, long labels that wrap whole, a choice unavailable throughout and the weekdays in a narrow column.",
+        StoryGroup::Choice,
+        640,
+        720,
+        CHOICE_STATES,
         KEYBOARD,
     ),
 ];

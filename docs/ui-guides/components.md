@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, segmented choices, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -774,7 +774,63 @@ the [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
 Buttons, icon actions and toggles carrying a bound action keep their visible
 label and measurements; their accessible name and tooltip add the subject,
 and `PresentationContext::bound_action` is the low-level form. A hidden
-availability for a row's argument presents nothing for it.
+availability for a row's argument presents nothing for it. A control whose
+visible label is not the action's, such as Edit on each routine where the
+action is Edit routine, gives its own with `BoundAction::with_label`; it
+shows that label and is named by it followed by the subject.
+`with_short_label` shows a shorter label still and keeps the label as the
+name and tooltip. `PresentationContext::labelled_bound_action` is the
+low-level form.
+
+## Segmented choice
+
+Use `Frame::segmented_choice` for a short set of options bound to one action
+whose argument is the option chosen, such as how often a routine repeats or
+the days it runs on. Declare the action's argument as a `ChoiceArgument`, or
+any contract its options' arguments satisfy.
+
+```text
+let repeats = ChoiceOption::choices::<Repeat>(|repeat| repeat == routine.repeat);
+frame.segmented_choice(ui, p, Action::Repeat, &SegmentedChoiceSpec::single("Repeats", &repeats));
+let days: Vec<_> = Day::CHOICES.iter().map(|(day, _, label)|
+    ChoiceOption::choice(*day, routine.runs_on(*day)).with_short_label(&label[..3])).collect();
+frame.segmented_choice(ui, p, Action::Day, &SegmentedChoiceSpec::multiple("Runs on", &days));
+```
+
+- **Task.** Choose one of a few options, or any number of them, in place,
+  without opening a menu. Use a combo box for a long or open-ended list.
+- **Modes.** A single choice is a radio group: the chosen option is checked,
+  Tab enters the group at the chosen option (else the first enabled one) and
+  leaves it, and the arrow keys, Home and End move to and choose another
+  enabled option, wrapping. A multiple choice is a group of toggles, each
+  pressed while chosen and each a Tab stop. Either way activating an option
+  performs the action with its argument; the application changes its state
+  and presents the new selection, so a refused change shows nothing chosen
+  that is not.
+- **Layout.** Options sit side by side in the order given, each as wide as
+  the widest label shown and at least the token minimum hit size, with
+  `spacing.unit` between them. Where the width is short they wrap into
+  balanced rows, such as four and three, rather than eliding; a label wider
+  than the whole width elides and keeps its name. Seven weekdays with short
+  labels fit one row at 390 points wide and wrap legibly at larger text.
+- **Face.** Options use the action button face: the chosen option takes the
+  selected pair, focus the outer ring and a disabled option the disabled
+  colours. `availability` (the host's `availability_with` for each option's
+  argument) disables an option with its reason or hides it, taking no space
+  and leaving the set.
+- **Names.** Each option is named by its label; a short label ("Tue") is
+  shown with the label ("Tuesday") as its tooltip. The group is named by the
+  specification's name; show the same words as the choice's heading.
+- **Semantics.** Each option publishes its argument, so the host binds each
+  as its own capability and agents see one control per option. The group is
+  a `Section` node; see [accessibility](accessibility.md) for its roles.
+
+Low-level callers use `PresentationContext::segmented_choice` with an
+availability function and perform `SegmentedChoiceResponse::activated`
+themselves. Gallery `choice/segmented` presents a single choice focused at
+its chosen option beside an unavailable one, weekday toggles with short
+labels, long labels that wrap whole, a choice unavailable throughout and the
+weekdays in a narrow column.
 
 ## Composer
 

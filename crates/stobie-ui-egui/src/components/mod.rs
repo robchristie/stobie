@@ -31,7 +31,8 @@ pub use action_button::{
     action_semantic_node_with_identity,
 };
 pub(crate) use action_button::{
-    ButtonFace, action_button_size, action_hit_height, present_action_button, present_button,
+    ButtonFace, ControlLabels, action_button_size, action_hit_height, present_action_button,
+    present_button,
 };
 pub use avatar::{
     AvatarFace, AvatarFigure, AvatarOutline, AvatarOutlineError, AvatarSize, AvatarSpec,

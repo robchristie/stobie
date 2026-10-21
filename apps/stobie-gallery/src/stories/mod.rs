@@ -1,6 +1,7 @@
 mod avatars;
 mod buttons;
 mod chat;
+mod choice;
 mod composer;
 mod copy;
 mod data;
@@ -46,6 +47,7 @@ pub(crate) struct StoryState {
     pub(crate) chat: ChatFixtureState,
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
+    pub(crate) choice: choice::ChoiceFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -157,6 +159,9 @@ fn present_story(
             &mut state.dialog,
             &mut report,
         ),
+        StoryId::ChoiceSegmented => {
+            choice::story(ui, tokens, font_scale, &mut state.choice, &mut report)
+        }
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.

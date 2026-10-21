@@ -201,7 +201,7 @@ snapshot, is the source.
 | `Button` | `Button` | `button` with `aria-keyshortcuts` for its shortcut; a toggle adds `aria-pressed`; a disabled control adds `aria-disabled` and its reason in `aria-description` |
 | `NavigationItem` | `Button` with current state | `button` with `aria-current` |
 | `Switch` | `Switch` with toggled state | `switch` with `aria-checked`; a disabled switch adds `aria-disabled` and its reason in `aria-description` |
-| `RadioButton` | `RadioButton` | `radio` with `aria-checked` |
+| `RadioButton` | `RadioButton`; a segmented choice's option is toggled, with its position and the set's size | `radio` with `aria-checked`, `aria-posinset` and `aria-setsize` |
 | `ComboBox` | `ComboBox` | `combobox` with its value as text and `aria-expanded` (`false` when unset) |
 | `TextInput`, `MultilineTextInput` | `TextInput`, `MultilineTextInput` | Focusable `input` or `textarea` (implicit `textbox`) whose `value` is the current text |
 | `Slider` | `Slider` | `slider` with `aria-valuenow`, `aria-valuemin` and `aria-valuemax` |
@@ -216,7 +216,7 @@ snapshot, is the source.
 | `Link` | `Link` with its URL | `link`, a hit target while enabled |
 | `Dialog` | `Dialog`, modal, named by its title | `dialog` with `aria-modal="true"`; while it is presented, the layer holds only it |
 | `AlertDialog` | `AlertDialog`, modal, named by its title and described by its message | `alertdialog` with `aria-modal="true"` and its message in `aria-description` |
-| `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender | `group` when named; otherwise flattened |
+| `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender, and a segmented choice a `RadioGroup` (single) or `Group` (multiple) named by the choice | `radiogroup` or `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |
 | Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading | Text, or `heading` with `aria-level` |

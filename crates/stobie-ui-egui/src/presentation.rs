@@ -5,6 +5,7 @@ use std::hash::Hash;
 use egui::{Response, Ui};
 
 mod chat;
+mod choice;
 mod composer;
 mod copy;
 mod dialog;
@@ -14,6 +15,7 @@ pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
     message_bubble_tokens,
 };
+pub use choice::{ChoiceMode, ChoiceOption, SegmentedChoiceResponse, SegmentedChoiceSpec};
 pub use composer::{
     COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
     ComposerSpec,
@@ -420,6 +422,26 @@ impl PresentationContext {
         argument: &ActionArgument,
         name: Option<&str>,
     ) -> Response {
+        self.labelled_bound_action(ui, key, spec, content, argument, name, None)
+    }
+
+    /// [`Self::bound_action`] with the control's own visible `label`, such
+    /// as "Tue", in place of the action's; `name`, such as "Tuesday", stays
+    /// its accessible name and shows in its tooltip when it differs. Hosted
+    /// applications give a [`BoundAction`](crate::BoundAction) its label with
+    /// [`with_label`](crate::BoundAction::with_label) and
+    /// [`with_short_label`](crate::BoundAction::with_short_label) instead.
+    #[allow(clippy::too_many_arguments)]
+    pub fn labelled_bound_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        argument: &ActionArgument,
+        name: Option<&str>,
+        label: Option<&str>,
+    ) -> Response {
         self.check_pass(ui);
         let value = argument.to_value();
         let identity = match &value {
@@ -429,7 +451,11 @@ impl PresentationContext {
                 .action_identity(),
             None => self.scope.instance(key).action_identity(),
         };
-        self.present_action(ui, &identity, spec, content, name, value)
+        let labels = crate::components::ControlLabels {
+            name,
+            visible: label,
+        };
+        self.present_labelled_action(ui, &identity, spec, content, labels, value)
     }
 
     pub(crate) fn present_action<A: ActionKey>(
@@ -441,6 +467,23 @@ impl PresentationContext {
         name: Option<&str>,
         argument: Option<serde_json::Value>,
     ) -> Response {
+        let labels = crate::components::ControlLabels {
+            name,
+            visible: None,
+        };
+        self.present_labelled_action(ui, identity, spec, content, labels, argument)
+    }
+
+    fn present_labelled_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        identity: &ActionButtonIdentity,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        labels: crate::components::ControlLabels<'_>,
+        argument: Option<serde_json::Value>,
+    ) -> Response {
+        let name = labels.name;
         let target = spec.target;
         let state = spec.state;
         let availability = spec.availability.clone();
@@ -449,7 +492,7 @@ impl PresentationContext {
             spec,
             identity,
             content,
-            name,
+            labels,
             &self.tokens,
             self.font_scale,
             &mut self.text_layouts,
