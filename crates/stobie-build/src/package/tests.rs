@@ -373,3 +373,42 @@ fn a_page_without_a_manifest_link_packages_as_before() {
         serde_json::from_slice(&fs::read(fixture.output.join("manifest.json")).unwrap()).unwrap();
     assert!(recorded["apps"][0].get("pwa").is_none());
 }
+
+/// The size report reads what packaging records: every served file, with
+/// the `.wasm` among them.
+#[test]
+fn the_size_report_counts_a_written_package() {
+    let fixture = Fixture::new("size");
+    let packaged = package(&fixture.options()).unwrap();
+    let app = &packaged.apps[0];
+    let sizes = crate::size::read(&fixture.output).unwrap();
+    assert_eq!(
+        sizes,
+        crate::size::of_manifest(&serde_json::to_value(&packaged).unwrap()).unwrap()
+    );
+    let [size] = &sizes[..] else {
+        panic!("one application")
+    };
+    assert_eq!(size.name, "lab");
+    assert_eq!(size.files, app.assets.len() + 1);
+    let wasm = app
+        .assets
+        .iter()
+        .find(|asset| asset.path.ends_with(".wasm"))
+        .unwrap();
+    assert_eq!(
+        (size.wasm.raw, size.wasm.br, size.wasm.gzip),
+        (
+            wasm.raw.bytes as u64,
+            wasm.br.bytes as u64,
+            wasm.gzip.bytes as u64
+        )
+    );
+    let raw: usize = app
+        .assets
+        .iter()
+        .chain([&app.entry])
+        .map(|asset| asset.raw.bytes)
+        .sum();
+    assert_eq!(size.total.raw, raw as u64);
+}

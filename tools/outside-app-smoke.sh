@@ -56,6 +56,8 @@ rm -rf "$APP" "$OUTSIDE/outside-imaging"
   "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web.json"
   "$STOBIE" build-web --production --output "$OUTSIDE/production" --json >"$EVIDENCE_DIR/build-web-production.json"
 )
+# Kept for `cargo xtask web-size`; the package itself goes with $OUTSIDE.
+cp "$OUTSIDE/production/manifest.json" "$EVIDENCE_DIR/production-manifest.json"
 # A second application opts into Web Push: its library is the check's
 # (tools/web-push-app/lib.rs) and its page declares stobie-web-push.
 PUSH_APP="$OUTSIDE/outside-push"
@@ -105,6 +107,50 @@ cp tools/composer-app/lib.rs "$COMPOSER_APP/src/lib.rs"
   cargo check --all-targets
   cargo check --lib --target wasm32-unknown-unknown
 )
+# A browser-only application has no native window system: natively its
+# library builds for its tests without eframe, winit or wgpu.
+"$STOBIE" new outside-browser --browser-only --path "$OUTSIDE/outside-browser" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" >/dev/null
+(
+  cd "$OUTSIDE/outside-browser"
+  [[ ! -e src/main.rs ]]
+  cargo test
+  cargo clippy --all-targets -- -D warnings
+  if cargo tree -e normal --prefix none | grep -E '^(eframe|winit|wgpu) '; then
+    echo "a browser-only application's native build has a window system" >&2
+    exit 1
+  fi
+  "$STOBIE" build-web --json >"$EVIDENCE_DIR/build-web-browser-only.json"
+)
+# A member of an existing workspace takes the workspace's toolchain and
+# profiles; a [profile.web] is recorded in its package's source identity.
+MEMBER_WORKSPACE="$OUTSIDE/member-workspace"
+mkdir -p "$MEMBER_WORKSPACE"
+cp "$APP/rust-toolchain.toml" "$MEMBER_WORKSPACE/"
+cat >"$MEMBER_WORKSPACE/Cargo.toml" <<'TOML'
+[workspace]
+members = ["apps/outside-member"]
+resolver = "3"
+
+[profile.web]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+TOML
+"$STOBIE" new outside-member --member --path "$MEMBER_WORKSPACE/apps/outside-member" --stobie-path "$ROOT" "${NEW_FLAGS[@]}" --json >"$EVIDENCE_DIR/new-member.json"
+(
+  cd "$MEMBER_WORKSPACE/apps/outside-member"
+  [[ ! -e rust-toolchain.toml ]]
+  cargo test
+  "$STOBIE" build-web --production --profile web --output "$OUTSIDE/member-production" --json >"$EVIDENCE_DIR/build-web-member.json"
+)
+python3 - "$EVIDENCE_DIR/build-web-member.json" "$OUTSIDE/member-production/manifest.json" <<'PY'
+import json, sys
+built = json.load(open(sys.argv[1]))
+assert built["profile"] == "web", built
+identity = json.load(open(sys.argv[2]))["sourceIdentity"]
+assert identity["profile"] == "web", identity
+assert "[profile.web]" in identity["workspaceManifest"], identity
+PY
 
 SYSROOT="$ROOT/.tools/sysroot"
 SMOKE_TMP="$(mktemp -d "$ROOT/.tools/runtime/outside-app-x11-XXXXXX")"

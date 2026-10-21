@@ -7,18 +7,20 @@
 //! writes the shared startup loader and, for an installable page, its web
 //! app manifest and service worker, and optionally packages the result with
 //! `wasm-opt`, Brotli and gzip into immutable, content-addressed assets.
+//! [`size`] reports a package's transfer sizes from its manifest.
 
 pub mod package;
 pub mod pwa;
 pub mod serve;
+pub mod size;
 mod web;
 
 use std::fmt;
 use std::path::Path;
 
 pub use web::{
-    BuildOptions, BuildReport, GENERATED, ProductionOptions, bindgen, build, cargo_metadata,
-    ensure_wasm_bindgen, locked_wasm_bindgen, stage_web, wasm_bindgen_cli_version,
+    BuildOptions, BuildReport, GENERATED, ProductionOptions, bindgen, build, build_with_profile,
+    cargo_metadata, ensure_wasm_bindgen, locked_wasm_bindgen, stage_web, wasm_bindgen_cli_version,
 };
 
 /// The shared browser startup loader that application bootstraps import as

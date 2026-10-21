@@ -49,6 +49,33 @@ and redo. `stobie new --imaging` also adds the image layer: `stobie-imaging`,
 `stobie-runtime`, `stobie-render-wgpu` and the UI crate's `image-rendering`
 feature, described in [Compose an image application](image-application-composition.md).
 
+### A browser-only application
+
+`stobie new my-app --browser-only` writes an application that runs only in
+the browser. It has no `src/main.rs`, and `Cargo.toml` declares eframe and the
+UI crate's `eframe` feature only for `wasm32`, so natively the library builds
+without a window system or GPU, for `cargo test`. Build and serve it with
+`stobie build-web` and `stobie serve` as above, and operate it with `stobie
+attach web`.
+
+### Inside an existing Cargo workspace
+
+`stobie new apps/my-app --member` (with `--path` for another directory)
+writes an application as a member of the Cargo workspace above it: its
+`Cargo.toml` has no `[workspace]` or `[profile.release]`, and it has no
+`rust-toolchain.toml`, because Cargo takes those from the workspace. It
+refuses a directory with no workspace above it. Then:
+
+- add the directory to `[workspace] members` in the workspace's `Cargo.toml`
+  (`stobie new` prints the line);
+- set the profile for web builds there, since Cargo reads profiles only from
+  the workspace root (see [Build profiles](#build-profiles));
+- run `stobie` from the application's directory or pass `--manifest-path`.
+  Cargo looks for `.cargo/config.toml` from the directory it runs in and its
+  parents, so a `--stobie-path` patch written beside the application applies
+  only when Cargo runs there; move it to the workspace's `.cargo/` to apply it
+  to every member.
+
 `stobie build-web` builds the library for `wasm32-unknown-unknown` in release
 mode, checks that the `wasm-bindgen` CLI is exactly the version of the
 `wasm-bindgen` crate the project locks (and prints the install command when
@@ -68,7 +95,34 @@ Brotli and gzip representations and immutable, content-addressed asset
 directories, by default in `target/web-production/`. `--variant Oz` or `O3`
 runs Binaryen 131's `wasm-opt`. The [browser startup guide](browser-startup.md#hosting-and-publication)
 says how to serve and publish it. An application with a Web Worker builds each
-web root and packages them together with `stobie package-web`.
+web root and packages them together with `stobie package-web`. Both print each
+packaged application's sizes in bytes, raw and with Brotli, for its WebAssembly
+and for everything it serves; `--json` gives them as `size` (`build-web`) or
+`sizes` (`package-web`), which the package's `manifest.json` records per file.
+
+### Build profiles
+
+`stobie build-web` builds with Cargo's `release` profile, `--debug` with
+`dev`, and `--profile NAME` with any other, such as a profile for web builds
+in the workspace's `Cargo.toml`:
+
+```toml
+[profile.web]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+```
+
+```sh
+stobie build-web --production --profile web
+```
+
+A production package's `sourceIdentity` records the profile's name, the
+workspace's `Cargo.toml` when the application is a member of a workspace rooted
+elsewhere, and any `CARGO_PROFILE_*` environment variables. All of these change
+its content identity, so packages built with different settings never share
+asset directories. Profile settings in `.cargo/config.toml` are not recorded;
+set them in `Cargo.toml` instead.
 
 ## Operate it with `stobie`
 

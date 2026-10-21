@@ -8,6 +8,7 @@ use anyhow::{Context, Result, anyhow, bail};
 
 mod browser;
 mod plans;
+mod size;
 mod tokens;
 mod ui;
 mod verify;
@@ -23,6 +24,7 @@ fn main() -> Result<()> {
         ),
         "build-web" => build_web(),
         "build-browser-production" => browser::build(env::args().skip(2).collect()),
+        "web-size" => size::run(env::args().skip(2).collect()),
         "architecture" => architecture(),
         "plans" => plans::check(Path::new(".")),
         "docs" => run("python3", &["tools/check-api-docs.py"]),
@@ -40,6 +42,9 @@ fn main() -> Result<()> {
             println!("cargo xtask verify-stage <name> run one complete hosted qualification stage");
             println!("cargo xtask build-web   build release WASM application and Worker packages");
             println!("cargo xtask build-browser-production [--variant none|Oz|O3] [--output DIR]");
+            println!(
+                "cargo xtask web-size [--package LABEL=DIR]... [--baseline JSON] [--output JSON]  report web package sizes"
+            );
             println!("cargo xtask architecture check dependency boundaries");
             println!("cargo xtask plans      check documentation plan lifecycle");
             println!(
