@@ -17,7 +17,7 @@ use crate::{
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[action(prefix = "join")]
 enum Act {
-    #[action(label = "Join", description = "Join the household")]
+    #[action(label = "Join", description = "Join the group")]
     Join,
 }
 
@@ -28,7 +28,7 @@ enum Intent {
     Password(String),
 }
 
-/// A form to join a household: a name, notes, an invitation code that is
+/// A form to join a group: a name, notes, an invitation code that is
 /// checked as it is typed, and a password.
 #[derive(Default)]
 struct Form {
@@ -90,13 +90,13 @@ impl Application for Form {
                 "notes",
                 &TextFieldSpec::new("Notes")
                     .multiline(2)
-                    .description("Only the household sees these."),
+                    .description("Only you see these."),
                 &self.notes,
                 Intent::Notes,
             );
             view.submitted += u32::from(notes.submitted);
             view.notes = Some(notes.field);
-            let invalid = !self.code.is_empty() && self.code.chars().count() != 6;
+            let invalid = !self.code.is_empty() && self.code.len() != 6;
             frame.text_field(
                 ui,
                 &mut p,
@@ -286,10 +286,7 @@ fn the_visible_caption_names_the_field() {
     assert!(name.text_selectable);
     let notes = node(&harness, "Notes");
     assert_eq!(notes.role, UiRole::MultilineTextInput);
-    assert_eq!(
-        notes.description.as_deref(),
-        Some("Only the household sees these.")
-    );
+    assert_eq!(notes.description.as_deref(), Some("Only you see these."));
     // AccessKit labels the field by its caption's node.
     let field = accesskit_node(&harness, &name.id.0);
     assert_eq!(field.label(), Some("Name"));
