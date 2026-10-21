@@ -128,6 +128,12 @@ impl DesignTokens {
         ICON_SIZE
     }
 
+    /// Square hit target of an icon-only action, in both densities, generated
+    /// without changing public token struct literals.
+    pub const fn touch_target_size(&self) -> Points {
+        Points(44.0)
+    }
+
     /// Avatar diameters at reference font scale, by where the avatar sits.
     pub const fn avatar_header_size(&self) -> Points {
         Points(32.0)
@@ -222,9 +228,9 @@ const COLOURS_LIGHT: ColourTokens = ColourTokens {
         alpha: 255,
     },
     surface_hover: Rgba8 {
-        red: 199,
-        green: 236,
-        blue: 235,
+        red: 217,
+        green: 224,
+        blue: 228,
         alpha: 255,
     },
     border_decorative: Rgba8 {
@@ -258,9 +264,9 @@ const COLOURS_LIGHT: ColourTokens = ColourTokens {
         alpha: 255,
     },
     action_quiet_hover: Rgba8 {
-        red: 199,
-        green: 236,
-        blue: 235,
+        red: 217,
+        green: 224,
+        blue: 228,
         alpha: 255,
     },
     text_primary: Rgba8 {
@@ -369,9 +375,9 @@ const COLOURS_DARK: ColourTokens = ColourTokens {
         alpha: 255,
     },
     surface_hover: Rgba8 {
-        red: 22,
-        green: 77,
-        blue: 82,
+        red: 40,
+        green: 50,
+        blue: 59,
         alpha: 255,
     },
     border_decorative: Rgba8 {
@@ -405,9 +411,9 @@ const COLOURS_DARK: ColourTokens = ColourTokens {
         alpha: 255,
     },
     action_quiet_hover: Rgba8 {
-        red: 22,
-        green: 77,
-        blue: 82,
+        red: 40,
+        green: 50,
+        blue: 59,
         alpha: 255,
     },
     text_primary: Rgba8 {
@@ -435,9 +441,9 @@ const COLOURS_DARK: ColourTokens = ColourTokens {
         alpha: 255,
     },
     selection_background: Rgba8 {
-        red: 22,
-        green: 77,
-        blue: 82,
+        red: 18,
+        green: 63,
+        blue: 67,
         alpha: 255,
     },
     focus_ring: Rgba8 {
@@ -516,9 +522,9 @@ const COLOURS_LIGHT_HIGH_CONTRAST: ColourTokens = ColourTokens {
         alpha: 255,
     },
     surface_hover: Rgba8 {
-        red: 196,
-        green: 245,
-        blue: 241,
+        red: 220,
+        green: 227,
+        blue: 231,
         alpha: 255,
     },
     border_decorative: Rgba8 {
@@ -552,9 +558,9 @@ const COLOURS_LIGHT_HIGH_CONTRAST: ColourTokens = ColourTokens {
         alpha: 255,
     },
     action_quiet_hover: Rgba8 {
-        red: 196,
-        green: 245,
-        blue: 241,
+        red: 220,
+        green: 227,
+        blue: 231,
         alpha: 255,
     },
     text_primary: Rgba8 {
@@ -663,9 +669,9 @@ const COLOURS_DARK_HIGH_CONTRAST: ColourTokens = ColourTokens {
         alpha: 255,
     },
     surface_hover: Rgba8 {
-        red: 6,
-        green: 63,
-        blue: 66,
+        red: 31,
+        green: 42,
+        blue: 48,
         alpha: 255,
     },
     border_decorative: Rgba8 {
@@ -699,9 +705,9 @@ const COLOURS_DARK_HIGH_CONTRAST: ColourTokens = ColourTokens {
         alpha: 255,
     },
     action_quiet_hover: Rgba8 {
-        red: 6,
-        green: 63,
-        blue: 66,
+        red: 31,
+        green: 42,
+        blue: 48,
         alpha: 255,
     },
     text_primary: Rgba8 {

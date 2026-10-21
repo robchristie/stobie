@@ -14,7 +14,8 @@
       "muted": { "$type": "color", "$value": "#9daab3" },
       "accent": { "$type": "color", "$value": "#2babb5" },
       "onAccent": { "$type": "color", "$value": "#061012" },
-      "selection": { "$type": "color", "$value": "#164d52" },
+      "hover": { "$type": "color", "$value": "#28323b", "$description": "Neutral transient hover fill, distinct from selection and from the raised surface" },
+      "selection": { "$type": "color", "$value": "#123f43" },
       "focus": { "$type": "color", "$value": "#70ded2" },
       "success": { "$type": "color", "$value": "#63c49a" },
       "warning": { "$type": "color", "$value": "#e1b75a" },
@@ -24,7 +25,7 @@
       "canvas": { "$type": "color", "$value": "{colour.palette.canvas}" },
       "panel": { "$type": "color", "$value": "{colour.palette.panel}" },
       "raised": { "$type": "color", "$value": "{colour.palette.raised}" },
-      "hover": { "$type": "color", "$value": "{colour.palette.selection}" }
+      "hover": { "$type": "color", "$value": "{colour.palette.hover}" }
     },
     "border": {
       "subtle": { "$type": "color", "$value": "{colour.palette.border}" },
@@ -49,7 +50,7 @@
         "foreground": { "$type": "color", "$value": "{colour.palette.onAccent}" }
       },
       "quiet": {
-        "hover": { "$type": "color", "$value": "{colour.palette.selection}" }
+        "hover": { "$type": "color", "$value": "{colour.palette.hover}" }
       }
     },
     "focus": {
@@ -82,7 +83,8 @@
     "minimumHitSize": { "$type": "dimension", "$value": 32 }
   },
   "icon": {
-    "size": { "$type": "dimension", "$value": 16, "$description": "Common square artwork size, independent of density and hit target" }
+    "size": { "$type": "dimension", "$value": 16, "$description": "Common square artwork size, independent of density and hit target" },
+    "touchTargetSize": { "$type": "dimension", "$value": 44, "$description": "Square hit target of an icon-only action, independent of density; its visual chrome stays the control height" }
   },
   "avatar": {
     "headerSize": { "$type": "dimension", "$value": 32, "$description": "Avatar beside a conversation's title, at 100% text scale" },
@@ -125,7 +127,8 @@
         "raised": { "$value": "#1b2229" }, "border": { "$value": "#45535e" },
         "text": { "$value": "#e7edf2" }, "muted": { "$value": "#9daab3" },
         "accent": { "$value": "#2babb5" }, "onAccent": { "$value": "#061012" },
-        "selection": { "$value": "#164d52" }, "focus": { "$value": "#70ded2" },
+        "hover": { "$value": "#28323b" }, "selection": { "$value": "#123f43" },
+        "focus": { "$value": "#70ded2" },
         "success": { "$value": "#63c49a" }, "warning": { "$value": "#e1b75a" },
         "error": { "$value": "#ef817d" }
       } }
@@ -136,7 +139,8 @@
         "raised": { "$value": "#e7ecef" }, "border": { "$value": "#89969f" },
         "text": { "$value": "#172027" }, "muted": { "$value": "#53616a" },
         "accent": { "$value": "#087781" }, "onAccent": { "$value": "#ffffff" },
-        "selection": { "$value": "#c7eceb" }, "focus": { "$value": "#006f78" },
+        "hover": { "$value": "#d9e0e4" }, "selection": { "$value": "#c7eceb" },
+        "focus": { "$value": "#006f78" },
         "success": { "$value": "#19734c" }, "warning": { "$value": "#865f00" },
         "error": { "$value": "#a52d32" }
       } }
@@ -147,7 +151,8 @@
         "raised": { "$value": "#11191d" }, "border": { "$value": "#b7c5ce" },
         "text": { "$value": "#ffffff" }, "muted": { "$value": "#d5dde2" },
         "accent": { "$value": "#71fff5" }, "onAccent": { "$value": "#000000" },
-        "selection": { "$value": "#063f42" }, "focus": { "$value": "#ffffff" },
+        "hover": { "$value": "#1f2a30" }, "selection": { "$value": "#063f42" },
+        "focus": { "$value": "#ffffff" },
         "success": { "$value": "#8fffc8" }, "warning": { "$value": "#ffe18a" },
         "error": { "$value": "#ffaaa6" }
       } }
@@ -158,7 +163,8 @@
         "raised": { "$value": "#edf1f3" }, "border": { "$value": "#263238" },
         "text": { "$value": "#000000" }, "muted": { "$value": "#303b42" },
         "accent": { "$value": "#005c62" }, "onAccent": { "$value": "#ffffff" },
-        "selection": { "$value": "#c4f5f1" }, "focus": { "$value": "#000000" },
+        "hover": { "$value": "#dce3e7" }, "selection": { "$value": "#c4f5f1" },
+        "focus": { "$value": "#000000" },
         "success": { "$value": "#075f3b" }, "warning": { "$value": "#684900" },
         "error": { "$value": "#862027" }
       } }
