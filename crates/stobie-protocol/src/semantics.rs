@@ -118,6 +118,7 @@ impl From<String> for SemanticUiId {
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum UiRole {
     Application,
     ApplicationBar,

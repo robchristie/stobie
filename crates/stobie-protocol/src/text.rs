@@ -27,6 +27,7 @@ pub enum TextRole {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum TextOverflow {
     /// Text is elided at the declared width and line limit.
     Ellipsis,
@@ -119,6 +120,7 @@ impl From<emath::Rect> for TextRect {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum TextComponentKind {
     DockTabStrip,
     DockTab,
@@ -279,6 +281,7 @@ impl TextLayoutObservation {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum TextLayoutError {
     InvalidMaxLines(u8),
     /// A bounded text recipe was asked to wrap without a line limit; only the
