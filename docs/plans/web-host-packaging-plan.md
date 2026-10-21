@@ -57,16 +57,17 @@ service worker's caching.
 | The CLI's commit without Git | Complete | Five unit tests of the file reader, one of them that vendored source names no commit; `cargo install --git` without `git` on `PATH` |
 | `WebPush::start` without a service worker | Complete | A native test of the reason, a loader test of the promise, and a Web Push smoke step that serves the page without its manifest link |
 | Earlier packages' assets | Complete | Guidance and the service worker's comment |
-| Candidate qualification | Complete | `cargo xtask verify` and `cargo xtask web-size` on the reviewed head; review, CI and merge retained in the PR |
+| Candidate qualification | Complete | `cargo xtask verify` on the reviewed head; review, CI and merge retained in the PR |
 
 ## Evidence
 
 - `cargo install --locked --git file://<checkout> --rev <commit> stobie-cli`
-  with a `PATH` holding no `git` command, in a fresh target directory:
-  at this branch's first commit `stobie --version` names that commit; at
-  `2964cad` (before) it names none.
-- Web package sizes from `cargo xtask web-size` (WASM raw / Brotli, bytes),
-  against `2964cad`: Gallery 12155584 / 3046856 (-237 / +710), Lab
+  with a `PATH` holding no `git` command, in a fresh target directory: at
+  `c966efe`, whose build script the head keeps, `stobie --version` names
+  that commit; at `2964cad` (before) it names none.
+- Web package sizes from `cargo xtask web-size` (WASM raw / Brotli, bytes)
+  at `80b2b25`, before the head lengthened one Web Push reason, against
+  `2964cad`: Gallery 12155584 / 3046856 (-237 / +710), Lab
   12459697 / 3069921 (-332 / +172), template 10475398 / 2688246
   (-720 / -375).
 
