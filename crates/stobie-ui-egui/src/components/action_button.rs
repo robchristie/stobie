@@ -6,6 +6,9 @@ use crate::{
     UiNode, UiRole, icon_size, measure_text, paint_icon, paint_measured_text,
 };
 
+/// The opacity a disabled action's fill keeps, over whatever is behind it.
+const DISABLED_FILL: f32 = 0.55;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ActionEmphasis {
     Quiet,
@@ -200,9 +203,10 @@ pub(crate) fn action_button_size(
     } else {
         0.0
     };
-    let hit_height = action_hit_height(tokens, font_scale);
+    let mut hit_height = action_hit_height(tokens, font_scale);
     let (intrinsic, minimum_width) = if matches!(content, ActionButtonContent::IconOnly(_)) {
-        let side = hit_height.max(artwork_size);
+        let side = icon_action_side(tokens, font_scale);
+        hit_height = side;
         (side, side)
     } else {
         let text_width = |label| {
@@ -234,6 +238,18 @@ pub(crate) fn action_button_size(
         intrinsic,
         minimum_width,
     }
+}
+
+/// The side of an icon-only action's square hit target: the touch target
+/// size in both densities, and never less than the labelled actions' hit
+/// height or the artwork. Its visual chrome stays the control height,
+/// centred, so only the room it takes grows.
+pub(crate) fn icon_action_side(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    tokens
+        .touch_target_size()
+        .0
+        .max(action_hit_height(tokens, font_scale))
+        .max(icon_size(tokens, font_scale))
 }
 
 /// An action button's hit height: the control height at the font scale, and
@@ -402,25 +418,31 @@ pub(crate) fn present_button(
         width
     };
     let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(visual_width, visual_height));
+    let quiet = matches!(
+        face.emphasis,
+        ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
+    );
     let fill = if !enabled {
-        Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
+        // Disabled keeps its resting or on treatment in a muted form: a
+        // toggled-on action still looks on, and a quiet one gains no fill.
+        if face.state.pressed() {
+            Color32::from(tokens.colours.selection_background).linear_multiply(DISABLED_FILL)
+        } else if quiet {
+            Color32::TRANSPARENT
+        } else {
+            Color32::from(tokens.colours.surface_raised).linear_multiply(DISABLED_FILL)
+        }
     } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_background.into()
     } else if face.state.pressed() || response.is_pointer_button_down_on() {
         tokens.colours.selection_background.into()
     } else if response.hovered() {
-        if matches!(
-            face.emphasis,
-            ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
-        ) {
+        if quiet {
             tokens.colours.action_quiet_hover.into()
         } else {
             tokens.colours.surface_hover.into()
         }
-    } else if matches!(
-        face.emphasis,
-        ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
-    ) {
+    } else if quiet {
         Color32::TRANSPARENT
     } else {
         tokens.colours.surface_raised.into()
@@ -438,16 +460,21 @@ pub(crate) fn present_button(
         },
         egui::StrokeKind::Inside,
     );
-    if enabled && (face.state.pressed() || response.is_pointer_button_down_on()) {
-        // The reference theme aliases hover and selection fills. Keep active
-        // feedback explicit, with geometry distinct from the outer focus ring.
+    let active = face.state.pressed() || (enabled && response.is_pointer_button_down_on());
+    if active {
+        // Pressed and toggled-on states add an inset outline, so they are
+        // never told from rest or hover by fill colour alone. Its geometry
+        // stays distinct from the outer focus ring; a disabled toggle keeps
+        // it in muted text.
         let inset = tokens.spacing.unit.0 * 0.5;
         ui.painter().rect_stroke(
             visual.shrink(inset),
             (tokens.geometry.control_radius.0 - inset).max(0.0),
             Stroke::new(
                 1.0,
-                if face.emphasis == ActionEmphasis::Primary {
+                if !enabled {
+                    tokens.colours.text_muted
+                } else if face.emphasis == ActionEmphasis::Primary {
                     tokens.colours.action_primary_foreground
                 } else {
                     tokens.colours.selection_indicator

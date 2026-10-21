@@ -509,6 +509,13 @@ fn active_outlines_survive_focus_and_aliased_state_colours_for_all_presentations
                     !disabled && (pressed || toggled),
                     "{content:?}, {emphasis:?}, {pressed}/{toggled}/{focused}/{disabled}"
                 );
+                // A disabled toggle that is on keeps its outline, muted.
+                assert_eq!(
+                    outlines.iter().any(|rect| rect.rect == active
+                        && rect.stroke.color == Color32::from(tokens.colours.text_muted)),
+                    disabled && toggled,
+                    "{content:?}, {emphasis:?}, {pressed}/{toggled}/{focused}/{disabled}"
+                );
                 if focused {
                     assert!(outlines.iter().any(|rect| rect.rect == visual
                         && rect.stroke.color == Color32::from(tokens.colours.focus_ring)));
@@ -522,6 +529,308 @@ fn active_outlines_survive_focus_and_aliased_state_colours_for_all_presentations
                                 tokens.colours.action_primary_foreground
                             })));
                 }
+            }
+        }
+    }
+}
+
+const THEMES: [ThemeVariant; 4] = [
+    ThemeVariant::Light,
+    ThemeVariant::Dark,
+    ThemeVariant::LightHighContrast,
+    ThemeVariant::DarkHighContrast,
+];
+
+/// Paint one action, hovered when asked, and return its response rect and
+/// the rectangles it painted.
+fn paint_action(
+    tokens: &DesignTokens,
+    action: impl Fn() -> ActionButtonSpec<TestAction>,
+    content: ActionButtonContent,
+    hovered: bool,
+) -> (Rect, Vec<egui::epaint::RectShape>) {
+    let context = egui::Context::default();
+    install_typography_fonts(&context);
+    let paint = |ui: &mut egui::Ui| {
+        action_button_with_content(ui, action(), content, tokens, 1.0, &mut Vec::new())
+    };
+    let mut centre = egui::Pos2::ZERO;
+    let mut initial = context.run_ui(Default::default(), |ui| {
+        centre = paint(ui).rect.center();
+    });
+    initial.textures_delta.clear();
+    let mut rect = Rect::NOTHING;
+    let mut output = context.run_ui(
+        egui::RawInput {
+            events: if hovered {
+                vec![egui::Event::PointerMoved(centre)]
+            } else {
+                Vec::new()
+            },
+            ..Default::default()
+        },
+        |ui| {
+            let response = paint(ui);
+            assert_eq!(response.hovered(), hovered);
+            rect = response.rect;
+        },
+    );
+    output.textures_delta.clear();
+    let rects = output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::Shape::Rect(rect) => Some(rect.clone()),
+            _ => None,
+        })
+        .collect();
+    (rect, rects)
+}
+
+/// The fill of the action's visual chrome: the first painted rectangle.
+fn chrome_fill(rects: &[egui::epaint::RectShape]) -> Color32 {
+    rects.first().expect("the action paints its chrome").fill
+}
+
+#[test]
+fn a_hovered_quiet_action_never_looks_toggled_on() {
+    for theme in THEMES {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        for emphasis in [ActionEmphasis::Quiet, ActionEmphasis::QuietBorderless] {
+            for content in [
+                ActionButtonContent::Text,
+                ActionButtonContent::IconOnly(IconId::Check),
+            ] {
+                let toggle = |pressed| {
+                    move || {
+                        spec(
+                            Availability::Enabled,
+                            ActionButtonState::Toggle { pressed },
+                            emphasis,
+                        )
+                    }
+                };
+                let (_, hovered_off) = paint_action(&tokens, toggle(false), content, true);
+                let (_, resting_on) = paint_action(&tokens, toggle(true), content, false);
+                let hover = chrome_fill(&hovered_off);
+                let on = chrome_fill(&resting_on);
+                assert_eq!(hover, Color32::from(tokens.colours.action_quiet_hover));
+                assert_eq!(on, Color32::from(tokens.colours.selection_background));
+                assert_ne!(hover, on, "{theme:?} {emphasis:?} {content:?}");
+                // On also differs by more than colour: an inset outline.
+                let inset = |rects: &[egui::epaint::RectShape]| {
+                    rects.iter().any(|rect| {
+                        rect.stroke.color == Color32::from(tokens.colours.selection_indicator)
+                    })
+                };
+                assert!(inset(&resting_on), "{theme:?} {emphasis:?} {content:?}");
+                assert!(!inset(&hovered_off), "{theme:?} {emphasis:?} {content:?}");
+            }
+        }
+        // A hovered resting action also never takes the selection fill.
+        let (_, normal) = paint_action(
+            &tokens,
+            || {
+                spec(
+                    Availability::Enabled,
+                    ActionButtonState::Momentary,
+                    ActionEmphasis::Normal,
+                )
+            },
+            ActionButtonContent::Text,
+            true,
+        );
+        assert_eq!(
+            chrome_fill(&normal),
+            Color32::from(tokens.colours.surface_hover)
+        );
+        assert_ne!(
+            tokens.colours.surface_hover, tokens.colours.selection_background,
+            "{theme:?}"
+        );
+    }
+}
+
+#[test]
+fn disabled_actions_keep_their_on_state_and_quiet_chrome_muted() {
+    let disabled = || Availability::Disabled {
+        reason: "Unavailable".into(),
+    };
+    for theme in THEMES {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        for emphasis in [
+            ActionEmphasis::Quiet,
+            ActionEmphasis::QuietBorderless,
+            ActionEmphasis::Normal,
+            ActionEmphasis::Primary,
+        ] {
+            for content in [
+                ActionButtonContent::Text,
+                ActionButtonContent::IconOnly(IconId::Check),
+            ] {
+                let toggle = |pressed| {
+                    move || spec(disabled(), ActionButtonState::Toggle { pressed }, emphasis)
+                };
+                let (_, off) = paint_action(&tokens, toggle(false), content, false);
+                let (_, on) = paint_action(&tokens, toggle(true), content, false);
+                let case = format!("{theme:?} {emphasis:?} {content:?}");
+                // On keeps the selection fill and the inset outline, muted.
+                assert_eq!(
+                    chrome_fill(&on),
+                    Color32::from(tokens.colours.selection_background).linear_multiply(0.55),
+                    "{case}"
+                );
+                assert!(
+                    on.iter().any(|rect| rect.stroke.color
+                        == Color32::from(tokens.colours.text_muted)
+                        && rect.rect != on[0].rect),
+                    "{case}"
+                );
+                assert_ne!(chrome_fill(&on), chrome_fill(&off), "{case}");
+                assert_eq!(off.len(), 1, "{case}: off paints no state outline");
+                let quiet = matches!(
+                    emphasis,
+                    ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
+                );
+                assert_eq!(
+                    chrome_fill(&off),
+                    if quiet {
+                        Color32::TRANSPARENT
+                    } else {
+                        Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
+                    },
+                    "{case}"
+                );
+                // A borderless action stays borderless when disabled.
+                if emphasis == ActionEmphasis::QuietBorderless {
+                    assert_eq!(off[0].stroke, egui::Stroke::NONE, "{case}");
+                    assert_eq!(on[0].stroke, egui::Stroke::NONE, "{case}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn icon_only_actions_take_a_touch_target_without_growing_their_chrome() {
+    for density in [DensityVariant::Compact, DensityVariant::Comfortable] {
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, density);
+        assert_eq!(tokens.touch_target_size().0, 44.0);
+        for scale in [1.0, 1.25, 1.5] {
+            let context = egui::Context::default();
+            install_typography_fonts(&context);
+            let mut icon = Rect::NOTHING;
+            let mut text = Rect::NOTHING;
+            let mut output = context.run_ui(Default::default(), |ui| {
+                ui.horizontal(|ui| {
+                    let action = || {
+                        spec(
+                            Availability::Enabled,
+                            ActionButtonState::Momentary,
+                            ActionEmphasis::Normal,
+                        )
+                    };
+                    icon = action_button_with_content(
+                        ui,
+                        action(),
+                        ActionButtonContent::IconOnly(IconId::Check),
+                        &tokens,
+                        scale,
+                        &mut Vec::new(),
+                    )
+                    .rect;
+                    text = action_button_with_content(
+                        ui,
+                        action(),
+                        ActionButtonContent::Text,
+                        &tokens,
+                        scale,
+                        &mut Vec::new(),
+                    )
+                    .rect;
+                });
+            });
+            output.textures_delta.clear();
+            let case = format!("{density:?} {scale}");
+            let side = tokens.touch_target_size().0;
+            assert!(icon.width() >= side && icon.height() >= side, "{case}");
+            assert_eq!(icon.width(), icon.height(), "{case}");
+            // The labelled action's hit height, and every other control's
+            // use of the minimum hit size, are unchanged.
+            assert_eq!(
+                text.height(),
+                tokens
+                    .geometry
+                    .minimum_hit_size
+                    .0
+                    .max(tokens.geometry.control_height.0 * scale),
+                "{case}"
+            );
+            // The icon's visual chrome stays the control height, centred.
+            let chrome = tokens.geometry.control_height.0 * scale;
+            assert!(
+                output.shapes.iter().any(|shape| matches!(&shape.shape,
+                    egui::Shape::Rect(rect) if rect.rect == Rect::from_center_size(icon.center(), egui::Vec2::splat(chrome)))),
+                "{case}"
+            );
+        }
+    }
+}
+
+#[test]
+fn short_labels_present_whole_at_least_the_minimum_hit_size() {
+    for density in [DensityVariant::Compact, DensityVariant::Comfortable] {
+        let tokens = DesignTokens::resolve(ThemeVariant::Light, density);
+        for scale in [1.0, 1.5] {
+            for label in ["Edit", "Tue", "OK", "A"] {
+                let context = egui::Context::default();
+                install_typography_fonts(&context);
+                let mut layouts = Vec::new();
+                let mut rect = Rect::NOTHING;
+                let mut output = context.run_ui(Default::default(), |ui| {
+                    let action = spec(
+                        Availability::Enabled,
+                        ActionButtonState::Momentary,
+                        ActionEmphasis::Normal,
+                    );
+                    let identity = ActionButtonIdentity::for_target(action.target);
+                    rect = crate::components::present_button(
+                        ui,
+                        &crate::components::ButtonFace {
+                            name: label,
+                            visible_label: label,
+                            description: None,
+                            shortcut: None,
+                            availability: &Availability::Enabled,
+                            state: ActionButtonState::Momentary,
+                            emphasis: ActionEmphasis::Normal,
+                            content: ActionButtonContent::Text,
+                            also_fits: &[],
+                            tooltip: false,
+                        },
+                        &identity,
+                        &tokens,
+                        scale,
+                        &mut layouts,
+                    )
+                    .rect;
+                });
+                output.textures_delta.clear();
+                let case = format!("{density:?} {scale} {label}");
+                let minimum = tokens.geometry.minimum_hit_size.0;
+                assert!(rect.width() >= minimum, "{case}: {}", rect.width());
+                assert!(rect.height() >= minimum, "{case}: {}", rect.height());
+                assert_eq!(layouts.len(), 1, "{case}");
+                assert!(!layouts[0].truncated, "{case}");
+                // The whole label paints inside the button, clear of its padding.
+                let painted = layouts[0].painted_rect;
+                assert!(
+                    painted.min_x >= rect.left() + tokens.geometry.control_padding_x.0 - 0.5
+                        && painted.max_x
+                            <= rect.right() - tokens.geometry.control_padding_x.0 + 0.5,
+                    "{case}: {painted:?} in {rect:?}"
+                );
+                assert!(audit_text_layouts(&layouts).is_empty(), "{case}");
             }
         }
     }

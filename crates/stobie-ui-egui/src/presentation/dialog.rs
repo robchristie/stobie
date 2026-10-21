@@ -18,7 +18,7 @@ use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionTarget, Availability, IconId, IntoActionTarget, PaneWidthClass,
     ReadingTextSpec, TextInteraction, TextRole, TextRoleStyles, UiNode, UiRole,
-    components::{action_button_size, action_hit_height},
+    components::{action_button_size, action_hit_height, icon_action_side},
     observation::DialogRegistration,
 };
 
@@ -745,12 +745,18 @@ impl PresentationContext {
             .fixed_pos(left_top);
         let hosted = crate::observation::is_enabled(&context, self.viewport);
         let hit = action_hit_height(&tokens, font_scale);
+        // The close control is icon-only, with that control's touch target.
+        let close_hit = if chrome.close_width > 0.0 {
+            icon_action_side(&tokens, font_scale)
+        } else {
+            0.0
+        };
         let gap = tokens.spacing.block.0.max(tokens.spacing.unit.0);
         let heading_height = TextRole::SectionHeading
             .style(&tokens, font_scale)
             .line_height
             + tokens.spacing.block.0;
-        let header_height = hit.max(heading_height);
+        let header_height = hit.max(close_hit).max(heading_height);
         let footer_part = if chrome.footer_height > 0.0 {
             gap + chrome.footer_height
         } else {
@@ -792,9 +798,9 @@ impl PresentationContext {
                     let close = Rect::from_min_size(
                         pos2(
                             header.right() - chrome.close_width,
-                            header.top() + (header_height - hit) / 2.0,
+                            header.top() + (header_height - close_hit) / 2.0,
                         ),
-                        vec2(chrome.close_width, hit),
+                        vec2(chrome.close_width, close_hit),
                     );
                     let title_right = if chrome.close_width > 0.0 {
                         close.left() - gap
@@ -814,6 +820,13 @@ impl PresentationContext {
                     content.scope_builder(UiBuilder::new().max_rect(title_rect), |ui| {
                         child.heading(ui, "stobie.dialog.title", chrome.title)
                     });
+                    // The title is centred in the header; a header taller
+                    // than it, for the close control's touch target, still
+                    // ends before the body.
+                    let short = header.bottom() - content.cursor().min.y;
+                    if short > 0.0 {
+                        content.add_space(short);
+                    }
                     content.add_space(gap);
 
                     // The body, which scrolls when it is taller than the room.

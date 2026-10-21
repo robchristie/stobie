@@ -420,6 +420,19 @@ fn the_field_grows_with_its_lines_up_to_its_limit_then_scrolls() {
     );
     // The controls sit on the field's line, at its height.
     assert!((send_rect(&harness).bottom() - one.bottom()).abs() < 0.5);
+    // The icon-only Send and Attach controls take a whole touch target.
+    let touch = host(&harness)
+        .preferences
+        .tokens(true)
+        .touch_target_size()
+        .0;
+    let leading = view(&harness).leading.as_ref().unwrap().rect;
+    for rect in [send_rect(&harness), leading] {
+        assert!(
+            rect.width() >= touch && rect.height() >= touch,
+            "an icon control is a touch target: {rect:?}"
+        );
+    }
 
     focus_field(&mut harness);
     type_text(&mut harness, "one");
