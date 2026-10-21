@@ -54,7 +54,7 @@ service worker's caching.
 | Increment | Status | Evidence |
 | --- | --- | --- |
 | Opener protection for every entry point | Complete | Native tests that an `AppHost`, a reading-text link and a Markdown link install the plugin, and a same-tab link does not; the existing reading-text and Markdown browser smokes check `noopener` in the browser |
-| The CLI's commit without Git | Complete | Four unit tests of the file reader; `cargo install --git` without `git` on `PATH` |
+| The CLI's commit without Git | Complete | Five unit tests of the file reader, one of them that vendored source names no commit; `cargo install --git` without `git` on `PATH` |
 | `WebPush::start` without a service worker | Complete | A native test of the reason, a loader test of the promise, and a Web Push smoke step that serves the page without its manifest link |
 | Earlier packages' assets | Complete | Guidance and the service worker's comment |
 | Candidate qualification | Complete | `cargo xtask verify` and `cargo xtask web-size` on the reviewed head; review, CI and merge retained in the PR |

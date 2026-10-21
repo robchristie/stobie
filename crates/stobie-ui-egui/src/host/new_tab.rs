@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn a_host_and_a_new_tab_request_install_the_plugin_once() {
+    fn a_new_tab_request_installs_the_plugin_and_leaves_requests_natively() {
         let context = egui::Context::default();
         assert!(!installed(&context));
         let mut output = context.run_ui(egui::RawInput::default(), |ui| {

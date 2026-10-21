@@ -8,6 +8,26 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// The top level of the Stobie checkout whose CLI manifest directory is
+/// `manifest`, with its Git directories. Only a Stobie checkout names a Stobie
+/// revision: source vendored into another repository, such as
+/// `<repository>/vendor/stobie-cli`, sits under that repository's Git
+/// directory but is not at `crates/stobie-cli` in it, so it names none.
+pub fn stobie_checkout(manifest: &Path) -> Option<(PathBuf, GitDirectories)> {
+    let top = manifest.join("../..").canonicalize().ok()?;
+    let own = manifest.join("Cargo.toml").canonicalize().ok()?;
+    if top
+        .join("crates/stobie-cli/Cargo.toml")
+        .canonicalize()
+        .ok()?
+        != own
+    {
+        return None;
+    }
+    let directories = directories(&top)?;
+    Some((top, directories))
+}
+
 /// A checkout's Git directory (its own `HEAD`) and common directory (shared
 /// refs), as Git's `--absolute-git-dir` and `--git-common-dir` name them.
 #[derive(Debug, Eq, PartialEq)]
@@ -165,6 +185,28 @@ mod tests {
             main.0.join(".git").canonicalize().unwrap()
         );
         assert_eq!(head_revision(&directories).as_deref(), Some(OTHER));
+    }
+
+    #[test]
+    fn only_a_stobie_checkout_is_one() {
+        let checkout = Scratch::new("stobie");
+        checkout.write(".git/HEAD", &format!("{MAIN}\n"));
+        checkout.write("crates/stobie-cli/Cargo.toml", "[package]\n");
+        let (top, directories) = stobie_checkout(&checkout.0.join("crates/stobie-cli")).unwrap();
+        assert_eq!(top, checkout.0.canonicalize().unwrap());
+        assert_eq!(head_revision(&directories).as_deref(), Some(MAIN));
+
+        // `cargo vendor` puts the crate two directories below the consumer's
+        // own repository.
+        let consumer = Scratch::new("consumer");
+        consumer.write(".git/HEAD", &format!("{OTHER}\n"));
+        consumer.write("vendor/stobie-cli/Cargo.toml", "[package]\n");
+        assert_eq!(stobie_checkout(&consumer.0.join("vendor/stobie-cli")), None);
+
+        // Source that is not a checkout at all.
+        let unpacked = Scratch::new("unpacked");
+        unpacked.write("crates/stobie-cli/Cargo.toml", "[package]\n");
+        assert_eq!(stobie_checkout(&unpacked.0.join("crates/stobie-cli")), None);
     }
 
     #[test]

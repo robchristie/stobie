@@ -33,24 +33,21 @@ fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
 fn main() {
     let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("set by Cargo"));
     // Only a Stobie checkout names a Stobie revision, not, say, another
-    // repository that vendors this source: the checkout's top level, two
-    // directories up, holds the Git directory.
-    let top = manifest.join("../..").canonicalize().ok();
-    let directories = top.as_deref().and_then(checkout::directories);
+    // repository that vendors this source.
+    let checkout = checkout::stobie_checkout(&manifest);
     let revision = std::env::var("STOBIE_SOURCE_REVISION").ok().or_else(|| {
-        let top = top.as_deref()?;
-        let directories = directories.as_ref()?;
+        let (top, directories) = checkout.as_ref()?;
         git(top, &["rev-parse", "HEAD"]).or_else(|| checkout::head_revision(directories))
     });
-    let cargo_checkout = directories.is_some()
-        && top
-            .as_ref()
-            .is_some_and(|top| top.join(".cargo-ok").exists());
+    let directories = checkout.as_ref().map(|(_, directories)| directories);
+    let cargo_checkout = checkout
+        .as_ref()
+        .is_some_and(|(top, _)| top.join(".cargo-ok").exists());
     // Any `rerun-if` directive replaces Cargo's own freshness rule.
     if !cargo_checkout {
         println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
     }
-    if let (false, Some(directories)) = (cargo_checkout, &directories) {
+    if let (false, Some(directories)) = (cargo_checkout, directories) {
         let mut watched = vec![
             directories.git.join("HEAD"),
             directories.common.join("packed-refs"),

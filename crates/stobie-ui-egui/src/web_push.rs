@@ -319,7 +319,7 @@ fn unregistered_reason(state: &str, message: Option<&str>) -> Option<String> {
     match state {
         "registered" | "registering" => None,
         "not_requested" => Some(
-            "this page registers no service worker: Web Push needs an installable page, whose head links manifest.webmanifest".into(),
+            "this page registers no service worker: Web Push needs an installable page, whose head links manifest.webmanifest, started without `serviceWorker: false`".into(),
         ),
         "failed" => Some(match message {
             Some(message) => format!("the service worker did not register: {message}"),
@@ -808,6 +808,7 @@ mod tests {
         let none = unregistered_reason("not_requested", None).unwrap();
         assert!(none.contains("registers no service worker"), "{none}");
         assert!(none.contains("manifest.webmanifest"), "{none}");
+        assert!(none.contains("serviceWorker: false"), "{none}");
         assert_eq!(
             unregistered_reason("failed", Some("SecurityError: bad scope")).as_deref(),
             Some("the service worker did not register: SecurityError: bad scope")
