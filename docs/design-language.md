@@ -41,7 +41,10 @@ Light and dark are equal authored modes. High contrast is an orthogonal
 preference with a light and dark result, not a colour inversion. Authored
 foreground/background text pairs target at least WCAG 2.2 AA 4.5:1 in standard
 modes and 7:1 in high-contrast modes. The token compiler tests primary and
-muted text on core surfaces, text on selection, and text on the accent.
+muted text on the canvas, panel, raised, hover, quiet-hover and selection
+fills, text on the accent, and the focus ring and selection marker at 3:1. It
+also requires the hover fills to differ from selection and the resting
+surfaces in every theme.
 
 ## Geometry, density and hit targets
 
@@ -53,6 +56,10 @@ Compact density uses 32-point application chrome, 24-point visual controls and
 Visual geometry and interaction geometry are distinct. A compact control may
 paint at 24 points while retaining at least a 32-point hit target; pointer and
 keyboard affordances must not shrink simply because information density rises.
+An icon-only action, which has no label to aim at, takes a square 44-point
+touch target (`icon.touchTargetSize`) in both densities, while its chrome
+paints at the control height, centred within it. Text actions keep the
+density's minimum hit size, padded to at least that width for short labels.
 The analytical reference uses three-point corner radii. Components may increase their
 allocation for 125% or 150% font scale, but must not silently reduce hit size.
 
@@ -267,8 +274,8 @@ and hold any content, such as Markdown with lists, links and code. A
 conversation list is a column of full-width rows: a decorative avatar, the
 name, a one-line preview, the time and, while there is something unread, a
 small accent dot; the current conversation keeps the selection fill and
-marker, and a hovered row takes the raised surface so it never looks
-current. A switch is a settings row whose label always shows; its state is
+marker, and a hovered row takes the hover surface, which every theme keeps
+apart from selection, so it never looks current. A switch is a settings row whose label always shows; its state is
 the track and thumb (an accent track with the thumb at the end for on, an
 outlined track with the thumb at the start for off), never the row's fill.
 Names, previews, times, unread words and states are stated in words for
@@ -372,13 +379,13 @@ reusable component increments.
 `ApplicationTheme::new(ThemeColours)` accepts four complete typed colour sets:
 light, dark, light high contrast and dark high contrast. Its private validated
 state prevents a partially edited theme becoming the production resolver.
-`ApplicationTheme::analytical()` preserves the original default colours under
-an explicit legacy compatibility policy. Those colours do not pass the stricter
-muted-text state checks for new application themes. Exact analytical JSON can
-round-trip through `ApplicationTheme::from_analytical_colours`; that constructor
-accepts only equality with all four complete authored reference palettes. Any
-edit, including to an otherwise unchecked role, must use `ApplicationTheme::new`
-and satisfy strict validation. Neither route silently adjusts the palette.
+`ApplicationTheme::analytical()` resolves the authored default colours, which
+pass the same strict validation as any application theme. Exact analytical JSON
+also round-trips through `ApplicationTheme::from_analytical_colours`, kept for
+applications that already call it; that constructor accepts only equality with
+all four complete authored reference palettes. Any edit, including to an
+otherwise unchecked role, must use `ApplicationTheme::new` and satisfy strict
+validation. Neither route silently adjusts the palette.
 
 Applications call `theme.resolve(variant, density, typography_profile)` for
 custom recipes and `apply_design_system_with_theme` for native styles. Both
@@ -395,10 +402,12 @@ actions omit their resting outline, retain hover treatment and always retain
 the independent keyboard-focus ring. A pointer press on an ordinary action uses
 selection colours, while a primary action retains its primary pair. Disabled
 foreground is resolved before text layout, including for primary actions.
-Enabled pressed/selected actions also paint an inset state outline using the
+Pressed/selected actions also paint an inset state outline using the
 selection indicator (primary foreground on Primary), separate from the outer
-focus ring. This distinguishes active feedback where the reference theme aliases
-hover and selection fills. Primary hover changes its outer border to the primary
+focus ring, so the on state is never told by fill colour alone. A disabled
+action keeps its on state in a muted form: a dimmed selection fill and a
+muted-text inset outline. A disabled `QuietBorderless` action stays borderless
+and unfilled. Primary hover changes its outer border to the primary
 foreground while retaining its foreground/background pair.
 
 New themes validate opaque primary and muted text on canvas, panel, raised,
@@ -420,9 +429,8 @@ Parse and validate once at build/startup; never parse colours per frame. The
 framework does not acquire application names, runtime selectors or a stylesheet
 language. The gallery workbench exports this exact type for checking into an
 application repository. Invalid edits preserve the last accepted preview and
-disable export. The workbench identifies analytical exports as legacy
-compatibility, names the exact-reference import route, and applies strict
-validation to every edited palette. The analytical token generator remains
+disable export. The workbench applies strict validation to every palette,
+the analytical reference included. The analytical token generator remains
 unchanged as the default source-authoring route, with the new semantic roles
 generated from its checked-in source.
 
