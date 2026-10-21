@@ -1,7 +1,7 @@
 # Fonts, licences and emoji
 
 Status: complete
-Delivery: [PR #PR](https://github.com/robchristie/stobie/pull/PR)
+Delivery: [PR #124](https://github.com/robchristie/stobie/pull/124)
 
 `stobie-ui-egui` declared Apache-2.0 alone although it embeds Source Sans 3
 under the SIL Open Font License 1.1, and it turned on egui's
