@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, headings with controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -398,6 +398,26 @@ text_layouts.extend(observed.text_layouts);
 semantic_nodes.extend(observed.semantic_nodes);
 ```
 
+A heading with controls at its end, such as a section's title with Edit,
+is one `heading_row(ui, key, text, controls, availability)` call
+(`Frame::heading_row` in a hosted application, which also triggers each
+clicked control with its argument). Each `HeaderControl` is an action, an
+`ActionTarget` or a `BoundAction`, icon-only unless built with other
+content, and may be a toggle whose pressed state the application owns. The
+controls keep their whole size at the row's end in the order given, and the
+heading elides in the room they leave, keeping its full text for assistive
+technology. When the controls would leave the heading less than its least
+width (its whole text, or three minimum hit targets), they take a line of
+their own below it, end-aligned, and the response says so (`wrapped`). Do
+not put controls after `heading` or `content` in `ui.horizontal`: those
+take the whole width they are given, which pushes what follows past the
+row's end. A visible action control laid out past its row's end keeps its
+semantic node, so the semantic audit reports it (an invalid rectangle once
+it is wholly out of sight) rather than it vanishing from agents and
+assistive technology, and debug builds mark it on screen. Gallery
+`heading/controls` shows one, two and five controls beside short and long
+titles at a phone's width.
+
 An action specification paints the production component and records its matching
 snapshot node and, when painted, measured text. Its widget identity is separate from
 `ActionTarget`, so repeated capabilities remain distinct. Heading and content
@@ -632,6 +652,35 @@ when shown, the item otherwise) and turns the detail over on the toggle.
 controls' responses for the caller to route, and each pane's observations,
 which it has already registered.
 
+The open item's header can also hold an avatar, a one-line subtitle such as
+a status, and the item's own controls, such as Pinned, Hide and Edit
+profile. Pass them as `NavigationOptions` to `Frame::navigation_with` (or
+`PresentationContext::navigation_with`), which also returns each header
+control's response in the order given and, in the hosted form, triggers it
+with its argument:
+
+```text
+let options = NavigationOptions::new()
+    .with_avatar(AvatarSpec::person(&bot.name, AvatarSize::Header))
+    .with_subtitle(status)
+    .with_control(HeaderControl::icon(BoundAction::new(Act::Pin, bot.id.as_str()), IconId::Check)
+        .pressed(bot.pinned))
+    .with_control(HeaderControl::icon(Act::EditProfile, IconId::Edit));
+frame.navigation_with(ui, p, "bots", &spec, &options, |ui, p, frame, pane| /* as above */);
+```
+
+The header reads Back, the avatar, the title over the subtitle, the
+controls and the detail toggle last; that is also its focus order. The
+controls belong to the content's pane, its node and AccessKit region, like
+the toggle. They keep their whole size and the title elides in the room
+they leave; when they would leave it less than its least width (its whole
+text, or three minimum hit targets), the controls and the toggle take a
+second line of the header, end-aligned, so none is dropped. At a phone's
+390 points, Back, an avatar, a title and three icon controls besides the
+toggle fit on one line at the reference text size; give further actions
+their place in the detail. Gallery `navigation/header` shows a long title
+with Pinned, Hide and Edit profile.
+
 - Destinations are a dynamic list: one row per item, each a `BoundAction`
   with the item's ID as its argument, so one action opens any of them.
   Use `Frame::conversation_row` for rows with an avatar, a preview and a
@@ -639,13 +688,19 @@ which it has already registered.
   destinations with an icon and an optional badge
   (`PresentationContext::bound_navigation_item` is the scoped form). Mark the
   open item's row `selected`; it is a `NavigationItem` with `aria-current`.
-- Headers are the application bar's height. Back is an `ArrowLeft` icon
+- Headers are at least the application bar's height. Back is an `ArrowLeft` icon
   named by the Back action's label, at the start, wherever the level it
   closes covers the one beneath: every pushed level in the stack, and the
   detail in the split. The title is a section heading that elides, and the
   content's header carries the detail toggle, an icon toggle named by its
   action's label whose pressed state says whether the detail shows. A
   hidden availability presents no control.
+- Bodies: the content's, the detail's and the empty prompt's are inset
+  from the pane's edges by as much as the header's controls
+  (`spacing.inline`), so messages and controls keep off the screen's edge
+  on a phone and the pane's edges beside other panes; the list's is not, so
+  its rows fill its width. `NavigationOptions::with_body_inset(pane,
+  inset)` turns either default over, such as for a full-width media pane.
 - Semantics: each pane but the empty content is a `Pane` node and an
   AccessKit region named by its title, holding its header's controls and
   its body's nodes; the content's pane carries `NavigationContent.reference`,

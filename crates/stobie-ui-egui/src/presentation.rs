@@ -2,12 +2,13 @@
 
 use std::hash::Hash;
 
-use egui::{Response, Ui};
+use egui::{Rect, Response, Ui, pos2};
 
 mod chat;
 mod composer;
 mod copy;
 mod dialog;
+mod heading;
 mod navigation;
 
 pub use chat::{
@@ -23,9 +24,10 @@ pub use dialog::{
     CONFIRM_WIDTH, ConfirmResponse, ConfirmSpec, DIALOG_WIDTH, DialogLayout, DialogPlacement,
     DialogResponse, DialogSpec, SheetHeight,
 };
+pub use heading::{HeaderControl, HeaderControlResponse, HeadingRowResponse};
 pub use navigation::{
     NavigationContent, NavigationControlResponse, NavigationDetail, NavigationLayout,
-    NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
+    NavigationOptions, NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
 };
 
 use crate::{
@@ -163,6 +165,20 @@ impl Drop for PresentationContext {
             let text = std::mem::take(&mut self.text_layouts);
             self.register(nodes, text);
         }
+    }
+}
+
+/// Mark a control laid out past the end of its row in debug builds, where
+/// the row's end is, in the manner of egui's own layout warnings.
+fn report_overflow(ui: &Ui, name: &str, rect: Rect, row: Rect) {
+    if cfg!(debug_assertions) {
+        let at = pos2(
+            rect.left().clamp(row.left(), row.right()),
+            rect.top().max(ui.clip_rect().top()),
+        );
+        ui.ctx()
+            .debug_painter()
+            .error(at, format!("{name:?} is laid out past the end of its row"));
     }
 }
 
@@ -468,6 +484,7 @@ impl PresentationContext {
         let target = spec.target;
         let state = spec.state;
         let availability = spec.availability.clone();
+        let row = ui.max_rect();
         let response = crate::components::present_action_button(
             ui,
             spec,
@@ -502,7 +519,18 @@ impl PresentationContext {
         if self.domain_reference.is_some() {
             node.domain_reference = self.domain_reference.clone();
         }
-        if response.interact_rect.is_positive() {
+        // A visible control laid out past the end of its row, such as one
+        // after a heading that took the row's width, is a layout fault, not
+        // a control scrolled out of view: it keeps its node, so the semantic
+        // audit reports it (an invalid rectangle once it is wholly out of
+        // sight), and debug builds mark it on screen.
+        let overflowed = availability.visible()
+            && (response.rect.right() > row.right() + 0.5
+                || response.rect.left() < row.left() - 0.5);
+        if overflowed {
+            report_overflow(ui, &node.name, response.rect, row);
+        }
+        if response.interact_rect.is_positive() || overflowed {
             self.push_node(ui, node);
         }
         response
@@ -692,6 +720,9 @@ impl PresentationContext {
         response
     }
 
+    /// A section heading: one line at the width it is given, eliding with
+    /// its full text kept. It takes the whole available width, so put
+    /// controls beside it with [`Self::heading_row`].
     pub fn heading(
         &mut self,
         ui: &mut Ui,
@@ -700,6 +731,15 @@ impl PresentationContext {
     ) -> Response {
         self.check_pass(ui);
         let identity = self.scope.instance(key);
+        self.heading_with_identity(ui, identity, text)
+    }
+
+    fn heading_with_identity(
+        &mut self,
+        ui: &mut Ui,
+        identity: PresentationId,
+        text: &str,
+    ) -> Response {
         let response = crate::pane_content::scoped_section_heading(
             ui,
             identity.text_instance(),

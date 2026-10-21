@@ -49,7 +49,12 @@ layout follows only that state and the width, so a resize, a rotation or a
 browser window dragged across a breakpoint keeps what is open, and each
 pane's scroll position survives because each pane keeps its identity. Each
 pane but the empty content is a region named by its title, with a header of
-the application bar's height. Keyboard focus follows the reader: opening a
+at least the application bar's height. The content's, the detail's and the
+empty prompt's bodies are inset from the pane's edges by as much as the
+header's controls (`spacing.inline`), so text and bubbles align with the
+title and keep off the screen's edge on a phone; the list's body is not, so
+its rows' selection and hover fill its width.
+`NavigationOptions::with_body_inset` turns either default over. Keyboard focus follows the reader: opening a
 level that shows Back moves focus to Back, and Back returns it to the
 control that opened that level. The recipe pushes no browser history; the
 in-app Back is the way back, and the browser's Back and the platform's back
