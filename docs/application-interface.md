@@ -260,13 +260,17 @@ still publishes its excerpt, since the elision is presentation. With the
 bound of 512 text observations, content adds at most about 128 Ki characters
 to an observation. Only text in view publishes content: text wholly scrolled
 out of view or clipped away publishes none, and empty or zero-size text
-publishes none either. Partly visible text publishes its whole excerpt, with
-one exception: inside a visible-only region (`observe_visible_only`, which
-the host applies to each dock pane), a heading, content label or other
-bounded text publishes its observation, and so its content, only once it is
-wholly visible. Reading text, Markdown and links there still publish their
-whole excerpt while partly visible. To read a partly scrolled heading in a
-pane, scroll it fully into view.
+publishes none either. Partly visible text publishes its whole excerpt,
+inside a visible-only region (`observe_visible_only`, which the host applies
+to each dock pane, navigation body and dialog body) as elsewhere. Its
+observation keeps the clip it was drawn within, so `snapshot.text` tells how
+much of it is in view. The host's audit (`snapshot.text_audit`) treats a
+region's edge cutting bounded text, such as a heading or label, as scrolling
+rather than clipping, and still checks everything else about its layout;
+outside visible-only regions partly visible bounded text is audited as
+presented. Auditing `snapshot.text` afresh with `audit_text_layouts` does not
+know which text was in such a region and so reports that cut as
+`text_outside_clip`.
 
 Text presented inside `withhold_content_text(ui, |ui| ...)` publishes
 `{"kind":"withheld"}`, with neither its words nor its length; its layout is

@@ -636,24 +636,24 @@ fn observations_outside_a_visible_only_region_are_published_as_presented() {
             .any(|row| !viewport.contains_rect(Rect::from(row.rect))),
         "rows keep their presented bounds"
     );
-    // The audit sees the rows the short viewport clips.
-    let clipped = snapshot
-        .text_audit
-        .iter()
-        .filter(|finding| {
-            matches!(
-                finding,
-                crate::TextAuditFinding::TextOutsideClip { .. }
-                    | crate::TextAuditFinding::InvalidUsefulBounds { .. }
-            )
-        })
-        .count();
-    assert!(clipped > 0 && clipped < 30, "{:?}", snapshot.text_audit);
-    let row_text = snapshot
+    // Text is audited as presented, but a row's text wholly scrolled out of
+    // view is not observed, so it raises no finding for its empty clip.
+    let row_text: Vec<_> = snapshot
         .text
         .iter()
-        .filter(|text| text.component_id.kind == crate::TextComponentKind::ContentLabel);
-    assert_eq!(row_text.count(), 30, "every row's text is audited");
+        .filter(|text| text.component_id.kind == crate::TextComponentKind::ContentLabel)
+        .collect();
+    let in_view = rows
+        .iter()
+        .filter(|row| viewport.intersects(Rect::from(row.rect)))
+        .count();
+    assert!(in_view > 0 && in_view < 30);
+    assert_eq!(
+        row_text.len(),
+        in_view,
+        "only rows in view observe their text"
+    );
+    assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
 }
 
 #[test]

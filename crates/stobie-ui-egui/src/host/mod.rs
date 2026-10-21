@@ -2062,32 +2062,43 @@ impl<A: Application> AppHost<A> {
             &nodes,
             observed.copies.into_iter().map(|(copy, _)| copy).collect(),
         );
-        // Visible-only surfaces scroll, so they submit partially visible text.
-        // Audit their measured successes only when complete; keep every failed
-        // attempt and all other text as presented. Reading text and links
-        // declare that a scroll surface clips them, and their recipes omit
-        // text scrolled fully out of view, so their partial text stays.
+        // Visible-only surfaces scroll, so they submit partly visible text.
+        // Publish what is at least partly in view, with the clip it was drawn
+        // within, and omit successful text wholly scrolled out of view; keep
+        // every failed attempt and all other text as presented. Reading text
+        // and links declare that a scroll surface clips them, and their
+        // recipes omit text scrolled fully out of view.
+        let mut scrolled = Vec::new();
         let text: Vec<_> = observed
             .text
             .into_iter()
-            .map(|observed| (observed.text, observed.visible_only))
-            .filter(|(text, visible_only)| {
-                !visible_only
+            .filter(|observed| {
+                let text = &observed.text;
+                !observed.visible_only
                     || text.layout_error.is_some()
                     || text.overflow == crate::TextOverflow::WrapUnbounded
-                    || (text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
-                        && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
-                        && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
-                        && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0)
+                    || (text.clip_rect.max_x > text.clip_rect.min_x
+                        && text.clip_rect.max_y > text.clip_rect.min_y)
             })
-            .map(|(text, _)| text)
+            .enumerate()
+            .map(|(index, observed)| {
+                if observed.visible_only
+                    && observed.text.layout_error.is_none()
+                    && observed.text.overflow != crate::TextOverflow::WrapUnbounded
+                    && !fully_visible(&observed.text)
+                {
+                    scrolled.push(index);
+                }
+                observed.text
+            })
             .collect();
+        let text_audit = audit_visible_only_text(&text, &scrolled);
         let mut snapshot = UiSnapshot {
             frame: self.passes,
             pixels_per_point: context.pixels_per_point(),
             root: SemanticUiId::root(),
             nodes,
-            text_audit: audit_text_layouts(&text),
+            text_audit,
             text_audit_coverage: Some(text_audit_coverage(context, &text)),
             text,
             semantic_audit: Vec::new(),
@@ -2159,6 +2170,33 @@ fn carried_argument(value: &serde_json::Value) -> ActionArgument {
             .map_or(ActionArgument::None, ActionArgument::Number),
         _ => ActionArgument::None,
     }
+}
+
+/// Whether `text`'s clip leaves its whole allocation in view, to a point.
+fn fully_visible(text: &TextLayoutObservation) -> bool {
+    text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
+        && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
+        && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
+        && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0
+}
+
+/// Audit published text, where the observations at `scrolled` are bounded
+/// text a visible-only region shows only in part. The region's edge cutting
+/// such text is scrolling, not a layout defect, so each is audited as though
+/// its whole allocation were in view; everything else about its layout is
+/// audited as presented. The published observations keep their clips.
+fn audit_visible_only_text(
+    text: &[TextLayoutObservation],
+    scrolled: &[usize],
+) -> Vec<crate::TextAuditFinding> {
+    if scrolled.is_empty() {
+        return audit_text_layouts(text);
+    }
+    let mut audited = text.to_vec();
+    for &index in scrolled {
+        audited[index].clip_rect = audited[index].allocated_rect;
+    }
+    audit_text_layouts(&audited)
 }
 
 /// Bind each registered copy control whose button node this pass published,
