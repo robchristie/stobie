@@ -167,10 +167,6 @@ mod web {
                                 .take()
                                 .expect("the application is created once");
                             let app = create(creation);
-                            // New-tab links open without an opener.
-                            creation
-                                .egui_ctx
-                                .add_plugin(crate::host::new_tab::NewTabLinks);
                             // Copy controls write inside the pass's own event.
                             crate::clipboard::ClipboardWrites::install(&creation.egui_ctx);
                             // What a modal dialog hides is hidden before the

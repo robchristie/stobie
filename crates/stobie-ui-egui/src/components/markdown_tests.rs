@@ -544,8 +544,12 @@ fn links_in_text_open_a_new_tab_from_pointer_keyboard_and_accesskit() {
     assert_eq!(rects.len(), 1);
     assert!(take(&opened).is_empty(), "nothing opens without activation");
     let link = rects[0];
+    assert!(!crate::host::new_tab_links_installed(&harness.ctx));
     click(&mut harness, link.center(), egui::PointerButton::Primary);
     assert_eq!(take(&opened), [egui::OpenUrl::new_tab(URL)]);
+    // Without an `AppHost`, the link itself makes the browser open new tabs
+    // without an opener.
+    assert!(crate::host::new_tab_links_installed(&harness.ctx));
     // A middle click also asks for a new tab.
     click(&mut harness, link.center(), egui::PointerButton::Middle);
     assert_eq!(take(&opened), [egui::OpenUrl::new_tab(URL)]);

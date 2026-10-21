@@ -786,7 +786,7 @@ fn present_text(
             response.on_hover_text(tip);
         }
         if clicked {
-            ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+            crate::open_new_tab(ui.ctx(), url);
         }
         if hovering && active {
             ui.ctx().set_cursor_icon(CursorIcon::PointingHand);

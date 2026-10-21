@@ -55,6 +55,10 @@ use crate::ShortcutEgui;
 #[cfg(feature = "eframe")]
 pub use entry::*;
 pub use events::{HostStopped, IntentSender};
+pub use new_tab::install_new_tab_links;
+#[cfg(test)]
+pub(crate) use new_tab::installed as new_tab_links_installed;
+pub(crate) use new_tab::open_new_tab;
 pub use renderer::renderer_identity;
 
 /// An application whose per-pass plumbing Stobie owns. See the crate documentation
@@ -1058,6 +1062,8 @@ impl<A: Application> AppHost<A> {
     pub fn new(context: &egui::Context, app: A) -> Self {
         crate::observation::enable(context);
         modal::install(context);
+        // New-tab links open without an opener, however the host started.
+        install_new_tab_links(context);
         let identity = app.identity();
         let preferences = app.preferences();
         let theme = app.theme();
@@ -1281,7 +1287,7 @@ impl<A: Application> AppHost<A> {
         // A semantic open always asks for a new tab, so the application under
         // inspection stays open; natively the platform opens its browser.
         for url in self.links_to_open.drain(..) {
-            context.open_url(egui::OpenUrl::new_tab(url));
+            open_new_tab(&context, url);
         }
         let mut triggers: Vec<_> = self
             .consume_shortcuts(root)

@@ -196,9 +196,9 @@ pub(crate) fn contrast_ratio(foreground: Color32, background: Color32) -> f64 {
 /// Present a link that opens `spec.url`: in a new browser tab by default, or
 /// the platform's default browser natively. A modifier or middle click always
 /// opens a new tab. Pointer, keyboard (Tab, then Enter or Space) and
-/// assistive-technology activation share one route. In a hosted web
-/// application the new tab opens with `noopener` and `noreferrer`, so the
-/// linked page cannot reach back into the application's tab.
+/// assistive-technology activation share one route. In the browser the new
+/// tab opens with `noopener` and `noreferrer`, however the application
+/// started, so the linked page cannot reach back into the application's tab.
 ///
 /// A URL that [`link_url_allowed`] rejects, including a blank one, paints a
 /// visible diagnostic, records a failing observation
@@ -280,12 +280,14 @@ pub fn link(
     );
     if !enabled {
         // An unavailable link opens nothing, whatever its sense reports.
-    } else if response.clicked_with_open_in_background() {
-        ui.ctx().open_url(egui::OpenUrl::new_tab(spec.url));
+    } else if response.clicked_with_open_in_background()
+        || (response.clicked() && spec.target == LinkTarget::NewTab)
+    {
+        crate::open_new_tab(ui.ctx(), spec.url);
     } else if response.clicked() {
         ui.ctx().open_url(egui::OpenUrl {
             url: spec.url.to_owned(),
-            new_tab: spec.target == LinkTarget::NewTab,
+            new_tab: false,
         });
     }
     if response.interact_rect.is_positive() {
