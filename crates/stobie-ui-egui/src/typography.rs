@@ -29,10 +29,27 @@ impl DesignTokens {
     }
 }
 
-/// Install the bundled, unmodified SIL OFL faces before the first egui pass.
-/// Existing font definitions are preserved. Additional script fallback fonts
-/// can be installed by the application using egui's font APIs.
+/// The bundled monochrome emoji face's font-data name. It follows the text
+/// face in both named families and in egui's proportional and monospace
+/// families.
+const EMOJI_FONT: &str = "Stobie Noto Emoji";
+
+const EMOJI_FONT_BYTES: &[u8] = include_bytes!("../assets/fonts/NotoEmoji-Regular.ttf");
+
+/// Install the bundled SIL OFL faces before the first egui pass: Source Sans 3
+/// regular and semibold, and Noto Emoji for emoji. Existing font definitions
+/// are preserved, and egui's default fonts, when the application enables them
+/// (egui's `default_fonts` feature), stay as further fallbacks. Additional
+/// script fallback fonts can be installed by the application using egui's
+/// font APIs.
 pub fn install_typography_fonts(context: &egui::Context) {
+    install_typography_fonts_over(context, &egui::FontDefinitions::default());
+}
+
+/// Install Stobie's faces with `fallbacks`' proportional faces after them in
+/// the named families: egui's default fonts when they are compiled in.
+fn install_typography_fonts_over(context: &egui::Context, fallbacks: &egui::FontDefinitions) {
+    use egui::epaint::text::{FontInsert, FontPriority, InsertFontFamily};
     let id = egui::Id::new("stobie.typography-fonts-installed");
     if context.data_mut(|data| {
         let installed = data.get_temp_mut_or_default::<bool>(id);
@@ -42,50 +59,64 @@ pub fn install_typography_fonts(context: &egui::Context) {
     }) {
         return;
     }
-    for (name, bytes, family, proportional) in [
-        (
-            REGULAR_FONT_FAMILY,
-            REGULAR_FONT_BYTES,
-            REGULAR_FONT_FAMILY,
-            true,
-        ),
-        (
-            SEMIBOLD_FONT_FAMILY,
-            include_bytes!("../assets/fonts/SourceSans3-Semibold.ttf").as_slice(),
-            SEMIBOLD_FONT_FAMILY,
-            false,
-        ),
-    ] {
-        let mut families = vec![egui::epaint::text::InsertFontFamily {
-            family: egui::FontFamily::Name(family.into()),
-            priority: egui::epaint::text::FontPriority::Highest,
-        }];
-        if proportional {
-            families.push(egui::epaint::text::InsertFontFamily {
-                family: egui::FontFamily::Proportional,
-                priority: egui::epaint::text::FontPriority::Highest,
-            });
-        }
-        context.add_font(egui::epaint::text::FontInsert {
-            name: name.into(),
-            data: egui::FontData::from_static(bytes),
-            families,
-        });
-    }
-    // Keep egui's bundled script and emoji coverage in both named families.
-    // Alias the fallback data so add_font can extend families while preserving
-    // the application's existing font definitions.
-    let defaults = egui::FontDefinitions::default();
-    for name in &defaults.families[&egui::FontFamily::Proportional] {
-        context.add_font(egui::epaint::text::FontInsert {
+    let named = |family: &str| egui::FontFamily::Name(family.into());
+    let insert = |family, priority| InsertFontFamily { family, priority };
+    // Fonts are inserted in order: each `Lowest` insertion follows the faces
+    // already in that family.
+    context.add_font(FontInsert {
+        name: REGULAR_FONT_FAMILY.into(),
+        data: egui::FontData::from_static(REGULAR_FONT_BYTES),
+        families: vec![
+            insert(named(REGULAR_FONT_FAMILY), FontPriority::Highest),
+            insert(egui::FontFamily::Proportional, FontPriority::Highest),
+            // Monospace roles keep egui's monospace face when it is compiled
+            // in; without it they are set in the regular face.
+            insert(egui::FontFamily::Monospace, FontPriority::Lowest),
+        ],
+    });
+    context.add_font(FontInsert {
+        name: SEMIBOLD_FONT_FAMILY.into(),
+        data: egui::FontData::from_static(include_bytes!(
+            "../assets/fonts/SourceSans3-Semibold.ttf"
+        )),
+        families: vec![insert(named(SEMIBOLD_FONT_FAMILY), FontPriority::Highest)],
+    });
+    // Emoji follow the text face, so the digits, `#` and `*` that the emoji
+    // face also maps keep the text face's glyphs.
+    context.add_font(FontInsert {
+        name: EMOJI_FONT.into(),
+        data: egui::FontData::from_static(EMOJI_FONT_BYTES).tweak(egui::FontTweak {
+            // As egui scales its own bundled emoji face, so that emoji sit
+            // within the text's line.
+            scale: 0.81,
+            ..Default::default()
+        }),
+        families: [
+            named(REGULAR_FONT_FAMILY),
+            named(SEMIBOLD_FONT_FAMILY),
+            egui::FontFamily::Proportional,
+            egui::FontFamily::Monospace,
+        ]
+        .into_iter()
+        .map(|family| insert(family, FontPriority::Lowest))
+        .collect(),
+    });
+    // Keep egui's bundled script coverage in both named families when the
+    // application compiles it in. Alias the fallback data so add_font can
+    // extend families while preserving the application's existing font
+    // definitions.
+    for name in fallbacks
+        .families
+        .get(&egui::FontFamily::Proportional)
+        .into_iter()
+        .flatten()
+    {
+        context.add_font(FontInsert {
             name: format!("Stobie fallback {name}"),
-            data: (*defaults.font_data[name]).clone(),
+            data: (*fallbacks.font_data[name]).clone(),
             families: [REGULAR_FONT_FAMILY, SEMIBOLD_FONT_FAMILY]
                 .into_iter()
-                .map(|family| egui::epaint::text::InsertFontFamily {
-                    family: egui::FontFamily::Name(family.into()),
-                    priority: egui::epaint::text::FontPriority::Lowest,
-                })
+                .map(|family| insert(named(family), FontPriority::Lowest))
                 .collect(),
         });
     }
@@ -115,6 +146,7 @@ mod tests {
                 for family in [REGULAR_FONT_FAMILY, SEMIBOLD_FONT_FAMILY] {
                     let members = &definitions.families[&egui::FontFamily::Name(family.into())];
                     assert_eq!(members[0], family);
+                    assert_eq!(members[1], EMOJI_FONT, "emoji follow the text face");
                     for fallback in
                         &egui::FontDefinitions::default().families[&egui::FontFamily::Proportional]
                     {
@@ -152,6 +184,144 @@ mod tests {
                 .unwrap();
                 assert!(glyphs.size().x > 0.0);
             }
+        });
+        output.textures_delta.clear();
+    }
+
+    /// The emoji that had no glyph in any bundled font on an iPhone (the iOS
+    /// PWA spike report, "Emoji").
+    const SPIKE_EMOJI: [char; 7] = ['🧠', '🤗', '🫣', '🛑', '🤣', '🪿', '🌧'];
+
+    fn families() -> [egui::FontFamily; 4] {
+        [
+            egui::FontFamily::Name(REGULAR_FONT_FAMILY.into()),
+            egui::FontFamily::Name(SEMIBOLD_FONT_FAMILY.into()),
+            egui::FontFamily::Proportional,
+            egui::FontFamily::Monospace,
+        ]
+    }
+
+    /// The drawn glyphs of `text`: those with pixels in the atlas.
+    fn drawn(
+        ui: &egui::Ui,
+        text: &str,
+        family: &egui::FontFamily,
+    ) -> Vec<egui::epaint::text::Glyph> {
+        let galley = ui.painter().layout_no_wrap(
+            text.into(),
+            egui::FontId::new(20.0, family.clone()),
+            egui::Color32::WHITE,
+        );
+        galley
+            .rows
+            .iter()
+            .flat_map(|row| row.row.glyphs.iter())
+            .filter(|glyph| !glyph.uv_rect.is_nothing())
+            .cloned()
+            .collect()
+    }
+
+    fn assert_spike_emoji_drawn(context: &egui::Context) {
+        let mut output = context.run_ui(Default::default(), |ui| {
+            for family in families() {
+                // egui's `has_glyph` is false for every character of the face
+                // that holds its replacement glyph, U+25FB, which the emoji
+                // face maps; ask which faces map the character instead.
+                let characters =
+                    ui.fonts_mut(|fonts| fonts.fonts.font(&family).characters().clone());
+                for emoji in SPIKE_EMOJI {
+                    assert_eq!(
+                        characters
+                            .get(&emoji)
+                            .and_then(|faces| faces.first())
+                            .map(String::as_str),
+                        Some(EMOJI_FONT),
+                        "{emoji} in {family:?}"
+                    );
+                    let drawn = drawn(ui, &emoji.to_string(), &family);
+                    assert_eq!(drawn.len(), 1, "{emoji} in {family:?}");
+                    assert_eq!(drawn[0].chr, emoji);
+                }
+            }
+        });
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn every_family_draws_the_spike_report_emoji() {
+        let context = egui::Context::default();
+        install_typography_fonts(&context);
+        assert_spike_emoji_drawn(&context);
+    }
+
+    /// An application that leaves out egui's default fonts keeps text,
+    /// monospace roles and emoji, from Stobie's faces alone.
+    #[test]
+    fn stobie_faces_alone_cover_every_family_without_eguis_default_fonts() {
+        let context = egui::Context::default();
+        context.set_fonts(egui::FontDefinitions::empty());
+        install_typography_fonts_over(&context, &egui::FontDefinitions::empty());
+        assert_spike_emoji_drawn(&context);
+        let mut output = context.run_ui(Default::default(), |ui| {
+            let definitions = ui.fonts(|fonts| fonts.definitions().clone());
+            assert_eq!(
+                definitions.font_data.keys().collect::<Vec<_>>(),
+                [EMOJI_FONT, REGULAR_FONT_FAMILY, SEMIBOLD_FONT_FAMILY]
+            );
+            assert_eq!(
+                definitions.families[&egui::FontFamily::Monospace],
+                [REGULAR_FONT_FAMILY, EMOJI_FONT]
+            );
+            for family in families() {
+                let characters =
+                    ui.fonts_mut(|fonts| fonts.fonts.font(&family).characters().clone());
+                for character in "Status: 12 µm → ok".chars() {
+                    assert_eq!(
+                        characters.get(&character).and_then(|faces| faces.first()),
+                        Some(&definitions.families[&family][0]),
+                        "{character:?} in {family:?} comes from the text face"
+                    );
+                }
+            }
+        });
+        output.textures_delta.clear();
+    }
+
+    /// egui shapes with the emoji face's ligatures, so a sequence draws as one
+    /// glyph, but the face is monochrome: a skin tone draws the untoned glyph,
+    /// and a keycap whose digit the text face maps draws the bare digit.
+    #[test]
+    fn emoji_sequences_draw_one_monochrome_glyph() {
+        let context = egui::Context::default();
+        install_typography_fonts(&context);
+        let mut output = context.run_ui(Default::default(), |ui| {
+            let family = egui::FontFamily::Name(REGULAR_FONT_FAMILY.into());
+            let atlas = |text: &str| {
+                let drawn = drawn(ui, text, &family);
+                assert_eq!(drawn.len(), 1, "{text:?} draws one glyph");
+                (drawn[0].uv_rect.min, drawn[0].uv_rect.max)
+            };
+            for (sequence, alone) in [
+                ("👨\u{200d}👩\u{200d}👧", "👨"),
+                ("🇦🇺", "🇦"),
+                ("🏳\u{fe0f}\u{200d}🌈", "🏳"),
+            ] {
+                assert_ne!(
+                    atlas(sequence),
+                    atlas(alone),
+                    "{sequence:?} has its own glyph"
+                );
+            }
+            assert_eq!(
+                atlas("👍🏽"),
+                atlas("👍"),
+                "a skin tone draws the untoned glyph"
+            );
+            assert_eq!(
+                atlas("1\u{fe0f}\u{20e3}"),
+                atlas("1"),
+                "a keycap draws the bare digit"
+            );
         });
         output.textures_delta.clear();
     }

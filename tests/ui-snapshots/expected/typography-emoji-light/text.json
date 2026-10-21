@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 710
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 121,
+        "max_x": 1150,
+        "max_y": 139
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 121,
+        "max_x": 641.15625,
+        "max_y": 139
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 121,
+        "max_x": 1150,
+        "max_y": 139
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Emoji in text roles",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 711
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 144,
+        "max_x": 1150,
+        "max_y": 162
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 144,
+        "max_x": 844.96875,
+        "max_y": 162
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 144,
+        "max_x": 1150,
+        "max_y": 162
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Brain 🧠 hug 🤗 peek 🫣 stop 🛑 laugh 🤣 goose 🪿 rain 🌧",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 712
+      },
+      "role": "button_label",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 167,
+        "max_x": 1150,
+        "max_y": 184
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 167,
+        "max_x": 838.0625,
+        "max_y": 184
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 167,
+        "max_x": 1150,
+        "max_y": 184
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Brain 🧠 hug 🤗 peek 🫣 stop 🛑 laugh 🤣 goose 🪿 rain 🌧",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 713
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 189,
+        "max_x": 1150,
+        "max_y": 206
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 189,
+        "max_x": 833,
+        "max_y": 206
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 189,
+        "max_x": 1150,
+        "max_y": 206
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Brain 🧠 hug 🤗 peek 🫣 stop 🛑 laugh 🤣 goose 🪿 rain 🌧",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 714
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 211,
+        "max_x": 1150,
+        "max_y": 229
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 211,
+        "max_x": 964.125,
+        "max_y": 229
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 211,
+        "max_x": 1150,
+        "max_y": 229
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Brain 🧠 hug 🤗 peek 🫣 stop 🛑 laugh 🤣 goose 🪿 rain 🌧",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 715
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 234,
+        "max_x": 1150,
+        "max_y": 252
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 234,
+        "max_x": 598.625,
+        "max_y": 252
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 234,
+        "max_x": 1150,
+        "max_y": 252
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Sequences",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 716
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 257,
+        "max_x": 1150,
+        "max_y": 275
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 257,
+        "max_x": 814.15625,
+        "max_y": 275
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 257,
+        "max_x": 1150,
+        "max_y": 275
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Family 👨‍👩‍👧 flag 🇦🇺 pride 🏳️‍🌈 toned 👍🏽 keycap 1️⃣ heart ❤️",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 717
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 280,
+        "max_x": 1150,
+        "max_y": 312
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 280,
+        "max_x": 1144.40625,
+        "max_y": 312
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 280,
+        "max_x": 1150,
+        "max_y": 312
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 8,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Emoji draw in the text colour: egui fills glyph outlines and has no colour glyphs. A skin tone draws as its untoned emoji and a keycap as its digit.",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 8,
+    "attempted_components": 8,
+    "successful_components": 8,
+    "failed_components": 0,
+    "native_text_controls": 24,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

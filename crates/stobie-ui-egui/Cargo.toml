@@ -3,7 +3,8 @@ name = "stobie-ui-egui"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
+# The crate embeds the SIL OFL 1.1 faces in assets/fonts/ (README.md there).
+license = "Apache-2.0 AND OFL-1.1"
 
 [features]
 default = ["eframe"]
@@ -55,3 +56,5 @@ test = true
 eframe.workspace = true
 egui_kittest.workspace = true
 trybuild = "1.0.122"
+# The font notices test checks each bundled face against its recorded hash.
+sha2 = "0.10.9"

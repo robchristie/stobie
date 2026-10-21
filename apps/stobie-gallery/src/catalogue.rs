@@ -51,10 +51,11 @@ pub enum StoryId {
     CopyActions,
     DialogSheet,
     DialogConfirm,
+    TypographyEmoji,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 46] = [
+    pub const ALL: [Self; 47] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -101,6 +102,7 @@ impl StoryId {
         Self::CopyActions,
         Self::DialogSheet,
         Self::DialogConfirm,
+        Self::TypographyEmoji,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -151,6 +153,7 @@ impl StoryId {
             Self::CopyActions => "copy/actions",
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
+            Self::TypographyEmoji => "typography/emoji",
         }
     }
 }
@@ -419,7 +422,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 46] = [
+pub static STORIES: [StoryDefinition; 47] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -833,6 +836,15 @@ pub static STORIES: [StoryDefinition; 46] = [
         720,
         DIALOG_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::TypographyEmoji,
+        "Monochrome emoji in each text role, and how sequences draw.",
+        StoryGroup::Reference,
+        480,
+        720,
+        REFERENCE_SCALE,
+        PASSIVE,
     ),
 ];
 

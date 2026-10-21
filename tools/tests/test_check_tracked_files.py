@@ -34,6 +34,7 @@ class TrackedFilePolicyTests(unittest.TestCase):
         self.add("docs/images/overview.webp", b"RIFF\0WEBP")
         self.add("tests/ui-snapshots/expected/story/visual.png", b"\x89PNG\0")
         self.add("crates/stobie-ui-egui/assets/fonts/Face.ttf", b"\0\1\0\0")
+        self.add("tests/fixtures/colour/Face.ttf", b"\0\1\0\0")
         self.assertEqual(self.violations(), [])
 
     def test_raw_evidence_is_rejected_whatever_its_format(self):
@@ -62,6 +63,13 @@ class TrackedFilePolicyTests(unittest.TestCase):
                          ["docs/images/large.webp", "docs/large.json"])
         self.assertIn("binary limit", next(v for v in found if v.startswith("docs/images/")))
         self.assertIn("text limit", next(v for v in found if v.startswith("docs/large.json")))
+
+    def test_a_size_exception_holds_only_for_its_exact_size(self):
+        [(path, size)] = policy.SIZE_EXCEPTIONS.items()
+        self.add(path, b"\0" * size)
+        self.assertEqual(self.violations(), [])
+        self.add(path, b"\0" * (size + 1))
+        self.assertTrue(any(v.startswith(path + ": ") and "exceeds" in v for v in self.violations()))
 
     def test_only_tracked_present_files_are_checked(self):
         untracked = self.root / "docs/example-evidence/untracked.png"
