@@ -22,14 +22,8 @@ error: duplicate `crate`
 26 | #[action(prefix = "test", crate = "stobie_ui_egui", crate = "again")]
    |                                                     ^^^^^
 
-error: an action enum needs at least one variant
-  --> tests/derive-action/enum_options.rs:34:6
-   |
-34 | enum Empty {}
-   |      ^^^^^
-
 error: action enums cannot be generic
-  --> tests/derive-action/enum_options.rs:38:13
+  --> tests/derive-action/enum_options.rs:34:13
    |
-38 | enum Generic<T> {
+34 | enum Generic<T> {
    |             ^^^

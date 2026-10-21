@@ -136,8 +136,8 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         name: "new",
-        usage: "stobie new NAME [--path DIR] [--imaging] [--stobie-rev COMMIT] [--stobie-path CHECKOUT] [--json]",
-        summary: "Create a standalone application in its own Cargo workspace, native and web, depending on Stobie through git pinned to this CLI's revision",
+        usage: "stobie new NAME [--path DIR] [--imaging] [--browser-only] [--member] [--stobie-rev COMMIT] [--stobie-path CHECKOUT] [--json]",
+        summary: "Create an application, native and web, depending on Stobie through git pinned to this CLI's revision: in its own Cargo workspace, or with --member in the enclosing one",
         connects: false,
         flags: &[
             flag(
@@ -149,6 +149,16 @@ pub const COMMANDS: &[Command] = &[
                 "--imaging",
                 None,
                 "Add the image layer: stobie-imaging, stobie-runtime, stobie-render-wgpu and the UI crate's image-rendering feature",
+            ),
+            flag(
+                "--browser-only",
+                None,
+                "Run only in the browser: eframe only for wasm32, so the native build is for tests, and no native entry point",
+            ),
+            flag(
+                "--member",
+                None,
+                "Join the enclosing Cargo workspace instead of declaring one: no [workspace], profile or toolchain file",
             ),
             flag(
                 "--stobie-rev",
@@ -166,8 +176,8 @@ pub const COMMANDS: &[Command] = &[
     },
     Command {
         name: "build-web",
-        usage: "stobie build-web [--manifest-path PATH] [--package PKG] [--web-dir DIR] [--debug] [--locked] [--production [--output DIR] [--variant none|Oz|O3] [--wasm-opt PATH]] [--json]",
-        summary: "Build an application for the browser: wasm32 release build, wasm-bindgen into WEB/pkg (the CLI must match the project's wasm-bindgen crate) and the startup loader; --production also packages compressed, immutable assets",
+        usage: "stobie build-web [--manifest-path PATH] [--package PKG] [--web-dir DIR] [--debug | --profile NAME] [--locked] [--production [--output DIR] [--variant none|Oz|O3] [--wasm-opt PATH]] [--json]",
+        summary: "Build an application for the browser: wasm32 build (release unless --debug or --profile), wasm-bindgen into WEB/pkg (the CLI must match the project's wasm-bindgen crate) and the startup loader; --production also packages compressed, immutable assets",
         connects: false,
         flags: &[
             flag(
@@ -189,6 +199,11 @@ pub const COMMANDS: &[Command] = &[
                 "--debug",
                 None,
                 "Build with the dev profile instead of release",
+            ),
+            flag(
+                "--profile",
+                Some("NAME"),
+                "Build with this Cargo profile instead of release, such as a [profile.web] that inherits release; --production records it in the source identity",
             ),
             flag("--locked", None, "Require Cargo.lock to be up to date"),
             flag(

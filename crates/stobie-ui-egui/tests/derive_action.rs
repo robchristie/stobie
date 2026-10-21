@@ -2,10 +2,13 @@
 
 use std::collections::BTreeSet;
 
+use egui_kittest::Harness;
 use serde::Serialize;
 use stobie_ui_egui::{
     Action, ActionArgument, ActionInvocation, ActionKey, ActionScope, ActionSet, ActionShortcut,
-    ArgumentContract, ArgumentOption, ChoiceArgument, ShortcutKey,
+    ActionTarget, AppHost, Application, ApplicationIdentity, ArgumentContract, ArgumentOption,
+    Availability, ChoiceArgument, Frame, Inspection, InspectionOperation, InspectionRequest,
+    InspectionResult, InspectionSelector, ShortcutKey,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -228,6 +231,82 @@ fn every_shortcut_key_has_a_derive_spelling() {
     let all: BTreeSet<_> = ShortcutKey::ALL.iter().copied().collect();
     assert_eq!(bound, all);
     assert_eq!(Keys::ALL.len(), ShortcutKey::ALL.len());
+}
+
+/// An application with no actions yet, as a new application might start.
+#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[action(prefix = "empty")]
+enum NoAction {}
+
+struct Placeholder;
+
+impl Application for Placeholder {
+    type Action = NoAction;
+    type Intent = ();
+    type UiState = ();
+
+    fn identity(&self) -> ApplicationIdentity {
+        stobie_ui_egui::application_identity!("Placeholder")
+    }
+
+    fn availability(&self, target: ActionTarget<NoAction>) -> Availability {
+        match target.action {}
+    }
+
+    fn ui(&self, ui: &mut egui::Ui, _: &mut (), _: &mut Frame<'_, NoAction, ()>) {
+        ui.label("Nothing to do yet");
+    }
+
+    fn apply(&mut self, _: (), _: &mut ()) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn perform(&mut self, target: ActionTarget<NoAction>, _: &mut ()) -> Result<bool, String> {
+        match target.action {}
+    }
+
+    fn report_error(&mut self, _: String) {}
+}
+
+#[test]
+fn an_enum_with_no_variants_declares_no_actions_and_hosts_an_application() {
+    assert!(NoAction::ALL.is_empty());
+    let mut harness = Harness::builder()
+        .with_size(egui::Vec2::new(400.0, 300.0))
+        .build_ui_state(
+            |ui, host: &mut Option<AppHost<Placeholder>>| {
+                if let Some(host) = host {
+                    host.present(ui);
+                }
+            },
+            None,
+        );
+    stobie_ui_egui::install_typography_fonts(&harness.ctx);
+    let mut host = AppHost::new(&harness.ctx.clone(), Placeholder);
+    host.enable_inspection(Inspection::new("empty-test"));
+    *harness.state_mut() = Some(host);
+    harness.run();
+    let host = harness.state().as_ref().unwrap();
+    let inspection = host.inspection().unwrap();
+    let reply = inspection.handle(InspectionRequest {
+        version: 1,
+        request_id: "discover".into(),
+        instance: Some(inspection.instance()),
+        operation: InspectionOperation::Discover {
+            selector: InspectionSelector::default(),
+            limit: 8,
+            cursor: None,
+        },
+    });
+    let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
+        panic!("discovery failed: {:?}", reply.error);
+    };
+    assert!(capabilities.is_empty(), "{capabilities:?}");
+    let snapshot = host.ui_snapshot();
+    assert!(
+        snapshot.nodes.iter().any(|node| node.id == snapshot.root),
+        "the host still publishes its root"
+    );
 }
 
 #[test]

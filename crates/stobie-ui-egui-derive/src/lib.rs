@@ -19,8 +19,9 @@ use syn::{
 /// `argument`: `"text"` (with an optional `max_length`), `"boolean"`,
 /// `"number"` (with `minimum`, `maximum` and an optional `integer = true`) or
 /// `"choice"` (with `choices = Type`, a `ChoiceArgument`). The stable ID
-/// defaults to `<prefix>.<kebab-case variant>`. See the `stobie_ui_egui`
-/// re-export for a compiled example.
+/// defaults to `<prefix>.<kebab-case variant>`. An enum with no variants
+/// declares no actions, for an application that has none yet. See the
+/// `stobie_ui_egui` re-export for a compiled example.
 #[proc_macro_derive(Action, attributes(action))]
 pub fn derive_action(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -116,12 +117,6 @@ fn expand(input: &DeriveInput) -> syn::Result<TokenStream2> {
         return Err(Error::new_spanned(
             &input.generics,
             "action enums cannot be generic",
-        ));
-    }
-    if data.variants.is_empty() {
-        return Err(Error::new_spanned(
-            &input.ident,
-            "an action enum needs at least one variant",
         ));
     }
     let options = enum_options(input)?;

@@ -31,10 +31,6 @@ enum RepeatedCrate {
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[action(prefix = "test")]
-enum Empty {}
-
-#[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[action(prefix = "test")]
 enum Generic<T> {
     #[action(label = "Save", description = "Save")]
     Save,

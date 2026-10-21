@@ -1,14 +1,28 @@
 # {{title}}
 
+{{#native}}
 A [Stobie](https://github.com/robchristie/stobie) application, created with
 `stobie new`. It runs natively and in the browser, and agents can read and
 operate it with the `stobie` command.
+{{/native}}
+{{#browser_only}}
+A [Stobie](https://github.com/robchristie/stobie) application, created with
+`stobie new --browser-only`. It runs in the browser, and agents can read and
+operate it with the `stobie` command. Natively its library builds without
+eframe, for `cargo test` only.
+{{/browser_only}}
 
 - `src/lib.rs` holds the application: its actions, state, UI and handlers.
   Start there; the [composition guide](https://github.com/robchristie/stobie/blob/{{stobie_rev}}/docs/application-composition.md)
   explains each part.
+{{#native}}
 - `src/main.rs` is the native entry point; the library's `web_handle!` is the
   browser one.
+{{/native}}
+{{#browser_only}}
+- The library's `web_handle!` is the browser entry point. There is no native
+  one: `Cargo.toml` depends on eframe only for `wasm32`.
+{{/browser_only}}
 - `web/` holds `index.html`, `bootstrap.js` and placeholder icons in
   `web/icons/`. `stobie build-web` writes `web/pkg/`, `web/browser-startup.js`,
   `web/manifest.webmanifest` and `web/sw.js` beside them.
@@ -25,12 +39,14 @@ to Home Screen.
 
 ## Run it
 
+{{#native}}
 Native (needs a graphical session):
 
 ```sh
 cargo run --release
 ```
 
+{{/native}}
 Browser (needs the `wasm-bindgen` CLI at exactly the version in `Cargo.toml`;
 `stobie build-web` says how to install it):
 
@@ -44,6 +60,7 @@ Then open <http://127.0.0.1:8080/> in a browser with WebGPU or WebGL2. Add
 
 ## Operate it with `stobie`
 
+{{#native}}
 ```sh
 stobie launch app --manifest-path Cargo.toml
 stobie observe
@@ -55,6 +72,19 @@ stobie stop app
 In the browser, open the page with `?automation=1` in a Chromium started with
 `--remote-debugging-port=9222`, then
 `stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'`.
+{{/native}}
+{{#browser_only}}
+Open the page with `?automation=1` in a Chromium started with
+`--remote-debugging-port=9222`, then:
+
+```sh
+stobie attach web --cdp http://127.0.0.1:9222 --page 'http://127.0.0.1:8080/?automation=1'
+stobie observe
+stobie set-text {{name}}.draft 'Buy stamps'
+stobie invoke {{name}}.add
+```
+{{/browser_only}}
+
 `stobie --help` describes every command.
 
 ## Add an action with an argument
@@ -132,3 +162,25 @@ stobie-ui-egui = { path = "/path/to/stobie/crates/stobie-ui-egui" }
 
 Patch every Stobie crate `Cargo.toml` names. Cargo still fetches the pinned
 revision, so it must exist on GitHub.
+{{#member}}
+
+## In a Cargo workspace
+
+This package is a member of an enclosing Cargo workspace, which must list it
+in its `members`. Cargo reads profiles only from the workspace's `Cargo.toml`,
+and `.cargo/config.toml` from the directory it runs in and that directory's
+parents, so a local patch written here applies only when Cargo runs here; put
+it in the workspace's own `.cargo/config.toml` to apply everywhere. For a
+smaller web build without slowing the workspace's other release builds, give
+the workspace's `Cargo.toml` a named profile:
+
+```toml
+[profile.web]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+```
+
+and build with `stobie build-web --profile web`, which records the profile in
+a `--production` package's source identity.
+{{/member}}
