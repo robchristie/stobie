@@ -827,3 +827,105 @@ fn panes_are_regions_whose_controls_belong_to_them() {
     region.get_by_label("Details");
     assert!(region.query_by_label("Katherine").is_none());
 }
+
+/// A pane's header node and text rectangles at a phone's width.
+fn header_geometry(harness: &Harness<'_, Probe>) -> (crate::UiRect, crate::UiRect, crate::UiRect) {
+    let snapshot = host(harness).ui_snapshot();
+    let pane = snapshot.by_role(UiRole::Pane).next().unwrap().rect;
+    let back = snapshot.by_action(PeopleAct::Back).next().unwrap().rect;
+    let toggle = snapshot.by_action(PeopleAct::Details).next().unwrap().rect;
+    (pane, back, toggle)
+}
+
+#[test]
+fn the_header_places_back_the_title_and_the_toggle_symmetrically() {
+    let mut harness = harness(PHONE);
+    harness.get_by_label("Ada").click();
+    run(&mut harness);
+    let (pane, back, toggle) = header_geometry(&harness);
+    let heading = harness
+        .get_by_role_and_label(egui::accesskit::Role::Heading, "Ada")
+        .rect();
+    // Back and the toggle sit the same distance in from the pane's edges,
+    // and the title takes the room between them, a gap from each.
+    let pad = back.min_x - pane.min_x;
+    assert!(pad > 0.0, "{pad}");
+    assert!((pane.max_x - toggle.max_x - pad).abs() < 0.01);
+    let gap = heading.min.x - back.max_x;
+    assert!(gap > 0.0, "{gap}");
+    assert!((toggle.min_x - heading.max.x - gap).abs() < 0.01);
+    // All three are centred on one line.
+    let centre = |min: f32, max: f32| (min + max) / 2.0;
+    let line = centre(back.min_y, back.max_y);
+    assert!((centre(toggle.min_y, toggle.max_y) - line).abs() < 0.01);
+    assert!((centre(heading.min.y, heading.max.y) - line).abs() < 0.51);
+}
+
+/// The measured text whose words begin with `prefix`.
+fn text_rect(harness: &Harness<'_, Probe>, prefix: &str) -> crate::TextRect {
+    host(harness)
+        .ui_snapshot()
+        .text
+        .iter()
+        .find(|text| {
+            matches!(&text.content, Some(crate::TextContent::Excerpt { text, .. })
+                if text.starts_with(prefix))
+        })
+        .unwrap_or_else(|| panic!("no text {prefix:?}"))
+        .allocated_rect
+}
+
+#[test]
+fn content_and_detail_bodies_are_inset_like_their_headers_and_the_list_is_not() {
+    for width in [PHONE, DESKTOP] {
+        let mut harness = harness(width);
+        harness.get_by_label("Ada").click();
+        run(&mut harness);
+        harness.get_by_label("Details").click();
+        run(&mut harness);
+        let snapshot = host(&harness).ui_snapshot();
+        let pane = |name: &str| {
+            snapshot
+                .by_role(UiRole::Pane)
+                .find(|node| node.name == name)
+                .unwrap()
+                .rect
+        };
+        let back_or_toggle = snapshot
+            .by_action(PeopleAct::Back)
+            .chain(snapshot.by_action(PeopleAct::Details))
+            .next()
+            .unwrap()
+            .rect;
+        let header_pane = snapshot
+            .by_role(UiRole::Pane)
+            .find(|node| node.rect.contains(back_or_toggle, 0.0))
+            .unwrap()
+            .rect;
+        // The header's controls sit this far in from the pane's edges.
+        let pad = (back_or_toggle.min_x - header_pane.min_x)
+            .min(header_pane.max_x - back_or_toggle.max_x);
+        assert!(pad > 0.0, "{width}: {pad}");
+        // The detail's body is inset by as much on each side.
+        let detail = pane("About Ada");
+        let about = text_rect(&harness, "Joined in 1952");
+        assert!(
+            (about.min_x - detail.min_x - pad).abs() < 0.01,
+            "{width}: {about:?}"
+        );
+        assert!(
+            (detail.max_x - about.max_x - pad).abs() < 0.01,
+            "{width}: {about:?}"
+        );
+        if width == DESKTOP {
+            // So is the content's, beside it; the list's rows fill its width.
+            let content = pane("Ada");
+            let messages = text_rect(&harness, "Messages with Ada");
+            assert!((messages.min_x - content.min_x - pad).abs() < 0.01);
+            assert!((content.max_x - messages.max_x - pad).abs() < 0.01);
+            let list = pane("People");
+            let row = snapshot.by_action(PeopleAct::Open).next().unwrap().rect;
+            assert!((row.min_x - list.min_x).abs() < 0.01, "{row:?}");
+        }
+    }
+}

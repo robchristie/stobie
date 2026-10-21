@@ -553,6 +553,69 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// [`Self::navigation`] with `options`: an avatar, a subtitle and
+    /// controls in the open item's header, and which bodies are inset (see
+    /// [`PresentationContext::navigation_with`]). Back, the toggle and each
+    /// header control trigger their actions, with their arguments, when
+    /// clicked; the controls' responses come back in the order given.
+    pub fn navigation_with(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::NavigationSpec<'_, A>,
+        options: &crate::NavigationOptions<'_, A>,
+        mut render: impl FnMut(&mut Ui, &mut PresentationContext, &mut Self, crate::NavigationPane),
+    ) -> (
+        crate::NavigationResponse<A>,
+        Vec<crate::HeaderControlResponse<A>>,
+    ) {
+        let availability = self.availability;
+        let (response, controls) = presentation.navigation_with(
+            ui,
+            key,
+            spec,
+            options,
+            availability,
+            |ui, presentation, pane| render(ui, presentation, self, pane),
+        );
+        for control in [&response.back, &response.toggle].into_iter().flatten() {
+            if control.response.clicked() {
+                self.triggers.push((control.target, ActionArgument::None));
+            }
+        }
+        self.trigger_header_controls(&controls);
+        (response, controls)
+    }
+
+    /// Present a heading with controls at its trailing edge, on one line
+    /// when they fit beside the title and with the controls on a line of
+    /// their own below it when they do not (see
+    /// [`PresentationContext::heading_row`]). Each control triggers its
+    /// action, with its argument, when clicked; a hidden one presents
+    /// nothing.
+    pub fn heading_row(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        text: &str,
+        controls: &[crate::HeaderControl<A>],
+    ) -> crate::HeadingRowResponse<A> {
+        let response = presentation.heading_row(ui, key, text, controls, self.availability);
+        self.trigger_header_controls(&response.controls);
+        response
+    }
+
+    fn trigger_header_controls(&mut self, controls: &[crate::HeaderControlResponse<A>]) {
+        for control in controls {
+            if control.response.clicked() {
+                self.triggers
+                    .push((control.target, control.argument.clone()));
+            }
+        }
+    }
+
     /// Present one conversation in a list: its avatar, name, one-line
     /// preview, time and unread dot, `selected` while it is the one on show
     /// (see [`crate::conversation_row`]). Clicking it triggers the action
@@ -2283,6 +2346,8 @@ mod copy_tests;
 mod dialog_navigation_tests;
 #[cfg(test)]
 mod dialog_tests;
+#[cfg(test)]
+mod heading_tests;
 #[cfg(test)]
 mod link_tests;
 #[cfg(test)]

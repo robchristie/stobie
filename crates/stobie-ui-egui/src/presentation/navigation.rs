@@ -6,12 +6,16 @@ use std::hash::Hash;
 
 use egui::{Align, Layout, Rect, Response, Stroke, Ui, UiBuilder, pos2, vec2};
 
-use super::{PresentationContext, PresentationObservations, PresentationScope};
+use super::heading::{RowMetrics, minimum_title_width, plan_row};
+use super::{
+    ContentTextSpec, HeaderControl, HeaderControlResponse, PresentationContext,
+    PresentationObservations, PresentationScope,
+};
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
-    ActionKey, ActionTarget, Availability, DomainReference, IconId, IntoActionTarget, SemanticUiId,
-    TextRole, TextRoleStyles, UiNode, UiRole, components::action_button_size,
-    components::action_hit_height,
+    ActionKey, ActionTarget, Availability, AvatarSpec, DomainReference, IconId, IntoActionTarget,
+    SemanticUiId, TextInteraction, TextOverflow, TextRole, TextRoleStyles, UiNode, UiRole,
+    components::action_button_size, components::action_hit_height,
 };
 
 /// How a navigation recipe arranges its panes at the width it is given.
@@ -265,6 +269,108 @@ impl<A> NavigationSpec<'_, A> {
     }
 }
 
+/// What a navigation recipe presents beyond its [`NavigationSpec`]: an
+/// avatar, a one-line subtitle and controls in the open item's header, and
+/// which panes' bodies are inset from the pane's edges. Pass it to
+/// [`PresentationContext::navigation_with`] or
+/// [`Frame::navigation_with`](crate::Frame::navigation_with).
+///
+/// The content's header then reads Back (where the layout shows it), the
+/// avatar, the title over the subtitle, the controls in the order given
+/// and the detail toggle last. Controls keep their whole size and the title
+/// elides in the room they leave. When they would leave the title less than
+/// its least width (its whole text, or three minimum hit targets), the
+/// controls and the toggle take a second line of the header, end-aligned, so
+/// no control is ever dropped. At a phone's 390 points, Back, a header
+/// avatar, a title and three icon controls besides the toggle fit on one
+/// line at the reference text size; give further actions their place in the
+/// detail.
+///
+/// ```
+/// use stobie_ui_egui::{
+///     ActionKey, AvatarSize, AvatarSpec, BoundAction, HeaderControl, IconId,
+///     NavigationOptions,
+/// };
+///
+/// // A is the application's own ActionKey enum; mute and edit are its actions.
+/// fn header<'a, A: ActionKey>(name: &'a str, status: &'a str, id: &str, muted: bool, mute: A,
+///     edit: A) -> NavigationOptions<'a, A> {
+///     NavigationOptions::new()
+///         .with_avatar(AvatarSpec::person(name, AvatarSize::Header))
+///         .with_subtitle(status)
+///         .with_control(HeaderControl::icon(BoundAction::new(mute, id), IconId::Notifications)
+///             .pressed(muted))
+///         .with_control(HeaderControl::icon(edit, IconId::Edit))
+/// }
+/// ```
+#[derive(Clone, Debug)]
+pub struct NavigationOptions<'a, A: ActionKey> {
+    avatar: Option<AvatarSpec<'a>>,
+    subtitle: Option<&'a str>,
+    controls: Vec<HeaderControl<A>>,
+    insets: Vec<(NavigationPane, bool)>,
+}
+
+impl<A: ActionKey> Default for NavigationOptions<'_, A> {
+    fn default() -> Self {
+        Self {
+            avatar: None,
+            subtitle: None,
+            controls: Vec::new(),
+            insets: Vec::new(),
+        }
+    }
+}
+
+impl<'a, A: ActionKey> NavigationOptions<'a, A> {
+    /// No avatar, subtitle or controls, and the default insets.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Show `avatar` after Back in the content's header, normally at
+    /// [`AvatarSize::Header`](crate::AvatarSize::Header). It is decorative:
+    /// the title names the item.
+    pub fn with_avatar(mut self, avatar: AvatarSpec<'a>) -> Self {
+        self.avatar = Some(avatar);
+        self
+    }
+
+    /// Show `subtitle`, such as a status ("Online", "Typing…"), on one line
+    /// under the content's title, eliding with its full text kept.
+    pub fn with_subtitle(mut self, subtitle: &'a str) -> Self {
+        self.subtitle = Some(subtitle);
+        self
+    }
+
+    /// Add a control to the content's header, after those added before and
+    /// before the detail toggle. It belongs to the content's pane region.
+    pub fn with_control(mut self, control: HeaderControl<A>) -> Self {
+        self.controls.push(control);
+        self
+    }
+
+    /// Whether `pane`'s body is inset from the pane's edges by as much as its
+    /// header's controls, overriding the default (see [`Self::body_inset`]).
+    pub fn with_body_inset(mut self, pane: NavigationPane, inset: bool) -> Self {
+        self.insets.retain(|(other, _)| *other != pane);
+        self.insets.push((pane, inset));
+        self
+    }
+
+    /// Whether `pane`'s body is inset horizontally by the header's inset
+    /// (`spacing.inline`). By default the content, the detail and the empty
+    /// prompt are, so text and bubbles align with the header's title and
+    /// keep off the screen's and the pane's edges; the list is not, so its
+    /// rows' selection and hover fill its width.
+    pub fn body_inset(&self, pane: NavigationPane) -> bool {
+        self.insets
+            .iter()
+            .find(|(other, _)| *other == pane)
+            .map_or(pane != NavigationPane::List, |(_, inset)| *inset)
+    }
+}
+
 /// A navigation header's control as presented: its resolved target and its
 /// response.
 #[derive(Clone, Debug)]
@@ -455,14 +561,40 @@ impl PresentationContext {
     ///   leave the application as they do for any page.
     /// - `availability` gives Back's and the toggle's availability; a
     ///   hidden control is not presented.
+    /// - The content's, the detail's and the empty prompt's bodies are inset
+    ///   horizontally by as much as the header's controls, the list's is
+    ///   not (see [`NavigationOptions::body_inset`]).
+    ///
+    /// [`Self::navigation_with`] adds an avatar, a subtitle and controls to
+    /// the content's header, and chooses the insets.
     pub fn navigation<A: ActionKey>(
         &mut self,
         ui: &mut Ui,
         key: impl Hash + std::fmt::Debug,
         spec: &NavigationSpec<'_, A>,
         availability: impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
-        mut render: impl FnMut(&mut Ui, &mut PresentationContext, NavigationPane),
+        render: impl FnMut(&mut Ui, &mut PresentationContext, NavigationPane),
     ) -> NavigationResponse<A> {
+        let options = NavigationOptions::new();
+        self.navigation_with(ui, key, spec, &options, availability, render)
+            .0
+    }
+
+    /// [`Self::navigation`] with `options`: an avatar, a subtitle and
+    /// controls in the open item's header, and which bodies are inset. It
+    /// returns, besides the navigation's response, each header control
+    /// shown, in the order given, for the caller to route;
+    /// [`Frame::navigation_with`](crate::Frame::navigation_with) triggers
+    /// them. `availability` gives the controls' availability too.
+    pub fn navigation_with<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: &NavigationSpec<'_, A>,
+        options: &NavigationOptions<'_, A>,
+        availability: impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
+        mut render: impl FnMut(&mut Ui, &mut PresentationContext, NavigationPane),
+    ) -> (NavigationResponse<A>, Vec<HeaderControlResponse<A>>) {
         self.check_pass(ui);
         let scope = self.scope.child(key);
         let rect = ui.available_rect_before_wrap();
@@ -480,6 +612,7 @@ impl PresentationContext {
             back: None,
             toggle: None,
         };
+        let mut controls = Vec::new();
         let plans = plan(spec, layout, rect);
         for (index, plan) in plans.iter().enumerate() {
             // Panes beside one another share a subtle edge.
@@ -552,6 +685,7 @@ impl PresentationContext {
                                     title,
                                     (plan.back).then_some(back_target),
                                     toggle.filter(|_| plan.toggle),
+                                    (plan.pane == NavigationPane::Content).then_some(options),
                                     &availability,
                                 );
                                 body.min.y = header.bar.bottom();
@@ -561,6 +695,14 @@ impl PresentationContext {
                                 if header.toggle.is_some() {
                                     response.toggle = header.toggle;
                                 }
+                                controls.extend(header.controls);
+                            }
+                            // Text and controls keep off the pane's edges,
+                            // aligned with the header's.
+                            if options.body_inset(plan.pane) {
+                                let inset = tokens.spacing.inline.0.min(body.width() * 0.5);
+                                body.min.x += inset;
+                                body.max.x -= inset;
                             }
                             ui.scope_builder(
                                 UiBuilder::new()
@@ -598,11 +740,12 @@ impl PresentationContext {
         }
         follow_focus(ui, &scope, spec.level(), &response);
         ui.advance_cursor_after_rect(rect);
-        response
+        (response, controls)
     }
 
     /// A pane's header: Back, the title and the detail toggle, on the
-    /// pane's own context.
+    /// pane's own context, and for the content the options' avatar,
+    /// subtitle and controls.
     #[allow(clippy::too_many_arguments)]
     fn navigation_header<A: ActionKey>(
         &self,
@@ -613,6 +756,7 @@ impl PresentationContext {
         title: &str,
         back: Option<ActionTarget<A>>,
         toggle: Option<(ActionTarget<A>, &NavigationDetail<'_, A>)>,
+        options: Option<&NavigationOptions<'_, A>>,
         availability: &impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
     ) -> Header<A> {
         let tokens = self.tokens;
@@ -622,34 +766,78 @@ impl PresentationContext {
             .style(&tokens, font_scale)
             .line_height
             + tokens.spacing.block.0;
-        let height = tokens
-            .geometry
-            .application_bar_height
-            .0
-            .max(hit.max(heading) + tokens.spacing.unit.0 * 2.0);
+        let subtitle = options.and_then(|options| options.subtitle);
+        let subtitle_height = subtitle.map_or(0.0, |_| {
+            TextRole::Secondary.style(&tokens, font_scale).line_height
+        });
+        let avatar = options.and_then(|options| options.avatar);
+        let avatar_side = avatar.map(|avatar| crate::avatar_size(&tokens, avatar.size, font_scale));
+        let title_height = heading + subtitle_height;
+        let line = tokens.geometry.application_bar_height.0.max(
+            hit.max(title_height).max(avatar_side.unwrap_or(0.0)) + tokens.spacing.unit.0 * 2.0,
+        );
+        let pad = tokens.spacing.inline.0;
+        let gap = tokens.spacing.unit.0;
+        let icon_width = |label: &str, icon: IconId| {
+            let content = ActionButtonContent::IconOnly(icon);
+            let size = action_button_size(ui, label, content, &tokens, font_scale);
+            size.intrinsic.max(size.minimum_width)
+        };
+
+        // What shows: Back and the avatar lead; the controls, then the
+        // toggle, end the line.
+        let back = back
+            .map(|target| (target, availability(target, &ActionArgument::None)))
+            .filter(|(_, availability)| availability.visible());
+        let toggle = toggle
+            .map(|(target, detail)| (target, detail, availability(target, &ActionArgument::None)))
+            .filter(|(_, _, availability)| availability.visible());
+        let extra = options.map_or_else(Vec::new, |options| {
+            child.resolve_controls(ui, &options.controls, availability)
+        });
+        let mut leading = Vec::new();
+        if let Some((target, _)) = &back {
+            let width = icon_width(target.action.specification().label, IconId::ArrowLeft);
+            leading.push(vec2(width, hit));
+        }
+        if let Some(side) = avatar_side {
+            leading.push(vec2(side, side));
+        }
+        let mut trailing: Vec<f32> = extra.iter().map(|control| control.width).collect();
+        if let Some((target, detail, _)) = &toggle {
+            trailing.push(icon_width(target.action.specification().label, detail.icon));
+        }
+        let metrics = RowMetrics {
+            line,
+            hit,
+            title: title_height,
+            gap,
+            min_title: minimum_title_width(ui, title, &tokens, font_scale),
+        };
+        let row = plan_row(
+            plan.rect.left() + pad,
+            plan.rect.right() - pad,
+            plan.rect.top(),
+            &metrics,
+            &leading,
+            &trailing,
+        );
+        // A second line of controls keeps the first line's padding below.
+        let height = row.height + if row.wrapped { gap } else { 0.0 };
         let bar = Rect::from_min_size(plan.rect.min, vec2(plan.rect.width(), height));
         ui.painter().hline(
             bar.x_range(),
             bar.bottom() - 0.5,
             Stroke::new(1.0, tokens.colours.border_subtle),
         );
-        let pad = tokens.spacing.inline.0;
-        let gap = tokens.spacing.unit.0;
-        let mut left = bar.left() + pad;
-        let mut right = bar.right() - pad;
-        let control = |left: f32, width: f32| {
-            Rect::from_min_size(pos2(left, bar.center().y - hit * 0.5), vec2(width, hit))
-        };
+        let header_scope = scope.child(("header", plan.pane.key()));
         let present = |child: &mut PresentationContext,
                        ui: &mut Ui,
                        rect: Rect,
                        name: &'static str,
                        spec: ActionButtonSpec<A>,
                        icon: IconId| {
-            let identity = scope
-                .child(("header", plan.pane.key()))
-                .instance(name)
-                .action_identity();
+            let identity = header_scope.instance(name).action_identity();
             ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 child.present_action(
                     ui,
@@ -666,70 +854,82 @@ impl PresentationContext {
             bar,
             back: None,
             toggle: None,
+            controls: Vec::new(),
         };
-        if let Some(target) = back {
-            let availability = availability(target, &ActionArgument::None);
-            if availability.visible() {
-                let label = target.action.specification().label;
-                let content = ActionButtonContent::IconOnly(IconId::ArrowLeft);
-                let width = action_button_size(ui, label, content, &tokens, font_scale).intrinsic;
-                let rect = control(left, width);
-                left += width + gap;
-                let response = present(
-                    child,
-                    ui,
-                    rect,
-                    "back",
-                    ActionButtonSpec {
-                        target,
-                        availability,
-                        state: ActionButtonState::Momentary,
-                        emphasis: ActionEmphasis::QuietBorderless,
-                        compact: false,
-                    },
-                    IconId::ArrowLeft,
-                );
-                header.back = Some(NavigationControlResponse { target, response });
-            }
+        let mut leading_rects = row.leading.iter();
+        if let Some((target, availability)) = back {
+            let rect = *leading_rects.next().expect("Back has its place");
+            let response = present(
+                child,
+                ui,
+                rect,
+                "back",
+                ActionButtonSpec {
+                    target,
+                    availability,
+                    state: ActionButtonState::Momentary,
+                    emphasis: ActionEmphasis::QuietBorderless,
+                    compact: false,
+                },
+                IconId::ArrowLeft,
+            );
+            header.back = Some(NavigationControlResponse { target, response });
         }
-        if let Some((target, detail)) = toggle {
-            let availability = availability(target, &ActionArgument::None);
-            if availability.visible() {
-                let label = target.action.specification().label;
-                let content = ActionButtonContent::IconOnly(detail.icon);
-                let width = action_button_size(ui, label, content, &tokens, font_scale).intrinsic;
-                right -= width;
-                let rect = control(right, width);
-                right -= gap;
-                let response = present(
-                    child,
-                    ui,
-                    rect,
-                    "toggle",
-                    ActionButtonSpec {
-                        target,
-                        availability,
-                        state: ActionButtonState::Toggle {
-                            pressed: detail.shown,
-                        },
-                        emphasis: ActionEmphasis::QuietBorderless,
-                        compact: false,
-                    },
-                    detail.icon,
-                );
-                header.toggle = Some(NavigationControlResponse { target, response });
-            }
+        if let (Some(avatar), Some(rect)) = (avatar, leading_rects.next()) {
+            crate::paint_avatar(ui.painter(), &avatar, *rect, &tokens);
         }
-        // The title takes the room between the controls, centred on the bar.
-        let title_rect = Rect::from_min_max(
-            pos2(left.min(right), bar.center().y - heading * 0.5),
-            pos2(right.max(left), bar.center().y + heading * 0.5),
-        );
+        let mut trailing_rects = row.trailing.iter();
+        for control in &extra {
+            let rect = *trailing_rects.next().expect("each control has its place");
+            header
+                .controls
+                .push(child.present_header_control(ui, header_scope, rect, control));
+        }
+        if let Some((target, detail, availability)) = toggle {
+            let rect = *trailing_rects.next().expect("the toggle has its place");
+            let response = present(
+                child,
+                ui,
+                rect,
+                "toggle",
+                ActionButtonSpec {
+                    target,
+                    availability,
+                    state: ActionButtonState::Toggle {
+                        pressed: detail.shown,
+                    },
+                    emphasis: ActionEmphasis::QuietBorderless,
+                    compact: false,
+                },
+                detail.icon,
+            );
+            header.toggle = Some(NavigationControlResponse { target, response });
+        }
+        // The title takes the room between the controls, centred on the
+        // first line, over the subtitle.
         ui.scope_builder(
             UiBuilder::new()
-                .max_rect(title_rect)
+                .max_rect(row.title)
                 .layout(Layout::top_down(Align::Min)),
-            |ui| child.heading(ui, ("title", plan.pane.key()), title),
+            |ui| {
+                // The subtitle sits directly under the heading, whose
+                // height includes its own spacing.
+                ui.spacing_mut().item_spacing.y = 0.0;
+                child.heading(ui, ("title", plan.pane.key()), title);
+                if let Some(subtitle) = subtitle {
+                    child.content(
+                        ui,
+                        ("subtitle", plan.pane.key()),
+                        subtitle,
+                        ContentTextSpec {
+                            role: TextRole::Secondary,
+                            overflow: TextOverflow::Ellipsis,
+                            max_lines: 1,
+                            interaction: TextInteraction::Selectable,
+                        },
+                    );
+                }
+            },
         );
         header
     }
@@ -739,4 +939,5 @@ struct Header<A: ActionKey> {
     bar: Rect,
     back: Option<NavigationControlResponse<A>>,
     toggle: Option<NavigationControlResponse<A>>,
+    controls: Vec<HeaderControlResponse<A>>,
 }
