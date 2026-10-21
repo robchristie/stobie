@@ -1,6 +1,7 @@
 // Check Web Push end to end in Chromium on the production package of the
 // `outside-push` application (tools/web-push-app/lib.rs), served under a
-// strict Content-Security-Policy: the application subscribes when its button
+// strict Content-Security-Policy: a page without a service worker reports
+// push as unsupported at once; the application subscribes when its button
 // is tapped, inside the tap's input event; the subscription survives a
 // reload; a push shows a notification, also for an unreadable payload; and a
 // tapped notification's route reaches the open application and, through the
@@ -116,8 +117,30 @@ try {
   await page.exposeFunction('__reportViolation', text => violations.push(text));
   await context.addInitScript(() => document.addEventListener('securitypolicyviolation', event => window.__reportViolation(`${event.violatedDirective} ${event.blockedURI}`)));
 
-  // At launch: supported, not yet asked, no subscription.
+  // A page that registers no service worker reports push as unsupported, with
+  // the reason, instead of waiting for a worker that never comes. Here the
+  // page links no manifest, so the loader registers none.
+  const pagePath = `/${name}/`;
+  const withoutManifest = async route => {
+    const response = await route.fetch();
+    const headers = Object.fromEntries(Object.entries(response.headers())
+      .filter(([header]) => !['content-encoding', 'content-length'].includes(header)));
+    const body = (await response.text()).replace(/<link rel="manifest"[^>]*>/, '');
+    assert(!/rel="manifest"/.test(body), 'the page links no manifest');
+    await route.fulfill({ status: response.status(), headers, body });
+  };
+  const isPage = url => url.pathname === pagePath;
+  await page.route(isPage, withoutManifest);
   let client = await open(page, `${scope}?automation=1`);
+  const unregistered = await facts(client, { states: 1, endpoint: '' });
+  assert.match(unregistered.support, /registers no service worker/, unregistered.support);
+  assert.equal(await page.evaluate(() => window.__STOBIE_STARTUP.serviceWorker.state), 'not_requested');
+  assert.equal(await page.evaluate(() => navigator.serviceWorker.getRegistration().then(found => found ?? null)), null);
+  step('launch without a service worker', { facts: unregistered });
+  await page.unroute(isPage, withoutManifest);
+
+  // At launch: supported, not yet asked, no subscription.
+  client = await open(page, `${scope}?automation=1`);
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 30000 });
   const launched = await facts(client, { states: 1, support: 'supported', endpoint: '' });
   // Headless Chromium denies by default; a headful profile has not asked.

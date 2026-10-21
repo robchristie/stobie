@@ -260,9 +260,13 @@ runner would otherwise open a same-tab link as `_self`, replacing the page.
 Natively it opens the platform's default browser (Stobie enables eframe's
 `links` feature). `LinkTarget::SameTab` is the explicit opt-out; a middle or
 modifier click always opens a new tab. Pointer release, Tab then Enter or
-Space, and assistive-technology activation share one route. A hosted web
-application opens every new-tab request with `noopener` and `noreferrer`, so
-the linked page cannot navigate the application's tab.
+Space, and assistive-technology activation share one route. In the browser
+every new-tab request opens with `noopener` and `noreferrer`, so the linked
+page cannot navigate the application's tab: every `AppHost` and every Stobie
+link component installs that protection, whether the application starts
+through `WebHost` or runs eframe's web runner itself. An application without
+an `AppHost` that asks for new tabs from its own code calls
+`install_new_tab_links(ctx)` once.
 
 A link opens only `http://` and `https://` URLs with something after the
 scheme and `mailto:` addresses (`link_url_allowed`). Any other URL, including a blank one or a

@@ -526,6 +526,16 @@ fn with_inspection(harness: &mut Harness<'_, Probe>) {
 }
 
 #[test]
+fn every_host_opens_new_tabs_without_an_opener() {
+    // `AppHost::new` installs the protection, so it holds for an application
+    // that runs eframe's web runner itself as much as for `WebHost`.
+    let context = egui::Context::default();
+    assert!(!super::new_tab_links_installed(&context));
+    let _host = AppHost::new(&context, Counter::default());
+    assert!(super::new_tab_links_installed(&context));
+}
+
+#[test]
 fn enabled_inspection_reports_the_renderer_the_host_started_on() {
     let mut harness = harness(Counter::default());
     let renderer = crate::RendererIdentity {

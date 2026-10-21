@@ -131,6 +131,11 @@ fn perform(&mut self, target: ActionTarget<Action>, _: &mut ()) -> Result<bool, 
   the current `subscription`. If a tapped notification opened the
   application, `PushEvent::Route` follows, and later taps deliver it while
   the application is open. An unsupported browser gets `State` at once.
+  So does a page with no service worker of its own, with `support`
+  `Unsupported` and a reason, once the startup loader reports that it
+  registered none: the page links no manifest, it started with
+  `serviceWorker: false`, or registration failed. A page whose own code
+  registers its worker instead gets `State` once that worker is active.
 - `support()` and `permission()` read the present state. `permission()` is
   `None` without notifications.
 - `subscribe(key)` takes the server's VAPID public key in base64url (65
@@ -183,7 +188,9 @@ fn perform(&mut self, target: ActionTarget<Action>, _: &mut ()) -> Result<bool, 
   without an open window.
 - `tools/web-push-smoke.mjs`, in the outside-app verification stage, runs an
   application built from `tools/web-push-app/lib.rs` in Chromium under a
-  strict Content-Security-Policy. A physical click subscribes, inside the
+  strict Content-Security-Policy. Served first without its manifest link,
+  the page registers no service worker and reports push as unsupported at
+  once. A physical click subscribes, inside the
   click's input event, with the decoded key; a relaunch reads the
   subscription; pushes delivered through DevTools show their notifications,
   including an unreadable one, as the worker's recorded `showNotification`
