@@ -15,7 +15,12 @@ cargo install --locked wasm-bindgen-cli --version 0.2.127
 
 `COMMIT` is the full 40-character Stobie commit you want, such as the head of
 `main`. The `stobie` binary remembers it, and `stobie new` pins new
-applications to it. Native applications need a graphical session and a
+applications to it. The install needs no `git` command: Cargo fetches the
+commit with its own Git library, and the CLI reads the commit from the
+checkout's files. A CLI built from a source tree that is not a Git checkout,
+such as an unpacked archive, names no commit unless `STOBIE_SOURCE_REVISION`
+holds the full commit when it builds; `stobie --version` shows the commit it
+names. Native applications need a graphical session and a
 wgpu-compatible backend; browser builds run in a browser with WebGPU or
 WebGL2.
 

@@ -427,8 +427,12 @@ fn a_link_requests_a_new_tab_by_default_from_pointer_keyboard_and_accesskit() {
     assert!(take(&opened).is_empty(), "nothing opens without activation");
     assert!(rect.height() >= tokens().geometry.minimum_hit_size.0);
     assert!(rect.width() >= tokens().geometry.minimum_hit_size.0);
+    assert!(!crate::host::new_tab_links_installed(&harness.ctx));
     click(&mut harness, rect.center(), egui::PointerButton::Primary);
     assert_eq!(take(&opened), [egui::OpenUrl::new_tab(URL)]);
+    // Without an `AppHost`, the link itself makes the browser open new tabs
+    // without an opener.
+    assert!(crate::host::new_tab_links_installed(&harness.ctx));
 
     // Keyboard: Tab to the link, then Enter or Space.
     let id = PresentationScope::new("links").instance("source").egui_id();
@@ -471,6 +475,7 @@ fn same_tab_links_ask_for_the_same_tab_unless_opened_in_the_background() {
             new_tab: false
         }]
     );
+    assert!(!crate::host::new_tab_links_installed(&harness.ctx));
     // A middle click opens in the background, which is always a new tab.
     click(&mut harness, rect.center(), egui::PointerButton::Middle);
     assert_eq!(take(&opened), [egui::OpenUrl::new_tab(URL)]);

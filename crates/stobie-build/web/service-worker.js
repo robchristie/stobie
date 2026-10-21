@@ -30,8 +30,9 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    // Earlier versions' caches go; their assets are refetched if an open
-    // page still needs them, and the server keeps them for a while.
+    // Earlier versions' caches go; an open page that still needs their
+    // assets refetches them, so the server keeps earlier assets for a while
+    // (docs/browser-startup.md, "Keeping earlier packages' assets").
     for (const name of await caches.keys()) {
       if (name.startsWith(PREFIX) && name !== CACHE) await caches.delete(name);
     }

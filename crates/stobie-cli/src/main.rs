@@ -1084,4 +1084,7 @@ fn capabilities() -> serde_json::Value {
 }
 
 #[cfg(test)]
+#[path = "../build/checkout.rs"]
+mod checkout;
+#[cfg(test)]
 mod tests;

@@ -1,5 +1,9 @@
 //! Record the Stobie revision this CLI is built from, which `stobie new` pins
-//! new applications to. `STOBIE_SOURCE_REVISION` overrides Git.
+//! new applications to. `STOBIE_SOURCE_REVISION` overrides the checkout's.
+//!
+//! The revision comes from the `git` command when it runs, and otherwise from
+//! the checkout's own files (`build/checkout.rs`), so `cargo install --git`
+//! records it without Git installed: Cargo fetches with its own Git library.
 //!
 //! Cargo's build-script hashes ignore a git package's revision, and once a
 //! script emits `rerun-if-changed`, Cargo checks only those paths, even when a
@@ -10,6 +14,9 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+#[path = "build/checkout.rs"]
+mod checkout;
 
 fn git(directory: &Path, arguments: &[&str]) -> Option<String> {
     let output = Command::new("git")
@@ -27,43 +34,33 @@ fn main() {
     let manifest = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("set by Cargo"));
     // Only a Stobie checkout names a Stobie revision, not, say, another
     // repository that vendors this source.
-    let top = git(&manifest, &["rev-parse", "--show-toplevel"])
-        .and_then(|top| Path::new(&top).canonicalize().ok())
-        .filter(|top| {
-            top.join("crates/stobie-cli/Cargo.toml").canonicalize().ok()
-                == manifest.join("Cargo.toml").canonicalize().ok()
-        });
-    let revision = std::env::var("STOBIE_SOURCE_REVISION")
-        .ok()
-        .or_else(|| top.as_ref().and(git(&manifest, &["rev-parse", "HEAD"])));
-    let cargo_checkout = top
+    let checkout = checkout::stobie_checkout(&manifest);
+    let revision = std::env::var("STOBIE_SOURCE_REVISION").ok().or_else(|| {
+        let (top, directories) = checkout.as_ref()?;
+        git(top, &["rev-parse", "HEAD"]).or_else(|| checkout::head_revision(directories))
+    });
+    let directories = checkout.as_ref().map(|(_, directories)| directories);
+    let cargo_checkout = checkout
         .as_ref()
-        .is_some_and(|top| top.join(".cargo-ok").exists());
+        .is_some_and(|(top, _)| top.join(".cargo-ok").exists());
     // Any `rerun-if` directive replaces Cargo's own freshness rule.
     if !cargo_checkout {
         println!("cargo:rerun-if-env-changed=STOBIE_SOURCE_REVISION");
     }
-    if let (false, Some(directory), Some(common)) = (
-        cargo_checkout,
-        git(&manifest, &["rev-parse", "--absolute-git-dir"]),
-        git(&manifest, &["rev-parse", "--git-common-dir"]),
-    ) {
-        let common = manifest.join(common);
+    if let (false, Some(directories)) = (cargo_checkout, directories) {
         let mut watched = vec![
-            Path::new(&directory).join("HEAD"),
-            common.join("packed-refs"),
+            directories.git.join("HEAD"),
+            directories.common.join("packed-refs"),
         ];
-        if let Some(reference) = git(&manifest, &["symbolic-ref", "-q", "HEAD"]) {
-            watched.push(common.join(reference));
+        if let Some(reference) = checkout::head_reference(directories) {
+            watched.push(directories.common.join(reference));
         }
         // A missing path would rerun the script on every build.
         for path in watched.iter().filter(|path| path.exists()) {
             println!("cargo:rerun-if-changed={}", path.display());
         }
     }
-    if let Some(revision) = revision.filter(|revision| {
-        revision.len() == 40 && revision.bytes().all(|byte| byte.is_ascii_hexdigit())
-    }) {
+    if let Some(revision) = revision.as_deref().and_then(checkout::revision) {
         println!("cargo:rustc-env=STOBIE_SOURCE_REVISION={revision}");
     }
 }

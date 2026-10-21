@@ -82,7 +82,9 @@ pub enum PushOperation {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PushEvent {
     /// After [`WebPush::start`], once the service worker is active, and after
-    /// each [`WebPush::refresh`]. Unsupported browsers report it at once.
+    /// each [`WebPush::refresh`]. Unsupported browsers report it at once, and
+    /// a page that registers no service worker as soon as the startup loader
+    /// says so.
     State(PushState),
     Subscribed(PushSubscription),
     Unsubscribed,
@@ -123,6 +125,12 @@ impl WebPush {
     /// launch, because Safari never reports a changed subscription. If a tap
     /// on a notification opened the application, [`PushEvent::Route`]
     /// follows; later taps deliver it while the application is open.
+    ///
+    /// On a page with no service worker, `State` reports push as unsupported,
+    /// with the reason, once Stobie's startup loader has registered none: the
+    /// page links no web app manifest, its loader was started with
+    /// `serviceWorker: false`, or registration failed. A page started some
+    /// other way gets `State` only once a worker it registers is active.
     pub fn start<I: 'static>(
         intents: IntentSender<I>,
         event: impl Fn(PushEvent) -> I + 'static,
@@ -152,7 +160,7 @@ impl WebPush {
     pub fn support(&self) -> PushSupport {
         #[cfg(all(target_arch = "wasm32", feature = "eframe"))]
         {
-            web::support()
+            self.web.support()
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
@@ -303,6 +311,25 @@ fn route_path(url: &str, scope: &str) -> Option<String> {
     url.strip_prefix(scope).map(str::to_owned)
 }
 
+/// Why the page has no service worker, from the startup loader's outcome
+/// (`state` and `message` of `__STOBIE_STARTUP.serviceWorker`), or `None`
+/// when the loader registered one.
+#[cfg_attr(not(all(target_arch = "wasm32", feature = "eframe")), allow(dead_code))]
+fn unregistered_reason(state: &str, message: Option<&str>) -> Option<String> {
+    match state {
+        "registered" | "registering" => None,
+        "not_requested" => Some(
+            "this page registers no service worker: Web Push needs an installable page, whose head links manifest.webmanifest, started without `serviceWorker: false`".into(),
+        ),
+        "failed" => Some(match message {
+            Some(message) => format!("the service worker did not register: {message}"),
+            None => "the service worker did not register".into(),
+        }),
+        "unsupported" => Some("this page cannot register a service worker".into()),
+        other => Some(format!("the service worker was not registered ({other})")),
+    }
+}
+
 #[cfg(all(target_arch = "wasm32", feature = "eframe"))]
 mod web {
     use std::cell::RefCell;
@@ -316,8 +343,12 @@ mod web {
 
     use super::{
         NotificationPermission, NotificationRoute, PushEvent, PushOperation, PushState,
-        PushSubscription, PushSupport, route_path,
+        PushSubscription, PushSupport, route_path, unregistered_reason,
     };
+
+    /// The startup loader's promise of its service worker registration's
+    /// outcome (`browser-startup.js`).
+    const REGISTRATION_OUTCOME: &str = "__stobieServiceWorker";
 
     /// Where the service worker leaves a tapped notification's route for the
     /// window it opens (`service-worker-push.js`).
@@ -332,6 +363,8 @@ mod web {
     pub(super) struct Shared {
         deliver: Rc<dyn Fn(PushEvent)>,
         registration: Rc<RefCell<Option<ServiceWorkerRegistration>>>,
+        /// Why the page has no service worker, once the loader has said so.
+        unregistered: Rc<RefCell<Option<String>>>,
         listener: Option<Listener>,
     }
 
@@ -527,9 +560,11 @@ mod web {
                     .add_event_listener_with_callback("message", listener.as_ref().unchecked_ref());
                 (container, listener)
             });
+            let unregistered = Rc::new(RefCell::new(None));
             let shared = Rc::new(Self {
                 deliver: deliver.clone(),
                 registration: registration.clone(),
+                unregistered: unregistered.clone(),
                 listener,
             });
             if !support.is_supported() {
@@ -544,6 +579,43 @@ mod web {
                 .listener
                 .as_ref()
                 .map(|(container, _)| container.clone());
+            if let (Some(container), Ok(outcome)) = (
+                container.clone(),
+                global(REGISTRATION_OUTCOME).dyn_into::<Promise>(),
+            ) {
+                // `ready` never settles on a page with no worker, so the
+                // loader's outcome reports that instead.
+                let deliver = deliver.clone();
+                let registration = registration.clone();
+                let unregistered = unregistered.clone();
+                spawn_local(async move {
+                    let Ok(outcome) = JsFuture::from(outcome).await else {
+                        return;
+                    };
+                    let field = |name: &str| {
+                        Reflect::get(&outcome, &JsValue::from_str(name))
+                            .ok()
+                            .and_then(|value| value.as_string())
+                    };
+                    let Some(reason) = field("state")
+                        .and_then(|state| unregistered_reason(&state, field("message").as_deref()))
+                    else {
+                        return;
+                    };
+                    // A worker an earlier visit registered still serves the
+                    // page, and `ready` settles with it.
+                    let found = settle(call(&container, "getRegistration", &[])).await;
+                    if found.is_ok_and(|found| present(&found)) || registration.borrow().is_some() {
+                        return;
+                    }
+                    unregistered.replace(Some(reason.clone()));
+                    deliver(PushEvent::State(PushState {
+                        support: PushSupport::Unsupported(reason),
+                        permission: permission(),
+                        subscription: None,
+                    }));
+                });
+            }
             spawn_local(async move {
                 let Some(container) = container else { return };
                 // `ready` settles once a worker for this page is active.
@@ -561,6 +633,7 @@ mod web {
                     }
                 };
                 registration.replace(Some(active.clone()));
+                unregistered.replace(None);
                 if let Some(route) = remembered_route(&active.scope()).await {
                     deliver(PushEvent::Route(route));
                 }
@@ -575,8 +648,16 @@ mod web {
             shared
         }
 
+        /// Support, or why the page has no service worker.
+        pub(super) fn support(&self) -> PushSupport {
+            match (support(), self.unregistered.borrow().as_ref()) {
+                (PushSupport::Supported, Some(reason)) => PushSupport::Unsupported(reason.clone()),
+                (support, _) => support,
+            }
+        }
+
         fn active(&self) -> Result<ServiceWorkerRegistration, String> {
-            if let PushSupport::Unsupported(reason) = support() {
+            if let PushSupport::Unsupported(reason) = self.support() {
                 return Err(reason);
             }
             self.registration.borrow().clone().ok_or_else(|| {
@@ -645,7 +726,7 @@ mod web {
         }
 
         pub(super) fn refresh(&self) -> Result<(), String> {
-            let support = support();
+            let support = self.support();
             if !support.is_supported() {
                 (self.deliver)(PushEvent::State(PushState {
                     support,
@@ -718,6 +799,26 @@ mod tests {
         assert!(short.contains("has 3 bytes"), "{short}");
         let compressed = KEY.replacen('B', "A", 1);
         assert!(decode_application_server_key(&compressed).is_err());
+    }
+
+    #[test]
+    fn only_a_registered_worker_leaves_push_waiting_for_it() {
+        assert_eq!(unregistered_reason("registered", None), None);
+        assert_eq!(unregistered_reason("registering", None), None);
+        let none = unregistered_reason("not_requested", None).unwrap();
+        assert!(none.contains("registers no service worker"), "{none}");
+        assert!(none.contains("manifest.webmanifest"), "{none}");
+        assert!(none.contains("serviceWorker: false"), "{none}");
+        assert_eq!(
+            unregistered_reason("failed", Some("SecurityError: bad scope")).as_deref(),
+            Some("the service worker did not register: SecurityError: bad scope")
+        );
+        assert!(unregistered_reason("unsupported", None).is_some());
+        assert!(
+            unregistered_reason("later", None)
+                .unwrap()
+                .contains("later")
+        );
     }
 
     #[test]

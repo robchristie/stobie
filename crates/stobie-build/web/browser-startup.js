@@ -208,9 +208,14 @@ export async function registerServiceWorker({ report, mode = 'auto', scope = glo
 // whose renderer needs WebGPU, such as the viewer, sets `requireWebGpu`.
 // `fitViewport` sizes the page from the visual viewport (`fitVisualViewport`),
 // and `serviceWorker` registers the build's service worker once the
-// application has started (`registerServiceWorker`).
+// application has started (`registerServiceWorker`). From before the
+// application starts, `__stobieServiceWorker` is a promise of that
+// registration's outcome, so the application's Web Push knows when the page
+// will have no worker.
 export async function startApplication({ app, workerUrl, load, canvasId, handleName, start, afterStart, requireWebGpu = false, fitViewport = false, serviceWorker = 'auto', scope = globalThis }) {
   let handle;
+  let settleServiceWorker;
+  scope.__stobieServiceWorker = new Promise(fulfil => { settleServiceWorker = fulfil; });
   if (fitViewport) fitVisualViewport({ scope });
   const startup = installStartup({ app, workerUrl, canvasId, scope, onFailure: () => {
     // Leave the Rust callback/constructor before releasing partially started resources.
@@ -238,7 +243,7 @@ export async function startApplication({ app, workerUrl, load, canvasId, handleN
     scope[handleName] = handle;
     afterStart?.(handle);
     // Installation caches the package, so it waits until the application runs.
-    registerServiceWorker({ report: startup.report, mode: serviceWorker, scope });
+    registerServiceWorker({ report: startup.report, mode: serviceWorker, scope }).then(settleServiceWorker);
     startup.phase('workspace', 'Preparing workspace…');
   } catch (error) { startup.fail(startup.report.phase, error); }
   return startup;

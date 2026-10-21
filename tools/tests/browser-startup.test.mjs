@@ -379,6 +379,25 @@ test('the service worker beside the page registers only for a page that links a 
   assert.equal(report.serviceWorker.state, 'failed');
 });
 
+test('the application can await the service worker registration from before it starts', async () => {
+  for (const [manifest, expected] of [[false, { state: 'not_requested' }], [true, { state: 'registered', scope: 'https://example.test/apps/notes/' }]]) {
+    const env = environment();
+    Object.assign(env.scope, {
+      isSecureContext: true, location: { href: 'https://example.test/apps/notes/' },
+      navigator: { ...env.scope.navigator, serviceWorker: { register: async (url, options) => ({ scope: options.scope }) } },
+    });
+    env.scope.document.querySelector = selector => (manifest && selector === 'link[rel~="manifest"]' ? {} : null);
+    let seen;
+    await startApplication({ app: 'notes', scope: env.scope, canvasId: 'canvas', handleName: 'handle',
+      load: async () => ({ default: async () => ({ memory: { buffer: { byteLength: 65536 } } }), WebHandle: class { destroy() {} } }),
+      // `WebPush::start` runs inside the host's start, before registration.
+      start: async () => { seen = env.scope.__stobieServiceWorker; },
+    });
+    assert.ok(seen instanceof Promise, 'the promise exists while the application starts');
+    assert.deepEqual(await seen, expected);
+  }
+});
+
 test('the visual viewport sizes the page shell and drops the bottom inset under a keyboard', () => {
   const listeners = new Map(), properties = new Map();
   const viewport = { height: 800, offsetTop: 0, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) };
