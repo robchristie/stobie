@@ -147,6 +147,16 @@ explains each step.
 cargo test
 ```
 
+## Fonts and licence notices
+
+The UI crate embeds Source Sans 3 and the monochrome Noto Emoji, both under
+the SIL Open Font License 1.1, and eframe's `default_fonts` feature adds
+egui's own fonts. A build you distribute must carry each font's licence and
+copyright notice; Stobie's
+[bundled-font record](https://github.com/robchristie/stobie/blob/{{stobie_rev}}/crates/stobie-ui-egui/assets/fonts/README.md)
+lists them. To leave egui's fonts out, remove `default_fonts` from eframe's
+features in `Cargo.toml`; monospace text then uses Source Sans 3.
+
 ## Stobie version
 
 Stobie is not on crates.io. `Cargo.toml` depends on it through git, pinned to

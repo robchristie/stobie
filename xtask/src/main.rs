@@ -217,6 +217,14 @@ fn architecture() -> Result<()> {
             "stobie-ui-egui",
         ],
     )?;
+    // egui's bundled fonts are the application's choice, with their notices:
+    // Stobie's UI crate never turns them on, whatever its features.
+    for arguments in [
+        &["-p", "stobie-ui-egui", "-e", "normal"][..],
+        &["-p", "stobie-ui-egui", "-e", "normal", "--all-features"][..],
+    ] {
+        assert_tree_excludes_with("stobie-ui-egui", arguments, &["epaint_default_fonts"])?;
+    }
     let mut pane_sources = Vec::new();
     collect_rust_sources(
         Path::new("apps/analytical-workspace-lab/src/panes"),

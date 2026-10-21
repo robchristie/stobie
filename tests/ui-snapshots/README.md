@@ -240,3 +240,11 @@ and the composer fixtures' from 53 to 55) and changed, by one colour step as
 the glyph atlas grew, two pixels of `diagnostics-high-contrast` (at 703, 516
 and 699, 522) and one of `navigation-long-high-contrast` (at 752, 208);
 nothing else changed.
+
+Emoji fixtures show the `typography/emoji` story, the seven emoji in
+reading, semibold, secondary and monospace text and the sequences, in light
+comfortable mode and in dark high contrast at 150% and narrow width. Every
+fixture's font identity names the monochrome Noto Emoji 3.002 face that
+`stobie-ui-egui` embeds. Adding the face changed, by one colour step as the
+glyph atlas changed, one pixel each of `application-shell-dark` (at 937, 362)
+and `navigation-responsive-dark` (at 357, 311); nothing else changed.

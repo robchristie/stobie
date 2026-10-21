@@ -83,7 +83,9 @@ role-specific line-height or muted-colour defaults.
 height. Its `max_lines` is an overflow limit. `measured_fixed_slot_label`
 explicitly reserves that many role line heights for fixed table or virtualised
 row recipes. Both align text at the top; deliberate grouping spacing belongs to
-the parent recipe. Font identities and licence authority are retained in the
+the parent recipe. Every family falls back to the monochrome Noto Emoji face
+after its text face, so emoji draw in the text colour. Font identities and
+licence authority are retained in the
 [bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md).
 
 Default alignment and overflow are semantic:
@@ -463,5 +465,5 @@ predictably, and font scale is clamped to 100–150%. System appearance resolves
 against egui's current system theme.
 
 The token source, generator, generated Rust and component recipe are Stobie
-project code under the repository's Apache-2.0 licence. Bundled Source Sans 3 fonts are separately licensed under SIL OFL 1.1; see the
+project code under the repository's Apache-2.0 licence. The bundled Source Sans 3 and Noto Emoji fonts are separately licensed under SIL OFL 1.1; see the
 [bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md).
