@@ -38,12 +38,21 @@ Invalid edits retain the last accepted preview and disable export. **Copy theme
 JSON** exports the typed `ThemeColours` source; check it into the consuming
 application and parse/validate it once. It does not approve snapshot baselines.
 
-The unchanged analytical reference retains historical muted-text state contrast
-that fails strict `ApplicationTheme::new` validation. The workbench labels this
-compatibility status and the export's required import route. Its exact JSON
-round-trips through `ApplicationTheme::from_analytical_colours`, which accepts
-only the complete original palette, with no changed roles. This exception is
-not available for edited reference colours; they must pass `ApplicationTheme::new`
-in all four modes. An invalid reference edit retains the original preview and
-disables export until repaired or reset. Prefer an authored application preset
-as the starting point for strict theme editing.
+Hover has its own `colour.palette.hover` in every theme: `colour.surface.hover`
+and `colour.action.quiet.hover` alias it, distinct from `colour.selection.background`,
+so a hovered row or quiet action never looks current or toggled on. The token
+tests require it to differ from selection and the resting surfaces in every
+theme, and hold muted text to the same floor on raised, hover and selection
+fills as on the canvas.
+
+The analytical reference passes `ApplicationTheme::new` in all four modes.
+`ApplicationTheme::from_analytical_colours` still round-trips its exact JSON
+for applications that already call it; it accepts only the complete authored
+palette and no changed roles. Every edited palette must pass
+`ApplicationTheme::new`. An invalid edit retains the last accepted preview and
+disables export until repaired or reset.
+
+`icon.touchTargetSize` (44 points) is the square hit target of an icon-only
+action in both densities, read through `DesignTokens::touch_target_size`. It is
+common rather than a geometry token so that it does not shrink with density;
+the action's visual chrome stays the control height.

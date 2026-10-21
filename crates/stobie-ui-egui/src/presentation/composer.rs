@@ -228,23 +228,34 @@ impl PresentationContext {
         });
         let before = send_availability(draft);
 
-        let hit = action_hit_height(&tokens, font_scale);
         let pad = tokens.spacing.unit.0;
         let gap = tokens.spacing.unit.0;
-        let width_of = |control: &ComposerControl<A>, availability: &Availability| {
+        // Each shown control's width and hit height; an icon-only control's
+        // touch target is taller than a labelled one's.
+        let size_of = |control: &ComposerControl<A>, availability: &Availability| {
             if !availability.visible() {
-                return 0.0;
+                return (0.0, 0.0);
             }
             let label = control.action.specification().label;
-            action_button_size(ui, label, control.content, &tokens, font_scale).intrinsic
+            let size = action_button_size(ui, label, control.content, &tokens, font_scale);
+            (size.intrinsic, size.hit_height)
         };
-        let leading_width = leading.as_ref().map_or(0.0, |(control, _, availability)| {
-            width_of(control, availability)
-        });
-        let trailing_width = trailing.as_ref().map_or(0.0, |(control, _, availability)| {
-            width_of(control, availability)
-        });
-        let send_width = width_of(&spec.send, &before);
+        let (leading_width, leading_hit) = leading
+            .as_ref()
+            .map_or((0.0, 0.0), |(control, _, availability)| {
+                size_of(control, availability)
+            });
+        let (trailing_width, trailing_hit) = trailing
+            .as_ref()
+            .map_or((0.0, 0.0), |(control, _, availability)| {
+                size_of(control, availability)
+            });
+        let (send_width, send_hit) = size_of(&spec.send, &before);
+        // The controls' row, which one line of the field fills.
+        let hit = action_hit_height(&tokens, font_scale)
+            .max(leading_hit)
+            .max(trailing_hit)
+            .max(send_hit);
 
         // The field's height last pass bottom-aligns the controls before it.
         let height_id = field_id.with("stobie.composer.height");

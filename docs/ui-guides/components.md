@@ -457,8 +457,9 @@ label. `action_with_content` accepts the explicit `ActionButtonContent` choice.
 These methods share capability, availability, emphasis, toggle, response and
 logical-identity contracts. `ActionButtonSpec` struct literals remain compatible.
 
-The icon-only allocation is a square token minimum hit target (32 points at the
-reference scale), with centred square visual chrome and 16-point artwork. Artwork
+The icon-only allocation is a square touch target (`touch_target_size`, 44
+points in both densities, or the scaled control height where that is larger),
+with centred square visual chrome at the control height and 16-point artwork. Artwork
 scales with 100–150% font preferences. Its full action name and description own
 semantics and a tooltip, including a disabled reason; the icon has no separate
 accessible owner and produces no measured-text attempt. Icon+label uses one
@@ -473,11 +474,13 @@ overflow. Selecting `icon_action` is an explicit caller decision, retaining a
 usable name; the component never silently collapses its label. Text-only layout
 and its historical identities remain compatible. Quiet, QuietBorderless, Normal
 and Primary share the existing enabled, pressed/selected, disabled and focus
-rules; icons use the exact resolved label foreground. Enabled pressed/selected
-actions have an inset state outline separate from keyboard focus, and Primary
-hover changes its outer border. These shared chrome corrections make states
-visible even when the analytical reference aliases hover and selection fills;
-resting text-only layout and appearance remain compatible.
+rules; icons use the exact resolved label foreground. Pressed/selected
+actions have an inset state outline separate from keyboard focus, so the on
+state never relies on fill colour alone, and Primary hover changes its outer
+border. Hover fills have their own colour, distinct from the selection fill
+of a toggled-on action. A disabled toggled-on action keeps a dimmed selection
+fill and a muted inset outline; a disabled `QuietBorderless` action stays
+borderless and unfilled. Resting text-only layout remains compatible.
 
 The following helper compiles as a rustdoc example on `icon_action`. Handle the
 returned click through your application's intent/command route and publish the
@@ -955,12 +958,12 @@ for message in &self.messages {
   the unread words, the preview, the time and the action's description,
   separated by "; "; a disabled row adds its reason. The current row has the
   selection fill and indicator, and a hovered current row adds a control
-  border. A hovered row has the raised surface, not the quiet action hover,
-  because the themes give that hover the selection's colour and a hovered
-  row would look current. Press uses the selection pair with an inset
-  outline, and keyboard focus the outer focus ring. Muted text on any of
-  those fills becomes primary text where it would read below its validated
-  contrast. Each enabled row is a Tab stop; Enter, Space and a pointer
+  border. A hovered row has the hover surface, which every theme keeps
+  apart from selection, so it never looks current. Press uses the selection
+  pair with an inset outline, and keyboard focus the outer focus ring. Theme
+  validation keeps muted text at its contrast floor on those fills; muted
+  text becomes primary text only on hand-assembled tokens where it would
+  read below 4.5:1. Each enabled row is a Tab stop; Enter, Space and a pointer
   release open it. The measurements are `ConversationRowTitle`,
   `ConversationRowPreview` and `ConversationRowTime` under a
   `ConversationRow` parent; like other control text they carry no content
