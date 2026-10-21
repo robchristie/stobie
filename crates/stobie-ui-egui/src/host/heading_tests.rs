@@ -336,10 +336,16 @@ fn a_heading_row_gives_crowding_controls_a_line_of_their_own() {
         assert!(on_screen(*control), "{control:?}");
         assert!(control.min_y >= title.max.y, "{control:?} {title:?}");
     }
-    // End-aligned, in the order given.
+    // In the order given: along a line, or on to the next when eight touch
+    // targets overfill a phone's line; each line is end-aligned.
     for pair in response.windows(2) {
-        assert!(pair[0].max_x <= pair[1].min_x);
+        let along = pair[0].max_x <= pair[1].min_x && pair[0].min_y == pair[1].min_y;
+        assert!(along || pair[1].min_y >= pair[0].max_y, "{pair:?}");
+        if !along {
+            assert!((pair[0].max_x - response[response.len() - 1].max_x).abs() < 0.5);
+        }
     }
+    assert!(response[0].min_y < response[response.len() - 1].min_y);
     // What follows the row sits below the controls.
     let body = host(&harness)
         .ui_snapshot()
@@ -351,7 +357,10 @@ fn a_heading_row_gives_crowding_controls_a_line_of_their_own() {
         })
         .unwrap()
         .allocated_rect;
-    assert!(body.min_y >= response[0].max_y, "{body:?}");
+    assert!(
+        response.iter().all(|control| body.min_y >= control.max_y),
+        "{body:?}"
+    );
 }
 
 #[test]

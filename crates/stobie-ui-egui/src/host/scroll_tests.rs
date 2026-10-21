@@ -308,13 +308,19 @@ fn node(harness: &Harness<'_, Probe>, name: &str) -> Option<UiRect> {
         .map(|node| node.rect)
 }
 
-/// Where a line of the footer was laid out. Its text is the last the area
-/// presents, and out of view it publishes no words, so it is found by place.
+/// Where a line of the footer was laid out, found by its words, or `None`
+/// when it is wholly out of view, as such text is not observed.
 fn footer_rect(harness: &Harness<'_, Probe>, line: usize) -> Option<UiRect> {
-    let lines = host(harness).app().footer;
-    let text = &host(harness).ui_snapshot().text;
-    let index = (text.len() + line).checked_sub(lines)?;
-    let rect = text.get(index)?.allocated_rect;
+    let expected = footer_line(line);
+    let rect = host(harness)
+        .ui_snapshot()
+        .text
+        .iter()
+        .find(|text| match &text.content {
+            Some(crate::TextContent::Excerpt { text, .. }) => *text == expected,
+            _ => false,
+        })?
+        .allocated_rect;
     Some(UiRect {
         min_x: rect.min_x,
         min_y: rect.min_y,
@@ -523,8 +529,11 @@ fn a_footer_sits_at_the_foot_of_a_short_pane_and_after_a_long_list() {
         thread.last = 40;
     });
     harness.run();
-    let foot = footer_rect(&harness, 0).unwrap();
-    assert!(foot.min_y > TOP + VIEW, "{foot:?}");
+    // The last row is below the view, and the footer after it is wholly out
+    // of view, so its text is not observed.
+    let last = bubble(&harness, 40).unwrap();
+    assert!(last.min_y > TOP + VIEW, "{last:?}");
+    assert_eq!(footer_rect(&harness, 0), None);
     wheel(&mut harness, -20_000.0);
     let last = bubble(&harness, 40).unwrap();
     let foot = footer_rect(&harness, 0).unwrap();

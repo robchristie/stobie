@@ -15,7 +15,7 @@ use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionTarget, Availability, AvatarSpec, DomainReference, IconId, IntoActionTarget,
     SemanticUiId, TextInteraction, TextOverflow, TextRole, TextRoleStyles, UiNode, UiRole,
-    components::action_button_size, components::action_hit_height,
+    components::action_button_size, components::icon_action_side,
 };
 
 /// How a navigation recipe arranges its panes at the width it is given.
@@ -761,7 +761,9 @@ impl PresentationContext {
     ) -> Header<A> {
         let tokens = self.tokens;
         let font_scale = self.font_scale;
-        let hit = action_hit_height(&tokens, font_scale);
+        // Back and the details toggle are icon-only: they take the touch
+        // target, and the header's line grows to hold it.
+        let hit = icon_action_side(&tokens, font_scale);
         let heading = TextRole::SectionHeading
             .style(&tokens, font_scale)
             .line_height

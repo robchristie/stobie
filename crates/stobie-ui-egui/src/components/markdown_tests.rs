@@ -940,7 +940,7 @@ fn a_code_blocks_copy_control_sits_in_a_strip_above_its_text() {
             // follows it move down by the strip, less the padding it
             // replaces.
             let tokens = tokens();
-            let strip = crate::components::action_hit_height(&tokens, scale);
+            let strip = crate::components::icon_action_side(&tokens, scale);
             let shift = strip - tokens.spacing.block.0;
             let reading = |presented: &Presented| -> Vec<(TextRole, Rect)> {
                 presented

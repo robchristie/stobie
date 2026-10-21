@@ -5,7 +5,7 @@ use std::hash::Hash;
 use egui::{Response, Ui, UiBuilder};
 
 use super::PresentationContext;
-use crate::components::{action_hit_height, present_markdown};
+use crate::components::{icon_action_side, present_markdown};
 use crate::{ActionEmphasis, Availability, CopyContent, CopySpec, MarkdownSpec};
 
 /// The words and face of the copy control on each code block in
@@ -95,7 +95,7 @@ impl PresentationContext {
         copy: &CodeCopySpec<'_>,
     ) -> Response {
         self.check_pass(ui);
-        let header = action_hit_height(&self.tokens, self.font_scale);
+        let header = icon_action_side(&self.tokens, self.font_scale);
         let (presented, blocks) = present_markdown(
             ui,
             self.scope.instance(&key),

@@ -10,7 +10,7 @@ use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionTarget, Availability, BoundAction, IconId, IntoActionTarget, TextOverflow,
     TextRole, TextRoleStyles, TextSpec,
-    components::{action_button_size, action_hit_height},
+    components::{action_button_size, action_hit_height, icon_action_side},
 };
 
 /// One control at the end of a heading row
@@ -121,7 +121,9 @@ pub(super) struct RowMetrics {
 /// start, `trailing` controls (by width) from the end, and the title in the
 /// room between them, a gap from each. When the trailing controls would leave
 /// the title less than its least width, they take a line of their own, a
-/// gap below the first and end-aligned, and the title runs to `right`.
+/// gap below the first and end-aligned, and the title runs to `right`; when
+/// one line across `left..right` cannot hold them all, they run on to more
+/// such lines, in the order given, so none is placed past `left`.
 pub(super) fn plan_row(
     left: f32,
     right: f32,
@@ -149,19 +151,42 @@ pub(super) fn plan_row(
         .collect();
     let needed: f32 = trailing.iter().map(|width| width + gap).sum();
     let wrapped = !trailing.is_empty() && right - needed - start < min_title;
-    let (trailing_centre, height) = if wrapped {
-        (top + line + gap + hit * 0.5, line + gap + hit)
-    } else {
-        (centre, line)
-    };
-    let mut end = right;
     let mut rects = vec![Rect::NOTHING; trailing.len()];
-    for (rect, width) in rects.iter_mut().zip(trailing).rev() {
-        end -= width;
-        *rect = Rect::from_min_size(pos2(end, trailing_centre - hit * 0.5), vec2(*width, hit));
-        end -= gap;
-    }
-    let title_right = if wrapped { right } else { end };
+    let (title_right, height) = if wrapped {
+        // Fill each line in order, then end-align it; a control wider than
+        // a whole line still takes one alone.
+        let mut lines: Vec<std::ops::Range<usize>> = Vec::new();
+        let mut first = 0;
+        let mut used = 0.0;
+        for (index, width) in trailing.iter().enumerate() {
+            if index > first && used + gap + width > right - left {
+                lines.push(first..index);
+                first = index;
+                used = 0.0;
+            }
+            used += if index > first { gap + width } else { *width };
+        }
+        lines.push(first..trailing.len());
+        let mut line_top = top + line + gap;
+        for range in &lines {
+            let mut end = right;
+            for index in range.clone().rev() {
+                end -= trailing[index];
+                rects[index] = Rect::from_min_size(pos2(end, line_top), vec2(trailing[index], hit));
+                end -= gap;
+            }
+            line_top += hit + gap;
+        }
+        (right, line_top - gap - top)
+    } else {
+        let mut end = right;
+        for (rect, width) in rects.iter_mut().zip(trailing).rev() {
+            end -= width;
+            *rect = Rect::from_min_size(pos2(end, centre - hit * 0.5), vec2(*width, hit));
+            end -= gap;
+        }
+        (end, line)
+    };
     RowPlan {
         leading,
         title: Rect::from_min_max(
@@ -205,8 +230,9 @@ impl PresentationContext {
     /// full text kept for assistive technology and its tooltip. When beside
     /// the controls the heading would have less than its least width (its
     /// whole text, or three minimum hit targets), the controls take a line
-    /// of their own below it, end-aligned, so no control is ever squeezed or
-    /// pushed out of sight. A hidden control is not presented.
+    /// of their own below it, end-aligned, running on to further such lines
+    /// when one cannot hold them, so no control is ever squeezed or pushed
+    /// out of sight. A hidden control is not presented.
     /// `availability` gives each control's availability; hosted
     /// applications use [`Frame::heading_row`](crate::Frame::heading_row),
     /// which also triggers a clicked control.
@@ -245,7 +271,16 @@ impl PresentationContext {
         let font_scale = self.font_scale;
         let scope = self.scope.child(key);
         let resolved = self.resolve_controls(ui, controls, &availability);
-        let hit = action_hit_height(&tokens, font_scale);
+        // Icon-only controls take the touch target; text controls keep the
+        // control height.
+        let hit = if resolved
+            .iter()
+            .any(|control| matches!(control.content, ActionButtonContent::IconOnly(_)))
+        {
+            icon_action_side(&tokens, font_scale)
+        } else {
+            action_hit_height(&tokens, font_scale)
+        };
         let heading = TextRole::SectionHeading
             .style(&tokens, font_scale)
             .line_height
@@ -430,5 +465,21 @@ mod tests {
         assert!(plan.trailing.iter().all(|rect| rect.min.y == 44.0));
         // One point wider, they fit beside it.
         assert!(!plan_row(0.0, 240.0, 0.0, &metrics(), &[], &[32.0; 4]).wrapped);
+    }
+
+    #[test]
+    fn controls_that_overfill_their_own_line_run_on_to_another() {
+        // Three 44-point controls fit in 140 points; the fourth does not.
+        let plan = plan_row(0.0, 140.0, 0.0, &metrics(), &[], &[44.0; 5]);
+        assert!(plan.wrapped);
+        let tops: Vec<f32> = plan.trailing.iter().map(|rect| rect.min.y).collect();
+        assert_eq!(tops, [44.0, 44.0, 44.0, 80.0, 80.0]);
+        // Each line is end-aligned, in the order given, and none starts
+        // before the row.
+        assert_eq!(plan.trailing[2].max.x, 140.0);
+        assert_eq!(plan.trailing[4].max.x, 140.0);
+        assert_eq!(plan.trailing[3].max.x, plan.trailing[4].min.x - 4.0);
+        assert!(plan.trailing.iter().all(|rect| rect.min.x >= 0.0));
+        assert_eq!(plan.height, 40.0 + 2.0 * (4.0 + 32.0));
     }
 }
