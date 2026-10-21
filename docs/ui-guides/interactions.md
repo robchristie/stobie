@@ -69,9 +69,11 @@ refused by `availability_with` when it hides the row's argument. A discovered
 target whose row has gone no longer matches (`no_match`); one admitted before
 the row went is refused when it runs (`unavailable` when `availability_with`
 hides its argument, otherwise `stale_target`). A target whose control now
-carries another argument is `stale_target`. Invoking the action's own binding
-with a removed row's ID is refused by `availability_with` when it hides that
-ID. A custom row that paints itself can carry the same contract: set its
+carries another argument is `stale_target`. A control whose argument its
+contract refuses is discovered disabled with that argument and the reason,
+beside the action's own binding, and invoking it is `unavailable`. Invoking
+the action's own binding with a removed row's ID is refused by
+`availability_with` when it hides that ID. A custom row that paints itself can carry the same contract: set its
 node's `actions` and `argument` and trigger the bound action with
 `Frame::trigger`.
 

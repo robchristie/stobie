@@ -112,6 +112,10 @@ impl Default for People {
 struct View {
     /// Remove this person and, in the same pass, click its Open.
     remove_then_open: Option<u32>,
+    /// Present Open for this person again in two other presentations, and
+    /// record the egui IDs of their responses.
+    open_elsewhere: Option<u32>,
+    elsewhere: Vec<egui::Id>,
 }
 
 impl People {
@@ -193,6 +197,22 @@ impl Application for People {
                     person.pinned,
                 );
             });
+        }
+        if let Some(id) = view.open_elsewhere {
+            view.elsewhere = ["first", "second"]
+                .map(|scope| {
+                    let mut other =
+                        frame.presentation(ui, PresentationScope::new(scope), SemanticUiId::root());
+                    frame
+                        .action(
+                            ui,
+                            &mut other,
+                            BoundAction::new(RowAct::Open, id),
+                            ActionEmphasis::Normal,
+                        )
+                        .id
+                })
+                .into();
         }
         if let Some(id) = view.remove_then_open.take() {
             frame.emit(Intent::Remove(id));
@@ -785,4 +805,100 @@ fn a_hidden_rows_control_presents_nothing() {
             .collect::<Vec<_>>(),
         [Some(serde_json::json!(1)), Some(serde_json::json!(3)), None]
     );
+}
+
+#[test]
+fn a_control_whose_argument_its_contract_refuses_keeps_the_actions_own_binding() {
+    // Open takes IDs up to 1000; this person's ID is beyond it.
+    let mut people = People::default();
+    people.people.push(Person {
+        id: 5000,
+        name: "Out of range",
+        role: "Nobody",
+        pinned: false,
+    });
+    let mut harness = harness(people);
+    with_inspection(&mut harness);
+    let found = discover(&harness, selector(RowAct::Open));
+    assert_eq!(
+        found
+            .iter()
+            .map(|capability| capability.argument.clone())
+            .collect::<Vec<_>>(),
+        [
+            Some(serde_json::json!(1)),
+            Some(serde_json::json!(2)),
+            Some(serde_json::json!(3)),
+            Some(serde_json::json!(5000)),
+            None
+        ],
+        "{found:?}"
+    );
+    // The control is disabled with the contract's reason, carrying its value.
+    let refused = &found[3];
+    assert!(
+        matches!(&refused.availability, Availability::Disabled { reason }
+            if reason.contains("The control's argument is invalid")),
+        "{refused:?}"
+    );
+    // The action's own binding still takes any value its contract allows.
+    let own = found.last().unwrap();
+    assert_eq!(own.availability, Availability::Enabled);
+    assert_eq!(
+        own.id,
+        ActionTarget::application(RowAct::Open).semantic_id().into()
+    );
+    // A value no row carries reaches the action's own binding.
+    host_mut(&mut harness).app_mut().people.push(Person {
+        id: 7,
+        name: "Barbara",
+        role: "Computer scientist",
+        pinned: false,
+    });
+    let opened = invoke(
+        &mut harness,
+        "open-7",
+        selector(RowAct::Open),
+        own.target.clone(),
+        serde_json::json!({ "value": 7 }),
+    );
+    assert_eq!(opened.state, ReceiptState::Completed, "{opened:?}");
+    assert_eq!(host(&harness).app().opened, Some(7));
+    // The refused value selects its own control, which refuses it.
+    let refused = invoke(
+        &mut harness,
+        "open-5000",
+        InspectionSelector {
+            id: Some(refused.id.clone()),
+            ..selector(RowAct::Open)
+        },
+        refused.target.clone(),
+        serde_json::Value::Null,
+    );
+    assert_eq!(
+        refused.error.map(|error| error.code),
+        Some(InspectionErrorCode::Unavailable)
+    );
+}
+
+#[test]
+fn hidden_controls_are_scoped_by_their_presentation() {
+    let mut harness = harness(People {
+        hide_open: Some(2),
+        ..People::default()
+    });
+    host_mut(&mut harness).ui_state.open_elsewhere = Some(2);
+    host_mut(&mut harness).request_repaint("test");
+    harness.run();
+    // Two presentations hiding the same action with the same argument give
+    // their empty responses distinct IDs...
+    let hidden = host(&harness).ui_state.elsewhere.clone();
+    assert_eq!(hidden.len(), 2);
+    assert_ne!(hidden[0], hidden[1]);
+    // ...the IDs the controls have when shown.
+    host_mut(&mut harness).app_mut().hide_open = None;
+    host_mut(&mut harness).request_repaint("test");
+    harness.run();
+    assert_eq!(host(&harness).ui_state.elsewhere, hidden);
+    assert_eq!(harness.query_all_by_label("Open").count(), 2);
 }

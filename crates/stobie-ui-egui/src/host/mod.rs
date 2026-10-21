@@ -721,15 +721,7 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         // A hidden action, such as one whose row argument names nothing,
         // presents no control and publishes no node.
         if !availability.visible() {
-            return ui.interact(
-                egui::Rect::NOTHING,
-                egui::Id::new((
-                    "stobie.hidden-action",
-                    bound.action().stable_id(),
-                    bound.argument().to_value().map(|value| value.to_string()),
-                )),
-                egui::Sense::hover(),
-            );
+            return presentation.hidden_action(ui, key, bound.argument());
         }
         let spec = ActionButtonSpec {
             target,
@@ -1893,19 +1885,31 @@ impl<A: Application> AppHost<A> {
                 if meaning.is_empty() {
                     meaning = "stable".into();
                 }
+                // The argument that tells this binding apart from the
+                // target's others: the validated one, or the refused value
+                // as its control presents it.
+                let mut refused = None;
                 let (availability, argument) = match argument {
                     Ok(ActionArgument::None) => {
                         (self.app.availability(target), ActionArgument::None)
                     }
                     Ok(argument) => (self.app.availability_with(target, &argument), argument),
                     // A control carrying an argument its contract refuses
-                    // stays discoverable, and refuses invocation.
-                    Err(reason) => (
-                        Availability::Disabled {
-                            reason: format!("The control's argument is invalid: {reason}").into(),
-                        },
-                        ActionArgument::None,
-                    ),
+                    // stays discoverable, carrying that value, and refuses
+                    // invocation. It is not the action's own binding, which
+                    // takes any value the contract allows.
+                    Err(reason) => {
+                        refused = node.and_then(|node| node.argument.clone());
+                        (
+                            Availability::Disabled {
+                                reason: format!("The control's argument is invalid: {reason}")
+                                    .into(),
+                            },
+                            refused
+                                .as_ref()
+                                .map_or(ActionArgument::None, carried_argument),
+                        )
+                    }
                 };
                 // A control the dialog scrolled out of view is still its own.
                 let availability = match (&modal, node) {
@@ -1928,7 +1932,11 @@ impl<A: Application> AppHost<A> {
                 // Several controls can present one target, such as a toolbar
                 // button and a viewport's custom action; the first is the
                 // capability's instance.
-                let key = (target, domain.clone(), binding.argument.to_value());
+                let key = (
+                    target,
+                    domain.clone(),
+                    refused.or_else(|| binding.argument.to_value()),
+                );
                 if presented.contains(&key) {
                     continue;
                 }
@@ -2139,6 +2147,19 @@ type Candidate<'a, A> = (
     Option<&'a UiNode>,
     Result<ActionArgument, String>,
 );
+
+/// A control's argument as it presents it, for a value its action's
+/// contract refuses: text, a boolean or a number, or none for any other JSON.
+fn carried_argument(value: &serde_json::Value) -> ActionArgument {
+    match value {
+        serde_json::Value::String(text) => ActionArgument::Text(text.clone()),
+        serde_json::Value::Bool(value) => ActionArgument::Boolean(*value),
+        serde_json::Value::Number(number) => number
+            .as_f64()
+            .map_or(ActionArgument::None, ActionArgument::Number),
+        _ => ActionArgument::None,
+    }
+}
 
 /// Bind each registered copy control whose button node this pass published,
 /// with that node's pane, domain and availability. A control clipped out of

@@ -432,6 +432,30 @@ impl PresentationContext {
         self.present_action(ui, &identity, spec, content, name, value)
     }
 
+    /// The empty response of a hidden action's control: no space, paint,
+    /// focus, semantic node or text observation, under the identity
+    /// [`Self::bound_action`] would give the control, so that it is scoped
+    /// by this presentation and `key` as a shown control is.
+    pub(crate) fn hidden_action(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let identity = match argument.to_value() {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        ui.interact(
+            egui::Rect::NOTHING,
+            identity.action_identity().widget_id,
+            egui::Sense::hover(),
+        )
+    }
+
     pub(crate) fn present_action<A: ActionKey>(
         &mut self,
         ui: &mut Ui,
