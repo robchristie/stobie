@@ -70,7 +70,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges, navigation items, list rows, composers, avatars, message bubbles,
+badges, navigation items, list rows, composers, avatars and avatar items, message bubbles,
 conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms, text fields and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
@@ -934,7 +934,7 @@ fn people(ui: &mut egui::Ui, p: &mut PresentationContext, photo: Option<egui::lo
   initials are not observed: it is decorative, like an icon, and the row,
   heading or control beside it names the person or thing. An avatar that
   acts (a pinned person who opens a conversation) belongs inside a control
-  with that name.
+  with that name, such as an avatar item.
 
 Low-level callers use `avatar(ui, &spec, tokens, font_scale)`, or
 `paint_avatar(painter, &spec, rect, tokens)` to paint into the largest
@@ -942,6 +942,49 @@ square in `rect`; `avatar_initials` and `avatar_eye_colour` expose the
 derivations. Gallery `avatars/figures` shows each size, people (including
 the glyph fallback), the built-in and application shapes, and images; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists its fixtures.
+
+### Avatar items and strips
+
+A strip of pinned people or things, whose avatar is itself the target,
+presents each as an avatar item inside `PresentationContext::avatar_strip`.
+In a hosted pane:
+
+```text
+p.avatar_strip(ui, "pinned", |ui, p| {
+    for person in &self.pinned {
+        let spec = AvatarItemSpec::new(AvatarSpec::person(&person.name, AvatarSize::Strip), &person.name)
+            .selected(self.open == Some(person.id));
+        frame.avatar_item(ui, p, BoundAction::new(Action::Open, person.id), &spec);
+    }
+});
+```
+
+- **Layout.** One target holds the avatar at `AvatarSize::Strip` (whatever
+  size the spec gives) over one centred `Caption` line, elided with an
+  ellipsis, within block padding: `avatar_item_size` gives its size, at
+  least the token hit size each way. The strip lays items in one row
+  `spacing.inline` apart and scrolls sideways when it is wider than the
+  space offered, as on a phone; focusing an item scrolls it into view.
+- **States.** Hover uses the quiet action hover fill, press the selection
+  pair with an inset outline, and keyboard focus the focus ring around the
+  whole item. The current item (`selected`) takes the selection background
+  and a selection-indicator marker beneath its caption. A disabled item
+  fades its avatar, mutes its caption and keeps its reason in its tooltip
+  and description.
+- **Semantics.** Each item is one `NavigationItem` node, and one AccessKit
+  button, named by the whole caption, described by the spec's
+  `description` or the action's, `selected` and `aria-current` while
+  current, carrying its `BoundAction`'s argument so agents open it by its
+  ID. The avatar adds no node; the strip adds none. Each enabled item is a
+  Tab stop; Enter, Space and a pointer release activate it. The caption is a
+  `NavigationLabel` measurement under a `NavigationItem` parent.
+- **Responses.** `Frame::avatar_item` triggers the action with its argument
+  when clicked; `PresentationContext::avatar_item` takes the target,
+  availability and argument and leaves triggering to the caller. Low-level
+  callers use `avatar_item` and publish `avatar_item_semantic_node`.
+
+Gallery `avatars/strip` shows a strip with the open item current, a long
+name elided and an unavailable item; at phone width it scrolls.
 
 ## Chat recipes
 

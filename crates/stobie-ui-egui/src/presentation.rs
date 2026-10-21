@@ -670,6 +670,93 @@ impl PresentationContext {
         response
     }
 
+    /// Present one pinned person or thing in a strip, whose avatar over its
+    /// caption is one target performing `target`, carrying `argument`, such
+    /// as the item's ID. It is a navigation item named by the caption and
+    /// current while `spec` is selected. Its identity combines `key` with the
+    /// argument. Hosted applications use
+    /// [`Frame::avatar_item`](crate::Frame::avatar_item), which triggers the
+    /// action when clicked. Hidden availability returns an empty hover
+    /// response without observations. Present items inside
+    /// [`Self::avatar_strip`].
+    pub fn avatar_item<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::AvatarItemSpec<'_>,
+        target: crate::ActionTarget<A>,
+        availability: &crate::Availability,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let value = argument.to_value();
+        let identity = match &value {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        if !availability.visible() {
+            return ui.interact(
+                egui::Rect::NOTHING,
+                identity.egui_id(),
+                egui::Sense::hover(),
+            );
+        }
+        let response = crate::avatar_item(
+            ui,
+            spec,
+            target,
+            availability,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if response.interact_rect.is_positive() {
+            let mut node = crate::avatar_item_semantic_node(
+                &response,
+                spec,
+                target,
+                availability,
+                value,
+                identity,
+                self.parent.clone(),
+            );
+            if self.domain_reference.is_some() {
+                node.domain_reference = self.domain_reference.clone();
+            }
+            self.push_node(ui, node);
+        }
+        response
+    }
+
+    /// Lay out a strip of avatar items in one row, `spacing.inline` apart,
+    /// that scrolls sideways when it is wider than the space offered, as on
+    /// a phone. Focusing an item scrolls it into view. Its height is the
+    /// items' height; the strip adds no semantic node.
+    pub fn avatar_strip<R>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        add: impl FnOnce(&mut Ui, &mut Self) -> R,
+    ) -> R {
+        self.check_pass(ui);
+        let identity = self.scope.instance((key, "stobie.avatar-strip"));
+        let gap = self.tokens.spacing.inline.0;
+        egui::ScrollArea::horizontal()
+            .id_salt(identity.egui_id())
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = gap;
+                    add(ui, self)
+                })
+                .inner
+            })
+            .inner
+    }
+
     pub fn heading(
         &mut self,
         ui: &mut Ui,

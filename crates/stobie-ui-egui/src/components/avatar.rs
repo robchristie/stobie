@@ -3,14 +3,20 @@
 //!
 //! An avatar is decorative, like an icon. It publishes no semantic node and
 //! no text observation: the row, heading or control beside it names the
-//! person or thing it stands for.
+//! person or thing it stands for. An avatar item is that control for a strip
+//! of pinned people or things: the avatar over its caption, in one target.
 
 use egui::{
     Color32, FontFamily, FontId, Mesh, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, Ui,
     load::SizedTexture,
 };
 
-use crate::{DesignTokens, IconId, PresentationContext, paint_icon};
+use crate::{
+    ActionKey, ActionTarget, Availability, DesignTokens, DomainReference, HorizontalTextAlignment,
+    IconId, PresentationContext, PresentationId, SemanticActionId, SemanticUiId, TextComponentId,
+    TextComponentKind, TextLayoutObservation, TextOverflow, TextRole, TextRoleStyles, TextSpec,
+    UiNode, UiRole, measure_component_text, paint_icon, paint_measured_text,
+};
 
 /// Where an avatar sits, which sets its diameter.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -652,6 +658,294 @@ fn fill_polygon(painter: &Painter, points: &[Pos2], triangles: &[[u32; 3]], fill
     painter.add(mesh);
 }
 
+/// One pinned person or thing in a strip, whose avatar is itself the
+/// control: the avatar over a short caption in one target, such as a pinned
+/// person who opens their conversation. The caption names it, visibly and
+/// for assistive technology. Build one with [`AvatarItemSpec::new`] and the
+/// builder methods.
+#[derive(Clone, Copy, Debug)]
+pub struct AvatarItemSpec<'a> {
+    avatar: AvatarSpec<'a>,
+    label: &'a str,
+    description: Option<&'a str>,
+    selected: bool,
+}
+
+impl<'a> AvatarItemSpec<'a> {
+    /// An item showing `avatar` at [`AvatarSize::Strip`], whatever size the
+    /// spec gives, over `label`, which names it.
+    pub const fn new(avatar: AvatarSpec<'a>, label: &'a str) -> Self {
+        Self {
+            avatar: AvatarSpec {
+                size: AvatarSize::Strip,
+                ..avatar
+            },
+            label,
+            description: None,
+            selected: false,
+        }
+    }
+
+    /// What activating it does, in place of the action's description.
+    pub const fn description(mut self, description: &'a str) -> Self {
+        self.description = Some(description);
+        self
+    }
+
+    /// Whether this is the current destination, the one on show.
+    pub const fn selected(mut self, selected: bool) -> Self {
+        self.selected = selected;
+        self
+    }
+
+    pub const fn label(&self) -> &'a str {
+        self.label
+    }
+
+    /// The description, then whether it is current.
+    fn describe(&self, action: &str) -> String {
+        let mut description = self.description.unwrap_or(action).to_owned();
+        if self.selected {
+            description.push_str("; Current destination");
+        }
+        description
+    }
+}
+
+/// The size of an avatar item: the strip avatar over one caption line within
+/// block padding, and at least the token hit size each way.
+pub fn avatar_item_size(tokens: &DesignTokens, font_scale: f32) -> egui::Vec2 {
+    let side = avatar_size(tokens, AvatarSize::Strip, font_scale);
+    let caption = TextRole::Caption.style(tokens, font_scale).line_height;
+    let padding = tokens.spacing.block.0;
+    let minimum = tokens.geometry.minimum_hit_size.0;
+    egui::vec2(
+        (side + padding * 2.0).max(minimum),
+        (side + tokens.spacing.unit.0 + caption + padding * 2.0).max(minimum),
+    )
+}
+
+/// An avatar over its caption in one target that activates `target`, named
+/// by the caption. Hosted applications use
+/// [`Frame::avatar_item`](crate::Frame::avatar_item) with a
+/// [`BoundAction`](crate::BoundAction) carrying the item's ID, inside
+/// [`PresentationContext::avatar_strip`]; use [`avatar_item_semantic_node`]
+/// for low-level publication. Hidden availability must be filtered before
+/// calling this recipe. Each enabled item is a Tab stop; Enter, Space and a
+/// pointer release share `clicked()`.
+#[allow(clippy::too_many_arguments)]
+pub fn avatar_item<A: ActionKey>(
+    ui: &mut Ui,
+    spec: &AvatarItemSpec<'_>,
+    target: ActionTarget<A>,
+    availability: &Availability,
+    identity: PresentationId,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) -> Response {
+    assert!(
+        availability.visible(),
+        "filter hidden avatar items before presentation"
+    );
+    let action = target.action.specification();
+    let enabled = availability.enabled() && ui.is_enabled();
+    let (_, rect) = ui.allocate_space(avatar_item_size(tokens, font_scale));
+    let response = ui.interact(
+        rect,
+        identity.egui_id(),
+        if enabled {
+            Sense::click()
+        } else {
+            Sense::hover()
+        },
+    );
+    if response.clicked() {
+        response.request_focus();
+    }
+    if response.gained_focus() {
+        // A strip scrolls sideways: keep the focused item in view.
+        response.scroll_to_me(None);
+    }
+    let description = spec.describe(action.description);
+    if response.interact_rect.is_positive() {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, spec.label)
+        });
+        ui.ctx().accesskit_node_builder(response.id, |node| {
+            use egui::accesskit::{Action, AriaCurrent, Role};
+            node.set_role(Role::Button);
+            node.set_label(spec.label);
+            node.set_author_id(identity.semantic_id().0);
+            node.clear_toggled();
+            node.clear_selected();
+            node.set_aria_current(if spec.selected {
+                AriaCurrent::True
+            } else {
+                AriaCurrent::False
+            });
+            node.set_description(availability.disabled_reason().map_or_else(
+                || description.clone(),
+                |reason| format!("{description}; unavailable: {reason}"),
+            ));
+            if enabled {
+                node.add_action(Action::Click);
+            } else {
+                node.set_disabled();
+                node.remove_action(Action::Click);
+            }
+            // The current pointer target when the strip clips the item.
+            let bounds = response.interact_rect;
+            node.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(bounds.min.x),
+                y0: f64::from(bounds.min.y),
+                x1: f64::from(bounds.max.x),
+                y1: f64::from(bounds.max.y),
+            });
+        });
+    }
+
+    let radius = tokens.geometry.control_radius.0;
+    let pointer_down = enabled && response.is_pointer_button_down_on();
+    if spec.selected || pointer_down {
+        ui.painter()
+            .rect_filled(rect, radius, tokens.colours.selection_background);
+    } else if enabled && response.hovered() {
+        ui.painter()
+            .rect_filled(rect, radius, tokens.colours.action_quiet_hover);
+    }
+    if spec.selected {
+        // A marker beneath the caption, as a current tab's.
+        let unit = tokens.spacing.unit.0;
+        let marker = Rect::from_min_max(
+            egui::pos2(rect.left() + tokens.spacing.block.0, rect.bottom() - unit),
+            egui::pos2(
+                rect.right() - tokens.spacing.block.0,
+                rect.bottom() - unit * 0.5,
+            ),
+        );
+        ui.painter()
+            .rect_filled(marker, radius, tokens.colours.selection_indicator);
+    }
+    if enabled && spec.selected && response.hovered() {
+        ui.painter().rect_stroke(
+            rect,
+            radius,
+            Stroke::new(1.0, tokens.colours.border_control),
+            egui::StrokeKind::Inside,
+        );
+    }
+    if pointer_down {
+        let inset = tokens.spacing.unit.0 * 0.5;
+        ui.painter().rect_stroke(
+            rect.shrink(inset),
+            (radius - inset).max(0.0),
+            Stroke::new(1.0, tokens.colours.selection_indicator),
+            egui::StrokeKind::Inside,
+        );
+    }
+    if response.has_focus() {
+        ui.painter().rect_stroke(
+            rect,
+            radius,
+            Stroke::new(1.0, tokens.colours.focus_ring),
+            egui::StrokeKind::Inside,
+        );
+    }
+
+    let padding = tokens.spacing.block.0;
+    let side = avatar_size(tokens, AvatarSize::Strip, font_scale);
+    let square = Rect::from_center_size(
+        egui::pos2(rect.center().x, rect.top() + padding + side * 0.5),
+        egui::Vec2::splat(side),
+    );
+    let mut painter = ui.painter().clone();
+    if !availability.enabled() && ui.is_enabled() {
+        // A disabled `Ui` already fades what it paints.
+        painter.multiply_opacity(ui.visuals().disabled_alpha());
+    }
+    paint_avatar(&painter, &spec.avatar, square, tokens);
+
+    let mut foreground = *tokens;
+    if !enabled {
+        foreground.colours.text_primary = tokens.colours.text_muted;
+    }
+    let caption_height = TextRole::Caption.style(tokens, font_scale).line_height;
+    let caption_rect = Rect::from_min_max(
+        egui::pos2(
+            rect.left() + tokens.spacing.unit.0,
+            square.bottom() + tokens.spacing.unit.0,
+        ),
+        egui::pos2(
+            rect.right() - tokens.spacing.unit.0,
+            square.bottom() + tokens.spacing.unit.0 + caption_height,
+        ),
+    );
+    let measured = measure_component_text(
+        ui.painter(),
+        spec.label,
+        TextSpec {
+            horizontal_alignment: HorizontalTextAlignment::Centre,
+            ..TextSpec::single_line(TextRole::Caption, TextOverflow::Ellipsis)
+        },
+        &foreground,
+        font_scale,
+        caption_rect.width().max(0.5),
+    );
+    let truncated = measured.truncated();
+    let parent = TextComponentId::new(TextComponentKind::NavigationItem, identity.text_instance());
+    let observation = paint_measured_text(
+        ui.painter(),
+        &measured,
+        caption_rect,
+        TextComponentId::new(TextComponentKind::NavigationLabel, identity.text_instance()),
+        Some(parent),
+    );
+    if ui.clip_rect().intersects(caption_rect) || observation.layout_error.is_some() {
+        observations.push(observation);
+    }
+    if truncated || !enabled {
+        let mut tooltip = format!("{}\n{}", spec.label, description.replace("; ", "\n"));
+        if let Some(reason) = availability.disabled_reason() {
+            tooltip.push_str(&format!("\nUnavailable: {reason}"));
+        }
+        response.clone().on_hover_text(tooltip);
+    }
+    response
+}
+
+/// The snapshot owner matching [`avatar_item`]: a navigation item named by
+/// the caption, `selected` while it is current, presenting `target`'s action
+/// with the argument it carries.
+pub fn avatar_item_semantic_node<A: ActionKey>(
+    response: &Response,
+    spec: &AvatarItemSpec<'_>,
+    target: ActionTarget<A>,
+    availability: &Availability,
+    argument: Option<serde_json::Value>,
+    identity: PresentationId,
+    parent: SemanticUiId,
+) -> UiNode {
+    let action = target.action.specification();
+    let mut node = UiNode::container(
+        identity.semantic_id(),
+        Some(parent),
+        UiRole::NavigationItem,
+        response.interact_rect.into(),
+    );
+    node.name = spec.label.to_owned();
+    node.description = Some(spec.describe(action.description));
+    node.enabled = availability.enabled() && response.enabled();
+    node.focused = response.has_focus();
+    node.selected = spec.selected;
+    node.pane = target.pane;
+    node.domain_reference = target.pane.map(DomainReference::Pane);
+    node.actions = vec![SemanticActionId::from_action(target.action)];
+    node.disabled_reason = availability.disabled_reason().map(ToOwned::to_owned);
+    node.argument = argument;
+    node
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -691,6 +985,100 @@ mod tests {
                 cross(a, b, c).abs() * 0.5
             })
             .sum()
+    }
+
+    /// Present one avatar item `width` points wide; return its node, text
+    /// and rect.
+    fn present_item(
+        spec: AvatarItemSpec<'_>,
+        availability: Availability,
+        width: f32,
+    ) -> (UiNode, Vec<TextLayoutObservation>, Rect) {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        let tokens = tokens();
+        let identity = crate::PresentationScope::new("strip").instance(("item", 7));
+        let mut result = None;
+        for _ in 0..2 {
+            let mut output = context.run_ui(egui::RawInput::default(), |ui| {
+                ui.set_max_width(width);
+                let mut observations = Vec::new();
+                let target = ActionTarget::application(crate::test_actions::TestAction::Undo);
+                let response = avatar_item(
+                    ui,
+                    &spec,
+                    target,
+                    &availability,
+                    identity,
+                    &tokens,
+                    1.0,
+                    &mut observations,
+                );
+                let node = avatar_item_semantic_node(
+                    &response,
+                    &spec,
+                    target,
+                    &availability,
+                    Some(serde_json::json!(7)),
+                    identity,
+                    SemanticUiId::root(),
+                );
+                result = Some((node, observations, response.rect));
+            });
+            output.textures_delta.clear();
+        }
+        result.expect("presented")
+    }
+
+    #[test]
+    fn an_avatar_item_is_a_navigation_item_named_by_its_whole_caption() {
+        let name = "Grace Brewster Murray Hopper";
+        let spec = AvatarItemSpec::new(AvatarSpec::person(name, AvatarSize::Header), name);
+        // Whatever size the avatar spec gives, the item shows the strip size.
+        assert_eq!(spec.avatar.size, AvatarSize::Strip);
+        let (node, text, rect) = present_item(spec, Availability::Enabled, 400.0);
+        assert_eq!(node.role, UiRole::NavigationItem);
+        assert_eq!(node.name, name);
+        assert_eq!(node.argument, Some(serde_json::json!(7)));
+        assert!(!node.selected);
+        let tokens = tokens();
+        let size = avatar_item_size(&tokens, 1.0);
+        assert!((rect.size() - size).length() < 0.5, "{rect:?} {size:?}");
+        assert!(size.x >= tokens.geometry.minimum_hit_size.0);
+        assert!(size.y > avatar_size(&tokens, AvatarSize::Strip, 1.0));
+        // The caption is one centred line, elided; the node keeps it whole.
+        assert_eq!(text.len(), 1);
+        assert_eq!(
+            text[0].component_id.kind,
+            TextComponentKind::NavigationLabel
+        );
+        assert!(text[0].truncated);
+        assert_eq!(text[0].line_count, 1);
+        assert!(text[0].layout_error.is_none());
+        // Larger text grows the item.
+        assert!(avatar_item_size(&tokens, 1.5).y > size.y);
+    }
+
+    #[test]
+    fn a_current_item_is_selected_and_a_disabled_one_keeps_its_reason() {
+        let spec = AvatarItemSpec::new(AvatarSpec::person("Ada", AvatarSize::Strip), "Ada")
+            .description("Open the conversation with Ada")
+            .selected(true);
+        let (node, _, _) = present_item(spec, Availability::Enabled, 400.0);
+        assert!(node.selected);
+        assert_eq!(
+            node.description.as_deref(),
+            Some("Open the conversation with Ada; Current destination")
+        );
+        let (node, _, _) = present_item(
+            spec.selected(false),
+            Availability::Disabled {
+                reason: "Ada is away".into(),
+            },
+            400.0,
+        );
+        assert!(!node.enabled);
+        assert_eq!(node.disabled_reason.as_deref(), Some("Ada is away"));
     }
 
     #[test]

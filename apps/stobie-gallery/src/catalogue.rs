@@ -52,10 +52,11 @@ pub enum StoryId {
     DialogSheet,
     DialogConfirm,
     FormTextFields,
+    AvatarsStrip,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 47] = [
+    pub const ALL: [Self; 48] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -103,6 +104,7 @@ impl StoryId {
         Self::DialogSheet,
         Self::DialogConfirm,
         Self::FormTextFields,
+        Self::AvatarsStrip,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -154,6 +156,7 @@ impl StoryId {
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
             Self::FormTextFields => "form/text-fields",
+            Self::AvatarsStrip => "avatars/strip",
         }
     }
 }
@@ -297,6 +300,12 @@ const SCROLL: &[InteractionScenario] = &[
     InteractionScenario::Keyboard,
     InteractionScenario::Scroll,
 ];
+const SCROLL_KEYBOARD: &[InteractionScenario] = &[
+    InteractionScenario::Pointer,
+    InteractionScenario::Keyboard,
+    InteractionScenario::Accessibility,
+    InteractionScenario::Scroll,
+];
 const PASSIVE: &[InteractionScenario] = &[];
 const BUTTON_DEFAULT: &[StoryState] = &[
     StoryState::Default,
@@ -403,6 +412,16 @@ const FIELD_STATES: &[StoryState] = &[
     StoryState::Error,
     StoryState::Narrow,
 ];
+const AVATAR_STRIP_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Selected,
+    StoryState::LongText,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -430,7 +449,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 47] = [
+pub static STORIES: [StoryDefinition; 48] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -853,6 +872,15 @@ pub static STORIES: [StoryDefinition; 47] = [
         720,
         FIELD_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::AvatarsStrip,
+        "A strip of pinned people and assistants whose avatars are the controls: the open one current, a long name elided and one unavailable; it scrolls sideways at phone width.",
+        StoryGroup::Avatar,
+        640,
+        360,
+        AVATAR_STRIP_STATES,
+        SCROLL_KEYBOARD,
     ),
 ];
 

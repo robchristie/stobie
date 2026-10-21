@@ -1,3 +1,4 @@
+mod avatar_strip;
 mod avatars;
 mod buttons;
 mod chat;
@@ -26,6 +27,7 @@ use stobie_ui_egui::{
 
 use crate::catalogue::{StoryId, story_definition};
 
+pub use avatar_strip::AvatarStripFixtureState;
 pub use chat::ChatFixtureState;
 pub use dialogs::DialogFixtureState;
 pub(crate) use dock::DockSceneState;
@@ -49,6 +51,7 @@ pub(crate) struct StoryState {
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
     pub(crate) fields: FieldFixtureState,
+    pub(crate) avatar_strip: AvatarStripFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -160,6 +163,9 @@ fn present_story(
             &mut state.dialog,
             &mut report,
         ),
+        StoryId::AvatarsStrip => {
+            avatar_strip::story(ui, tokens, font_scale, &mut state.avatar_strip, &mut report)
+        }
         StoryId::FormTextFields => {
             fields::story(ui, tokens, font_scale, &mut state.fields, &mut report)
         }

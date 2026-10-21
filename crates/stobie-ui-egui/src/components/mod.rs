@@ -34,8 +34,9 @@ pub(crate) use action_button::{
     ButtonFace, action_button_size, action_hit_height, present_action_button, present_button,
 };
 pub use avatar::{
-    AvatarFace, AvatarFigure, AvatarOutline, AvatarOutlineError, AvatarSize, AvatarSpec,
-    OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_size, paint_avatar,
+    AvatarFace, AvatarFigure, AvatarItemSpec, AvatarOutline, AvatarOutlineError, AvatarSize,
+    AvatarSpec, OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_item,
+    avatar_item_semantic_node, avatar_item_size, avatar_size, paint_avatar,
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub(crate) use conversation_row::muted_text_on;
