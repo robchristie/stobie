@@ -1020,9 +1020,15 @@ Instants are `Timestamp`s: whole milliseconds since the Unix epoch, in years
 | `long_date` | Tuesday 14 April 2026 | Tuesday 14 April 2026 |
 | `relative_day` | Today, Yesterday, Tomorrow, Tuesday (within the last six days), then the short date | the same |
 | `relative_day_and_time` | Yesterday at 7:00 AM | Yesterday at 07:00 |
+| `relative_day_in_sentence`, inside a sentence | today, yesterday, tomorrow, on Tuesday, on 14 Apr | the same |
+| `relative_day_and_time_in_sentence` | today at 3:30 PM, on Saturday at 9:41 AM, on 14 Apr at 7:00 AM | today at 15:30 |
 | `compact`, for a list row | 9:41 AM today, otherwise the relative day | 09:41 |
 | `utc_offset` | UTC+9:30, UTC-3:30, UTC | the same |
 | `format_duration` (a free function) | 45 s, 12 min, 2 h 10 min, 1 day 4 h | the same |
+
+The `_in_sentence` forms continue a sentence ("Signed in today at 3:30 PM",
+"Reset on Saturday at 9:41 AM"); begin a sentence, a label or a list row with
+the capitalised forms. Both classify the day the same way.
 
 With month before day (United States English) the dates read "Apr 14",
 "Apr 14, 2025" and "Tuesday, April 14, 2026". `TimeZone::name` gives the
@@ -1085,4 +1091,20 @@ it when the zone or locale may have changed, such as when the application
 returns to the foreground. Times shown relative to now ("Today", "in 2 h")
 change as time passes: schedule a later pass with
 `Frame::request_repaint_after` for the next change rather than repainting
-every frame.
+every frame. `until_next_day` gives how long until the day in the zone
+changes, which is when every relative day and every time of day that
+`compact` shows changes. It is exact across a daylight-saving change, even
+one that skips midnight; where the zone's answers disagree, or past
+`Timestamp::MAX`, it gives at most an hour. Ask again in each pass that shows
+such text, so the request follows the clock:
+
+```rust,ignore
+// In `ui`, beside a list whose rows show `local.compact(sent)`.
+frame.request_repaint_after("the local day changes", local.until_next_day());
+```
+
+The repaint then has a recorded reason and runs once a day while the
+application is otherwise idle. A timer that fires early finds the same day and
+asks again for the few milliseconds left. A wall clock set by hand, or a sleep
+that pauses timers, can make the pass late; egui also repaints on input
+and when the page or window regains focus.

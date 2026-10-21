@@ -1,7 +1,8 @@
 // Check `stobie_ui_egui::local_time` in the browser, through the Gallery's
-// WebAssembly build: the shared fixtures, formatted through the page's Intl,
-// must give exactly the values the native unit tests check, and the viewer's
-// zone and locale must be the page's. Each page runs with Chromium's time zone
+// WebAssembly build: the shared fixtures, formatted through the page's Intl
+// with the time until each case's day changes, must give exactly the values
+// the native unit tests check, and the viewer's zone and locale must be the
+// page's. Each page runs with Chromium's time zone
 // and locale emulation, so the result does not depend on the host's settings.
 //
 // Build the Gallery's web package first (`cargo xtask verify-stage
@@ -57,20 +58,25 @@ const now = Date.UTC(2026, 3, 5, 0, 0);
 const viewers = [
   {
     timezoneId: 'Australia/Adelaide', locale: 'en-AU', resolved: '12 day-month',
-    formats: { time_of_day: '2:30 AM', short_date: '5 Apr', long_date: 'Sunday 5 April 2026', relative_day: 'Today', relative_day_and_time: 'Today at 2:30 AM', compact: '2:30 AM', utc_offset: 'UTC+9:30' },
+    formats: { time_of_day: '2:30 AM', short_date: '5 Apr', long_date: 'Sunday 5 April 2026', relative_day: 'Today', relative_day_and_time: 'Today at 2:30 AM', relative_day_in_sentence: 'today', relative_day_and_time_in_sentence: 'today at 2:30 AM', compact: '2:30 AM', utc_offset: 'UTC+9:30' },
+    // 09:30 on the 5th, so the day changes at 00:00 on the 6th (+9:30).
+    until_next_day_ms: 14.5 * 3_600_000,
   },
   {
     timezoneId: 'America/New_York', locale: 'en-US', resolved: '12 month-day',
-    formats: { time_of_day: '1:00 PM', short_date: 'Apr 4', long_date: 'Saturday, April 4, 2026', relative_day: 'Today', relative_day_and_time: 'Today at 1:00 PM', compact: '1:00 PM', utc_offset: 'UTC-4:00' },
+    formats: { time_of_day: '1:00 PM', short_date: 'Apr 4', long_date: 'Saturday, April 4, 2026', relative_day: 'Today', relative_day_and_time: 'Today at 1:00 PM', relative_day_in_sentence: 'today', relative_day_and_time_in_sentence: 'today at 1:00 PM', compact: '1:00 PM', utc_offset: 'UTC-4:00' },
+    until_next_day_ms: 4 * 3_600_000,
   },
   {
     timezoneId: 'Europe/London', locale: 'en-GB', resolved: '24 day-month',
-    formats: { time_of_day: '18:00', short_date: '4 Apr', long_date: 'Saturday 4 April 2026', relative_day: 'Yesterday', relative_day_and_time: 'Yesterday at 18:00', compact: 'Yesterday', utc_offset: 'UTC+1:00' },
+    formats: { time_of_day: '18:00', short_date: '4 Apr', long_date: 'Saturday 4 April 2026', relative_day: 'Yesterday', relative_day_and_time: 'Yesterday at 18:00', relative_day_in_sentence: 'yesterday', relative_day_and_time_in_sentence: 'yesterday at 18:00', compact: 'Yesterday', utc_offset: 'UTC+1:00' },
+    until_next_day_ms: 23 * 3_600_000,
   },
   {
     // Fields stay Gregorian with Latin digits whatever the page's locale.
     timezoneId: 'Asia/Tokyo', locale: 'ar-EG', resolved: '12 day-month',
-    formats: { time_of_day: '2:00 AM', short_date: '5 Apr', long_date: 'Sunday 5 April 2026', relative_day: 'Today', relative_day_and_time: 'Today at 2:00 AM', compact: '2:00 AM', utc_offset: 'UTC+9:00' },
+    formats: { time_of_day: '2:00 AM', short_date: '5 Apr', long_date: 'Sunday 5 April 2026', relative_day: 'Today', relative_day_and_time: 'Today at 2:00 AM', relative_day_in_sentence: 'today', relative_day_and_time_in_sentence: 'today at 2:00 AM', compact: '2:00 AM', utc_offset: 'UTC+9:00' },
+    until_next_day_ms: 15 * 3_600_000,
   },
 ];
 
@@ -97,6 +103,7 @@ try {
       assert.deepEqual(result.fixtures, fixtures, `${viewer.timezoneId}: Intl formats the fixtures as natively`);
       assert.deepEqual(result.viewer, {
         zone: viewer.timezoneId, locale: viewer.resolved, formats: viewer.formats,
+        until_next_day_ms: viewer.until_next_day_ms,
       }, `${viewer.timezoneId}: the viewer's zone and locale are the page's`);
       report.fixtures ??= result.fixtures;
       report.viewers.push({ timezoneId: viewer.timezoneId, locale: viewer.locale, page: result.page, viewer: result.viewer });
