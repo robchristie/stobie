@@ -50,6 +50,11 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
         fs::remove_dir_all(staging)?;
     }
     fs::create_dir_all(staging)?;
+    // Production builds keep a target directory of their own inside Cargo's.
+    let cargo_target = super::target_directory()?.join("browser-cargo");
+    let cargo_target = cargo_target
+        .to_str()
+        .context("target directory is not UTF-8")?;
     super::run(
         "cargo",
         &[
@@ -58,7 +63,7 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             "--release",
             "--lib",
             "--target-dir",
-            "target/browser-cargo",
+            cargo_target,
             "--target",
             "wasm32-unknown-unknown",
             "-p",
@@ -87,9 +92,13 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
             &["worker-pkg"],
         )?;
         stobie_build::write_startup_loader(&destination)?;
-        bindgen(binary, &destination.join("pkg"))?;
+        bindgen(cargo_target, binary, &destination.join("pkg"))?;
         if name == "lab" {
-            bindgen("stobie_tile_worker", &destination.join("worker-pkg"))?;
+            bindgen(
+                cargo_target,
+                "stobie_tile_worker",
+                &destination.join("worker-pkg"),
+            )?;
         }
         apps.push(package::App {
             name: name.into(),
@@ -123,9 +132,9 @@ pub fn build(arguments: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-fn bindgen(binary: &str, destination: &Path) -> Result<()> {
+fn bindgen(cargo_target: &str, binary: &str, destination: &Path) -> Result<()> {
     super::bindgen(
-        &format!("target/browser-cargo/wasm32-unknown-unknown/release/{binary}.wasm"),
+        Path::new(cargo_target).join(format!("wasm32-unknown-unknown/release/{binary}.wasm")),
         destination,
     )
 }

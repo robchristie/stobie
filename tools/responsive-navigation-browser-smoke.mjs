@@ -36,7 +36,7 @@ const steps = [];
 const targets = [];
 const errors = [];
 let context, page, browser, url;
-const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
+const snapshot = async () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 // Nothing open arrives as undefined from the WASM bridge.
 const fixture = async () => ({ open: null, ...(await page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot().responsive_fixture)) });
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'desktop', ...overrides });

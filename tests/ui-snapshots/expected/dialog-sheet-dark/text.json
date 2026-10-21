@@ -257,7 +257,7 @@
     "attempted_components": 10,
     "successful_components": 10,
     "failed_components": 0,
-    "native_text_controls": 54,
+    "native_text_controls": 26,
     "observed_native_controls": 0,
     "excluded_categories": [
       "ordinary_egui_labels",

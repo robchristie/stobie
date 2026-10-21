@@ -21,7 +21,6 @@ else
 fi
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
-export DISPLAY="${STOBIE_RESPONSIVE_NAVIGATION_BROWSER_DISPLAY:-:87}" STOBIE_BROWSER_HEADFUL=1
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/browser-xvfb.log" 2>&1
-sleep 1
+export STOBIE_BROWSER_HEADFUL=1
+owned_start_xvfb "$EVIDENCE_DIR/browser-xvfb.log" -screen 0 1440x900x24 -nolisten tcp +extension GLX
 STOBIE_EVIDENCE_DIR="$EVIDENCE_DIR" ui_sandbox "$(command -v node)" tools/responsive-navigation-browser-smoke.mjs

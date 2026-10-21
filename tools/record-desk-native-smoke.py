@@ -10,11 +10,16 @@ import sys
 import time
 
 from native_keyboard_focus import focus_native_target
+from target_directory import target_directory
 
 ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE = Path(sys.argv[1]).resolve()
 XDO, IMPORT = sys.argv[2:4]
-BINARY = ROOT / "consumers/record-desk/target/release/record-desk"
+BINARY = Path(
+    os.environ.get("STOBIE_RECORD_DESK_TARGET_DIR")
+    or target_directory(ROOT / "consumers/record-desk/Cargo.toml"),
+    "release/record-desk",
+)
 SNAPSHOT = EVIDENCE / "native-current.json"
 STATE = EVIDENCE / "native-state.json"
 STEPS = []

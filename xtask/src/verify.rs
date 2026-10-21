@@ -116,6 +116,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "--test",
                     "tools/tests/browser-startup.test.mjs",
                     "tools/tests/browser-launch.test.mjs",
+                    "tools/tests/browser-launch-failure.test.mjs",
                     "tools/tests/browser-idle.test.mjs",
                     "tools/tests/navigation-browser-focus.test.mjs",
                     "tools/tests/record-desk-target.test.mjs",
@@ -376,6 +377,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                     "cargo",
                     &[
                         "build",
+                        "--locked",
                         "--release",
                         "--manifest-path",
                         "consumers/record-desk/Cargo.toml",
@@ -506,7 +508,7 @@ fn build_gallery_web() -> Result<()> {
         ],
     )?;
     bindgen(
-        "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
+        target_directory()?.join("wasm32-unknown-unknown/release/stobie_gallery.wasm"),
         "apps/stobie-gallery/web/pkg",
     )
 }

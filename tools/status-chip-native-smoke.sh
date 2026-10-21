@@ -22,15 +22,14 @@ fi
 IMPORT="$(command -v import)"
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
-export DISPLAY="${STOBIE_STATUS_CHIP_DISPLAY:-:94}" WGPU_BACKEND=gl
+export WGPU_BACKEND=gl
 STORY="${STOBIE_GALLERY_STORY:-status-chip/tasks}"
 SNAPSHOT="$ROOT/.tools/runtime/status-chip-native-snapshot.json"
 rm -f "$SNAPSHOT"
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/native-xvfb.log" 2>&1
-sleep 1
+owned_start_xvfb "$EVIDENCE_DIR/native-xvfb.log" -screen 0 1440x900x24 -nolisten tcp +extension GLX
 STOBIE_GALLERY_STORY="$STORY" STOBIE_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
   STOBIE_GALLERY_SNAPSHOT_CONTINUOUS=1 \
-  owned_start APP_PID target/release/stobie-gallery >"$EVIDENCE_DIR/native-runtime.log" 2>&1
+  owned_start APP_PID "$STOBIE_TARGET_DIR"/release/stobie-gallery >"$EVIDENCE_DIR/native-runtime.log" 2>&1
 ui_sandbox "$(command -v python3)" - "$SNAPSHOT" "$XDO" "$IMPORT" "$EVIDENCE_DIR" <<'PY'
 import hashlib
 import json
@@ -154,7 +153,7 @@ try:
     image = capture.read_bytes()
     width, height = struct.unpack(">II", image[16:24])
     report = {"source_revision": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "binary_sha256": hashlib.sha256(Path("target/release/stobie-gallery").read_bytes()).hexdigest(),
+              "binary_sha256": hashlib.sha256(Path(os.environ["STOBIE_TARGET_DIR"], "release/stobie-gallery").read_bytes()).hexdigest(),
               "story": state["story"], "configuration": state["configuration"], "display": os.environ["DISPLAY"],
               "backend": "GL/llvmpipe on Xvfb", "steps": steps, "targets": targets, "idle": idle,
               "image": {"path": capture.name, "width": width, "height": height, "sha256": hashlib.sha256(image).hexdigest()},

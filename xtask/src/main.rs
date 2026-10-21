@@ -1,4 +1,8 @@
-use std::{env, fs, path::Path, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use anyhow::{Context, Result, anyhow, bail};
 
@@ -71,22 +75,20 @@ fn build_web() -> Result<()> {
             "live-feed",
         ],
     )?;
+    let wasm = target_directory()?.join("wasm32-unknown-unknown/release");
     bindgen(
-        "target/wasm32-unknown-unknown/release/analytical_workspace_lab.wasm",
+        wasm.join("analytical_workspace_lab.wasm"),
         "apps/analytical-workspace-lab/web/pkg",
     )?;
     bindgen(
-        "target/wasm32-unknown-unknown/release/stobie_gallery.wasm",
+        wasm.join("stobie_gallery.wasm"),
         "apps/stobie-gallery/web/pkg",
     )?;
     bindgen(
-        "target/wasm32-unknown-unknown/release/stobie_tile_worker.wasm",
+        wasm.join("stobie_tile_worker.wasm"),
         "apps/analytical-workspace-lab/web/worker-pkg",
     )?;
-    bindgen(
-        "target/wasm32-unknown-unknown/release/live_feed.wasm",
-        "apps/live-feed/web/pkg",
-    )?;
+    bindgen(wasm.join("live_feed.wasm"), "apps/live-feed/web/pkg")?;
     Ok(())
 }
 
@@ -101,14 +103,35 @@ fn ensure_wasm_bindgen() -> Result<String> {
 }
 
 /// Run wasm-bindgen for the web into a fresh `output`.
-fn bindgen(wasm: &str, output: impl AsRef<Path>) -> Result<()> {
-    let output = output.as_ref();
+fn bindgen(wasm: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<()> {
+    let (wasm, output) = (wasm.as_ref(), output.as_ref());
     println!(
-        "+ wasm-bindgen --target web --out-dir {} {wasm}",
-        output.display()
+        "+ wasm-bindgen --target web --out-dir {} {}",
+        output.display(),
+        wasm.display()
     );
-    stobie_build::bindgen(Path::new(wasm), output)?;
+    stobie_build::bindgen(wasm, output)?;
     Ok(())
+}
+
+/// The directory Cargo builds this workspace into: `CARGO_TARGET_DIR`, Cargo
+/// configuration or the workspace's own `target/`.
+fn target_directory() -> Result<PathBuf> {
+    let output = Command::new("cargo")
+        .args(["metadata", "--format-version", "1", "--no-deps"])
+        .output()
+        .context("run cargo metadata")?;
+    if !output.status.success() {
+        bail!(
+            "cargo metadata failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    metadata["target_directory"]
+        .as_str()
+        .map(PathBuf::from)
+        .context("cargo metadata reports no target_directory")
 }
 
 fn architecture() -> Result<()> {
@@ -572,15 +595,25 @@ fn assert_tree_excludes(package: &str, forbidden: &[&str]) -> Result<()> {
     assert_tree_excludes_with(package, &["-p", package], forbidden)
 }
 
+/// `cargo tree` over the workspace or manifest `arguments` name. It is locked,
+/// so a `Cargo.lock` that no longer matches its manifests fails the check
+/// instead of being rewritten.
+fn cargo_tree(arguments: &[&str]) -> Command {
+    let mut command = Command::new("cargo");
+    command.args(["tree", "--locked"]).args(arguments);
+    command
+}
+
 fn assert_tree_excludes_with(label: &str, arguments: &[&str], forbidden: &[&str]) -> Result<()> {
-    let output = Command::new("cargo")
-        .arg("tree")
-        .args(arguments)
+    let output = cargo_tree(arguments)
         .args(["--target", "all", "--prefix", "none"])
         .output()
         .with_context(|| format!("run cargo tree for {label}"))?;
     if !output.status.success() {
-        bail!("cargo tree failed for {label}");
+        bail!(
+            "cargo tree failed for {label}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
     let tree = String::from_utf8(output.stdout)?;
     for dependency in forbidden {
@@ -601,9 +634,7 @@ fn assert_gpu_only_through_eframe(label: &str, arguments: &[&str]) -> Result<()>
         ("wgpu", &["egui-wgpu", "eframe"][..]),
         ("egui-wgpu", &["eframe"][..]),
     ] {
-        let output = Command::new("cargo")
-            .arg("tree")
-            .args(arguments)
+        let output = cargo_tree(arguments)
             .args([
                 "-e", "normal", "--target", "all", "--prefix", "none", "--depth", "1", "-i",
                 package,
@@ -614,7 +645,10 @@ fn assert_gpu_only_through_eframe(label: &str, arguments: &[&str]) -> Result<()>
             if String::from_utf8_lossy(&output.stderr).contains("did not match any packages") {
                 continue;
             }
-            bail!("cargo tree -i {package} failed for {label}");
+            bail!(
+                "cargo tree -i {package} failed for {label}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
         for dependent in direct_dependents(&String::from_utf8(output.stdout)?) {
             if !allowed.contains(&dependent) {
@@ -676,9 +710,24 @@ fn run_with_environment(
 #[cfg(test)]
 mod architecture_tests {
     use super::{
-        direct_dependents, has_action_key_implementation, image_definitions, owns_action_registry,
-        workspace_definition_count,
+        cargo_tree, direct_dependents, has_action_key_implementation, image_definitions,
+        owns_action_registry, workspace_definition_count,
     };
+
+    #[test]
+    fn dependency_checks_never_rewrite_a_lockfile() {
+        let command = cargo_tree(&["--manifest-path", "consumers/record-desk/Cargo.toml"]);
+        let arguments: Vec<_> = command.get_args().collect();
+        assert_eq!(
+            arguments,
+            [
+                "tree",
+                "--locked",
+                "--manifest-path",
+                "consumers/record-desk/Cargo.toml"
+            ]
+        );
+    }
 
     #[test]
     fn core_image_guard_finds_definitions_but_not_mentions() {

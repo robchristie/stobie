@@ -9,6 +9,7 @@ import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } fr
 import { ApplicationClient, SocketTransport, BrowserTransport, BrowserPhysicalAdapter, NativePhysicalAdapter } from './application-client.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { interfaceSelection, assertInterfaceCoverage } from './application-interface-selection.mjs';
+import { recordDeskTargetDirectory, stobieTargetDirectory } from './target-directory.mjs';
 
 const selection = interfaceSelection(process.argv.slice(2));
 
@@ -260,7 +261,7 @@ try {
     await page.close();
   }
   for (const app of selection.hosts.includes('native') ? selection.apps : []) {
-    const binary = resolve(app === 'lab' ? 'target/release/analytical-workspace-lab' : 'consumers/record-desk/target/release/record-desk');
+    const binary = app === 'lab' ? resolve(stobieTargetDirectory(), 'release/analytical-workspace-lab') : resolve(recordDeskTargetDirectory(), 'release/record-desk');
     const socket = resolve('.tools/runtime', `ai-${randomUUID().slice(0, 8)}.sock`);
     const storage = await mkdtemp(resolve('.tools/runtime', 'ai-store-'));
     const runtime = await open(resolve(evidence, `${app}-native.log`), 'w');

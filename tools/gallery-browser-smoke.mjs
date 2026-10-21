@@ -103,7 +103,11 @@ const assertRenderedScreenshot = async (screenshot, label) => {
   }
 };
 
-const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
+// Native-text coverage counts the catalogue entries in view, which in the
+// 1440 by 900 viewport is 18 for any catalogue longer than that, so a new story
+// changes nothing here; the other six are the Gallery's own controls.
+const CATALOGUE_ENTRIES_IN_VIEW = 18;
+const snapshot = async () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const selectStory = async (story) => {
   const before = await snapshot();
   const startedMs = Date.now();
@@ -141,7 +145,7 @@ try {
   let current = await snapshot();
   if (current.story !== 'reference/application-shell' || current.story_count !== manifest.length
       || current.text.length === 0 || current.text_audit.length !== 0
-      || current.text_audit_coverage?.native_text_controls !== manifest.length + 6
+      || current.text_audit_coverage?.native_text_controls !== Math.min(manifest.length, CATALOGUE_ENTRIES_IN_VIEW) + 6
       || current.text_audit_coverage.observed_native_controls !== 0
       || JSON.stringify(current.text_audit_coverage) !== JSON.stringify(current.ui_snapshot.text_audit_coverage)
       || current.ui_snapshot.nodes.length === 0 || current.ui_snapshot.nodes.length >= 1_000

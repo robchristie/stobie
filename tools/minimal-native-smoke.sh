@@ -16,7 +16,6 @@ else
   XDO="$SYSROOT/usr/bin/xdotool"
   XVFB="$SYSROOT/usr/bin/Xvfb"
 fi
-DISPLAY_NUMBER=:94
 SNAPSHOT="$ROOT/.tools/runtime/minimal-native-snapshot.json"
 SMOKE_TMP="$ROOT/.tools/runtime/minimal-native-x11-tmp"
 APP_LOG="$EVIDENCE_DIR/minimal-native-runtime.log"
@@ -27,12 +26,11 @@ find "$SMOKE_TMP/.X11-unix" -mindepth 1 -delete
 chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
 source "$ROOT/tools/native-smoke-lifecycle.sh"
 xdo() { DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$XDO" "$@"; }
-owned_start XVFB_PID "$XVFB" "$DISPLAY_NUMBER" \
-  -screen 0 900x700x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/minimal-native-xvfb.log" 2>&1
+owned_start_xvfb "$EVIDENCE_DIR/minimal-native-xvfb.log" -screen 0 900x700x24 -nolisten tcp +extension GLX
+DISPLAY_NUMBER="$DISPLAY"
 rm -f "$SNAPSHOT"
-sleep 1
 DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl STOBIE_MINIMAL_SNAPSHOT="$SNAPSHOT" \
-  owned_start APP_PID target/release/examples/minimal-workspace >"$APP_LOG" 2>&1
+  owned_start APP_PID "$STOBIE_TARGET_DIR"/release/examples/minimal-workspace >"$APP_LOG" 2>&1
 
 wait_snapshot() {
   local count="$1"

@@ -37,7 +37,8 @@ assert.equal(packaged?.pwa?.webPush, true, 'the package manifest records the pus
 const VAPID_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 const keyBytes = [...Buffer.from(VAPID_KEY, 'base64url')];
 
-// The policy Bokkie's gateway sends, for one origin.
+// A strict content security policy, as a chat application's server might send
+// it, for one origin.
 const policy = origin => [
   "default-src 'none'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline'", "img-src 'self'",
   `connect-src 'self' ws://${new URL(origin).host}`, "manifest-src 'self'", "worker-src 'self'", "base-uri 'self'",
@@ -165,7 +166,7 @@ try {
   }));
   await cdp.send('ServiceWorker.enable');
   const registrationId = await registration;
-  const route = `${scope}?bot=scout`;
+  const route = `${scope}?conversation=inbox`;
   const deliver = data => cdp.send('ServiceWorker.deliverPushMessage', { origin, registrationId, data });
   async function shown(count) {
     const deadline = Date.now() + 20000;
@@ -179,11 +180,11 @@ try {
   }
   await deliver(JSON.stringify({
     web_push: 8030, mutable: true,
-    notification: { title: 'Scout', body: 'Five new papers', navigate: route, tag: 'bot-scout', app_badge: '2' },
+    notification: { title: 'Inbox', body: 'Two new messages', navigate: route, tag: 'conversation-inbox', app_badge: '2' },
   }));
   const declarative = await shown(1);
   assert.deepEqual(declarative.find(call => call.outcome), {
-    title: 'Scout', options: { data: { route }, body: 'Five new papers', tag: 'bot-scout' }, outcome: 'shown',
+    title: 'Inbox', options: { data: { route }, body: 'Two new messages', tag: 'conversation-inbox' }, outcome: 'shown',
   });
   const badges = declarative.filter(call => call.badge);
   await deliver('not json');
@@ -196,18 +197,18 @@ try {
 
   // A tap while the application is open: the worker posts it the route.
   await worker.evaluate(route => openRoute(route), route);
-  step('route while open', { facts: await facts(client, { route, path: '?bot=scout', routes: 1 }) });
+  step('route while open', { facts: await facts(client, { route, path: '?conversation=inbox', routes: 1 }) });
 
   // A tap with no window open: the worker remembers the route and opens a
   // window; this one lands on the scope, as WebKit's sometimes do, and the
   // application still reads the route at launch.
   await page.goto('about:blank');
-  const later = `${scope}bots/atlas`;
+  const later = `${scope}conversations/archive`;
   const opened = await worker.evaluate(route => openRoute(route).then(() => 'opened', error => `${error.name}`), later);
   // Outside a real tap Chromium refuses to open the window, so this page does.
   assert.notEqual(opened, 'opened', 'the worker opened a window outside a tap');
   client = await open(page, `${scope}?automation=1`);
-  step('route at launch', { openWindow: opened, facts: await facts(client, { route: later, path: 'bots/atlas', routes: 1 }) });
+  step('route at launch', { openWindow: opened, facts: await facts(client, { route: later, path: 'conversations/archive', routes: 1 }) });
   // The remembered route is read once.
   client = await open(page, `${scope}?automation=1`);
   const relaunched = await facts(client, { states: 1, routes: 0 });

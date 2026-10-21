@@ -49,6 +49,16 @@ in [docs/plans/](docs/plans/).
   tests, release native build, WASM build, architecture checks and browser smoke.
 - Keep execution plans consistent with [docs/plan-lifecycle.md](docs/plan-lifecycle.md).
 
+Verification asks Cargo where it builds (`cargo metadata`), so a worktree may set
+`CARGO_TARGET_DIR` to any directory; give each worktree its own, because
+worktrees that share one can reuse each other's binaries. Consumer workspaces
+such as `consumers/record-desk` are built and checked with `--locked`, so a
+stale lockfile fails rather than being rewritten. Each native smoke's Xvfb
+takes a free display number (`-displayfd`), so several verifications can run on
+one host at once; set `STOBIE_XVFB_DISPLAY=:N` only to choose one by hand.
+`tools/bootstrap-linux-ui.sh` provisions `.tools/sysroot` once per checkout;
+remove that directory to rebuild it.
+
 For ordinary README, plan lifecycle prose and `docs/plans/*-plan.md` closeout changes,
 `python3 tools/verify.py --base <comparison-commit>` is the scoped alternative.
 It derives committed, staged, unstaged and untracked scope from Git, checks

@@ -8,12 +8,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 APP="${1:?usage: stobie-cli-smoke.sh record-desk|lab|record-desk-browser}"
 case "$APP" in
-  record-desk) BINARY="$ROOT/consumers/record-desk/target/release/record-desk" ;;
-  lab) BINARY="$ROOT/target/release/analytical-workspace-lab" ;;
-  record-desk-browser) BINARY="$ROOT/consumers/record-desk/web"; export STOBIE_BROWSER_HEADFUL=1 ;;
+  record-desk|lab) ;;
+  record-desk-browser) export STOBIE_BROWSER_HEADFUL=1 ;;
   *) echo "unknown application $APP" >&2; exit 2 ;;
 esac
-STOBIE="$ROOT/target/release/stobie"
 bash tools/bootstrap-linux-ui.sh
 EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/stobie-cli-evidence}/stobie-cli"
 mkdir -p "$EVIDENCE_DIR" .tools/runtime
@@ -31,8 +29,13 @@ else
 fi
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
+case "$APP" in
+  record-desk) BINARY="$STOBIE_RECORD_DESK_TARGET_DIR/release/record-desk" ;;
+  lab) BINARY="$STOBIE_TARGET_DIR/release/analytical-workspace-lab" ;;
+  record-desk-browser) BINARY="$ROOT/consumers/record-desk/web" ;;
+esac
+STOBIE="$STOBIE_TARGET_DIR/release/stobie"
 # Sessions, sockets and saved state stay in the smoke's private directory.
-export DISPLAY=:94 WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime RECORD_DESK_STATE_PATH=/tmp/record-desk-state.json
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/stobie-cli-xvfb-$APP.log" 2>&1
-sleep 1
+export WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime RECORD_DESK_STATE_PATH=/tmp/record-desk-state.json
+owned_start_xvfb "$EVIDENCE_DIR/stobie-cli-xvfb-$APP.log" -screen 0 1440x1000x24 -nolisten tcp +extension GLX
 ui_sandbox "$(command -v node)" tools/stobie-cli-smoke.mjs "$STOBIE" "$BINARY" "$APP" "$EVIDENCE_DIR"

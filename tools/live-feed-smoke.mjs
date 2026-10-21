@@ -13,6 +13,7 @@ import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { ApplicationClient, BrowserTransport, SocketTransport } from './application-client.mjs';
+import { stobieTargetDirectory } from './target-directory.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 
 const [host, evidenceArgument] = process.argv.slice(2);
@@ -62,7 +63,7 @@ async function noRepaint(client, name, send) {
 }
 
 async function native() {
-  const binary = resolve('target/release/live-feed');
+  const binary = resolve(stobieTargetDirectory(), 'release/live-feed');
   assert(existsSync(binary), 'build first: cargo build --release -p live-feed');
   const runtime = process.env.XDG_RUNTIME_DIR ?? '/tmp';
   await mkdir(runtime, { recursive: true });

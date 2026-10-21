@@ -19,7 +19,6 @@ else
 fi
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
-export DISPLAY=:92 WGPU_BACKEND=gl
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/native-xvfb.log" 2>&1
-sleep 1
+export WGPU_BACKEND=gl
+owned_start_xvfb "$EVIDENCE_DIR/native-xvfb.log" -screen 0 1440x1000x24 -nolisten tcp +extension GLX
 ui_sandbox "$(command -v python3)" tools/record-desk-native-smoke.py "$EVIDENCE_DIR" "$XDO" "$(command -v import)"

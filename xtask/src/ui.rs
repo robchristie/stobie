@@ -909,8 +909,21 @@ mod tests {
         let manifest: FixtureManifest =
             serde_json::from_str(include_str!("../../tests/ui-snapshots/fixtures.json")).unwrap();
         validate_manifest(&manifest).unwrap();
-        assert_eq!(manifest.fixtures.len(), 39);
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        // The checked-in baselines are exactly the manifest's fixtures, each
+        // complete, so a fixture added on one branch needs no count bump.
+        assert_eq!(
+            unexpected_expected_fixtures(&root, &manifest).unwrap(),
+            BTreeSet::new()
+        );
+        for fixture in &manifest.fixtures {
+            let directory = root.join(EXPECTED_ROOT).join(&fixture.id);
+            assert!(
+                has_complete_evidence(&directory),
+                "incomplete baseline {}",
+                fixture.id
+            );
+        }
         validate_evaluation_seed(&root).unwrap();
     }
 

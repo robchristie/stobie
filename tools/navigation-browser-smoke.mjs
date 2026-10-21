@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
 import { focusNavigationDestination } from './navigation-browser-focus.mjs';
+import { focusedId } from './browser-keyboard-focus.mjs';
 
 const root = resolve('apps/stobie-gallery/web');
 const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/navigation-browser');
@@ -32,7 +33,7 @@ const steps = [];
 const targets = [];
 const errors = [];
 let context, page, browser, url;
-const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
+const snapshot = async () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'regular', ...overrides });
 async function story(id, config = configuration()) {
   const before = await snapshot();
@@ -61,7 +62,7 @@ async function target(destination) {
   const r = node.rect;
   const point = { x: canvas.x + ((r.min_x + r.max_x) / 2 - root.min_x) * canvas.width / (root.max_x - root.min_x), y: canvas.y + ((r.min_y + r.max_y) / 2 - root.min_y) * canvas.height / (root.max_y - root.min_y) };
   targets.push({ destination, id, frame: s.frame, rect: r, point });
-  return { node, point, tab_input_epoch: s.tab_input_epoch };
+  return { node, point, focused_id: focusedId(s.ui_snapshot.nodes), tab_input_epoch: s.tab_input_epoch };
 }
 async function click(destination) { const { point } = await target(destination); await page.mouse.click(point.x, point.y); }
 async function focus(destination) {

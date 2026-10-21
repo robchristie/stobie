@@ -11,6 +11,18 @@ PACKAGES="$ROOT/.tools/packages"
 SYSROOT="$ROOT/.tools/sysroot"
 mkdir -p "$PACKAGES" "$SYSROOT"
 
+# Smokes run at once in one checkout share the sysroot: one extracts it while
+# the others wait, and it is extracted again only when this script changes.
+# Remove .tools/sysroot to rebuild it.
+STAMP="$SYSROOT/.stobie-bootstrap"
+EXPECTED="$(sha256sum "${BASH_SOURCE[0]}" | cut -d ' ' -f 1)"
+exec 9>"$ROOT/.tools/sysroot.lock"
+flock 9
+if [[ -f "$STAMP" && "$(<"$STAMP")" == "$EXPECTED" ]]; then
+  exit 0
+fi
+rm -f "$STAMP"
+
 fetch() {
   local name="$1"
   local url="$2"
@@ -42,3 +54,4 @@ fetch libxtst https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxtst-1.2.
 fetch libxinerama https://au.mirrors.cicku.me/archlinux/extra/os/x86_64/libxinerama-1.1.6-1-x86_64.pkg.tar.zst
 
 ln -sf /opt/bash "$SYSROOT/usr/bin/sh"
+printf '%s\n' "$EXPECTED" >"$STAMP"
