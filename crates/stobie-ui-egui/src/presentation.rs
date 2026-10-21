@@ -9,6 +9,7 @@ mod composer;
 mod copy;
 mod dialog;
 mod navigation;
+mod scroll;
 
 pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
@@ -27,6 +28,7 @@ pub use navigation::{
     NavigationContent, NavigationControlResponse, NavigationDetail, NavigationLayout,
     NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
 };
+pub use scroll::{AnchoredScrollArea, ScrollRows};
 
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,
