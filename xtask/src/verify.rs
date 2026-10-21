@@ -292,6 +292,11 @@ pub fn run_stage(name: &str) -> Result<()> {
             )?;
             run_with_environment(
                 "bash",
+                &["tools/scroll-browser-smoke.sh"],
+                &evidence_environment,
+            )?;
+            run_with_environment(
+                "bash",
                 &["tools/copy-browser-smoke.sh"],
                 &evidence_environment,
             )?;
@@ -462,6 +467,7 @@ pub fn run_stage(name: &str) -> Result<()> {
                 "tools/reading-text-browser-smoke.sh",
                 "tools/markdown-browser-smoke.sh",
                 "tools/chat-browser-smoke.sh",
+                "tools/scroll-browser-smoke.sh",
                 "tools/copy-browser-smoke.sh",
                 "tools/dialog-browser-smoke.sh",
                 "tools/responsive-navigation-browser-smoke.sh",
