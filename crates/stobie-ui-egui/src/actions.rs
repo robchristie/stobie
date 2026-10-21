@@ -96,6 +96,11 @@ impl<A: ActionKey> IntoActionTarget<A> for ActionTarget<A> {
 /// argument, so an agent discovers each row's control with the value it
 /// carries and invokes it without supplying one. Give the subject, such as the
 /// row's title, so that each control has its own accessible name ("Open Ada").
+/// Give a control its own label, such as "Tuesday" for one option of a
+/// weekday choice, with [`with_label`](Self::with_label), and a shorter one
+/// to show, such as "Tue", with [`with_short_label`](Self::with_short_label);
+/// [`Frame::segmented_choice`](crate::Frame::segmented_choice) presents a
+/// whole set of options of one action this way.
 ///
 /// The argument must satisfy the action's declared contract, which the host
 /// checks again before performing it.
@@ -194,6 +199,8 @@ pub struct BoundAction<A: ActionKey> {
     explicit: bool,
     argument: ActionArgument,
     subject: Option<String>,
+    label: Option<String>,
+    short_label: Option<String>,
 }
 
 impl<A: ActionKey> BoundAction<A> {
@@ -206,6 +213,8 @@ impl<A: ActionKey> BoundAction<A> {
             explicit: false,
             argument: argument.into(),
             subject: None,
+            label: None,
+            short_label: None,
         }
     }
 
@@ -218,6 +227,8 @@ impl<A: ActionKey> BoundAction<A> {
             explicit: true,
             argument: argument.into(),
             subject: None,
+            label: None,
+            short_label: None,
         }
     }
 
@@ -229,9 +240,45 @@ impl<A: ActionKey> BoundAction<A> {
         self
     }
 
+    /// Give the control its own label in place of the action's, such as
+    /// "Tuesday" for one option of a weekday choice: it shows the label and is
+    /// named by it, followed by the subject when one is named. The action, its
+    /// description and the argument stay the same.
+    pub fn with_label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    /// Show `short_label`, such as "Tue", in place of the label where space
+    /// is tight. The accessible name and the tooltip keep the full label
+    /// ("Tuesday"), as an action's own compact label does.
+    pub fn with_short_label(mut self, short_label: impl Into<String>) -> Self {
+        self.short_label = Some(short_label.into());
+        self
+    }
+
     /// The action this control performs.
     pub fn action(&self) -> A {
         self.action
+    }
+
+    /// The control's own label, when given in place of the action's.
+    pub fn label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    /// The control's own short label, when given.
+    pub fn short_label(&self) -> Option<&str> {
+        self.short_label.as_deref()
+    }
+
+    /// The label the control shows: its short label, its own label or the
+    /// action's, in that order.
+    pub fn visible_label(&self) -> &str {
+        self.short_label
+            .as_deref()
+            .or(self.label.as_deref())
+            .unwrap_or(self.action.specification().label)
     }
 
     /// The argument the control carries.
@@ -257,10 +304,14 @@ impl<A: ActionKey> BoundAction<A> {
         }
     }
 
-    /// The accessible name of a button presenting this action: its label,
-    /// followed by the subject when one is named.
+    /// The accessible name of a button presenting this action: its label
+    /// (the control's own, or the action's), followed by the subject when one
+    /// is named.
     pub fn accessible_name(&self) -> String {
-        let label = self.action.specification().label;
+        let label = self
+            .label
+            .as_deref()
+            .unwrap_or(self.action.specification().label);
         match &self.subject {
             Some(subject) => format!("{label} {subject}"),
             None => label.to_owned(),
@@ -359,6 +410,31 @@ pub(crate) fn stable_action_hash<A: ActionKey>(action: A, pane: Option<PaneId>) 
 mod tests {
     use super::*;
     use crate::test_actions::TestAction;
+
+    #[test]
+    fn a_bound_actions_own_label_names_and_shows_it() {
+        let plain = BoundAction::new(TestAction::Undo, 2_u32).with_subject("Ada");
+        assert_eq!(plain.visible_label(), "Undo");
+        assert_eq!(plain.accessible_name(), "Undo Ada");
+        let labelled = BoundAction::new(TestAction::Undo, "tue").with_label("Tuesday");
+        assert_eq!(labelled.label(), Some("Tuesday"));
+        assert_eq!(labelled.visible_label(), "Tuesday");
+        assert_eq!(labelled.accessible_name(), "Tuesday");
+        let short = labelled.with_short_label("Tue");
+        assert_eq!(short.short_label(), Some("Tue"));
+        assert_eq!(short.visible_label(), "Tue");
+        assert_eq!(short.accessible_name(), "Tuesday");
+        assert_eq!(
+            BoundAction::new(TestAction::Undo, 3_u32)
+                .with_label("Edit")
+                .with_subject("Ada")
+                .accessible_name(),
+            "Edit Ada"
+        );
+        // The action and argument stay the action's own.
+        assert_eq!(short.action(), TestAction::Undo);
+        assert_eq!(short.argument(), &ActionArgument::from("tue"));
+    }
 
     #[test]
     fn every_shortcut_key_name_is_a_distinct_egui_key() {

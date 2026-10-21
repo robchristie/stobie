@@ -197,6 +197,7 @@ impl PresentationContext {
                 content,
                 also_fits: &[spec.label, spec.confirmation, spec.failure],
                 tooltip: false,
+                tab_stop: true,
             },
             &action_identity,
             &self.tokens,

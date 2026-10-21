@@ -54,10 +54,11 @@ pub enum StoryId {
     HeadingControls,
     NavigationHeader,
     ScrollLoadOlder,
+    ChoiceSegmented,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 49] = [
+    pub const ALL: [Self; 50] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -107,6 +108,7 @@ impl StoryId {
         Self::HeadingControls,
         Self::NavigationHeader,
         Self::ScrollLoadOlder,
+        Self::ChoiceSegmented,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -160,6 +162,7 @@ impl StoryId {
             Self::HeadingControls => "heading/controls",
             Self::NavigationHeader => "navigation/header",
             Self::ScrollLoadOlder => "scroll/load-older",
+            Self::ChoiceSegmented => "choice/segmented",
         }
     }
 }
@@ -219,6 +222,7 @@ pub enum StoryGroup {
     Chat,
     Copy,
     Dialog,
+    Choice,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -419,6 +423,14 @@ const SCROLL_STATES: &[StoryState] = &[
     StoryState::KeyboardFocused,
     StoryState::Disabled,
     StoryState::Narrow,
+const CHOICE_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Selected,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
 ];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
@@ -447,7 +459,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 49] = [
+pub static STORIES: [StoryDefinition; 50] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -888,6 +900,15 @@ pub static STORIES: [StoryDefinition; 49] = [
         720,
         SCROLL_STATES,
         SCROLL,
+    ),
+    story(
+        StoryId::ChoiceSegmented,
+        "Segmented choices in a routine editor: a radio group focused at its chosen option beside an unavailable one, weekday toggles with short labels, long labels that wrap whole, a choice unavailable throughout and the weekdays in a narrow column.",
+        StoryGroup::Choice,
+        640,
+        720,
+        CHOICE_STATES,
+        KEYBOARD,
     ),
 ];
 

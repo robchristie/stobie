@@ -158,7 +158,7 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
         spec,
         identity,
         content,
-        None,
+        ControlLabels::default(),
         tokens,
         font_scale,
         observations,
@@ -262,16 +262,26 @@ pub(crate) fn action_hit_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
         .max(tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5))
 }
 
-/// The action button, named `name` for assistive technology and its tooltip
-/// when given, such as "Open Ada" for one row's Open; the visible label stays
-/// the action's.
+/// A bound control's own name and label, in place of its action's.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ControlLabels<'a> {
+    /// The accessible name and the tooltip's first line, such as "Open Ada"
+    /// for one row's Open.
+    pub name: Option<&'a str>,
+    /// The visible label, such as "Tue" for one option of a weekday choice.
+    pub visible: Option<&'a str>,
+}
+
+/// The action button, named and labelled by `labels` where they are given,
+/// and otherwise by its action. A visible label that differs from the name
+/// shows the name in a tooltip.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn present_action_button<A: ActionKey>(
     ui: &mut egui::Ui,
     spec: ActionButtonSpec<A>,
     identity: &ActionButtonIdentity,
     content: ActionButtonContent,
-    name: Option<&str>,
+    labels: ControlLabels<'_>,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
@@ -281,13 +291,15 @@ pub(crate) fn present_action_button<A: ActionKey>(
         return ui.interact(Rect::NOTHING, identity.widget_id, Sense::hover());
     }
     let action = spec.target.action.specification();
+    let name = labels.name.unwrap_or(action.label);
+    let visible_label = labels.visible.unwrap_or(if spec.compact {
+        action.compact_label.unwrap_or(action.label)
+    } else {
+        action.label
+    });
     let face = ButtonFace {
-        name: name.unwrap_or(action.label),
-        visible_label: if spec.compact {
-            action.compact_label.unwrap_or(action.label)
-        } else {
-            action.label
-        },
+        name,
+        visible_label,
         description: Some(action.description),
         shortcut: action.shortcut.map(|shortcut| shortcut.aria_keyshortcuts()),
         availability: &spec.availability,
@@ -295,7 +307,8 @@ pub(crate) fn present_action_button<A: ActionKey>(
         emphasis: spec.emphasis,
         content,
         also_fits: &[],
-        tooltip: spec.compact,
+        tooltip: spec.compact || labels.visible.is_some_and(|visible| visible != name),
+        tab_stop: true,
     };
     present_button(ui, &face, identity, tokens, font_scale, observations)
 }
@@ -318,6 +331,10 @@ pub(crate) struct ButtonFace<'a> {
     pub also_fits: &'a [&'a str],
     /// Show the tooltip even when the whole label shows.
     pub tooltip: bool,
+    /// Whether Tab stops on the enabled button. A roving group, such as a
+    /// single choice, keeps one option a Tab stop and moves between the
+    /// others with arrow keys; the rest still take clicks.
+    pub tab_stop: bool,
 }
 
 /// Present a visible button's face: allocate it, sense clicks when enabled,
@@ -357,10 +374,10 @@ pub(crate) fn present_button(
     let response = ui.interact(
         hit_rect,
         identity.widget_id,
-        if enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
+        match (enabled, face.tab_stop) {
+            (true, true) => Sense::click(),
+            (true, false) => Sense::CLICK,
+            (false, _) => Sense::hover(),
         },
     );
     if response.clicked() {

@@ -466,6 +466,33 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         )
     }
 
+    /// Present a segmented choice of `spec`'s options, bound to one action
+    /// whose argument is the option activated, such as a choice ID (see
+    /// [`PresentationContext::segmented_choice`]). Activating an option, by
+    /// clicking it or, in a single choice, moving to it with the arrow keys,
+    /// triggers the action with that option's argument; the application
+    /// records the choice in [`Application::perform_with`] and presents it on
+    /// a later pass. Each option's availability is the application's for its
+    /// argument, and agents see one control per option.
+    pub fn segmented_choice(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: &crate::SegmentedChoiceSpec<'_>,
+    ) -> crate::SegmentedChoiceResponse {
+        let target = target.into_target(presentation.pane());
+        let availability = self.availability;
+        let response =
+            presentation.segmented_choice(ui, target.action, target, spec, |target, argument| {
+                availability(target, argument)
+            });
+        if let Some(argument) = response.activated_argument(spec) {
+            self.triggers.push((target, argument.clone()));
+        }
+        response
+    }
+
     /// Present one row of a list whose whole surface performs the action for
     /// that row, named by `spec.title`, and trigger it with the row's argument
     /// when clicked. Pass a [`BoundAction`](crate::BoundAction) carrying the
@@ -800,11 +827,24 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
             emphasis,
             compact: false,
         };
-        let response = if *bound.argument() == ActionArgument::None && bound.subject().is_none() {
+        let labelled = bound.label().is_some() || bound.short_label().is_some();
+        let response = if *bound.argument() == ActionArgument::None
+            && bound.subject().is_none()
+            && !labelled
+        {
             presentation.action_with_content(ui, key, spec, content)
         } else {
-            let name = bound.subject().map(|_| bound.accessible_name());
-            presentation.bound_action(ui, key, spec, content, bound.argument(), name.as_deref())
+            let name = (bound.subject().is_some() || bound.label().is_some())
+                .then(|| bound.accessible_name());
+            presentation.labelled_bound_action(
+                ui,
+                key,
+                spec,
+                content,
+                bound.argument(),
+                name.as_deref(),
+                labelled.then(|| bound.visible_label()),
+            )
         };
         if response.clicked() {
             self.triggers.push((target, bound.argument().clone()));
@@ -2402,6 +2442,8 @@ fn pair_text_fields(
 
 #[cfg(test)]
 mod chat_tests;
+#[cfg(test)]
+mod choice_tests;
 #[cfg(test)]
 mod composer_tests;
 #[cfg(test)]
