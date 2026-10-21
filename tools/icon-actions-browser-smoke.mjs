@@ -8,7 +8,7 @@ import { resolve, join } from 'node:path';
 import { chromium } from 'playwright';
 import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { observeWarmedIdle } from './browser-idle.mjs';
-import { focusByTab } from './browser-keyboard-focus.mjs';
+import { focusByTab, focusedId } from './browser-keyboard-focus.mjs';
 
 const root = resolve('apps/stobie-gallery/web');
 const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/icons-browser');
@@ -37,7 +37,7 @@ let browser;
 let url;
 let serverStarted = false;
 let pressedComparison;
-const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
+const snapshot = async () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'regular', ...overrides });
 
 async function ready() {
@@ -77,7 +77,7 @@ async function control(control) {
     y: canvas.y + ((r.min_y + r.max_y) / 2 - rr.min_y) * canvas.height / (rr.max_y - rr.min_y),
   };
   targets.push({ control, node_id: node.id, frame: s.frame, rect: r, point });
-  return { node, point, tab_input_epoch: s.tab_input_epoch };
+  return { node, point, focused_id: focusedId(s.ui_snapshot.nodes), tab_input_epoch: s.tab_input_epoch };
 }
 async function click(controlId) {
   const { point } = await control(controlId);
@@ -89,7 +89,6 @@ async function focus(controlId) {
     pressTab: () => page.keyboard.press('Tab'),
     waitForTab: epoch => page.waitForFunction(epoch => window.__STOBIE_GALLERY_HANDLE.snapshot().tab_input_epoch > epoch, epoch, { timeout: 15000 }),
     wait: ms => page.waitForTimeout(ms),
-    maxTabs: 48,
   });
 }
 

@@ -135,14 +135,23 @@ async function layerShowsOnly(page, role, title, inside) {
     assert.equal(await layer(page).getByRole('button', { name: behind, exact: true }).count(), 0, `${behind} is hidden behind the ${role}`);
   }
 }
-/** Press Tab (or Shift+Tab) `count` times, returning each focused control. */
+/**
+ * Press Tab (or Shift+Tab) `count` times, returning each focused control.
+ * Each press waits until the Gallery has counted it and focus rests on a named
+ * control other than the one it left: egui moves focus a pass after it reads
+ * the key, so the pass that counts it can still show the old control, or none.
+ */
 async function tabs(page, key, count) {
   const visited = [];
   for (let i = 0; i < count; i += 1) {
-    const before = (await snapshot(page)).frame;
+    const before = await snapshot(page);
+    const from = focused(before) ?? null;
     await page.keyboard.press(key);
-    await page.waitForFunction(frame => window.__STOBIE_GALLERY_HANDLE.snapshot().frame > frame, before);
-    await page.waitForTimeout(120);
+    await page.waitForFunction(({ epoch, from }) => {
+      const s = window.__STOBIE_GALLERY_HANDLE.snapshot();
+      return s.tab_input_epoch > epoch && s.ui_snapshot.nodes.some(n => n.focused && n.name && n.name !== from);
+    }, { epoch: before.tab_input_epoch, from }, { timeout: 10000 })
+      .catch(async error => { throw new Error(`${key} from ${from} left focus on ${focused(await snapshot(page)) ?? 'no control'} after ${visited.join(',')}: ${error}`); });
     visited.push(focused(await snapshot(page)));
   }
   return visited;

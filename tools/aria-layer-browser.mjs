@@ -217,7 +217,10 @@ try {
   assert.deepEqual(serious.map(violation => `${violation.id}: ${violation.nodes.map(node => node.target.join(' ')).join(', ')}`), [], 'no serious axe-core violations');
   check('axe-core', { version: await page.evaluate(() => window.axe.version), violations: axe.map(violation => ({ id: violation.id, impact: violation.impact })) });
 
-  // An idle application presents no frame and writes nothing.
+  // An idle application presents no frame and writes nothing. axe-core's
+  // reads of the page can wake it, and under load its frames arrive late,
+  // so let it settle first.
+  await settle('after axe-core');
   let before = await probe();
   await page.waitForTimeout(1500);
   let after = await probe();

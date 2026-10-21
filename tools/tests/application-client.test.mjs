@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { ApplicationClient, ApplicationError, SocketTransport, BrowserTransport,
-  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError } from '../application-client.mjs';
+  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError, SOCKET_PATH_BYTES } from '../application-client.mjs';
 
 const rootRect = { min_x: 10, min_y: 20, max_x: 410, max_y: 320 };
 const targetRect = { min_x: 30, min_y: 40, max_x: 90, max_y: 80 };
@@ -477,8 +477,20 @@ test('native pointer placement supports an unchanged position and dispatches one
   await assert.rejects(misplaced.click({ x: 73, y: 23 }), { code: 'invalid_geometry' });
 });
 
+// A directory for a test socket. A long TMPDIR (such as one inside a deep
+// worktree) would make the socket path too long to bind, so use /tmp then.
+async function socketDirectory() {
+  const base = Buffer.byteLength(join(tmpdir(), 'stobie-socket-XXXXXX', 'application.sock')) <= SOCKET_PATH_BYTES ? tmpdir() : '/tmp';
+  return mkdtemp(join(base, 'stobie-socket-'));
+}
+
+test('socket transport refuses a path too long to bind', () => {
+  assert.throws(() => new SocketTransport(`/${'a'.repeat(SOCKET_PATH_BYTES)}`), { code: 'invalid_request', message: /at most/ });
+  assert.doesNotThrow(() => new SocketTransport(`/${'a'.repeat(SOCKET_PATH_BYTES - 1)}`));
+});
+
 test('socket transport handles fragmented replies and connection loss with no retry', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'stobie-socket-'));
+  const directory = await socketDirectory();
   const path = join(directory, 'application.sock');
   let connections = 0;
   const server = createServer(stream => {
@@ -489,13 +501,13 @@ test('socket transport handles fragmented replies and connection loss with no re
     });
   });
   try {
-    await new Promise(resolve => server.listen(path, resolve));
+    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(path, resolve); });
     const transport = new SocketTransport(path);
     assert.deepEqual(JSON.parse(await transport.request('{}')), { value: 1 });
     await assert.rejects(transport.request('{}'), { code: 'disconnected' });
     assert.equal(connections, 2);
   } finally {
-    await new Promise(resolve => server.close(resolve));
+    if (server.listening) await new Promise(resolve => server.close(resolve));
     await rm(directory, { recursive: true, force: true });
   }
 });

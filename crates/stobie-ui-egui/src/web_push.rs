@@ -56,8 +56,8 @@ pub struct PushSubscription {
 pub struct NotificationRoute {
     /// The absolute URL, always inside the service worker's scope.
     pub url: String,
-    /// The part of `url` after the scope, such as `?bot=scout` or
-    /// `bots/scout`; empty for the scope itself.
+    /// The part of `url` after the scope, such as `?conversation=inbox` or
+    /// `conversations/inbox`; empty for the scope itself.
     pub path: String,
 }
 
@@ -825,8 +825,8 @@ mod tests {
     fn a_route_is_the_part_after_the_scope() {
         let scope = "https://app.test/notes/";
         assert_eq!(
-            route_path("https://app.test/notes/?bot=scout", scope).as_deref(),
-            Some("?bot=scout")
+            route_path("https://app.test/notes/?conversation=inbox", scope).as_deref(),
+            Some("?conversation=inbox")
         );
         assert_eq!(route_path(scope, scope).as_deref(), Some(""));
         assert_eq!(route_path("https://app.test/other/", scope), None);

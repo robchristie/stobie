@@ -57,20 +57,20 @@ test('a declarative message shows its notification and sets the badge', async ()
   const sw = worker();
   await sw.push(JSON.stringify({
     web_push: 8030, mutable: true,
-    notification: { title: ' Scout ', body: 'Five new papers', navigate: `${SCOPE}?bot=scout`, tag: 'bot-scout', lang: 'en-AU', dir: 'ltr', app_badge: '3', silent: true },
+    notification: { title: ' Inbox ', body: 'Two new messages', navigate: `${SCOPE}?conversation=inbox`, tag: 'conversation-inbox', lang: 'en-AU', dir: 'ltr', app_badge: '3', silent: true },
   }));
   assert.deepEqual(sw.shown, [{
-    title: 'Scout',
-    options: { data: { route: `${SCOPE}?bot=scout` }, body: 'Five new papers', tag: 'bot-scout', lang: 'en-AU', dir: 'ltr' },
+    title: 'Inbox',
+    options: { data: { route: `${SCOPE}?conversation=inbox` }, body: 'Two new messages', tag: 'conversation-inbox', lang: 'en-AU', dir: 'ltr' },
   }]);
   assert.deepEqual(sw.badges, [3]);
 });
 
 test('the notification object alone, a top-level badge and a relative route', async () => {
   const sw = worker();
-  await sw.push(JSON.stringify({ title: 'Scout', navigate: 'bots/scout', app_badge: 0 }));
-  await sw.push(JSON.stringify({ web_push: 8030, notification: { title: 'Scout', navigate: '/elsewhere/' }, app_badge: 2 }));
-  assert.deepEqual(sw.shown.map(entry => entry.options.data.route), [`${SCOPE}bots/scout`, SCOPE], 'a route outside the scope opens the application');
+  await sw.push(JSON.stringify({ title: 'Inbox', navigate: 'conversations/inbox', app_badge: 0 }));
+  await sw.push(JSON.stringify({ web_push: 8030, notification: { title: 'Inbox', navigate: '/elsewhere/' }, app_badge: 2 }));
+  assert.deepEqual(sw.shown.map(entry => entry.options.data.route), [`${SCOPE}conversations/inbox`, SCOPE], 'a route outside the scope opens the application');
   assert.deepEqual(sw.badges, [0, 2]);
 });
 
@@ -83,33 +83,33 @@ test('an unreadable payload still shows a notification that opens the applicatio
   }
   for (const badge of [-1, 1.5, '1e3', true]) {
     const sw = worker();
-    await sw.push(JSON.stringify({ title: 'Scout', app_badge: badge }));
+    await sw.push(JSON.stringify({ title: 'Inbox', app_badge: badge }));
     assert.deepEqual(sw.badges, [], String(badge));
   }
 });
 
 test('a tap focuses an open window of the scope and posts it the route', async () => {
-  const sw = worker({ windows: ['https://app.test/other/', `${SCOPE}?bot=atlas`] });
-  const notification = await sw.click({ route: `${SCOPE}?bot=scout` });
+  const sw = worker({ windows: ['https://app.test/other/', `${SCOPE}?conversation=archive`] });
+  const notification = await sw.click({ route: `${SCOPE}?conversation=inbox` });
   assert(notification.closed);
-  assert.deepEqual(sw.posted, [{ url: `${SCOPE}?bot=atlas`, message: { stobie: 'notification', route: `${SCOPE}?bot=scout` } }]);
+  assert.deepEqual(sw.posted, [{ url: `${SCOPE}?conversation=archive`, message: { stobie: 'notification', route: `${SCOPE}?conversation=inbox` } }]);
   assert.deepEqual(sw.opened, []);
   assert.equal(sw.stored.size, 0);
 });
 
 test('a window that cannot be focused still receives the route', async () => {
   const sw = worker({ windows: [SCOPE], focus: () => { throw new Error('InvalidAccessError'); } });
-  await sw.click({ route: `${SCOPE}?bot=scout` });
-  assert.deepEqual(sw.posted.map(entry => entry.message.route), [`${SCOPE}?bot=scout`]);
+  await sw.click({ route: `${SCOPE}?conversation=inbox` });
+  assert.deepEqual(sw.posted.map(entry => entry.message.route), [`${SCOPE}?conversation=inbox`]);
 });
 
 test('without a window, a tap remembers the route and opens it', async () => {
   const before = Date.now();
   const sw = worker({ windows: ['https://app.test/other/'] });
-  await sw.click({ route: `${SCOPE}?bot=scout` });
-  assert.deepEqual(sw.opened, [`${SCOPE}?bot=scout`]);
+  await sw.click({ route: `${SCOPE}?conversation=inbox` });
+  assert.deepEqual(sw.opened, [`${SCOPE}?conversation=inbox`]);
   const remembered = sw.stored.get(`stobie-notification-route ${SCOPE}__stobie/notification-route`);
-  assert.equal(remembered.route, `${SCOPE}?bot=scout`);
+  assert.equal(remembered.route, `${SCOPE}?conversation=inbox`);
   assert(remembered.at >= before && remembered.at <= Date.now());
   // A route from elsewhere, or none, opens the application itself.
   for (const data of [{ route: 'https://evil.test/' }, undefined, null]) {

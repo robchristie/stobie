@@ -35,7 +35,9 @@ independently of the visible observation subset, so filtering cannot erase a
 failed request. Empty findings mean
 “Every observed Stobie text component passed”, not “Every visible string was
 structurally audited”. Counts cover the submitted layout pass, including clipped
-controls and gallery chrome; ordinary labels remain excluded. See the
+controls and gallery chrome; ordinary labels remain excluded. The Gallery counts
+only the catalogue entries in view, so a story added below them changes no
+other fixture's count. See the
 [design language](../../docs/design-language.md) for the denominator and native-widget
 boundary.
 
@@ -61,8 +63,9 @@ mode, the vocabulary in light compact mode, and narrow labelled actions in light
 high contrast at 150%. Physical hover/press, keyboard, toggle/disabled and display
 scale probes run through `tools/icon-actions-browser-smoke.mjs` and the Linux
 native companion in full verification. Catalogue growth changes Gallery chrome
-and native-control coverage; review those differences alongside any deliberate
-artwork change before updating the original fixtures. Frozen seed tasks and their
+and native-control coverage only where the new entry is in view; review those
+differences alongside any deliberate artwork change before updating the original
+fixtures. Frozen seed tasks and their
 assertions remain unchanged.
 
 Navigation fixtures add the ordinary dark sidebar, light compact state/count

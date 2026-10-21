@@ -26,7 +26,9 @@ const server = createServer(async (request, response) => {
     response.writeHead(404); response.end('not found');
   }
 });
-await new Promise((resolve) => server.listen(4173, '127.0.0.1', resolve));
+// Any free port, so that another verification on this host can run too.
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const origin = `http://127.0.0.1:${server.address().port}`;
 
 const errors = [];
 const resultSelectionReceipts = [];
@@ -134,7 +136,7 @@ const captureX11Root = async (path) => {
 };
 
 try {
-  await page.goto(rendererUrl('http://127.0.0.1:4173/'), { waitUntil: 'domcontentloaded' });
+  await page.goto(rendererUrl(`${origin}/`), { waitUntil: 'domcontentloaded' });
   await page.locator('#stobie-canvas[data-stobie-ready="true"]').waitFor({ timeout: 30_000 });
   await assertBrowserRenderer(page, '#stobie-canvas');
   await page.waitForFunction(() => {

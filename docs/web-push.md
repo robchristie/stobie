@@ -38,10 +38,10 @@ worker reads the payload as a declarative push message:
   "web_push": 8030,
   "mutable": true,
   "notification": {
-    "title": "Scout",
-    "body": "Five new papers",
-    "navigate": "https://example.org/app/?item=scout",
-    "tag": "item-scout",
+    "title": "Inbox",
+    "body": "Two new messages",
+    "navigate": "https://example.org/app/?item=inbox",
+    "tag": "item-inbox",
     "app_badge": "2"
   }
 }
@@ -151,7 +151,7 @@ fn perform(&mut self, target: ActionTarget<Action>, _: &mut ()) -> Result<bool, 
   the application knows, such as unread items, so set it whenever that
   changes, as well as from a payload's `app_badge`.
 - `NotificationRoute` carries the absolute `url` and the `path` after the
-  scope, such as `?item=scout`.
+  scope, such as `?item=inbox`.
 - Native builds report push as unsupported: `State` arrives at once with
   `PushSupport::Unsupported`, and the operations deliver `Failed`.
 - Dropping `WebPush` stops listening for routes.

@@ -23,7 +23,6 @@ else
   XDO="$SYSROOT/usr/bin/xdotool"
   XVFB="$SYSROOT/usr/bin/Xvfb"
 fi
-DISPLAY_NUMBER=:97
 XVFB_LOG="$EVIDENCE_DIR/native-xvfb.log"
 APP_LOG="$EVIDENCE_DIR/native-runtime.log"
 SNAPSHOT="$ROOT/.tools/runtime/native-physical-snapshot.json"
@@ -36,15 +35,14 @@ chmod 1777 "$SMOKE_TMP" "$SMOKE_TMP/.X11-unix"
 
 source "$ROOT/tools/native-smoke-lifecycle.sh"
 
-owned_start XVFB_PID "$XVFB" "$DISPLAY_NUMBER" \
-  -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$XVFB_LOG" 2>&1
-sleep 1
+owned_start_xvfb "$XVFB_LOG" -screen 0 1440x900x24 -nolisten tcp +extension GLX
+DISPLAY_NUMBER="$DISPLAY"
 
 launch_app() {
   DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl RUST_LOG=info \
     STOBIE_PERSISTENCE_PATH="$ROOT/.tools/runtime/native-storage.ron" \
     STOBIE_TEST_SNAPSHOT_PATH="$SNAPSHOT" \
-    owned_start APP_PID target/release/analytical-workspace-lab >>"$APP_LOG" 2>&1
+    owned_start APP_PID "$STOBIE_TARGET_DIR"/release/analytical-workspace-lab >>"$APP_LOG" 2>&1
   WINDOW_ID="$(owned_wait_window 'Analytical Workspace Lab' "$APP_PID")"
   xdo windowfocus --sync "$WINDOW_ID"
   WINDOW_WIDTH="$(xdo getwindowgeometry --shell "$WINDOW_ID" | sed -n 's/^WIDTH=//p')"

@@ -11,9 +11,9 @@ class WindowReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             return subprocess.run(["bash", "-c", '''
 set -euo pipefail
-STOBIE_USE_SYSTEM_UI_LIBS=1
+STOBIE_USE_SYSTEM_UI_LIBS=1 ROOT="$2" STOBIE_TARGET_DIR=unused STOBIE_RECORD_DESK_TARGET_DIR=unused
 source "$1"
-''' + body, "fixture", str(LIFECYCLE)], cwd=temporary, text=True,
+''' + body, "fixture", str(LIFECYCLE), str(LIFECYCLE.parents[1])], cwd=temporary, text=True,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=4)
 
     def test_delayed_visibility_is_observed_without_a_fixed_startup_sleep(self):

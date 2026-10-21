@@ -164,7 +164,9 @@ asserted explicitly; zero findings alone cannot prove a component was submitted.
 Native buttons, combo boxes, radios, sliders and selectable options are recorded at their
 recipe or application call sites. The denominator includes submitted clipped
 controls, gallery chrome and open popup options, but not closed popup options
-or virtual items that were never instantiated. A native control is counted once
+or virtual items that were never instantiated. The Gallery records only the
+catalogue entries in view, so a story added below them changes no fixture's
+count. A native control is counted once
 by response ID, not once per internal string. These counts describe bounded
 instrumentation, not a census of all visible text. For example, the preferences
 control contributes nine radios and one slider, with zero structurally observed

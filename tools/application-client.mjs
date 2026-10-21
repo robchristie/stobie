@@ -152,12 +152,18 @@ function boundedJson(value, bound, label) {
   return json;
 }
 
+/** The longest Unix socket path, in bytes: `sun_path` less its terminator. */
+export const SOCKET_PATH_BYTES = process.platform === 'linux' ? 107 : 103;
+
 /** One request per local Unix stream. No connection or mutation is retried. */
 export class SocketTransport {
   constructor(path = process.env.STOBIE_AUTOMATION_SOCKET) {
     if (process.platform === 'win32') throw failure('unsupported_host', 'The local socket adapter requires Unix');
     if (typeof path !== 'string' || !path || path.includes('\0')) {
       throw failure('invalid_request', 'Supply the explicit STOBIE_AUTOMATION_SOCKET path');
+    }
+    if (Buffer.byteLength(path) > SOCKET_PATH_BYTES) {
+      throw failure('invalid_request', `The socket path is ${Buffer.byteLength(path)} bytes; a Unix socket path has at most ${SOCKET_PATH_BYTES}`);
     }
     this.path = path;
     this.kind = 'native_unix';

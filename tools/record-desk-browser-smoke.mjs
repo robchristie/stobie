@@ -7,7 +7,7 @@ import { resolve, extname } from 'node:path';
 import { chromium } from 'playwright';
 import { assertBrowserRenderer, hostedLinuxWebGpuLaunchOptions, rendererUrl } from './browser-launch.mjs';
 import { waitForClickTarget } from './record-desk-target.mjs';
-import { focusByTab } from './browser-keyboard-focus.mjs';
+import { focusByTab, focusedId } from './browser-keyboard-focus.mjs';
 
 const root = resolve('consumers/record-desk/web');
 const evidence = resolve(process.env.STOBIE_EVIDENCE_DIR ?? '.tools/runtime/record-desk-evidence/record-desk');
@@ -28,7 +28,7 @@ const pointerTargets = [];
 const errors = [];
 let page;
 const storageKey = 'stobie.record-desk.v1';
-const snapshot = () => page.evaluate(() => JSON.parse(window.__RECORD_DESK.snapshot()));
+const snapshot = async () => page.evaluate(() => JSON.parse(window.__RECORD_DESK.snapshot()));
 async function wait(predicate) {
   await page.waitForFunction(`window.__RECORD_DESK && (${predicate})(JSON.parse(window.__RECORD_DESK.snapshot()))`, null, { timeout: 15000 });
 }
@@ -57,12 +57,11 @@ async function focusNode(id) {
       const s = await snapshot();
       const node = s.ui.nodes.find(node => node.id === id);
       assert(node, `current keyboard target ${id}`);
-      return { node, tab_input_epoch: s.tab_input_epoch };
+      return { node, focused_id: focusedId(s.ui.nodes), tab_input_epoch: s.tab_input_epoch };
     },
     pressTab: () => page.keyboard.press('Tab'),
     waitForTab: epoch => wait(`s => s.tab_input_epoch > ${epoch}`),
     wait: ms => page.waitForTimeout(ms),
-    maxTabs: 24,
     settleMs: 50,
   });
 }

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -108,4 +109,17 @@ export function uiLibraryEnvironment(environment = process.env, root = repositor
   if (uiLibrarySource(environment, root) === 'system') return { ...environment };
   const libraries = [sysrootLibraries(root), environment.LD_LIBRARY_PATH].filter(Boolean);
   return { ...environment, LD_LIBRARY_PATH: libraries.join(':') };
+}
+
+/**
+ * A loopback TCP port that is free now, for a DevTools endpoint that a
+ * separate client attaches to. Another verification on the same host picks
+ * its own, where a fixed or process-derived number could collide.
+ */
+export async function freeLoopbackPort() {
+  const server = createServer();
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  const { port } = server.address();
+  await new Promise(resolve => server.close(resolve));
+  return port;
 }

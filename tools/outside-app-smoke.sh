@@ -9,7 +9,13 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-STOBIE="$ROOT/target/release/stobie"
+# Cargo's target directory for this checkout (CARGO_TARGET_DIR, Cargo
+# configuration or target/), resolved before this script changes it below.
+# Assigned before it is exported, so that a failure of cargo metadata stops
+# the script under set -e.
+STOBIE_TARGET_DIR="${STOBIE_TARGET_DIR:-$(python3 tools/target_directory.py)}"
+export STOBIE_TARGET_DIR
+STOBIE="$STOBIE_TARGET_DIR/release/stobie"
 [[ -x "$STOBIE" ]] || { echo "build stobie first: cargo build --release -p stobie-cli" >&2; exit 2; }
 bash tools/bootstrap-linux-ui.sh
 EVIDENCE_DIR="${STOBIE_EVIDENCE_DIR:-$ROOT/.tools/runtime/outside-app-evidence}/outside-app"
@@ -27,9 +33,9 @@ trap remove_outside EXIT
 case "$OUTSIDE/" in
   "$(pwd -P)/"*) echo "STOBIE_OUTSIDE_DIR must be outside the checkout: $OUTSIDE" >&2; exit 2 ;;
 esac
-# Generated applications compile into this checkout's ignored target area,
-# so CI caches them and the scratch directory stays small.
-export CARGO_TARGET_DIR="$ROOT/target/outside-app"
+# Generated applications compile into this checkout's target directory, so
+# CI caches them and the scratch directory stays small.
+export CARGO_TARGET_DIR="$STOBIE_TARGET_DIR/outside-app"
 
 # The CLI pins the revision it was built from. Cargo fetches the pin even
 # when a local patch replaces it, so pin a commit GitHub has: CI's checkout
@@ -173,9 +179,8 @@ if (( ${#UI_COMMAND[@]} )); then
   UI_COMMAND+=(--bind "$OUTSIDE" "$OUTSIDE")
 fi
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"; remove_outside' EXIT
-export DISPLAY=:93 WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_HEADFUL=1
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1440x1000x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/xvfb.log" 2>&1
-sleep 1
+export WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_HEADFUL=1
+owned_start_xvfb "$EVIDENCE_DIR/xvfb.log" -screen 0 1440x1000x24 -nolisten tcp +extension GLX
 ui_sandbox "$(command -v node)" tools/outside-app-smoke.mjs "$STOBIE" "$APP" "$CARGO_TARGET_DIR/release/outside-notes" "$EVIDENCE_DIR"
 # The generated page is installable: both builds wrote its manifest and
 # service worker, which Chromium accepts, and it starts offline.

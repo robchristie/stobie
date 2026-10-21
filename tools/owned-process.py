@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Run one Linux smoke process tree; terminate and reap every owned descendant."""
+"""Run one Linux smoke process tree; terminate and reap every owned descendant.
+
+usage: owned-process.py [--pass-fd N] COMMAND [ARGUMENT...]
+
+--pass-fd keeps the inherited descriptor N open in COMMAND, such as the
+descriptor Xvfb's -displayfd writes its display number to.
+"""
 
 import ctypes
 import os
@@ -22,7 +28,12 @@ def main():
 
     for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(signum, stop)
-    child = subprocess.Popen(sys.argv[1:], start_new_session=True)
+    command = sys.argv[1:]
+    passed = ()
+    if command[:1] == ["--pass-fd"]:
+        passed = (int(command[1]),)
+        command = command[2:]
+    child = subprocess.Popen(command, start_new_session=True, pass_fds=passed)
     while child.poll() is None and not interrupted:
         time.sleep(0.02)
     result = 128 + interrupted if interrupted else child.returncode

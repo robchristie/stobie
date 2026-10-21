@@ -224,7 +224,7 @@ try {
   const launch = await import('./browser-launch.mjs');
   try {
     const options = launch.hostedLinuxWebGpuLaunchOptions();
-    const port = 9500 + (process.pid % 200);
+    const port = await launch.freeLoopbackPort();
     const browser = await chromium.launch({ ...options, args: [...options.args, `--remote-debugging-port=${port}`], env: launch.uiLibraryEnvironment() });
     try {
       const pageUrl = launch.rendererUrl(`${url}?automation=1`);

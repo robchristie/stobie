@@ -21,7 +21,6 @@ else
   XDO="$SYSROOT/usr/bin/xdotool"
   XVFB="$SYSROOT/usr/bin/Xvfb"
 fi
-DISPLAY_NUMBER=:96
 XVFB_LOG="$EVIDENCE_DIR/gallery-native-xvfb.log"
 APP_LOG="$EVIDENCE_DIR/gallery-native-runtime.log"
 SNAPSHOT="$ROOT/.tools/runtime/gallery-native-snapshot.json"
@@ -39,16 +38,15 @@ xdo() {
   DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$XDO" "$@"
 }
 
-owned_start XVFB_PID "$XVFB" "$DISPLAY_NUMBER" \
-  -screen 0 1440x900x24 -nolisten tcp +extension GLX >"$XVFB_LOG" 2>&1
-sleep 1
+owned_start_xvfb "$XVFB_LOG" -screen 0 1440x900x24 -nolisten tcp +extension GLX
+DISPLAY_NUMBER="$DISPLAY"
 
 : >"$APP_LOG"
 rm -f "$SNAPSHOT"
 DISPLAY="$DISPLAY_NUMBER" WGPU_BACKEND=gl \
   STOBIE_GALLERY_STORY=reference/application-shell \
   STOBIE_GALLERY_SNAPSHOT_PATH="$SNAPSHOT" \
-  owned_start APP_PID target/release/stobie-gallery >>"$APP_LOG" 2>&1
+  owned_start APP_PID "$STOBIE_TARGET_DIR"/release/stobie-gallery >>"$APP_LOG" 2>&1
 WINDOW_ID="$(owned_wait_window 'Stobie Component Gallery' "$APP_PID")"
 xdo windowfocus --sync "$WINDOW_ID"
 DISPLAY="$DISPLAY_NUMBER" ui_sandbox "$IMPORT" -window root "$EVIDENCE_DIR/gallery-native-overview.png"

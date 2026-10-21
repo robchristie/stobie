@@ -24,7 +24,6 @@ else
 fi
 source tools/native-smoke-lifecycle.sh
 trap 'cleanup; rm -rf -- "$SMOKE_TMP"' EXIT
-export DISPLAY="${STOBIE_LIVE_FEED_DISPLAY:-:98}" WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_HEADFUL=1
-owned_start XVFB_PID "$XVFB" "$DISPLAY" -screen 0 1280x800x24 -nolisten tcp +extension GLX >"$EVIDENCE_DIR/xvfb-$HOST.log" 2>&1
-sleep 1
+export WGPU_BACKEND=gl XDG_RUNTIME_DIR=/tmp/runtime STOBIE_BROWSER_HEADFUL=1
+owned_start_xvfb "$EVIDENCE_DIR/xvfb-$HOST.log" -screen 0 1280x800x24 -nolisten tcp +extension GLX
 ui_sandbox "$(command -v node)" tools/live-feed-smoke.mjs "$HOST" "$EVIDENCE_DIR"

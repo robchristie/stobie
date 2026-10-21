@@ -92,18 +92,35 @@ async function launchBrowser() {
       '--dev-bind', '/dev', '/dev',
       '--proc', '/proc',
     ];
-    const privateDisplay = `:${100 + (process.pid % 10_000)}`;
+    // Xvfb picks a free display and writes its number to descriptor 3 once
+    // it accepts connections, so concurrent captures never share a display.
     xvfbProcess = spawn('bwrap', [
       ...sandbox,
-      join(sysroot, 'usr/bin/Xvfb'), privateDisplay,
+      join(sysroot, 'usr/bin/Xvfb'), '-displayfd', '3',
       '-screen', '0', '1440x900x24', '-nolisten', 'tcp', '+extension', 'GLX',
-    ], { env: libraryEnvironment, stdio: ['ignore', 'ignore', 'pipe'] });
+    ], { env: libraryEnvironment, stdio: ['ignore', 'ignore', 'pipe', 'pipe'] });
     xvfbProcess.stderr.setEncoding('utf8');
     xvfbProcess.stderr.on('data', (chunk) => { xvfbDiagnostics += chunk; });
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    if (xvfbProcess.exitCode !== null) {
-      throw new Error(`private Xvfb failed to start: code=${xvfbProcess.exitCode}\n${xvfbDiagnostics}`);
-    }
+    const privateDisplay = await new Promise((resolve, reject) => {
+      let reported = '';
+      const timeout = setTimeout(
+        () => reject(new Error(`private Xvfb reported no display within 30 s\n${xvfbDiagnostics}`)),
+        30_000,
+      );
+      xvfbProcess.stdio[3].setEncoding('utf8');
+      xvfbProcess.stdio[3].on('data', (chunk) => {
+        reported += chunk;
+        const number = /^(\d+)\n/.exec(reported);
+        if (number) {
+          clearTimeout(timeout);
+          resolve(`:${number[1]}`);
+        }
+      });
+      xvfbProcess.once('exit', (code) => {
+        clearTimeout(timeout);
+        reject(new Error(`private Xvfb failed to start: code=${code}\n${xvfbDiagnostics}`));
+      });
+    });
     executable = 'bwrap';
     prefix = [...sandbox, chromiumExecutable];
     display = privateDisplay;

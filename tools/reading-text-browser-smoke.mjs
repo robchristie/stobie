@@ -47,7 +47,7 @@ const targets = [];
 const errors = [];
 const opened = [];
 let context, page, browser, url;
-const snapshot = () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
+const snapshot = async () => page.evaluate(() => window.__STOBIE_GALLERY_HANDLE.snapshot());
 const configuration = (overrides = {}) => ({ appearance: 'dark', contrast: 'standard', density: 'comfortable', font_scale: 1, width: 'regular', ...overrides });
 async function story(id, config = configuration()) {
   const before = await snapshot();

@@ -707,7 +707,11 @@ fn story_navigation(root_ui: &mut egui::Ui, selected: StoryId) -> (Option<StoryI
                     }
                     let option =
                         ui.selectable_label(selected == definition.id, definition.id.as_str());
-                    record_native_text_control(&option, NativeTextControlKind::Selectable);
+                    // Only entries in view count towards text coverage, so a
+                    // story added below them changes no other baseline.
+                    if ui.is_rect_visible(option.rect) {
+                        record_native_text_control(&option, NativeTextControlKind::Selectable);
+                    }
                     if option.clicked() {
                         chosen = Some(definition.id);
                     }
