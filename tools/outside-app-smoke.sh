@@ -11,7 +11,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 # Cargo's target directory for this checkout (CARGO_TARGET_DIR, Cargo
 # configuration or target/), resolved before this script changes it below.
-export STOBIE_TARGET_DIR="${STOBIE_TARGET_DIR:-$(python3 tools/target_directory.py)}"
+# Assigned before it is exported, so that a failure of cargo metadata stops
+# the script under set -e.
+STOBIE_TARGET_DIR="${STOBIE_TARGET_DIR:-$(python3 tools/target_directory.py)}"
+export STOBIE_TARGET_DIR
 STOBIE="$STOBIE_TARGET_DIR/release/stobie"
 [[ -x "$STOBIE" ]] || { echo "build stobie first: cargo build --release -p stobie-cli" >&2; exit 2; }
 bash tools/bootstrap-linux-ui.sh

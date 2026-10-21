@@ -129,9 +129,20 @@ try {
     browser = await chromium.launch({ ...options, args: [...options.args, `--remote-debugging-port=${port}`], env: uiLibraryEnvironment() });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const url = rendererUrl(`http://127.0.0.1:${server.address().port}/?automation=1`);
+    // The page answers requests before its first frame publishes an
+    // observation, so each fresh instance waits for one: otherwise whichever
+    // client asks first can meet `missing_observation`, and the other not.
     const fresh = async () => {
       await page.goto(url);
       await page.waitForFunction(() => window.__STOBIE_AUTOMATION, null, { timeout: 30000 });
+      const probe = new ApplicationClient(new BrowserTransport(page));
+      await probe.hello();
+      for (const deadline = Date.now() + 30000; ;) {
+        try { await probe.observe(); return; } catch (error) {
+          if (error.code !== 'missing_observation' || Date.now() > deadline) throw error;
+        }
+        await new Promise(done => setTimeout(done, 50));
+      }
     };
     const endpoint = `http://127.0.0.1:${port}`;
     await fresh();

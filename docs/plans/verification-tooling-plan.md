@@ -69,6 +69,17 @@ host, and keeps one contributor's change from touching unrelated checks.
   `observeWarmedIdle` settles once more after one late burst, recording it
   in `late_bursts`; a repaint after the second quiet window fails, and
   painting that recurs within about 1.4 s fails either way.
+- **Tab samples that wait for focus.** The dialog browser smoke's Tab walk
+  sampled focus 120 ms after any new frame, so under load it could read the
+  pass that counted the key before egui moved focus: the old control again,
+  or none. Each press now waits until the Gallery has counted it
+  (`tab_input_epoch`) and focus rests on a named control other than the one
+  it left, and a press that never gets there fails naming both.
+- **Parity from a published observation.** In the Record Desk browser parity
+  check, a fresh page answers requests before its first frame publishes an
+  observation, so the Node client, which asks first, could meet
+  `missing_observation` while the slower CLI did not. Each fresh instance now
+  waits for a published observation before either client starts.
 - **Neutral examples.** The Web Push smoke, tests and guide use neutral
   routes and notification text.
 
@@ -100,6 +111,8 @@ host, and keeps one contributor's change from touching unrelated checks.
   allowance the old strict gate holds.
 - `tools/tests/application-client.test.mjs` passes with a `TMPDIR` too long
   for a socket path, and a too-long socket path is refused.
+- The dialog browser smoke and the Record Desk browser parity check pass
+  repeatedly while each other and another load run.
 - The fixture manifest test, and `cargo xtask ui verify` with the 39
   re-rendered `text.json` baselines, whose only change is
   `native_text_controls`.
@@ -116,6 +129,16 @@ host, and keeps one contributor's change from touching unrelated checks.
   (13,922,343 to 13,922,399), and by Brotli (quality 11) shrank by 151 bytes
   (3,266,200 to 3,266,049): the only application change is one visibility
   check in its catalogue.
+- With 28 busy processes on 32 cores, four dialog browser smokes at a time
+  and the Record Desk browser parity check alongside: the old Tab walk failed
+  12 of 20 runs, each a Tab or Shift+Tab sequence with a repeated or empty
+  control, and the new one passed 20 of 20. The parity check passed 10 of 10
+  both before and after.
+- The parity check failed once in a full verification here: the Node
+  client's first request after a fresh load met `missing_observation`, which
+  the application returns only before its first publication. Measured, a
+  fresh page usually publishes within the first request, so the window is
+  small; the wait closes it rather than a reproduction showing it closed.
 
 ## Delivery increments
 
@@ -125,3 +148,4 @@ host, and keeps one contributor's change from touching unrelated checks.
 | Free Xvfb displays | Complete | Xvfb lifecycle tests, concurrent verification |
 | Tab walks, launch errors and baselines | Complete | Focus, launch failure and fixture manifest tests |
 | Long `TMPDIR`, idle under load and neutral examples | Complete | Client, idle and push tests, `cargo xtask verify` |
+| Dialog Tab samples and browser parity start | Complete | Repeated dialog and parity runs |

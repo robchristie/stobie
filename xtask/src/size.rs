@@ -111,15 +111,6 @@ pub fn report(
     Ok(())
 }
 
-fn target_directory() -> Result<PathBuf> {
-    let metadata = stobie_build::cargo_metadata(None, false)?;
-    Ok(PathBuf::from(
-        metadata["target_directory"]
-            .as_str()
-            .context("cargo metadata has no target_directory")?,
-    ))
-}
-
 fn output_of(command: &mut Command) -> Option<String> {
     let output = command.output().ok()?;
     output
@@ -148,7 +139,7 @@ fn pin() -> Option<String> {
 /// with `stobie build-web --production`, and return its package directory.
 fn build_template(output: &Path) -> Result<PathBuf> {
     super::run("cargo", &["build", "--release", "-p", "stobie-cli"])?;
-    let target = target_directory()?;
+    let target = super::target_directory()?;
     let stobie = target.join("release/stobie");
     let root = env::current_dir()?;
     // Outside the checkout, so that it is its own workspace.
