@@ -260,6 +260,13 @@ pub fn run_stage(name: &str) -> Result<()> {
                 &["tools/local-time-browser.mjs"],
                 &evidence_environment,
             )?;
+            // The browser's text size through the system preferences, headful
+            // because headless Chromium ignores its font size setting.
+            run_with_environment(
+                "bash",
+                &["tools/text-size-browser.sh"],
+                &evidence_environment,
+            )?;
             run_with_environment(
                 "bash",
                 &["tools/icon-actions-browser-smoke.sh"],

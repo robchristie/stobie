@@ -462,6 +462,33 @@ unknown current values fall back independently, obsolete schema versions reset
 predictably, and font scale is clamped to 100–150%. System appearance resolves
 against egui's current system theme.
 
+`UiPreferences::default()` is dark at 100% whatever the system's settings, for
+applications that set up egui themselves. `UiPreferences::system()` follows
+the system instead: system appearance, and the font scale
+`system_font_scale()` reads. It is what `Application::preferences` returns by
+default, so an application on the framework host follows the person's light or
+dark setting and text size until it offers its own choice; an application that
+offers one starts from `UiPreferences::system()` for what the person has not
+chosen. Tests and evidence pin an appearance rather than follow the host's.
+
+`system_font_scale()` is 100% natively. In the browser it is the root
+element's computed font size over 16 CSS pixels, which follows the browser's
+text size setting, such as Chromium's Settings > Appearance > Font size. In a
+WebKit browser it is the larger of that and the system body text size
+(`-apple-system-body`) over its default of 17 pixels, which follows Dynamic
+Type on iOS and iPadOS. Stobie measures that body size on a hidden element it
+removes before anything paints, so no page template opts the page's own text
+into Dynamic Type and nothing else the page draws changes. Smaller sizes give
+100%, so the default iOS size and macOS Safari's smaller body text change
+nothing. The browser reads again when the page regains focus, is shown again
+(`visibilitychange`, `pageshow`) or is resized: a text size is changed in the
+browser's or the system's settings, outside the page, and returning to the
+page raises one of those events and a pass, in which the host reapplies the
+design system with a recorded reason. Between those events asking costs
+nothing. `tools/text-size-browser.sh` (gallery-browser stage) checks Chromium's
+setting, a root size set by the page, the bounds and a change while running;
+the Dynamic Type route has not been checked on an iOS device.
+
 The token source, generator, generated Rust and component recipe are Stobie
 project code under the repository's Apache-2.0 licence. Bundled Source Sans 3 fonts are separately licensed under SIL OFL 1.1; see the
 [bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md).

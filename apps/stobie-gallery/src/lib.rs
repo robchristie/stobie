@@ -128,3 +128,16 @@ pub fn local_time_viewer_report(at: f64, now: f64) -> Result<String, JsValue> {
     stobie_ui_egui::__private::local_time_viewer_report(at as i64, now as i64)
         .map_err(|error| JsValue::from_str(&error))
 }
+
+/// The page's text size as a font scale, and the preferences an application
+/// on the framework host follows by default, for
+/// `tools/text-size-browser.mjs`.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn system_preferences_report() -> String {
+    serde_json::json!({
+        "font_scale": stobie_ui_egui::system_font_scale(),
+        "preferences": stobie_ui_egui::UiPreferences::system(),
+    })
+    .to_string()
+}
