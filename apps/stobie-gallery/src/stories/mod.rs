@@ -6,6 +6,7 @@ mod copy;
 mod data;
 mod dialogs;
 mod dock;
+mod fields;
 mod icons;
 mod markdown;
 mod navigation;
@@ -28,6 +29,7 @@ use crate::catalogue::{StoryId, story_definition};
 pub use chat::ChatFixtureState;
 pub use dialogs::DialogFixtureState;
 pub(crate) use dock::DockSceneState;
+pub use fields::FieldFixtureState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
 pub use responsive::ResponsiveFixtureState;
@@ -46,6 +48,7 @@ pub(crate) struct StoryState {
     pub(crate) chat: ChatFixtureState,
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
+    pub(crate) fields: FieldFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -157,6 +160,9 @@ fn present_story(
             &mut state.dialog,
             &mut report,
         ),
+        StoryId::FormTextFields => {
+            fields::story(ui, tokens, font_scale, &mut state.fields, &mut report)
+        }
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.

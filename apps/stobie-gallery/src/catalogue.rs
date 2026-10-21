@@ -51,10 +51,11 @@ pub enum StoryId {
     CopyActions,
     DialogSheet,
     DialogConfirm,
+    FormTextFields,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 46] = [
+    pub const ALL: [Self; 47] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -101,6 +102,7 @@ impl StoryId {
         Self::CopyActions,
         Self::DialogSheet,
         Self::DialogConfirm,
+        Self::FormTextFields,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -151,6 +153,7 @@ impl StoryId {
             Self::CopyActions => "copy/actions",
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
+            Self::FormTextFields => "form/text-fields",
         }
     }
 }
@@ -210,6 +213,7 @@ pub enum StoryGroup {
     Chat,
     Copy,
     Dialog,
+    Form,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -392,6 +396,13 @@ const DIALOG_STATES: &[StoryState] = &[
     StoryState::Active,
     StoryState::Narrow,
 ];
+const FIELD_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Error,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -419,7 +430,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 46] = [
+pub static STORIES: [StoryDefinition; 47] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -832,6 +843,15 @@ pub static STORIES: [StoryDefinition; 46] = [
         640,
         720,
         DIALOG_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::FormTextFields,
+        "A sign-up form's labelled text fields: a hint, a description with an error, a password, a multiline field and a disabled one.",
+        StoryGroup::Form,
+        640,
+        720,
+        FIELD_STATES,
         KEYBOARD,
     ),
 ];

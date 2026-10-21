@@ -71,7 +71,7 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms, text fields and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -724,9 +724,8 @@ happened for the caller to route.
   holding what it presents and marked modal for assistive technology. While
   one is presented the host observes, binds and shows assistive technology
   only it (see [interactions](interactions.md#dialogs)).
-- **Fields.** A form's text fields are `NativeTextEdit`s presented through
-  `PresentationContext::native`, labelled for AccessKit and observed as text
-  inputs, as elsewhere; on iOS they edit through the native field.
+- **Fields.** A form's text fields use the [text field](#text-fields)
+  recipe, as elsewhere; on iOS they edit through the native field.
 
 Gallery `dialog/sheet` (a routine editor with two text fields and a switch,
 over the routine it edits) and `dialog/confirm` (deleting that routine) use
@@ -775,6 +774,60 @@ Buttons, icon actions and toggles carrying a bound action keep their visible
 label and measurements; their accessible name and tooltip add the subject,
 and `PresentationContext::bound_action` is the low-level form. A hidden
 availability for a row's argument presents nothing for it.
+
+## Text fields
+
+A form's text field is a visible caption above a field, with an optional
+description and error line beneath it. In a hosted pane:
+
+```text
+let name = TextFieldSpec::new("Name").hint("Morning briefing");
+frame.text_field(ui, p, "name", &name, &self.name, Intent::Name);
+let code = TextFieldSpec::new("Invitation code")
+    .spellcheck(false)
+    .description("Six letters or digits from the invitation.")
+    .error(self.code_error.as_deref());
+let code = frame.text_field(ui, p, "code", &code, &self.code, Intent::Code);
+if code.submitted { /* Return in the field: submit the form */ }
+```
+
+`TextFieldSpec::new` takes the caption, which also names the field; builder
+methods add `multiline(rows)` and `max_rows`, a `hint`, a `description`, an
+`error`, `password`, `spellcheck(false)` for codes and addresses, and `id`
+for a field whose published semantic ID agents and smokes already use. The
+words are the application's.
+
+- **Layout.** A `Caption` line (wrapping to two, then elided) above a
+  frameless `NativeTextEdit` in `Body` text, as wide as the space offered and
+  padded, as in a composer, so that one line fills the token hit height. Its
+  ground is the text-field ground with the control corner radius; its border
+  is the control border, the focus ring while it has focus, the error colour
+  while it shows an error, and the subtle border while disabled. The error,
+  then the description, follow as measured, selectable `Error` and
+  `Secondary` text, each wrapping to four lines.
+- **Editing.** A single-line field reports `submitted` for Return and keeps
+  focus; a multiline field types a newline and grows from `rows` to
+  `max_rows`. A disabled `Ui` disables the field. On a touch device a tap
+  makes it the platform's own field. A `password` field is a single line
+  that egui masks; it is never the native field and has no spelling help.
+- **Semantics.** The field's AccessKit node is labelled by the caption (and
+  carries it as its label), described by the error then the description, and
+  marked invalid while it has an error. It is observed as a `TextInput` or
+  `MultilineTextInput` node named by the caption, so agents fill it with
+  `set-text`. A password field is a `PasswordInput` for assistive technology,
+  so the host publishes no value for it and offers no `set-text`. An empty
+  polite `Status` is always present beneath it and takes the error's words
+  when one appears, so assistive technology announces it once; while it shows
+  an error the snapshot has a `Status` node with the same words.
+- **Responses.** `Frame::text_field` takes the text and an intent
+  constructor and emits the edited text as that intent; it returns a
+  `TextFieldResponse` with the field's and caption's responses, `changed` and
+  `submitted`. `PresentationContext::text_field` is the low-level form: it
+  edits a `&mut String`.
+
+Gallery `form/text-fields` presents an empty field with its hint, a
+description with an error, a password, a multiline field and a disabled
+field; `dialog/sheet` uses the recipe in a routine editor.
 
 ## Composer
 

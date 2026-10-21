@@ -656,6 +656,28 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present a labelled text field for the application's text (see
+    /// [`PresentationContext::text_field`] for its conventions). The text
+    /// stays the application's: an edit emits `edit(text)` with the whole
+    /// new text, to apply in [`Application::apply`]. The response reports
+    /// whether Return submitted a single-line field.
+    pub fn text_field(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::TextFieldSpec<'_>,
+        text: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::TextFieldResponse {
+        let mut edited = text.to_owned();
+        let response = presentation.text_field(ui, key, spec, &mut edited);
+        if response.changed {
+            self.intents.push(edit(edited));
+        }
+        response
+    }
+
     /// Present a modal dialog or sheet with `content` inside it (see
     /// [`PresentationContext::dialog`]), and trigger its dismiss action when
     /// the close control, Escape or the scrim dismisses it. Present it in
@@ -2291,5 +2313,7 @@ mod navigation_tests;
 mod row_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod text_field_tests;
 #[cfg(test)]
 mod text_tests;

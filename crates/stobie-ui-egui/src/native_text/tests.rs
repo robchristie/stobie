@@ -259,3 +259,32 @@ fn a_limited_fields_hint_shows_on_one_line_elided() {
     assert_eq!(long, short, "the long hint takes one line");
     assert_eq!(registered_in_completed_pass(&context)[0].hint, hint);
 }
+
+#[test]
+fn a_password_field_is_masked_and_never_native() {
+    let context = egui::Context::default();
+    context.enable_accesskit();
+    let mut text = "hunter2".to_owned();
+    // Even while the host would have it active.
+    set_native_text_active(&context, Some(Id::new(FIELD)));
+    let output = run(&context, |ui| {
+        NativeTextEdit::singleline(&mut text, FIELD)
+            .password(true)
+            .desired_width(240.0)
+            .show(ui);
+    });
+    assert!(registered_in_completed_pass(&context).is_empty());
+    let painted = text_colours(&output);
+    assert!(
+        painted.iter().all(|(text, _)| !text.contains("hunter2")),
+        "{painted:?}"
+    );
+    let update = output.platform_output.accesskit_update.expect("AccessKit");
+    let (_, node) = update
+        .nodes
+        .iter()
+        .find(|(id, _)| *id == Id::new(FIELD).accesskit_id())
+        .expect("field node");
+    assert_eq!(node.role(), egui::accesskit::Role::PasswordInput);
+    assert!(node.value().is_none_or(|value| !value.contains("hunter2")));
+}

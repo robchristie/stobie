@@ -31,23 +31,12 @@ pub fn content_spec(role: TextRole, lines: u8) -> ContentTextSpec {
 impl RecordPanes<'_> {
     fn list(&mut self, ui: &mut Ui, p: &mut PresentationContext, frame: PaneFrame) {
         let mut filters = self.filters.clone();
-        p.content(
-            ui,
-            "search-label",
-            "Search titles and notes",
-            content_spec(TextRole::Secondary, 1),
-        );
-        let search = text_input(
-            ui,
-            p,
-            "record-desk.search",
-            "Search records",
-            &mut filters.query,
-            false,
-            None,
-        );
+        let search = TextFieldSpec::new("Search records")
+            .id("record-desk.search")
+            .hint("Titles and notes");
+        let search = p.text_field(ui, "search", &search, &mut filters.query);
         if self.focus_search {
-            search.request_focus();
+            search.field.request_focus();
             self.focus_search = false;
         }
         ui.horizontal_wrapped(|ui| {
@@ -151,21 +140,9 @@ impl RecordPanes<'_> {
                 content_spec(TextRole::Status, 2),
             );
         }
-        p.content(
-            ui,
-            "title-label",
-            "Title",
-            content_spec(TextRole::Secondary, 1),
-        );
-        text_input(
-            ui,
-            p,
-            &format!("record-desk.title.{}", record.id.0),
-            "Record title",
-            &mut draft.title,
-            false,
-            Some(record.id),
-        );
+        let title_id = format!("record-desk.title.{}", record.id.0);
+        let title = TextFieldSpec::new("Record title").id(&title_id);
+        p.text_field(ui, "title", &title, &mut draft.title);
         p.content(
             ui,
             "category-label",
@@ -184,21 +161,12 @@ impl RecordPanes<'_> {
             &self.tokens,
         );
         frame.toggle(ui, p, "reviewed", Action::ToggleReviewed, draft.reviewed);
-        p.content(
-            ui,
-            "notes-label",
-            "Notes",
-            content_spec(TextRole::Secondary, 1),
-        );
-        text_input(
-            ui,
-            p,
-            &format!("record-desk.notes.{}", record.id.0),
-            "Record notes",
-            &mut draft.notes,
-            true,
-            Some(record.id),
-        );
+        // Notes are prose: on touch devices they edit in a native field.
+        let notes_id = format!("record-desk.notes.{}", record.id.0);
+        let notes = TextFieldSpec::new("Record notes")
+            .id(&notes_id)
+            .multiline(4);
+        p.text_field(ui, "notes", &notes, &mut draft.notes);
         if let Err(error) = validate_record(&draft) {
             p.content(ui, "validation", &error, content_spec(TextRole::Error, 2));
         }
@@ -280,60 +248,6 @@ fn set_visible_bounds(node: &mut egui::accesskit::Node, response: &egui::Respons
             y1: f64::from(response.interact_rect.max.y),
         });
     }
-}
-
-// Keep the native control's identity and observation inputs explicit.
-fn text_input(
-    ui: &mut Ui,
-    p: &mut PresentationContext,
-    id: &str,
-    name: &str,
-    value: &mut String,
-    multiline: bool,
-    record: Option<RecordId>,
-) -> egui::Response {
-    let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-        let width = ui.available_width();
-        // Notes are prose: on touch devices they edit in a native field.
-        let response = if multiline {
-            NativeTextEdit::multiline(value, egui::Id::new(id))
-                .desired_rows(4)
-                .desired_width(width)
-                .show(ui)
-        } else {
-            ui.add(
-                egui::TextEdit::singleline(value)
-                    .id(egui::Id::new(id))
-                    .desired_width(width),
-            )
-        };
-        ui.ctx().accesskit_node_builder(response.id, |node| {
-            node.set_label(name);
-            node.set_author_id(id.to_owned());
-            set_visible_bounds(node, &response);
-        });
-        (response, ())
-    });
-    let mut node = UiNode::container(
-        SemanticUiId::new(id),
-        Some(if record.is_some() {
-            SemanticUiId::pane(DETAIL_PANE)
-        } else {
-            SemanticUiId::pane(LIST_PANE)
-        }),
-        if multiline {
-            UiRole::MultilineTextInput
-        } else {
-            UiRole::TextInput
-        },
-        response.rect.into(),
-    );
-    node.name = name.into();
-    node.focused = response.has_focus();
-    node.text_selectable = true;
-    node.domain_reference = record.map(domain);
-    p.observe_node(ui, node);
-    response
 }
 
 fn record_row(
