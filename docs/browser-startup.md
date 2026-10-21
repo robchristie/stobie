@@ -107,6 +107,29 @@ for your chosen retention period. Rebuilding over that same directory destroys
 its previous output and is therefore inappropriate for a retained deployment.
 This work does not deploy or publish a site.
 
+### Keeping earlier packages' assets
+
+An application server that serves the package itself, from one directory,
+keeps earlier assets by the same rule:
+
+- Keep each earlier package's `<app>/assets/<content-sha256>/` directories,
+  with their `.br` and `.gz` files. A content-addressed name never collides
+  with a different file, so copying them into the new package's
+  `<app>/assets/` before switching to it is safe, and a directory already
+  there is the same file.
+- Never keep an earlier `index.html`, `sw.js` or `manifest.webmanifest`:
+  they are the mutable entry points, and the new package's replace them.
+- Keep them for at least as long as a page takes to start, since a page
+  open at the switch may still be fetching its startup files. A page that
+  loads files after starting, such as a worker from `__stobieWorkerUrl`,
+  needs its package's assets for as long as it stays open.
+
+In an installable application the new service worker takes over open pages
+at once and deletes earlier versions' caches, so an open earlier page then
+fetches its assets from the server; the browser does not keep them for it.
+A page that had fully started before the switch needs nothing more unless
+it loads files later.
+
 ## Installable web applications
 
 A page whose `<head>` links `manifest.webmanifest` is an installable web
@@ -186,7 +209,9 @@ the page links a manifest; `startApplication({ serviceWorker: false })` opts
 out. `window.__STOBIE_STARTUP.serviceWorker` records the outcome: `registered`
 with its scope, `not_requested`, `unsupported` (no service workers, or not a
 secure context: browsers allow them only over HTTPS or on `localhost`) or
-`failed` with a message. With `fitViewport: true`, the loader keeps
+`failed` with a message. `window.__stobieServiceWorker`, set before the
+application starts, is a promise of that record once registration settles,
+which [Web Push](web-push.md) awaits. With `fitViewport: true`, the loader keeps
 `--stobie-viewport-height`, `--stobie-viewport-top` and
 `--stobie-bottom-inset` on the root element at the visual viewport's size. A
 page shell sized from them, as in the `stobie new` page, stays above the iOS
