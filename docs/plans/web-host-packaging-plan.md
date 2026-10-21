@@ -1,7 +1,7 @@
 # Web host and packaging
 
 Status: complete
-Delivery: [PR #PR_NUMBER](https://github.com/robchristie/stobie/pull/PR_NUMBER)
+Delivery: [PR #122](https://github.com/robchristie/stobie/pull/122)
 
 ## Outcome and boundaries
 
@@ -65,7 +65,10 @@ service worker's caching.
   with a `PATH` holding no `git` command, in a fresh target directory:
   at this branch's first commit `stobie --version` names that commit; at
   `2964cad` (before) it names none.
-- Web package sizes (WASM raw / Brotli, bytes), against `2964cad`: SIZES.
+- Web package sizes from `cargo xtask web-size` (WASM raw / Brotli, bytes),
+  against `2964cad`: Gallery 12155584 / 3046856 (-237 / +710), Lab
+  12459697 / 3069921 (-332 / +172), template 10475398 / 2688246
+  (-720 / -375).
 
 ## Limits
 
