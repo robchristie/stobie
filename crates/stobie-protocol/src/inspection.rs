@@ -374,6 +374,29 @@ impl From<ArgumentContract> for ContractWire {
     }
 }
 
+/// The largest whole number an [`ActionArgument`] carries exactly, 2^53 − 1;
+/// its negation is the smallest. Arguments travel as JSON numbers, which are
+/// `f64`.
+pub const MAX_EXACT_INTEGER: i64 = (1 << 53) - 1;
+
+/// A whole number outside ±(2^53 − 1) ([`MAX_EXACT_INTEGER`]), which an
+/// [`ActionArgument`] cannot carry exactly; it holds the value as written.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InexactInteger(pub String);
+
+impl std::fmt::Display for InexactInteger {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "{} cannot be represented exactly: an integer argument must lie within \
+             ±{MAX_EXACT_INTEGER}",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for InexactInteger {}
+
 /// A validated argument, delivered to the application with its action.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum ActionArgument {
@@ -389,13 +412,31 @@ pub enum ActionArgument {
 
 impl ActionArgument {
     /// A whole-number argument, such as a row's ID. Numbers travel as `f64`,
-    /// so an ID must lie within ±(2^53 − 1) to stay exact.
+    /// so an ID must lie within ±(2^53 − 1) ([`MAX_EXACT_INTEGER`]) to stay
+    /// exact.
+    ///
+    /// # Panics
+    ///
+    /// Panics, in release builds too, when `value` lies outside that range,
+    /// rather than round it to another ID. Use [`Self::try_integer`] for a
+    /// value that might.
     pub fn integer(value: i64) -> Self {
-        debug_assert!(
-            value.unsigned_abs() < 1 << 53,
-            "{value} cannot be represented exactly"
-        );
-        Self::Number(value as f64)
+        Self::try_integer(value).unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    /// A whole-number argument, or [`InexactInteger`] when `value` lies
+    /// outside ±(2^53 − 1) ([`MAX_EXACT_INTEGER`]), which a number cannot
+    /// carry exactly. Takes any integer type, such as `u64` or `usize`.
+    pub fn try_integer<T>(value: T) -> Result<Self, InexactInteger>
+    where
+        T: TryInto<i64> + std::fmt::Display + Copy,
+    {
+        match value.try_into() {
+            Ok(exact) if exact.unsigned_abs() <= MAX_EXACT_INTEGER.unsigned_abs() => {
+                Ok(Self::Number(exact as f64))
+            }
+            _ => Err(InexactInteger(value.to_string())),
+        }
     }
 
     /// The argument as the JSON value an invocation sends in
@@ -477,18 +518,21 @@ impl From<u32> for ActionArgument {
     }
 }
 
-/// See [`ActionArgument::integer`]: the value must lie within ±(2^53 − 1).
+/// See [`ActionArgument::integer`]: the value must lie within ±(2^53 − 1),
+/// and one outside it panics. Use [`ActionArgument::try_integer`] for a
+/// value that might lie outside it.
 impl From<i64> for ActionArgument {
     fn from(value: i64) -> Self {
         Self::integer(value)
     }
 }
 
-/// See [`ActionArgument::integer`]: the value must be below 2^53.
+/// See [`ActionArgument::integer`]: the value must be below 2^53, and a
+/// larger one panics. Use [`ActionArgument::try_integer`] for a value that
+/// might be larger.
 impl From<u64> for ActionArgument {
     fn from(value: u64) -> Self {
-        debug_assert!(value < 1 << 53, "{value} cannot be represented exactly");
-        Self::Number(value as f64)
+        Self::try_integer(value).unwrap_or_else(|error| panic!("{error}"))
     }
 }
 
@@ -1172,6 +1216,40 @@ mod tests {
             },
             argument,
             target,
+        }
+    }
+
+    #[test]
+    fn integers_beyond_what_a_number_carries_exactly_are_refused() {
+        let edge = MAX_EXACT_INTEGER;
+        assert_eq!(ActionArgument::integer(edge).to_value(), Some(json!(edge)));
+        assert_eq!(
+            ActionArgument::integer(-edge).to_value(),
+            Some(json!(-edge))
+        );
+        assert_eq!(
+            ActionArgument::try_integer(edge as u64),
+            Ok(ActionArgument::Number(edge as f64))
+        );
+        for refused in [edge + 1, -edge - 1, i64::MAX, i64::MIN] {
+            let error = ActionArgument::try_integer(refused).unwrap_err();
+            assert_eq!(error, InexactInteger(refused.to_string()));
+            assert!(error.to_string().contains("cannot be represented exactly"));
+        }
+        assert!(ActionArgument::try_integer(u64::MAX).is_err());
+        // The infallible forms refuse the same values, in release builds too.
+        for refused in [
+            std::panic::catch_unwind(|| ActionArgument::integer(edge + 1)),
+            std::panic::catch_unwind(|| ActionArgument::from(edge + 1)),
+            std::panic::catch_unwind(|| ActionArgument::from((edge + 1) as u64)),
+            std::panic::catch_unwind(|| ActionArgument::from(u64::MAX)),
+        ] {
+            let message = refused.unwrap_err();
+            let message = message.downcast_ref::<String>().unwrap();
+            assert!(
+                message.contains("cannot be represented exactly"),
+                "{message}"
+            );
         }
     }
 
