@@ -161,7 +161,10 @@ pub fn audit_accesskit(
             UiRole::AlertDialog => egui::accesskit::Role::AlertDialog,
             _ => unreachable!(),
         };
-        if node.role() != expected_role {
+        // A masked text input is AccessKit's password input.
+        let password = semantic.role == UiRole::TextInput
+            && node.role() == egui::accesskit::Role::PasswordInput;
+        if node.role() != expected_role && !password {
             findings.push(AccessKitMismatch::Role {
                 id: semantic.id.clone(),
             });

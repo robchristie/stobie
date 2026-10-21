@@ -807,6 +807,7 @@ fn short_labels_present_whole_at_least_the_minimum_hit_size() {
                             content: ActionButtonContent::Text,
                             also_fits: &[],
                             tooltip: false,
+                            tab_stop: true,
                         },
                         &identity,
                         &tokens,

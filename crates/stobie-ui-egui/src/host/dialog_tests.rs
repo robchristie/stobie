@@ -15,8 +15,7 @@ use super::*;
 use crate::{
     Action, CapabilityDescription, ConfirmSpec, DialogPlacement, DialogSpec, InspectionErrorCode,
     InspectionOperation, InspectionResult, InspectionSelector, InvocationReceipt,
-    NativeTextControlKind, NativeTextEdit, PresentationContext, PresentationScope, ReceiptState,
-    ResolvedTarget,
+    PresentationScope, ReceiptState, ResolvedTarget, TextFieldSpec,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -80,46 +79,6 @@ const NAME: &str = "planner.name";
 const PROMPT: &str = "planner.prompt";
 const SEARCH: &str = "planner.search";
 
-/// A labelled text field presented as Stobie recipes present one.
-fn field(
-    ui: &mut Ui,
-    p: &mut PresentationContext,
-    id: &'static str,
-    label: &str,
-    text: &str,
-    native: bool,
-) -> Option<String> {
-    let mut edited = text.to_owned();
-    let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-        let response = if native {
-            NativeTextEdit::multiline(&mut edited, egui::Id::new(id))
-                .desired_rows(2)
-                .show(ui)
-        } else {
-            ui.add(egui::TextEdit::singleline(&mut edited).id(egui::Id::new(id)))
-        };
-        ui.ctx().accesskit_node_builder(response.id, |node| {
-            node.set_label(label);
-            node.set_author_id(id.to_owned());
-        });
-        (response, ())
-    });
-    let mut node = UiNode::container(
-        SemanticUiId::new(id),
-        Some(p.parent().clone()),
-        if native {
-            UiRole::MultilineTextInput
-        } else {
-            UiRole::TextInput
-        },
-        response.rect.into(),
-    );
-    node.name = label.into();
-    node.focused = response.has_focus();
-    p.observe_node(ui, node);
-    (edited != text).then_some(edited)
-}
-
 impl Application for Planner {
     type Action = Act;
     type Intent = Intent;
@@ -143,9 +102,8 @@ impl Application for Planner {
         frame.action(ui, &mut p, Act::Edit, ActionEmphasis::Normal);
         frame.action(ui, &mut p, Act::SignOut, ActionEmphasis::Normal);
         frame.action(ui, &mut p, Act::Refresh, ActionEmphasis::Normal);
-        if let Some(search) = field(ui, &mut p, SEARCH, "Search", &self.search, false) {
-            frame.emit(Intent::Search(search));
-        }
+        let search = TextFieldSpec::new("Search").id(SEARCH);
+        frame.text_field(ui, &mut p, SEARCH, &search, &self.search, Intent::Search);
         view.placement = None;
         view.rect = None;
         if self.editing {
@@ -157,12 +115,10 @@ impl Application for Planner {
                 spec = spec.full_height();
             }
             let response = frame.dialog(ui, &mut p, "editor", &spec, |ui, frame, p| {
-                if let Some(name) = field(ui, p, NAME, "Name", &self.name, false) {
-                    frame.emit(Intent::Name(name));
-                }
-                if let Some(prompt) = field(ui, p, PROMPT, "Prompt", &self.prompt, true) {
-                    frame.emit(Intent::Prompt(prompt));
-                }
+                let name = TextFieldSpec::new("Name").id(NAME);
+                frame.text_field(ui, p, NAME, &name, &self.name, Intent::Name);
+                let prompt = TextFieldSpec::new("Prompt").id(PROMPT).multiline(2);
+                frame.text_field(ui, p, PROMPT, &prompt, &self.prompt, Intent::Prompt);
                 if self.long {
                     ui.add_space(2000.0);
                 }

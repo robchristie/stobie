@@ -1,12 +1,15 @@
+mod avatar_strip;
 mod avatars;
 mod buttons;
 mod chat;
 mod choice;
+mod code_copy;
 mod composer;
 mod copy;
 mod data;
 mod dialogs;
 mod dock;
+mod fields;
 mod headers;
 mod icons;
 mod markdown;
@@ -28,9 +31,11 @@ use stobie_ui_egui::{
 
 use crate::catalogue::{StoryId, story_definition};
 
+pub use avatar_strip::AvatarStripFixtureState;
 pub use chat::ChatFixtureState;
 pub use dialogs::DialogFixtureState;
 pub(crate) use dock::DockSceneState;
+pub use fields::FieldFixtureState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
 pub use responsive::ResponsiveFixtureState;
@@ -53,6 +58,8 @@ pub(crate) struct StoryState {
     pub(crate) header: headers::HeaderFixtureState,
     pub(crate) scroll: ScrollFixtureState,
     pub(crate) choice: choice::ChoiceFixtureState,
+    pub(crate) fields: FieldFixtureState,
+    pub(crate) avatar_strip: AvatarStripFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -174,6 +181,13 @@ fn present_story(
         ),
         StoryId::ChoiceSegmented => {
             choice::story(ui, tokens, font_scale, &mut state.choice, &mut report)
+        }
+        StoryId::AvatarsStrip => {
+            avatar_strip::story(ui, tokens, font_scale, &mut state.avatar_strip, &mut report)
+        }
+        StoryId::MarkdownCodeCopy => code_copy::story(ui, tokens, font_scale, &mut report),
+        StoryId::FormTextFields => {
+            fields::story(ui, tokens, font_scale, &mut state.fields, &mut report)
         }
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the

@@ -521,6 +521,36 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present one pinned person or thing in a strip: its avatar over its
+    /// caption in one target, named by the caption, that triggers the action
+    /// with its argument when clicked (see [`crate::avatar_item`]). Pass a
+    /// [`BoundAction`](crate::BoundAction) carrying the item's ID, so agents
+    /// open it by that ID, and present items inside
+    /// [`PresentationContext::avatar_strip`]. A hidden item presents nothing.
+    pub fn avatar_item(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: &crate::AvatarItemSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.avatar_item(
+            ui,
+            bound.action(),
+            spec,
+            target,
+            &availability,
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
+    }
+
     /// Present one destination, such as a section of the application or
     /// one of a dynamic list with one per person, `selected` while it is the
     /// one on show (see [`crate::navigation_item`]). Clicking it triggers
@@ -749,6 +779,28 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
             if control.response.clicked() {
                 self.triggers.push((control.target, ActionArgument::None));
             }
+        }
+        response
+    }
+
+    /// Present a labelled text field for the application's text (see
+    /// [`PresentationContext::text_field`] for its conventions). The text
+    /// stays the application's: an edit emits `edit(text)` with the whole
+    /// new text, to apply in [`Application::apply`]. The response reports
+    /// whether Return submitted a single-line field.
+    pub fn text_field(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::TextFieldSpec<'_>,
+        text: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::TextFieldResponse {
+        let mut edited = text.to_owned();
+        let response = presentation.text_field(ui, key, spec, &mut edited);
+        if response.changed {
+            self.intents.push(edit(edited));
         }
         response
     }
@@ -2441,6 +2493,8 @@ fn pair_text_fields(
 }
 
 #[cfg(test)]
+mod avatar_item_tests;
+#[cfg(test)]
 mod chat_tests;
 #[cfg(test)]
 mod choice_tests;
@@ -2466,5 +2520,7 @@ mod row_tests;
 mod scroll_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod text_field_tests;
 #[cfg(test)]
 mod text_tests;

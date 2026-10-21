@@ -55,10 +55,13 @@ pub enum StoryId {
     NavigationHeader,
     ScrollLoadOlder,
     ChoiceSegmented,
+    FormTextFields,
+    AvatarsStrip,
+    MarkdownCodeCopy,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 50] = [
+    pub const ALL: [Self; 53] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -109,6 +112,9 @@ impl StoryId {
         Self::NavigationHeader,
         Self::ScrollLoadOlder,
         Self::ChoiceSegmented,
+        Self::FormTextFields,
+        Self::AvatarsStrip,
+        Self::MarkdownCodeCopy,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -163,6 +169,9 @@ impl StoryId {
             Self::NavigationHeader => "navigation/header",
             Self::ScrollLoadOlder => "scroll/load-older",
             Self::ChoiceSegmented => "choice/segmented",
+            Self::FormTextFields => "form/text-fields",
+            Self::AvatarsStrip => "avatars/strip",
+            Self::MarkdownCodeCopy => "markdown/code-copy",
         }
     }
 }
@@ -223,6 +232,7 @@ pub enum StoryGroup {
     Copy,
     Dialog,
     Choice,
+    Form,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -304,6 +314,12 @@ const DRAG: &[InteractionScenario] = &[
 const SCROLL: &[InteractionScenario] = &[
     InteractionScenario::Pointer,
     InteractionScenario::Keyboard,
+    InteractionScenario::Scroll,
+];
+const SCROLL_KEYBOARD: &[InteractionScenario] = &[
+    InteractionScenario::Pointer,
+    InteractionScenario::Keyboard,
+    InteractionScenario::Accessibility,
     InteractionScenario::Scroll,
 ];
 const PASSIVE: &[InteractionScenario] = &[];
@@ -423,6 +439,7 @@ const SCROLL_STATES: &[StoryState] = &[
     StoryState::KeyboardFocused,
     StoryState::Disabled,
     StoryState::Narrow,
+];
 const CHOICE_STATES: &[StoryState] = &[
     StoryState::Default,
     StoryState::Selected,
@@ -431,6 +448,31 @@ const CHOICE_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
     StoryState::HighTextScale,
+];
+const FIELD_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Error,
+    StoryState::Narrow,
+];
+const AVATAR_STRIP_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Selected,
+    StoryState::LongText,
+    StoryState::Narrow,
+];
+const CODE_COPY_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::Pressed,
+    StoryState::KeyboardFocused,
+    StoryState::LongText,
+    StoryState::Narrow,
 ];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
@@ -459,7 +501,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 50] = [
+pub static STORIES: [StoryDefinition; 53] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -909,6 +951,33 @@ pub static STORIES: [StoryDefinition; 50] = [
         720,
         CHOICE_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::FormTextFields,
+        "A sign-up form's labelled text fields: a hint, a description with an error, a password, a multiline field and a disabled one.",
+        StoryGroup::Form,
+        640,
+        720,
+        FIELD_STATES,
+        KEYBOARD,
+    ),
+    story(
+        StoryId::AvatarsStrip,
+        "A strip of pinned people and assistants whose avatars are the controls: the open one current, a long name elided and one unavailable; it scrolls sideways at phone width.",
+        StoryGroup::Avatar,
+        640,
+        360,
+        AVATAR_STRIP_STATES,
+        SCROLL_KEYBOARD,
+    ),
+    story(
+        StoryId::MarkdownCodeCopy,
+        "A reply in a message bubble whose two code blocks each carry a copy control, the longer one wrapping in a narrow column.",
+        StoryGroup::Copy,
+        640,
+        720,
+        CODE_COPY_STATES,
+        SCROLL_KEYBOARD,
     ),
 ];
 

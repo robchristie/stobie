@@ -70,11 +70,11 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, segmented choices,
-headings with controls, responsive navigation, dialogs, sheets, confirms,
-anchored scroll areas, pane footers and virtual thumbnail cells. Their
-deterministic examples are the
+badges, navigation items, list rows, composers, avatars and avatar items,
+message bubbles, conversation rows, unread dots, switches, copy controls,
+segmented choices, headings with controls, responsive navigation, dialogs,
+sheets, confirms, text fields, anchored scroll areas, pane footers and virtual
+thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -249,10 +249,37 @@ out of view add no observation or node, while coverage counts every attempt.
 Choose `TextInteraction::Inert` only where a parent owns the pointer; links
 stay activatable.
 
+### Copying a code block
+
+Use `PresentationContext::markdown_with_code_copy(ui, key, source, spec,
+&CodeCopySpec::new(label, confirmation, failure))` to give each code block
+its own [copy control](#copy), such as a reply whose commands a person will
+paste. Plain `markdown` presents none. Each block gains a strip across its
+top, inside its raised surface and in place of its top padding, as tall as an
+action's hit height; the control sits at the strip's trailing end with
+`QuietBorderless` emphasis, and the code wraps beneath it at its full width,
+so the control never covers code. Every other block keeps its place.
+
+Each control copies exactly the block's text as Stobie's Markdown parses it:
+without its fences, its language or its final line break, with tabs as four
+spaces. It is named by the application's label, such as "Copy code", when
+there is one code block, and by the label and the block's number from 1,
+such as "Copy code 2", when there are several (`CodeCopySpec::name`), so the
+names stay distinct. Controls are keyed by their block's position among the
+code blocks, so in a reply still arriving each keeps its identity, and any
+confirmation it shows, as later blocks arrive; the first control's name moves
+from "Copy code" to "Copy code 1" when a second block arrives.
+`CodeCopySpec` shows the glyph alone by default; `content` chooses a face with
+the label and `description` adds an accessible description. The controls
+behave as any copy control does, inside a message bubble too: they confirm
+without moving the bubble or each other.
+
 Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
-font_scale, observations)` and publish the returned `link_nodes`. Gallery
-`markdown/digest` and `markdown/long-narrow` use the production recipe; the
-[evidence record](../markdown-evidence.md) retains the review.
+font_scale, observations)` and publish the returned `link_nodes`; it presents
+no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
+production recipe and `markdown/code-copy` a reply with a copy control on
+each of its code blocks; the [evidence record](../markdown-evidence.md)
+retains the review.
 
 ## Links
 
@@ -352,6 +379,8 @@ p.copy(ui, "copy-code", &CopySpec::new(&code, "Copy code", "Copied", "Couldn't c
   text changes, never the text or a digest of it. Show the text itself, if
   the user should read it, with content text; an application that must not
   publish a secret withholds that content text and keeps the copy control.
+
+[Markdown code blocks](#copying-a-code-block) can each carry a copy control.
 
 Gallery `copy/actions` presents a copy control beside a code, an icon-only
 control under a message, a long localised label and confirmation, and a
@@ -785,9 +814,8 @@ happened for the caller to route.
   holding what it presents and marked modal for assistive technology. While
   one is presented the host observes, binds and shows assistive technology
   only it (see [interactions](interactions.md#dialogs)).
-- **Fields.** A form's text fields are `NativeTextEdit`s presented through
-  `PresentationContext::native`, labelled for AccessKit and observed as text
-  inputs, as elsewhere; on iOS they edit through the native field.
+- **Fields.** A form's text fields use the [text field](#text-fields)
+  recipe, as elsewhere; on iOS they edit through the native field.
 
 Gallery `dialog/sheet` (a routine editor with two text fields and a switch,
 over the routine it edits) and `dialog/confirm` (deleting that routine) use
@@ -892,6 +920,60 @@ themselves. Gallery `choice/segmented` presents a single choice focused at
 its chosen option beside an unavailable one, weekday toggles with short
 labels, long labels that wrap whole, a choice unavailable throughout and the
 weekdays in a narrow column.
+
+## Text fields
+
+A form's text field is a visible caption above a field, with an optional
+description and error line beneath it. In a hosted pane:
+
+```text
+let name = TextFieldSpec::new("Name").hint("Morning briefing");
+frame.text_field(ui, p, "name", &name, &self.name, Intent::Name);
+let code = TextFieldSpec::new("Invitation code")
+    .spellcheck(false)
+    .description("Six letters or digits from the invitation.")
+    .error(self.code_error.as_deref());
+let code = frame.text_field(ui, p, "code", &code, &self.code, Intent::Code);
+if code.submitted { /* Return in the field: submit the form */ }
+```
+
+`TextFieldSpec::new` takes the caption, which also names the field; builder
+methods add `multiline(rows)` and `max_rows`, a `hint`, a `description`, an
+`error`, `password`, `spellcheck(false)` for codes and addresses, and `id`
+for a field whose published semantic ID agents and smokes already use. The
+words are the application's.
+
+- **Layout.** A `Caption` line (wrapping to two, then elided) above a
+  frameless `NativeTextEdit` in `Body` text, as wide as the space offered and
+  padded, as in a composer, so that one line fills the token hit height. Its
+  ground is the text-field ground with the control corner radius; its border
+  is the control border, the focus ring while it has focus, the error colour
+  while it shows an error, and the subtle border while disabled. The error,
+  then the description, follow as measured, selectable `Error` and
+  `Secondary` text, each wrapping to four lines.
+- **Editing.** A single-line field reports `submitted` for Return and keeps
+  focus; a multiline field types a newline and grows from `rows` to
+  `max_rows`. A disabled `Ui` disables the field. On a touch device a tap
+  makes it the platform's own field. A `password` field is a single line
+  that egui masks; it is never the native field and has no spelling help.
+- **Semantics.** The field's AccessKit node is labelled by the caption (and
+  carries it as its label), described by the error then the description, and
+  marked invalid while it has an error. It is observed as a `TextInput` or
+  `MultilineTextInput` node named by the caption, so agents fill it with
+  `set-text`. A password field is a `PasswordInput` for assistive technology,
+  so the host publishes no value for it and offers no `set-text`. An empty
+  polite `Status` is always present beneath it and takes the error's words
+  when one appears, so assistive technology announces it once; while it shows
+  an error the snapshot has a `Status` node with the same words.
+- **Responses.** `Frame::text_field` takes the text and an intent
+  constructor and emits the edited text as that intent; it returns a
+  `TextFieldResponse` with the field's and caption's responses, `changed` and
+  `submitted`. `PresentationContext::text_field` is the low-level form: it
+  edits a `&mut String`.
+
+Gallery `form/text-fields` presents an empty field with its hint, a
+description with an error, a password, a multiline field and a disabled
+field; `dialog/sheet` uses the recipe in a routine editor.
 
 ## Composer
 
@@ -998,7 +1080,7 @@ fn people(ui: &mut egui::Ui, p: &mut PresentationContext, photo: Option<egui::lo
   initials are not observed: it is decorative, like an icon, and the row,
   heading or control beside it names the person or thing. An avatar that
   acts (a pinned person who opens a conversation) belongs inside a control
-  with that name.
+  with that name, such as an avatar item.
 
 Low-level callers use `avatar(ui, &spec, tokens, font_scale)`, or
 `paint_avatar(painter, &spec, rect, tokens)` to paint into the largest
@@ -1006,6 +1088,49 @@ square in `rect`; `avatar_initials` and `avatar_eye_colour` expose the
 derivations. Gallery `avatars/figures` shows each size, people (including
 the glyph fallback), the built-in and application shapes, and images; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists its fixtures.
+
+### Avatar items and strips
+
+A strip of pinned people or things, whose avatar is itself the target,
+presents each as an avatar item inside `PresentationContext::avatar_strip`.
+In a hosted pane:
+
+```text
+p.avatar_strip(ui, "pinned", |ui, p| {
+    for person in &self.pinned {
+        let spec = AvatarItemSpec::new(AvatarSpec::person(&person.name, AvatarSize::Strip), &person.name)
+            .selected(self.open == Some(person.id));
+        frame.avatar_item(ui, p, BoundAction::new(Action::Open, person.id), &spec);
+    }
+});
+```
+
+- **Layout.** One target holds the avatar at `AvatarSize::Strip` (whatever
+  size the spec gives) over one centred `Caption` line, elided with an
+  ellipsis, within block padding: `avatar_item_size` gives its size, at
+  least the token hit size each way. The strip lays items in one row
+  `spacing.inline` apart and scrolls sideways when it is wider than the
+  space offered, as on a phone; focusing an item scrolls it into view.
+- **States.** Hover uses the quiet action hover fill, press the selection
+  pair with an inset outline, and keyboard focus the focus ring around the
+  whole item. The current item (`selected`) takes the selection background
+  and a selection-indicator marker beneath its caption. A disabled item
+  fades its avatar, mutes its caption and keeps its reason in its tooltip
+  and description.
+- **Semantics.** Each item is one `NavigationItem` node, and one AccessKit
+  button, named by the whole caption, described by the spec's
+  `description` or the action's, `selected` and `aria-current` while
+  current, carrying its `BoundAction`'s argument so agents open it by its
+  ID. The avatar adds no node; the strip adds none. Each enabled item is a
+  Tab stop; Enter, Space and a pointer release activate it. The caption is a
+  `NavigationLabel` measurement under a `NavigationItem` parent.
+- **Responses.** `Frame::avatar_item` triggers the action with its argument
+  when clicked; `PresentationContext::avatar_item` takes the target,
+  availability and argument and leaves triggering to the caller. Low-level
+  callers use `avatar_item` and publish `avatar_item_semantic_node`.
+
+Gallery `avatars/strip` shows a strip with the open item current, a long
+name elided and an unavailable item; at phone width it scrolls.
 
 ## Chat recipes
 

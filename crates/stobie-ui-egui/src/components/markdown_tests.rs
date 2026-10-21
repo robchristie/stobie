@@ -15,10 +15,10 @@ use egui_kittest::{
 };
 
 use crate::{
-    DensityVariant, DesignTokens, MarkdownSpec, PresentationContext, PresentationScope,
-    SemanticUiId, TextAuditFinding, TextComponentId, TextComponentKind, TextInteraction,
-    TextLayoutObservation, TextOverflow, TextRole, ThemeVariant, UiNode, UiRole, UiSnapshot,
-    audit_accesskit, audit_text_layouts,
+    CodeCopySpec, DensityVariant, DesignTokens, MarkdownSpec, PresentationContext,
+    PresentationScope, SemanticUiId, TextAuditFinding, TextComponentId, TextComponentKind,
+    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, ThemeVariant, UiNode, UiRole,
+    UiSnapshot, audit_accesskit, audit_text_layouts,
 };
 
 const PHONE: f32 = 343.0;
@@ -113,6 +113,19 @@ fn present_with(
     scale: f32,
     tokens: DesignTokens,
 ) -> Presented {
+    present_copying(context, source, width, scale, tokens, None)
+}
+
+/// Present `source`, with a copy control on each code block when `copy` is
+/// given.
+fn present_copying(
+    context: &egui::Context,
+    source: &str,
+    width: f32,
+    scale: f32,
+    tokens: DesignTokens,
+    copy: Option<&CodeCopySpec<'_>>,
+) -> Presented {
     let mut published = None;
     let mut rect = Rect::NOTHING;
     let mut output = context.run_ui(screen(width, 20_000.0), |ui| {
@@ -123,7 +136,13 @@ fn present_with(
             PresentationScope::new("reply"),
             SemanticUiId::root(),
         );
-        rect = p.markdown(ui, "body", source, MarkdownSpec::default()).rect;
+        rect = match copy {
+            Some(copy) => {
+                p.markdown_with_code_copy(ui, "body", source, MarkdownSpec::default(), copy)
+            }
+            None => p.markdown(ui, "body", source, MarkdownSpec::default()),
+        }
+        .rect;
         published = Some(p.finish(ui));
     });
     output.textures_delta.clear();
@@ -874,4 +893,149 @@ fn links_after_shaped_clusters_keep_their_whole_hit_area_and_label() {
         widths.iter().all(|width| (width - widths[0]).abs() < 0.5),
         "{widths:?}"
     );
+}
+
+const CODE_COPY: CodeCopySpec<'static> = CodeCopySpec::new("Copy code", "Copied", "Couldn't copy");
+
+fn copy_controls(presented: &Presented) -> Vec<&UiNode> {
+    presented
+        .snapshot
+        .nodes
+        .iter()
+        .filter(|node| node.role == UiRole::Button)
+        .collect()
+}
+
+fn code_copy_id(index: usize) -> SemanticUiId {
+    PresentationScope::new("reply")
+        .instance((&"body", "stobie.code-copy", index))
+        .semantic_id()
+}
+
+#[test]
+fn a_code_blocks_copy_control_sits_in_a_strip_above_its_text() {
+    for width in [PHONE, DESKTOP] {
+        for scale in [1.0, 1.5] {
+            let label = format!("{width} at {scale}");
+            let plain = present(ELEMENTS, width, scale);
+            let copying = present_copying(
+                &context(),
+                ELEMENTS,
+                width,
+                scale,
+                tokens(),
+                Some(&CODE_COPY),
+            );
+            assert_clean(&copying, &label);
+            // Only the opted-in presentation has a control.
+            assert!(copy_controls(&plain).is_empty(), "{label}");
+            let controls = copy_controls(&copying);
+            assert_eq!(controls.len(), 1, "{label}");
+            let control = controls[0];
+            assert_eq!(control.name, "Copy code");
+            assert_eq!(control.id, code_copy_id(0));
+            assert!(control.enabled);
+
+            // Every block keeps its place, except that the code and what
+            // follows it move down by the strip, less the padding it
+            // replaces.
+            let tokens = tokens();
+            let strip = crate::components::action_hit_height(&tokens, scale);
+            let shift = strip - tokens.spacing.block.0;
+            let reading = |presented: &Presented| -> Vec<(TextRole, Rect)> {
+                presented
+                    .kind(TextComponentKind::ReadingText)
+                    .iter()
+                    .map(|text| (text.role, text_rect(text.allocated_rect)))
+                    .collect()
+            };
+            let (before, after) = (reading(&plain), reading(&copying));
+            assert_eq!(before.len(), after.len(), "{label}");
+            let code = before
+                .iter()
+                .position(|(role, _)| *role == TextRole::MonospaceTechnical)
+                .unwrap();
+            for (index, ((_, was), (_, now))) in before.iter().zip(&after).enumerate() {
+                let expected = if index < code {
+                    *was
+                } else {
+                    was.translate(egui::vec2(0.0, shift))
+                };
+                assert!(
+                    (now.min - expected.min).length() < 0.5
+                        && (now.size() - expected.size()).length() < 0.5,
+                    "{label}: block {index} {now:?} {expected:?}"
+                );
+            }
+            assert!(
+                (copying.rect.height() - plain.rect.height() - shift).abs() < 0.5,
+                "{label}"
+            );
+            // The control is at the strip's trailing end, above the code,
+            // and at least the touch target.
+            let text = after[code].1;
+            let control = Rect::from(control.rect);
+            let minimum = tokens.geometry.minimum_hit_size.0;
+            assert!(control.width() >= minimum && control.height() >= minimum - 0.5);
+            assert!(control.bottom() <= text.top() + 0.5, "{label}: {control:?}");
+            assert!(control.right() <= width + 0.5, "{label}: {control:?}");
+            assert!(
+                control.right() >= text.right(),
+                "{label}: {control:?} {text:?}"
+            );
+            assert!(control.left() > text.left(), "{label}: {control:?}");
+        }
+    }
+}
+
+#[test]
+fn several_code_blocks_have_distinct_names_keyed_by_their_position() {
+    let one = "Install:\n\n```sh\npip install example\n```\n";
+    let presented = present_copying(&context(), one, PHONE, 1.0, tokens(), Some(&CODE_COPY));
+    let names: Vec<_> = copy_controls(&presented)
+        .iter()
+        .map(|node| (node.id.clone(), node.name.clone()))
+        .collect();
+    assert_eq!(names, [(code_copy_id(0), "Copy code".to_owned())]);
+
+    // As the reply grows, the first control keeps its key; code in a list
+    // item and in a quote has its own control too.
+    let three = format!(
+        "{one}\nThen:\n\n- Run it:\n\n  ```\n  example --check\n  ```\n\n\
+         > ```\n> quoted\n> ```\n"
+    );
+    let presented = present_copying(&context(), &three, PHONE, 1.0, tokens(), Some(&CODE_COPY));
+    assert_clean(&presented, "three blocks");
+    let names: Vec<_> = copy_controls(&presented)
+        .iter()
+        .map(|node| (node.id.clone(), node.name.clone()))
+        .collect();
+    assert_eq!(
+        names,
+        [
+            (code_copy_id(0), "Copy code 1".to_owned()),
+            (code_copy_id(1), "Copy code 2".to_owned()),
+            (code_copy_id(2), "Copy code 3".to_owned()),
+        ]
+    );
+    // Each control is above its own block's text.
+    let code: Vec<_> = presented
+        .kind(TextComponentKind::ReadingText)
+        .into_iter()
+        .filter(|text| text.role == TextRole::MonospaceTechnical)
+        .map(|text| text_rect(text.allocated_rect))
+        .collect();
+    assert_eq!(code.len(), 3);
+    for (control, text) in copy_controls(&presented).iter().zip(&code) {
+        let control = Rect::from(control.rect);
+        assert!(control.bottom() <= text.top() + 0.5, "{control:?} {text:?}");
+        assert!(text.top() - control.bottom() < 1.0, "{control:?} {text:?}");
+    }
+}
+
+fn text_rect(rect: crate::TextRect) -> Rect {
+    Rect::from_min_max(
+        egui::pos2(rect.min_x, rect.min_y),
+        egui::pos2(rect.max_x, rect.max_y),
+    )
 }

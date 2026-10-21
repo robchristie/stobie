@@ -32,12 +32,12 @@ pub use action_button::{
 };
 pub(crate) use action_button::{
     ButtonFace, ControlLabels, action_button_size, action_hit_height, icon_action_side,
-    present_action_button,
-    present_button,
+    present_action_button, present_button,
 };
 pub use avatar::{
-    AvatarFace, AvatarFigure, AvatarOutline, AvatarOutlineError, AvatarSize, AvatarSpec,
-    OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_size, paint_avatar,
+    AvatarFace, AvatarFigure, AvatarItemSpec, AvatarOutline, AvatarOutlineError, AvatarSize,
+    AvatarSpec, OutlineSegment, avatar, avatar_eye_colour, avatar_initials, avatar_item,
+    avatar_item_semantic_node, avatar_item_size, avatar_size, paint_avatar,
 };
 pub use choice::{ChoiceControlOutput, choice_control, choice_control_with_options};
 pub(crate) use conversation_row::muted_text_on;
@@ -47,6 +47,7 @@ pub use conversation_row::{
 };
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
+pub(crate) use markdown::present_markdown;
 pub use markdown::{MarkdownResponse, MarkdownSpec, markdown};
 pub use navigation::{
     DestinationSpec, NavigationBadge, NavigationItemSpec, navigation_item,

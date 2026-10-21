@@ -40,6 +40,7 @@ pub struct NativeTextEdit<'t> {
     /// `None` keeps egui's own return key.
     return_key: Option<Option<KeyboardShortcut>>,
     max_rows: Option<usize>,
+    password: bool,
 }
 
 impl<'t> NativeTextEdit<'t> {
@@ -68,6 +69,7 @@ impl<'t> NativeTextEdit<'t> {
             frame: true,
             return_key: None,
             max_rows: None,
+            password: false,
         }
     }
 
@@ -137,9 +139,21 @@ impl<'t> NativeTextEdit<'t> {
         self
     }
 
+    /// Mask a single-line field's text, as a password field (off by
+    /// default). egui draws its dots and publishes it to AccessKit as a
+    /// password input, so hosts never publish its text, set it or offer it
+    /// to agents. It is never presented as a native field: the browser's own
+    /// field would hold the text unmasked in the page. Spelling help is off.
+    /// A multiline field ignores it.
+    pub fn password(mut self, password: bool) -> Self {
+        self.password = password;
+        self
+    }
+
     /// Add the field and register it for this pass.
     pub fn show(self, ui: &mut Ui) -> Response {
-        let active = native_text_active(ui.ctx()) == Some(self.id);
+        let password = self.password && !self.multiline;
+        let active = !password && native_text_active(ui.ctx()) == Some(self.id);
         let font = self
             .font
             .unwrap_or_else(|| egui::FontSelection::Default.resolve(ui.style()));
@@ -176,7 +190,8 @@ impl<'t> NativeTextEdit<'t> {
             }
             .id(self.id)
             .font(font.clone())
-            .margin(margin);
+            .margin(margin)
+            .password(password);
             if !self.frame {
                 // No fill or stroke, and exactly the margin.
                 edit = edit.frame(egui::Frame::new().inner_margin(margin));
@@ -276,6 +291,10 @@ impl<'t> NativeTextEdit<'t> {
         // egui places a text edit's rows on whole points, a little closer
         // than the font's row height; the native field's lines match them,
         // so its text fits the field egui sized.
+        if password {
+            // egui alone presents a password field.
+            return response;
+        }
         let rows = output.galley.rows.len();
         let line_height = if self.multiline && rows > 0 && output.galley.rect.height() > 0.0 {
             output.galley.rect.height() / rows as f32
