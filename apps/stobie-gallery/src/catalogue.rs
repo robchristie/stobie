@@ -53,10 +53,11 @@ pub enum StoryId {
     DialogConfirm,
     HeadingControls,
     NavigationHeader,
+    ScrollLoadOlder,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 48] = [
+    pub const ALL: [Self; 49] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -105,6 +106,7 @@ impl StoryId {
         Self::DialogConfirm,
         Self::HeadingControls,
         Self::NavigationHeader,
+        Self::ScrollLoadOlder,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -157,6 +159,7 @@ impl StoryId {
             Self::DialogConfirm => "dialog/confirm",
             Self::HeadingControls => "heading/controls",
             Self::NavigationHeader => "navigation/header",
+            Self::ScrollLoadOlder => "scroll/load-older",
         }
     }
 }
@@ -410,6 +413,13 @@ const DIALOG_STATES: &[StoryState] = &[
     StoryState::Active,
     StoryState::Narrow,
 ];
+const SCROLL_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::Hover,
+    StoryState::KeyboardFocused,
+    StoryState::Disabled,
+    StoryState::Narrow,
+];
 const ICON_NARROW_STATES: &[StoryState] = &[
     StoryState::LongText,
     StoryState::Narrow,
@@ -437,7 +447,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 48] = [
+pub static STORIES: [StoryDefinition; 49] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -869,6 +879,15 @@ pub static STORIES: [StoryDefinition; 48] = [
         720,
         NAVIGATION_HEADER_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::ScrollLoadOlder,
+        "A conversation that loads older messages above the reader's place, beside a short list whose account sits at the pane's foot.",
+        StoryGroup::Chat,
+        960,
+        720,
+        SCROLL_STATES,
+        SCROLL,
     ),
 ];
 

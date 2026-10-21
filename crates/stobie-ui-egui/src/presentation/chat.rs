@@ -97,8 +97,28 @@ struct BubbleFit {
     max: f32,
     /// The content's natural width at that maximum.
     fit: f32,
-    /// The content's text and how it was set: its lines and their height.
+    /// The content's text and how it was set: its lines and their height,
+    /// as painted while the whole bubble was in view.
     signature: u64,
+    /// The lines and height of each of the content's measured texts, which
+    /// they record whether or not they paint.
+    layout: u64,
+}
+
+/// A hash of the lines and height of each measured text in a bubble's
+/// content. Measured text records its layout even where it is out of view
+/// and skips its paint, so this, unlike the painted shapes, is the same
+/// wherever the bubble is scrolled.
+fn layout_signature(texts: &[crate::TextLayoutObservation]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    for text in texts {
+        text.component_id.hash(&mut hasher);
+        text.line_count.hash(&mut hasher);
+        (text.painted_rect.max_y - text.painted_rect.min_y)
+            .to_bits()
+            .hash(&mut hasher);
+    }
+    hasher.finish()
 }
 
 /// The rightmost edge among `shapes`, and a hash of their text and how it
@@ -145,7 +165,13 @@ impl PresentationContext {
     /// A bubble measures its content after presenting it and keeps the
     /// width for later passes; when the content's text, the way it is set
     /// (a density, contrast or text size) or the column's width changes, it
-    /// lays out once more at the new width.
+    /// lays out once more at the new width. It measures only while it is
+    /// wholly in view, because content scrolled out of view skips its
+    /// paint: a bubble partly scrolled away keeps the width it has, and one
+    /// first presented partly in view, or taller than its view, keeps the
+    /// most it may take until it is wholly in view. A bubble holding
+    /// controls, such as a Copy below its text, settles wherever it is
+    /// scrolled.
     ///
     /// ```
     /// use stobie_ui_egui::{MarkdownSpec, MessageBubbleSpec, MessageSide,
@@ -255,8 +281,13 @@ impl PresentationContext {
         );
         let row = egui::Rect::from_min_max(origin, pos2(origin.x + available, bubble.bottom()));
         ui.allocate_rect(row, egui::Sense::hover());
-        // Measure the content's natural width for later passes, while the
-        // bubble is in view: content out of view may skip its paint.
+        // Content out of view skips its paint, so the painted shapes give the
+        // content's natural width only while the whole bubble is in view. A
+        // bubble partly in view keeps the width it has: measuring only the
+        // part in view, such as a Copy below text scrolled away, would narrow
+        // the bubble, wrap its text into view and measure again, without end.
+        let complete = ui.clip_rect().expand(0.5).contains_rect(bubble);
+        let layout = layout_signature(&child.text_layouts);
         if ui.is_rect_visible(bubble) {
             let mut right = f32::NEG_INFINITY;
             let mut hasher = DefaultHasher::new();
@@ -277,13 +308,20 @@ impl PresentationContext {
             };
             let laid_out_at_maximum = (width - maximum).abs() < 0.5;
             let next = if laid_out_at_maximum {
-                Some(BubbleFit {
-                    max: maximum,
-                    fit: natural,
-                    signature,
-                })
-            } else if remembered.is_some_and(|fit| fit.signature != signature)
-                || natural > width + 0.5
+                if complete {
+                    Some(BubbleFit {
+                        max: maximum,
+                        fit: natural,
+                        signature,
+                        layout,
+                    })
+                } else {
+                    remembered
+                }
+            } else if remembered.is_some_and(|fit| fit.layout != layout)
+                || (complete
+                    && (remembered.is_some_and(|fit| fit.signature != signature)
+                        || natural > width + 0.5))
             {
                 // The text changed while laid out narrower than the
                 // maximum: measure it again at the maximum.

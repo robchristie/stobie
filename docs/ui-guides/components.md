@@ -71,7 +71,9 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
 badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, headings with controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
+conversation rows, unread dots, switches, copy controls, headings with controls,
+responsive navigation, dialogs, sheets, confirms, anchored scroll areas, pane
+footers and virtual thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -989,7 +991,15 @@ for message in &self.messages {
   the bound. The bubble measures its content after presenting it and keeps
   that width for later passes, laying out once more when the content's
   text, the way it is set (density, contrast or text size) or the column
-  changes. Content inside sees `message_bubble_tokens`: its surfaces are
+  changes. It measures only while wholly in view, because content scrolled
+  out of view skips its paint: a bubble partly scrolled away keeps its
+  width, and one first presented partly in view, or taller than its view,
+  keeps the maximum width until it is wholly in view, so a bubble holding
+  controls such as a Copy below its text settles wherever it is scrolled.
+  The fit is the bubble's own: egui lays a widget out once, before its
+  content's width is known, so Stobie offers no general "hug the content"
+  measure: other content that should hug sits in a bubble or sizes itself
+  from text measured with egui's layout before presenting it. Content inside sees `message_bubble_tokens`: its surfaces are
   the fill, so links and code blocks are checked against it, and muted text
   becomes primary text on a fill too close to it. The bubble publishes a
   `Section` named by `spec.sender` (the application's words, such as "You"
@@ -1058,6 +1068,64 @@ and previews, a row without a preview, an archived (disabled) row, a long
 switch label, a disabled switch, and bubbles holding a long link and code,
 and scrolls. The [snapshot guide](../../tests/ui-snapshots/README.md) lists
 their fixtures.
+
+## Scrolling: keeping the reader's place and a pane's footer
+
+egui keeps a scroll area's offset from the top of its content, so rows an
+application inserts above the ones in view, such as older messages a "Load
+older" control brings in, push what the reader was reading down and out of
+view; `stick_to_bottom` covers only the content's end. `AnchoredScrollArea`
+wraps a vertical `egui::ScrollArea` the application configures and keeps
+the reader's place:
+
+```text
+let area = egui::ScrollArea::vertical().stick_to_bottom(true).auto_shrink(false);
+AnchoredScrollArea::new("messages", area).show(ui, |ui, rows| {
+    frame.action(ui, p, Action::LoadOlder, ActionEmphasis::Normal);
+    for message in &self.messages {
+        rows.row(ui, message.id, |ui| {
+            p.message_bubble(ui, ("message", message.id), spec(message), |ui, p| { /* … */ });
+        });
+    }
+    rows.footer(ui, |ui| { /* an account block, a status line */ });
+});
+```
+
+- **Rows.** `ScrollRows::row(ui, key, add)` presents one row named by a
+  stable key from the application's data, such as a message ID, never its
+  position. After each pass the area remembers the first row in view and
+  where it was; when rows are inserted, removed or resized above it, it
+  moves the offset by as much and lays the pass out again
+  (`request_discard`), so the first frame that shows the new rows already
+  shows the reader's row where it was. A reader at the content's end stays
+  at the end: with `stick_to_bottom`, a row appended at the end scrolls
+  into view and rows prepended above leave the view as it was. Content
+  outside a row, such as the "Load older" control, is never the anchor.
+  Only the content's own changes move the offset; a wheel, a drag or a
+  scroll to a control scrolls as before. Nothing repaints unless content
+  moved.
+- **Footer.** `ScrollRows::footer(ui, add)`, called last, presents a
+  footer at the foot of the view while the content above it is short and
+  after the last row once it is long. It measures its own height as it is
+  presented and keeps it in egui's temporary data; when that moves the
+  footer, the pass is laid out again, so the application adds no spacer and
+  asks for no repaint.
+- **Agents and a control out of view.** A long scrolled list belongs in an
+  `observe_visible_only` region, which leaves out what is scrolled out of
+  view: a "Load older" control above the view is absent from the snapshot
+  and the AccessKit tree. Its action is still bound and discoverable, so an
+  agent finds it with `discover` by capability and `invoke`s it directly
+  rather than scrolling to the control first; the area keeps the reader's
+  place as it does for a click.
+
+Gallery `scroll/load-older` shows a conversation with a "Load older"
+control in its header, which stays in view and prepends a page of older
+messages whether the reader is scrolled up or at the newest message, and a
+short list pane whose footer sits at the pane's foot. The physical browser
+journey `tools/scroll-browser-smoke.sh`, run through full verification,
+checks in both themes at desktop and phone widths that the message the
+reader was reading stays where it was on screen, scrolled up and at the
+end, and where the footer sits.
 
 ## Local date and time
 

@@ -2421,6 +2421,8 @@ mod navigation_tests;
 #[cfg(test)]
 mod row_tests;
 #[cfg(test)]
+mod scroll_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod text_tests;

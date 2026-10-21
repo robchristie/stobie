@@ -14,6 +14,7 @@ mod reading;
 mod reference;
 mod responsive;
 mod rows;
+mod scroll;
 mod status_chips;
 mod toolbars;
 mod typography;
@@ -32,6 +33,7 @@ pub(crate) use dock::DockSceneState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
 pub use responsive::ResponsiveFixtureState;
+pub use scroll::ScrollFixtureState;
 pub use status_chips::StatusChipFixtureState;
 
 /// Per-story fixture state. Selecting another story resets it.
@@ -48,6 +50,7 @@ pub(crate) struct StoryState {
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
     pub(crate) header: headers::HeaderFixtureState,
+    pub(crate) scroll: ScrollFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -294,6 +297,9 @@ fn present_story(
         }
         StoryId::ReferenceDiagnostics => {
             reference::diagnostics_story(ui, tokens, font_scale, &mut observations)
+        }
+        StoryId::ScrollLoadOlder => {
+            scroll::story(ui, tokens, font_scale, &mut state.scroll, &mut report)
         }
     }
     report.selectable |= observations.iter().any(selectable);
