@@ -1,7 +1,7 @@
 # Verification tooling
 
 Status: complete
-Delivery: [PR #PENDING](https://github.com/robchristie/stobie/pulls)
+Delivery: [PR #120](https://github.com/robchristie/stobie/pull/120)
 
 `cargo xtask verify` assumed one checkout per host. It started binaries from
 the worktree's own `target/` ([#100](https://github.com/robchristie/stobie/issues/100)),
