@@ -202,7 +202,16 @@ impl Application for Counter {
         }
         let mut p = frame.presentation(ui, PresentationScope::new("counter"), SemanticUiId::root());
         if self.theme.is_none() {
-            assert_eq!(frame.tokens(), tokens());
+            // The default preferences follow the system, which is dark when
+            // the harness gives none.
+            let variant = match ui.ctx().theme() {
+                egui::Theme::Light => ThemeVariant::Light,
+                egui::Theme::Dark => ThemeVariant::Dark,
+            };
+            assert_eq!(
+                frame.tokens(),
+                DesignTokens::resolve(variant, DensityVariant::Comfortable)
+            );
         }
         view.tokens = Some(frame.tokens());
         for action in [Act::Increment, Act::Reset, Act::Explode] {
@@ -533,6 +542,31 @@ fn every_host_opens_new_tabs_without_an_opener() {
     assert!(!super::new_tab_links_installed(&context));
     let _host = AppHost::new(&context, Counter::default());
     assert!(super::new_tab_links_installed(&context));
+}
+
+#[test]
+fn an_application_that_does_not_choose_follows_the_system_appearance() {
+    // Counter leaves `Application::preferences` at its default.
+    assert_eq!(
+        Counter::default().preferences(),
+        crate::UiPreferences::system()
+    );
+    let mut harness = harness(Counter::default());
+    assert_eq!(
+        harness.ctx.options(|options| options.theme_preference),
+        egui::ThemePreference::System
+    );
+    for (system, dark) in [(egui::Theme::Light, false), (egui::Theme::Dark, true)] {
+        harness.input_mut().system_theme = Some(system);
+        harness.run();
+        assert_eq!(harness.ctx.theme(), system);
+        assert_eq!(harness.ctx.global_style().visuals.dark_mode, dark);
+    }
+    // Without a system theme, as in a headless run, it stays dark.
+    harness.input_mut().system_theme = None;
+    harness.run();
+    assert_eq!(harness.ctx.theme(), egui::Theme::Dark);
+    assert_eq!(host(&harness).ui_state().tokens, Some(tokens()));
 }
 
 #[test]

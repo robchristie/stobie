@@ -165,9 +165,16 @@ pub trait Application: 'static {
     fn observe(&self, _observation: &mut Observation<'_>) {}
 
     /// Appearance preferences. The host applies the design system for them at
-    /// startup and whenever they change, and resolves [`Frame::tokens`].
+    /// startup and whenever they change, and resolves [`Frame::tokens`]. It
+    /// asks in every pass, so keep this cheap.
+    ///
+    /// The default, [`UiPreferences::system`], follows the system's light or
+    /// dark appearance and, in the browser, its text size. Override it to
+    /// offer a choice: start from [`UiPreferences::system`] to keep following
+    /// what the person has not chosen, or pin a theme, as tests and evidence
+    /// do, for a deterministic appearance.
     fn preferences(&self) -> UiPreferences {
-        UiPreferences::default()
+        UiPreferences::system()
     }
 
     /// The colour theme the design system and [`Frame::tokens`] resolve,
