@@ -126,5 +126,36 @@ read -r _
                     run.communicate(timeout=10)
 
 
+@unittest.skipUnless(sys.platform == "linux" and (SYSROOT / "usr/bin").exists() and shutil.which("bwrap"),
+                     "the repository UI sysroot and bubblewrap")
+class SandboxTemporaryDirectoryTests(unittest.TestCase):
+    def test_a_host_tmpdir_is_replaced_by_the_private_tmp(self):
+        # A worktree may set TMPDIR inside the checkout, which the sandbox
+        # mounts read-only, or under the host's /tmp, which it hides.
+        with tempfile.TemporaryDirectory(dir=ROOT / ".tools/runtime") as directory:
+            smoke = Path(directory, "smoke")
+            smoke.mkdir()
+            for host_tmpdir in (Path(directory, "tmp"), Path("/tmp/stobie-missing-tmpdir")):
+                with self.subTest(tmpdir=str(host_tmpdir)):
+                    if host_tmpdir.parent == Path(directory):
+                        host_tmpdir.mkdir(exist_ok=True)
+                    env = {**os.environ, "STOBIE_TARGET_DIR": "unused", "STOBIE_RECORD_DESK_TARGET_DIR": "unused",
+                           "TMPDIR": str(host_tmpdir)}
+                    env.pop("STOBIE_USE_SYSTEM_UI_LIBS", None)
+                    script = """
+set -euo pipefail
+ROOT="$1" SYSROOT="$1/.tools/sysroot" SMOKE_TMP="$2" EVIDENCE_DIR="$2"
+source "$ROOT/tools/native-smoke-lifecycle.sh"
+ui_sandbox /bin/sh -c 'echo "$TMPDIR"; : >"$TMPDIR/probe"'
+"""
+                    result = subprocess.run(["bash", "-c", script, "fixture", str(ROOT), str(smoke)], env=env,
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout.splitlines()[0], "/tmp")
+                    probe = smoke / "probe"
+                    self.assertTrue(probe.exists(), "the probe landed in the private /tmp")
+                    probe.unlink()
+
+
 if __name__ == "__main__":
     unittest.main()

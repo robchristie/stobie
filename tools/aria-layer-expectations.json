@@ -574,7 +574,16 @@
           }
         ]
       }
-    ]
+    ],
+    "handle": "__STOBIE_GALLERY_HANDLE",
+    "touch": {
+      "story": "form/text-fields",
+      "agent": {
+        "name": "Password",
+        "textAgent": true,
+        "type": " staple"
+      }
+    }
   },
   "lab": {
     "application": "Analytical Workspace Lab",

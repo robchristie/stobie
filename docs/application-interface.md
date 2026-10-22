@@ -205,7 +205,8 @@ over it (or deletes it), then returns focus to where it was. A single-line
 field therefore turns newlines into spaces, as a paste does, and a field's
 character limit applies. A field that held focus sees focus leave and return,
 as when a user clicks into another field and back. A disabled or password
-field is never set. Its receipt stays `queued`, and can no longer be
+field is never set; an agent in a browser fills a password by focusing the
+field and typing (see the [`stobie` guide](agent-cli.md#browser)). Its receipt stays `queued`, and can no longer be
 cancelled, until the edit has applied and the intents it caused have settled;
 it then completes with the observation that presents them. If the field is no
 longer presented by then, or it did not take the text, the receipt is
