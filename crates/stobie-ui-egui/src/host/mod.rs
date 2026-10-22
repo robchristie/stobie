@@ -93,6 +93,13 @@ pub trait Application: 'static {
     /// default is the target's availability, leaving
     /// [`Self::perform_with`] to reject an argument it cannot use.
     ///
+    /// A hidden argument is refused without a reason ("Open is
+    /// unavailable"), so that a refusal never says what the application
+    /// chose not to present. To tell an agent why it cannot act on
+    /// something no control presents, such as an archived conversation,
+    /// return [`Availability::Disabled`] with that reason: the refusal
+    /// carries it, and nothing presented changes.
+    ///
     /// [`BoundAction`]: crate::BoundAction
     fn availability_with(
         &self,

@@ -26,7 +26,12 @@ not silently consume an unavailable action. A hidden action presents nothing:
 `Frame::action`, `icon_action`, `toggle` and `PresentationContext::action`
 draw no control and publish no node for it, so a caller need not filter it.
 Its capability stays discoverable with `rendered: false`, and invoking it is
-refused as `unavailable`.
+refused as `unavailable`, without a reason: a reason for something the
+application chose not to present would say what it hides. To explain a
+refusal of something no control presents, such as an archived row an agent
+names by its ID, return `Disabled` with the reason from `availability_with`
+for that argument; the refusal carries the reason, and nothing on screen
+changes.
 
 ## Actions on rows
 
