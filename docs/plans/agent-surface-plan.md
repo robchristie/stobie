@@ -220,7 +220,18 @@ host test that fails there, a browser run, or a source line.
 
 ## Size
 
-Measured with `cargo xtask web-size` in the production stage.
+`cargo xtask verify` on this branch against the sizes recorded at the base
+by [`layout-recipes-plan.md`](layout-recipes-plan.md), in bytes. The
+template is the `stobie new` application the outside-app stage builds:
+
+| Package | WASM raw before | WASM raw after | WASM Brotli before | WASM Brotli after |
+| --- | ---: | ---: | ---: | ---: |
+| Gallery (browser production) | 13,280,625 | 13,315,528 (+34,903) | 3,611,928 | 3,621,210 (+9,282, +0.3%) |
+| Lab (browser production) | 13,351,324 | 13,379,566 (+28,242) | 3,588,163 | 3,594,426 (+6,263, +0.2%) |
+| `stobie new` template | 11,372,723 | 11,400,546 (+27,823) | 3,210,293 | 3,213,115 (+2,822, +0.1%) |
+
+The template application grows by about 3 KB compressed; the Gallery and
+the Lab, which use more of the library, by 6 to 9 KB.
 
 ## What an application changes
 
