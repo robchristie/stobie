@@ -98,8 +98,19 @@ fn discover(
     let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
         panic!("discovery failed: {:?}", reply.error);
     };
-    assert_eq!(capabilities.len(), 1, "{capabilities:?}");
-    let capability = &capabilities[0];
+    // A toolbar button and the viewport's custom action can both present the
+    // action: they perform the same thing, and invoking resolves to the least ID.
+    assert!(!capabilities.is_empty(), "no capability for {action:?}");
+    assert!(
+        capabilities
+            .iter()
+            .all(|capability| capability.performs_same_as(&capabilities[0])),
+        "{capabilities:?}"
+    );
+    let capability = capabilities
+        .iter()
+        .min_by(|left, right| left.id.0.cmp(&right.id.0))
+        .unwrap();
     (capability.availability.enabled(), capability.target.clone())
 }
 

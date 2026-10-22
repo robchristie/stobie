@@ -262,13 +262,12 @@ so the control never covers code. Every other block keeps its place.
 
 Each control copies exactly the block's text as Stobie's Markdown parses it:
 without its fences, its language or its final line break, with tabs as four
-spaces. It is named by the application's label, such as "Copy code", when
-there is one code block, and by the label and the block's number from 1,
-such as "Copy code 2", when there are several (`CodeCopySpec::name`), so the
-names stay distinct. Controls are keyed by their block's position among the
-code blocks, so in a reply still arriving each keeps its identity, and any
-confirmation it shows, as later blocks arrive; the first control's name moves
-from "Copy code" to "Copy code 1" when a second block arrives.
+spaces. The first block's control is named by the application's label, such
+as "Copy code", and each later one by the label and the block's number, such
+as "Copy code 2" for the second (`CodeCopySpec::name`), so the names stay
+distinct. Controls are keyed by their block's position among the code
+blocks, so in a reply still arriving each keeps its identity, its name and
+any confirmation it shows as later blocks arrive.
 `CodeCopySpec` shows the glyph alone by default; `content` chooses a face with
 the label and `description` adds an accessible description. The controls
 behave as any copy control does, inside a message bubble too: they confirm
@@ -435,7 +434,11 @@ is one `heading_row(ui, key, text, controls, availability)` call
 (`Frame::heading_row` in a hosted application, which also triggers each
 clicked control with its argument). Each `HeaderControl` is an action, an
 `ActionTarget` or a `BoundAction`, icon-only unless built with other
-content, and may be a toggle whose pressed state the application owns. The
+content, and may be a toggle whose pressed state the application owns. A
+bound action's own label (`with_label`) and subject name the control, and a
+text control shows its short label (`with_short_label`) where it has one,
+with the full name in its tooltip, as `Frame::action` does; the navigation
+header's controls follow the same rule. The
 controls keep their whole size at the row's end in the order given, and the
 heading elides in the room they leave, keeping its full text for assistive
 technology. When the controls would leave the heading less than its least
@@ -1035,7 +1038,13 @@ control is named by its action's label. `in_pane` targets a pane action.
 - **Semantics.** The field is a `MultilineTextInput` node named by the
   spec's name, whose value is the draft and whose bounds are the part shown.
   Each control is an ordinary action button node; send carries the draft as
-  its argument.
+  its argument. Their semantic IDs derive from the scope and the key; give
+  the composer a stable, published ID with `Frame::composer_with_id(ui, p,
+  "chat.composer", &spec, &self.draft, Intent::Draft)` (or
+  `PresentationContext::composer_with_id`), and the field is
+  `chat.composer` and its controls `chat.composer.send`,
+  `chat.composer.leading` and `chat.composer.trailing`. Keep the ID stable
+  and unique, as for `TextFieldSpec::id`.
 - **Responses.** `Frame::composer` returns a `ComposerResponse` with the
   field's response, whether the draft changed, the text submitted, and each
   control's target and response. `PresentationContext::composer` is the

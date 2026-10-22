@@ -998,8 +998,8 @@ fn several_code_blocks_have_distinct_names_keyed_by_their_position() {
         .collect();
     assert_eq!(names, [(code_copy_id(0), "Copy code".to_owned())]);
 
-    // As the reply grows, the first control keeps its key; code in a list
-    // item and in a quote has its own control too.
+    // As the reply grows, the first control keeps its key and its name;
+    // code in a list item and in a quote has its own control too.
     let three = format!(
         "{one}\nThen:\n\n- Run it:\n\n  ```\n  example --check\n  ```\n\n\
          > ```\n> quoted\n> ```\n"
@@ -1013,7 +1013,7 @@ fn several_code_blocks_have_distinct_names_keyed_by_their_position() {
     assert_eq!(
         names,
         [
-            (code_copy_id(0), "Copy code 1".to_owned()),
+            (code_copy_id(0), "Copy code".to_owned()),
             (code_copy_id(1), "Copy code 2".to_owned()),
             (code_copy_id(2), "Copy code 3".to_owned()),
         ]

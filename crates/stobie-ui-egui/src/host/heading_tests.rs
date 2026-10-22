@@ -12,9 +12,10 @@ use serde::Serialize;
 
 use super::*;
 use crate::{
-    Action, AvatarSize, AvatarSpec, BoundAction, HeaderControl, NavigationContent,
-    NavigationDetail, NavigationOptions, NavigationPane, NavigationSpec, PresentationScope,
-    ReadingTextSpec, SemanticAuditFinding,
+    Action, AvatarSize, AvatarSpec, BoundAction, HeaderControl, InspectionOperation,
+    InspectionRequest, InspectionResult, InspectionSelector, NavigationContent, NavigationDetail,
+    NavigationOptions, NavigationPane, NavigationSpec, PresentationScope, ReadingTextSpec,
+    SemanticAuditFinding,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -79,6 +80,9 @@ struct Profile {
     muted: bool,
     /// Edit shows its label rather than its icon.
     labelled_edit: bool,
+    /// Edit's own label and short label, and Hide's own label, in place of
+    /// their actions'.
+    relabelled: Option<(&'static str, Option<&'static str>)>,
     inset: bool,
     performed: Vec<(Act, ActionArgument)>,
 }
@@ -90,6 +94,7 @@ impl Profile {
             title,
             muted: false,
             labelled_edit: false,
+            relabelled: None,
             inset: true,
             performed: Vec::new(),
         }
@@ -98,11 +103,23 @@ impl Profile {
     fn controls(&self, more: usize) -> Vec<HeaderControl<Act>> {
         let mute = BoundAction::new(Act::Mute, "p1").with_subject("Grace");
         std::iter::once(HeaderControl::icon(mute, IconId::Notifications).pressed(self.muted))
-            .chain(MORE.iter().take(more).map(|(action, icon)| match action {
-                Act::Edit if self.labelled_edit => {
-                    HeaderControl::new(*action, ActionButtonContent::Text)
+            .chain(MORE.iter().take(more).map(|(action, icon)| {
+                let mut bound = BoundAction::from(*action);
+                if let Some((label, short)) = self.relabelled {
+                    bound = match action {
+                        Act::Edit => short
+                            .into_iter()
+                            .fold(bound.with_label(label), BoundAction::with_short_label),
+                        Act::Hide => bound.with_label("Archive"),
+                        _ => bound,
+                    };
                 }
-                _ => HeaderControl::icon(*action, *icon),
+                match action {
+                    Act::Edit if self.labelled_edit => {
+                        HeaderControl::new(bound, ActionButtonContent::Text)
+                    }
+                    _ => HeaderControl::icon(bound, *icon),
+                }
             }))
             .collect()
     }
@@ -245,6 +262,10 @@ fn host<'a>(harness: &'a Harness<'_, Probe>) -> &'a AppHost<Profile> {
     harness.state().host.as_ref().unwrap()
 }
 
+fn host_mut<'a>(harness: &'a mut Harness<'_, Probe>) -> &'a mut AppHost<Profile> {
+    harness.state_mut().host.as_mut().unwrap()
+}
+
 /// The audits are clean and every Stobie node is in the AccessKit tree.
 fn assert_clean(harness: &Harness<'_, Probe>) {
     let snapshot = host(harness).ui_snapshot();
@@ -254,6 +275,45 @@ fn assert_clean(harness: &Harness<'_, Probe>) {
         snapshot.semantic_audit
     );
     assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
+}
+
+fn inspect(
+    harness: &Harness<'_, Probe>,
+    id: &str,
+    operation: InspectionOperation,
+) -> InspectionResult {
+    let inspection = host(harness).inspection().unwrap();
+    let reply = inspection.handle(InspectionRequest {
+        version: 1,
+        request_id: id.into(),
+        instance: Some(inspection.instance()),
+        operation,
+    });
+    reply
+        .result
+        .unwrap_or_else(|| panic!("{id} failed: {:?}", reply.error))
+}
+
+/// The AccessKit tree as kittest holds it, for the parity audit.
+fn accesskit_update(harness: &Harness<'_, Probe>) -> egui::accesskit::TreeUpdate {
+    fn collect(
+        node: egui_kittest::kittest::AccessKitNode<'_>,
+        update: &mut egui::accesskit::TreeUpdate,
+    ) {
+        update.nodes.push((node.locate().0, node.data().clone()));
+        for child in node.children() {
+            collect(child, update);
+        }
+    }
+    let root = harness.kittest_state().root();
+    let mut update = egui::accesskit::TreeUpdate {
+        nodes: Vec::new(),
+        tree: Some(egui::accesskit::Tree::new(root.locate().0)),
+        tree_id: egui::accesskit::TreeId::ROOT,
+        focus: root.locate().0,
+    };
+    collect(root, &mut update);
+    update
 }
 
 /// The header controls' rectangles, in the order given, and the screen's.
@@ -535,5 +595,126 @@ fn a_content_body_inset_can_be_turned_off() {
         } else {
             assert!(gap.abs() < 0.01, "{gap}");
         }
+    }
+}
+
+#[test]
+fn header_controls_take_a_bound_actions_own_label_and_short_label() {
+    for show in [Show::Row(2), Show::Navigation(2)] {
+        let width = |relabelled| {
+            let mut app = Profile::new(show, "Grace");
+            app.labelled_edit = true;
+            app.relabelled = relabelled;
+            let mut harness = harness(app);
+            harness.run();
+            assert_clean(&harness);
+            let rect = host(&harness)
+                .ui_snapshot()
+                .by_action(Act::Edit)
+                .next()
+                .unwrap()
+                .rect;
+            rect.max_x - rect.min_x
+        };
+        // Edit shows its own label, measured to fit, or its shorter one.
+        let plain = width(None);
+        let labelled = width(Some(("Edit profile", None)));
+        let short = width(Some(("Edit profile", Some("Profile"))));
+        assert!(
+            labelled > short && short > plain,
+            "{show:?}: {plain} {labelled} {short}"
+        );
+
+        let mut app = Profile::new(show, "Grace");
+        app.labelled_edit = true;
+        app.relabelled = Some(("Edit profile", Some("Profile")));
+        let mut harness = harness(app);
+        host_mut(&mut harness).enable_inspection(crate::Inspection::new("heading-test"));
+        harness.run();
+        assert_clean(&harness);
+        // Both are named by their own labels, in the snapshot and AccessKit.
+        let snapshot = host(&harness).ui_snapshot();
+        let edit = snapshot.by_action(Act::Edit).next().unwrap().clone();
+        let hide = snapshot.by_action(Act::Hide).next().unwrap().clone();
+        assert_eq!(
+            (edit.name.as_str(), hide.name.as_str()),
+            ("Edit profile", "Archive")
+        );
+        harness.get_by_label("Edit profile");
+        harness.get_by_label("Archive");
+        let mismatches = crate::audit_accesskit(snapshot, &accesskit_update(&harness));
+        assert!(mismatches.is_empty(), "{show:?}: {mismatches:?}");
+        // Each control is its action's binding, under its own ID, and an agent
+        // invoking it performs the action once.
+        for (action, node) in [(Act::Edit, &edit), (Act::Hide, &hide)] {
+            let selector = InspectionSelector {
+                capability: Some(action.stable_id().into()),
+                ..Default::default()
+            };
+            let InspectionResult::Query { nodes, .. } = inspect(
+                &harness,
+                "query",
+                InspectionOperation::Query {
+                    selector: selector.clone(),
+                    limit: 8,
+                    cursor: None,
+                },
+            ) else {
+                panic!("not a query")
+            };
+            assert_eq!(nodes.len(), 1, "{show:?}");
+            assert_eq!(
+                (&nodes[0].node.id, &nodes[0].node.name),
+                (&node.id, &node.name)
+            );
+            let InspectionResult::Discover { capabilities, .. } = inspect(
+                &harness,
+                "discover",
+                InspectionOperation::Discover {
+                    selector: selector.clone(),
+                    limit: 8,
+                    cursor: None,
+                },
+            ) else {
+                panic!("not a discovery")
+            };
+            assert_eq!(capabilities.len(), 1, "{show:?}: {capabilities:?}");
+            assert_eq!(capabilities[0].id, node.id);
+            let request = format!("invoke-{action:?}");
+            let InspectionResult::Receipt { receipt } = inspect(
+                &harness,
+                &request,
+                InspectionOperation::Invoke {
+                    selector,
+                    expected: capabilities[0].target.clone(),
+                    arguments: serde_json::Value::Null,
+                },
+            ) else {
+                panic!("not a receipt")
+            };
+            assert_eq!(receipt.state, crate::ReceiptState::Queued, "{receipt:?}");
+            harness.run();
+            let InspectionResult::Receipt { receipt } = inspect(
+                &harness,
+                "receipt",
+                InspectionOperation::Receipt {
+                    request_id: request,
+                },
+            ) else {
+                panic!("not a receipt")
+            };
+            assert_eq!(receipt.state, crate::ReceiptState::Completed, "{receipt:?}");
+            assert_eq!(
+                receipt.target.map(|target| target.id).as_ref(),
+                Some(&node.id)
+            );
+        }
+        assert_eq!(
+            host(&harness).app().performed,
+            [
+                (Act::Edit, ActionArgument::None),
+                (Act::Hide, ActionArgument::None)
+            ]
+        );
     }
 }

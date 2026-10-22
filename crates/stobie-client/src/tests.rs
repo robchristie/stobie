@@ -116,7 +116,19 @@ fn capabilities() -> Vec<CapabilityDescription> {
                 max_length: Some(512),
             },
         ),
+        // Archive, presented for person 2 in two lists: two controls that
+        // perform the same thing.
+        archive("people.list.archive.2"),
+        archive("people.recent.archive.2"),
     ]
+}
+
+fn archive(id: &str) -> CapabilityDescription {
+    let mut capability = row(id, Some(2));
+    capability.capability = "people.archive".into();
+    capability.target.capability = capability.capability.clone();
+    capability.target.meaning = capability.capability.clone();
+    capability
 }
 
 fn row(id: &str, carried: Option<u32>) -> CapabilityDescription {
@@ -669,4 +681,38 @@ fn an_id_no_pass_presents_fails_with_the_reveals_reason() {
     // A direct reveal reports the same failure on its receipt.
     let revealed = client.reveal(&SemanticUiId::new("desk.gone")).unwrap();
     assert_eq!(revealed.receipt.state, ReceiptState::Rejected);
+}
+
+#[test]
+fn controls_that_perform_the_same_thing_resolve_to_the_least_id() {
+    let (mut client, fake) = client();
+    client
+        .invoke(select("people.archive"), InvokeOptions::default())
+        .unwrap();
+    client
+        .invoke(
+            select("people.archive"),
+            InvokeOptions {
+                arguments: Some(serde_json::json!({ "value": 2 })),
+                ..InvokeOptions::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        fake.0.borrow().targets,
+        ["people.list.archive.2", "people.list.archive.2"]
+    );
+    assert_eq!(
+        client.discover_one(select("people.archive")).unwrap().id.0,
+        "people.list.archive.2"
+    );
+    let waited = client
+        .wait(&Condition::CapabilityEnabled {
+            selector: select("people.archive"),
+        })
+        .unwrap();
+    assert_eq!(waited.capability.unwrap().id.0, "people.list.archive.2");
+    // Rows carrying different values remain several choices.
+    let error = client.discover_one(select("people.open")).unwrap_err();
+    assert_eq!(error.code, "ambiguous", "{error}");
 }

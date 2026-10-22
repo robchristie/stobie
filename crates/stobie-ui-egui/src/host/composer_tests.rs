@@ -59,6 +59,8 @@ struct Chat {
     max_rows: usize,
     /// Draft edits applied, one per changed pass.
     edits: u32,
+    /// The composer's own ID, given with `composer_with_id`.
+    id: Option<&'static str>,
 }
 
 impl Default for Chat {
@@ -77,6 +79,7 @@ impl Default for Chat {
             plain_hidden: false,
             max_rows: 3,
             edits: 0,
+            id: None,
         }
     }
 }
@@ -157,7 +160,10 @@ impl Application for Chat {
         .max_rows(self.max_rows)
         .leading(ComposerControl::icon(ChatAct::Attach, IconId::Attach))
         .trailing(ComposerControl::label(ChatAct::Dictate));
-        let response = frame.composer(ui, &mut p, "composer", &spec, &self.draft, Intent::Draft);
+        let response = match self.id {
+            Some(id) => frame.composer_with_id(ui, &mut p, id, &spec, &self.draft, Intent::Draft),
+            None => frame.composer(ui, &mut p, "composer", &spec, &self.draft, Intent::Draft),
+        };
         view.field = Some(response.field);
         view.send = Some(response.send.response);
         view.leading = response.leading.map(|control| control.response);
@@ -836,4 +842,96 @@ fn hidden_actions_are_not_drawn_or_observed() {
     assert!(field_rect(&harness).top() > 40.0);
     // Archive, the toggle and the direct Archive measure their labels.
     assert!(host(&harness).ui_snapshot().text.len() >= hidden_text + 3);
+}
+
+/// The AccessKit tree as kittest holds it, for the parity audit.
+fn accesskit_update(harness: &Harness<'_, Probe>) -> egui::accesskit::TreeUpdate {
+    fn collect(
+        node: egui_kittest::kittest::AccessKitNode<'_>,
+        update: &mut egui::accesskit::TreeUpdate,
+    ) {
+        update.nodes.push((node.locate().0, node.data().clone()));
+        for child in node.children() {
+            collect(child, update);
+        }
+    }
+    let root = harness.kittest_state().root();
+    let mut update = egui::accesskit::TreeUpdate {
+        nodes: Vec::new(),
+        tree: Some(egui::accesskit::Tree::new(root.locate().0)),
+        tree_id: egui::accesskit::TreeId::ROOT,
+        focus: root.locate().0,
+    };
+    collect(root, &mut update);
+    update
+}
+
+#[test]
+fn a_composer_with_an_id_names_its_field_and_controls_by_it() {
+    // Without one, the field's ID derives from the scope and the key.
+    let harness = harness(Chat::default());
+    let derived = field_node(&harness);
+    assert!(
+        derived.id.0.starts_with("presentation."),
+        "{:?}",
+        derived.id
+    );
+
+    let mut harness = self::harness(Chat {
+        id: Some("chat.composer"),
+        ..Chat::default()
+    });
+    let field = field_node(&harness);
+    assert_eq!(field.id, SemanticUiId::new("chat.composer"));
+    assert_eq!(
+        (field.name.as_str(), field.role),
+        ("Message", UiRole::MultilineTextInput)
+    );
+    // It lays out as the derived composer does.
+    assert_eq!(field.rect, derived.rect);
+    let snapshot = host(&harness).ui_snapshot();
+    for (action, id) in [
+        (ChatAct::Attach, "chat.composer.leading"),
+        (ChatAct::Dictate, "chat.composer.trailing"),
+        (ChatAct::Send, "chat.composer.send"),
+    ] {
+        let ids: Vec<_> = snapshot
+            .by_action(action)
+            .map(|node| node.id.0.as_str())
+            .collect();
+        assert_eq!(ids, [id], "{action:?}");
+    }
+    // AccessKit gives the field the same name and ID.
+    let mismatches = crate::audit_accesskit(snapshot, &accesskit_update(&harness));
+    assert!(mismatches.is_empty(), "{mismatches:?}");
+    let (_, node) = accesskit_update(&harness)
+        .nodes
+        .into_iter()
+        .find(|(_, node)| node.author_id() == Some("chat.composer"))
+        .expect("the field is in the AccessKit tree");
+    assert_eq!(
+        (node.role(), node.label()),
+        (egui::accesskit::Role::MultilineTextInput, Some("Message"))
+    );
+
+    // An agent sets the text by the field's ID and sends it by the send
+    // control's.
+    let set = set_text(&mut harness, "Named");
+    assert_eq!(set.state, ReceiptState::Completed, "{set:?}");
+    assert_eq!(set.target.map(|target| target.id), Some(field.id));
+    let send = SemanticUiId::new("chat.composer.send");
+    let mut bindings = discover(&harness, by_id(&send));
+    assert_eq!(bindings.len(), 1, "{bindings:?}");
+    let binding = bindings.remove(0);
+    assert_eq!(binding.argument, Some(serde_json::json!("Named")));
+    let sent = invoke(
+        &mut harness,
+        "send-named",
+        by_id(&send),
+        binding.target,
+        serde_json::Value::Null,
+    );
+    assert_eq!(sent.state, ReceiptState::Completed, "{sent:?}");
+    assert_eq!(sent.target.map(|target| target.id), Some(send));
+    assert_eq!(app(&harness).sent, ["Named"]);
 }

@@ -113,7 +113,7 @@ mod tests {
             .filter(|node| node.role == UiRole::Button)
             .map(|node| (node.name.as_str(), node.parent.as_ref() == Some(&reply.id)))
             .collect();
-        assert_eq!(buttons, [("Copy code 1", true), ("Copy code 2", true)]);
+        assert_eq!(buttons, [("Copy code", true), ("Copy code 2", true)]);
         let update = output.platform_output.accesskit_update.take().unwrap();
         let findings = audit_accesskit(&snapshot, &update);
         assert!(findings.is_empty(), "{findings:?}");

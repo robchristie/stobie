@@ -26,7 +26,12 @@ not silently consume an unavailable action. A hidden action presents nothing:
 `Frame::action`, `icon_action`, `toggle` and `PresentationContext::action`
 draw no control and publish no node for it, so a caller need not filter it.
 Its capability stays discoverable with `rendered: false`, and invoking it is
-refused as `unavailable`.
+refused as `unavailable`, without a reason: a reason for something the
+application chose not to present would say what it hides. To explain a
+refusal of something no control presents, such as an archived row an agent
+names by its ID, return `Disabled` with the reason from `availability_with`
+for that argument; the refusal carries the reason, and nothing on screen
+changes.
 
 ## Actions on rows
 
@@ -54,7 +59,12 @@ it by hand or call `trigger_with` from a row's click.
   (the JSON value an invocation would send). The host binds each such control
   as its own capability carrying that argument, and keeps the action's own
   binding, which takes any value its contract allows, unless a control without
-  an argument presents the action.
+  an argument presents the action. Two controls carrying one argument, such
+  as Open for one person in two lists, are two bindings, each with its own
+  ID; because they perform the same thing, invoking the action with that
+  value resolves to one of them rather than being ambiguous. The same holds
+  for an action without an argument presented twice, such as a dialog's
+  dismiss action on its close control and on a Cancel button.
 - **Availability.** Implement `Application::availability_with(target,
   argument)` to decide availability for one row, such as a disabled Remove on
   a pinned person, and to hide an argument that names nothing, such as a
@@ -125,7 +135,9 @@ send action that takes a text argument carries it.
   SEND --id ID` sends the draft shown. `--value TEXT` sends that text,
   through the send control when it carries it and otherwise through the
   action's own binding, under the same availability. A refused send's receipt
-  carries the application's error, and the draft stays.
+  carries the application's error, and the draft stays. Present the composer
+  with `Frame::composer_with_id` to give the field an ID agents can rely on,
+  such as `chat.composer`, and its send control `chat.composer.send`.
 
 ## Copying to the clipboard
 

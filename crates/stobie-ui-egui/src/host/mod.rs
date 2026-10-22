@@ -93,6 +93,13 @@ pub trait Application: 'static {
     /// default is the target's availability, leaving
     /// [`Self::perform_with`] to reject an argument it cannot use.
     ///
+    /// A hidden argument is refused without a reason ("Open is
+    /// unavailable"), so that a refusal never says what the application
+    /// chose not to present. To tell an agent why it cannot act on
+    /// something no control presents, such as an archived conversation,
+    /// return [`Availability::Disabled`] with that reason: the refusal
+    /// carries it, and nothing presented changes.
+    ///
     /// [`BoundAction`]: crate::BoundAction
     fn availability_with(
         &self,
@@ -765,6 +772,37 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     ) -> crate::ComposerResponse<A> {
         let mut text = draft.to_owned();
         let response = presentation.composer(ui, key, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// [`Self::composer`] with the field's semantic ID `id`, and its
+    /// controls' `id.send`, `id.leading` and `id.trailing`, rather than IDs
+    /// derived from a key (see [`PresentationContext::composer_with_id`]).
+    ///
+    /// # Panics
+    ///
+    /// If the send action does not take a text argument.
+    pub fn composer_with_id(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        id: &str,
+        spec: &crate::ComposerSpec<'_, A>,
+        draft: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
+        let mut text = draft.to_owned();
+        let response = presentation.composer_with_id(ui, id, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// Emit a composer's edit and trigger what it sent or clicked.
+    fn composed(
+        &mut self,
+        response: crate::ComposerResponse<A>,
+        text: String,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
         if response.changed {
             self.intents.push(edit(text));
         }
@@ -2164,7 +2202,6 @@ impl<A: Application> AppHost<A> {
     /// any argument, unless a control without an argument presents it.
     fn bindings(&self) -> Vec<InspectionBinding<A::Action>> {
         let mut bindings = Vec::new();
-        let mut presented = Vec::new();
         // While a modal dialog is presented, the snapshot holds only it and
         // its content; every action it does not present is refused.
         let modal = self
@@ -2250,7 +2287,6 @@ impl<A: Application> AppHost<A> {
                 // The argument that tells this binding apart from the
                 // target's others: the validated one, or the refused value
                 // as its control presents it.
-                let mut refused = None;
                 let (availability, argument) = match argument {
                     Ok(ActionArgument::None) => {
                         (self.app.availability(target), ActionArgument::None)
@@ -2260,18 +2296,13 @@ impl<A: Application> AppHost<A> {
                     // stays discoverable, carrying that value, and refuses
                     // invocation. It is not the action's own binding, which
                     // takes any value the contract allows.
-                    Err(reason) => {
-                        refused = node.and_then(|node| node.argument.clone());
-                        (
-                            Availability::Disabled {
-                                reason: format!("The control's argument is invalid: {reason}")
-                                    .into(),
-                            },
-                            refused
-                                .as_ref()
-                                .map_or(ActionArgument::None, carried_argument),
-                        )
-                    }
+                    Err(reason) => (
+                        Availability::Disabled {
+                            reason: format!("The control's argument is invalid: {reason}").into(),
+                        },
+                        node.and_then(|node| node.argument.as_ref())
+                            .map_or(ActionArgument::None, carried_argument),
+                    ),
                 };
                 // A control the dialog scrolled out of view is still its own.
                 let availability = match (&modal, node) {
@@ -2291,18 +2322,12 @@ impl<A: Application> AppHost<A> {
                 let domain = node
                     .and_then(|node| node.domain_reference.clone())
                     .or_else(|| target.pane.map(DomainReference::Pane));
-                // Several controls can present one target, such as a toolbar
-                // button and a viewport's custom action; the first is the
-                // capability's instance.
-                let key = (
-                    target,
-                    domain.clone(),
-                    refused.or_else(|| binding.argument.to_value()),
-                );
-                if presented.contains(&key) {
-                    continue;
-                }
-                presented.push(key);
+                // Several controls can present one target with one argument,
+                // such as a toolbar button and a viewport's custom action, or
+                // Show for one run in two lists: each is a binding of its own,
+                // so an agent can address any of them, and invoking them
+                // together resolves to one, because they perform the same
+                // thing (`select_invocation_target`).
                 if let Some(node) = node {
                     binding = binding.with_id(node.id.clone());
                 }

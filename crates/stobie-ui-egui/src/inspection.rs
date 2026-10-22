@@ -1297,7 +1297,8 @@ impl InspectionState {
                 )
             })
             .collect();
-        let capability = select_invocation_target(&candidates, |candidate| *candidate, arguments)?;
+        let chosen = select_invocation_target(&candidates, |candidate| *candidate, arguments)?;
+        let capability = discovered(&candidates, |candidate| *candidate, chosen, expected);
         validate_expected(&capability.target, expected)?;
         validate_invocable(capability)?;
         capability.parse_arguments(arguments).map(drop)
@@ -1344,7 +1345,7 @@ impl InspectionState {
             .collect();
         // A target that is no longer presented, such as a removed row's
         // control, is stale rather than unknown: it was admitted.
-        let (description, current) =
+        let chosen =
             select_invocation_target(&candidates, |(description, _)| description, arguments)
                 .map_err(|error| match error.code {
                     InspectionErrorCode::NoMatch => InspectionError::new(
@@ -1357,6 +1358,12 @@ impl InspectionState {
                     ),
                     _ => error,
                 })?;
+        let (description, current) = discovered(
+            &candidates,
+            |(description, _)| description,
+            chosen,
+            expected,
+        );
         validate_expected(&description.target, expected)?;
         validate_invocable(description)?;
         let argument = description.parse_arguments(arguments)?;
@@ -1569,6 +1576,24 @@ fn selector_matches_binding(
                 .as_ref()
                 .is_some_and(|carried| same_argument(argument, carried))
         })
+}
+
+/// Among bindings that perform what the chosen one does, the one the caller
+/// discovered and expects, so that a target taken from any of them is
+/// current; otherwise the chosen one.
+fn discovered<'a, T>(
+    candidates: &'a [T],
+    describe: impl Fn(&T) -> &CapabilityDescription,
+    chosen: &'a T,
+    expected: &ResolvedTarget,
+) -> &'a T {
+    candidates
+        .iter()
+        .find(|candidate| {
+            let candidate = describe(candidate);
+            candidate.id == expected.id && candidate.performs_same_as(describe(chosen))
+        })
+        .unwrap_or(chosen)
 }
 
 fn validate_expected(
