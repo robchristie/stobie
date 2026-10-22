@@ -10,8 +10,10 @@
 //!
 //! One pass runs in this order:
 //!
-//! 1. Intents sent through an [`IntentSender`] from outside the host's passes,
-//!    such as socket messages, apply in the order they were sent.
+//! 1. A change in whether the page or window can be seen reaches
+//!    [`Application::visibility_changed`]; then intents sent through an
+//!    [`IntentSender`] from outside the host's passes, such as socket
+//!    messages, apply in the order they were sent.
 //! 2. [`Application::prepare`] adapts state to the viewport and polls workers.
 //! 3. Queued semantic invocations run, each rechecked against current state.
 //! 4. Available shortcuts are consumed with exact modifiers.
@@ -202,6 +204,24 @@ pub trait Application: 'static {
     /// which connections to open and when to reconnect, in the application.
     fn started(&mut self, _intents: IntentSender<Self::Intent>) {}
 
+    /// The page or window was hidden or shown again: a hidden browser page
+    /// (`visibilitychange`), or a minimised or fully occluded native window,
+    /// as eframe reports it. The host starts out [`HostVisibility::Visible`]
+    /// and calls this once per change, before it applies the intents sent
+    /// since, so an application can stop marking what arrives as read or
+    /// viewed while nobody can see it, and mark what is open as viewed once
+    /// it is shown. Return whether presented state changed; the pass that
+    /// follows presents it, as it presents sent intents. While hidden the
+    /// host runs no pass, but it still calls this and applies sent intents.
+    /// [`AppHost::visibility`] reads the current state.
+    fn visibility_changed(
+        &mut self,
+        _visibility: HostVisibility,
+        _state: &mut Self::UiState,
+    ) -> bool {
+        false
+    }
+
     /// Whether the browser host mirrors this application's accessibility tree
     /// into a hidden ARIA layer over its canvas, for screen readers and
     /// accessibility-tree browser agents. On by default; it has no effect
@@ -263,6 +283,34 @@ macro_rules! application_identity {
 /// How soon a hidden viewport checks again whether it is visible, while it
 /// holds sent intents that no pass has presented.
 pub const HIDDEN_RECHECK: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Whether the host's page or window can be seen, as egui's viewport reports
+/// it: a hidden browser page, or a minimised or fully occluded native window,
+/// is hidden. See [`Application::visibility_changed`].
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub enum HostVisibility {
+    /// The page or window can be seen, or egui does not know.
+    #[default]
+    Visible,
+    /// The browser page is hidden, or the window is minimised or occluded.
+    Hidden,
+}
+
+impl HostVisibility {
+    /// The visibility egui's root viewport reports in `context`'s input.
+    pub fn of(context: &egui::Context) -> Self {
+        if context.input(|input| input.viewport().visible() == Some(false)) {
+            Self::Hidden
+        } else {
+            Self::Visible
+        }
+    }
+
+    /// Whether this is [`Self::Visible`].
+    pub fn is_visible(self) -> bool {
+        self == Self::Visible
+    }
+}
 
 /// Why the host asked egui for another pass.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1184,6 +1232,8 @@ pub struct AppHost<A: Application> {
     /// Whether sent intents changed state outside a pass that presented it,
     /// as while the viewport is hidden.
     unpresented: bool,
+    /// Whether the page or window could be seen when the host last looked.
+    visibility: HostVisibility,
     /// The modal dialog the latest pass presented, and focus around it.
     modal: modal::Modal,
     /// The actions, with their panes, that the latest pass presented without
@@ -1251,6 +1301,7 @@ impl<A: Application> AppHost<A> {
             sent: Default::default(),
             sent_applied: 0,
             unpresented: false,
+            visibility: HostVisibility::Visible,
             modal: modal::Modal::default(),
             dialog_actions: Vec::new(),
             #[cfg(target_arch = "wasm32")]
@@ -1413,12 +1464,49 @@ impl<A: Application> AppHost<A> {
         &self.repaint
     }
 
+    /// Whether the page or window could be seen when the host last looked,
+    /// before its latest pass or while hidden; see
+    /// [`Application::visibility_changed`].
+    pub fn visibility(&self) -> HostVisibility {
+        self.visibility
+    }
+
+    /// Tell the application about a change in visibility, before sent
+    /// intents apply. Returns whether presented state changed.
+    fn update_visibility(&mut self, visibility: HostVisibility) -> bool {
+        if visibility == self.visibility {
+            return false;
+        }
+        self.visibility = visibility;
+        let changed = self.app.visibility_changed(visibility, &mut self.ui_state);
+        if changed {
+            self.fields_stale = true;
+        }
+        changed
+    }
+
+    /// What eframe's `App::logic` does before every pass and also while the
+    /// viewport is hidden: report a change in visibility, then apply sent
+    /// intents. Returns whether the viewport is hidden, in which case eframe
+    /// runs no pass.
+    #[cfg(any(feature = "eframe", feature = "test-support", test))]
+    pub(crate) fn before_pass(&mut self, context: &egui::Context) -> bool {
+        let visibility = HostVisibility::of(context);
+        if self.update_visibility(visibility) {
+            self.unpresented = true;
+        }
+        let hidden = !visibility.is_visible();
+        self.apply_sent_intents_before_pass(hidden);
+        hidden
+    }
+
     /// Run one UI pass of the hosted application over `root`.
     pub fn present(&mut self, root: &mut Ui) {
         let context = root.ctx().clone();
         // The root node covers the viewport, not content that overflowed it.
         let root_rect = root.max_rect();
         self.repaint.clear();
+        self.update_visibility(HostVisibility::of(&context));
         self.apply_sent_intents();
         // This pass presents everything applied so far.
         self.unpresented = false;

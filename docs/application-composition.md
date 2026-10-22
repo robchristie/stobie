@@ -153,8 +153,9 @@ rearrange them), followed by its actions, rechecking each action's availability
 first. It repaints only when state changed, an error was shown, a dock drag is
 active or you call `Frame::request_repaint(reason)`;
 `Frame::request_repaint_after(reason, delay)` schedules a later pass, and
-`PassContext` offers both to `prepare`. Intents sent from outside a pass apply
-before `prepare` and present in that pass (see
+`PassContext` offers both to `prepare`. A change in whether the page or window
+can be seen reaches `Application::visibility_changed`, and then intents sent
+from outside a pass apply, before `prepare`, and present in that pass (see
 [Receive events from outside](#receive-events-from-outside)). To
 persist to eframe storage, implement `Application::save`; return true from
 `take_save_request` after an action such as "Save layout" to save at once. The
@@ -220,6 +221,14 @@ if intents.send(FeedIntent::Event(event)).is_err() {
   (`HIDDEN_RECHECK`) until a visible pass presents them, so a page shown again
   catches up without input. A hidden application with nothing new does
   nothing.
+- `Application::visibility_changed` tells the application when the page or
+  window is hidden or shown again (`AppHost::visibility` reads it), before the
+  intents sent since, so it can stop marking what arrives as read while
+  nobody can see it and mark what is open as read once it is shown. The host
+  starts out `HostVisibility::Visible`. In the browser the page's
+  `visibilitychange` wakes the host; natively eframe reports a minimised or
+  fully occluded window. A window behind others but not covered, or a page
+  that has lost focus to another window, is still visible.
 - A stream that changes state on every pass delays an agent's `set-text`
   until it pauses, because a semantic edit waits for a pass that state did
   not change under.
