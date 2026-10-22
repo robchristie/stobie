@@ -77,6 +77,8 @@ struct Profile {
     show: Show,
     title: &'static str,
     muted: bool,
+    /// Edit shows its label rather than its icon.
+    labelled_edit: bool,
     inset: bool,
     performed: Vec<(Act, ActionArgument)>,
 }
@@ -87,6 +89,7 @@ impl Profile {
             show,
             title,
             muted: false,
+            labelled_edit: false,
             inset: true,
             performed: Vec::new(),
         }
@@ -95,11 +98,12 @@ impl Profile {
     fn controls(&self, more: usize) -> Vec<HeaderControl<Act>> {
         let mute = BoundAction::new(Act::Mute, "p1").with_subject("Grace");
         std::iter::once(HeaderControl::icon(mute, IconId::Notifications).pressed(self.muted))
-            .chain(
-                MORE.iter()
-                    .take(more)
-                    .map(|(action, icon)| HeaderControl::icon(*action, *icon)),
-            )
+            .chain(MORE.iter().take(more).map(|(action, icon)| match action {
+                Act::Edit if self.labelled_edit => {
+                    HeaderControl::new(*action, ActionButtonContent::Text)
+                }
+                _ => HeaderControl::icon(*action, *icon),
+            }))
             .collect()
     }
 }
@@ -322,6 +326,31 @@ fn a_heading_row_keeps_one_or_two_controls_whole_beside_a_long_title() {
         // The heading elides in the room left (the clean text audit says
         // it declares that), keeping its whole name.
         assert!(title.min.x >= 0.0);
+    }
+}
+
+#[test]
+fn a_labelled_control_shares_the_centre_line_of_an_icon_only_control() {
+    for show in [Show::Row(1), Show::Navigation(1)] {
+        let mut app = Profile::new(show, "Grace");
+        app.labelled_edit = true;
+        let mut harness = harness(app);
+        harness.run();
+        assert_clean(&harness);
+        let [mute, edit] = controls(&harness, 1)[..] else {
+            panic!("two controls")
+        };
+        // The icon-only toggle takes the touch target and the labelled Edit
+        // the control height, both centred on the row's line.
+        assert!(
+            mute.max_y - mute.min_y > edit.max_y - edit.min_y,
+            "{show:?}"
+        );
+        let centre = |rect: crate::UiRect| (rect.min_y + rect.max_y) / 2.0;
+        assert!(
+            (centre(mute) - centre(edit)).abs() < 0.01,
+            "{show:?}: {mute:?} {edit:?}"
+        );
     }
 }
 

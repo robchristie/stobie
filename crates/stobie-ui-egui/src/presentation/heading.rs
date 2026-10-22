@@ -389,6 +389,15 @@ impl PresentationContext {
             emphasis: control.emphasis,
             compact: false,
         };
+        // A row's place is as tall as its tallest control, such as an
+        // icon-only control's touch target; a labelled control keeps the
+        // control height, centred on the same line.
+        let rect = if matches!(control.content, ActionButtonContent::IconOnly(_)) {
+            rect
+        } else {
+            let height = action_hit_height(&self.tokens, self.font_scale).min(rect.height());
+            Rect::from_center_size(rect.center(), vec2(rect.width(), height))
+        };
         let response = ui
             .scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 self.present_action(ui, &identity, spec, control.content, name.as_deref(), value)
