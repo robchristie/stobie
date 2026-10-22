@@ -127,6 +127,19 @@ renderer". Without GPU acceleration, Chromium may need
 `--use-angle=swiftshader --enable-unsafe-swiftshader` for WebGL2. The DevTools
 client is Lantern's `lantern-core`, pinned to an exact revision.
 
+Text typed into the page, with Playwright's `keyboard.type` or `fill()` or
+with DevTools' `Input.insertText`, reaches egui through eframe's hidden text
+agent or a layer field (see the
+[browser ARIA layer](ui-guides/accessibility.md#browser-aria-layer)).
+Chromium, headless or headful, fires `input` events in those only when
+fontconfig finds a font; without one, the keys arrive and the text is
+dropped. On a host without system fonts, or a Chromium given its own
+libraries, set `FONTCONFIG_FILE` to a `fonts.conf` whose `<dir>` names a font
+directory, such as Stobie's `crates/stobie-ui-egui/assets/fonts`. `set-text`
+needs neither a font nor focus, because it edits through the application
+interface. A password field takes no `set-text`: click or tap it, which
+focuses eframe's text agent, then type with the keyboard.
+
 ## Selectors
 
 Commands that name controls take `--id`, `--role`, `--name`,

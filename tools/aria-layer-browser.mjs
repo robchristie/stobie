@@ -514,8 +514,13 @@ try {
  * the agent itself. During each tap the check therefore holds animation
  * frames and keeps touch pointer events from the page, so `touchend` alone
  * must focus the field, as on the device.
+ *
+ * `agent` names a single-line field; with `textAgent` it must be egui's own
+ * text edit, edited through eframe's text agent, and with `type` the keys
+ * typed then must reach it. `native` names a native field, and `story` the
+ * Gallery story that holds the fields.
  */
-async function checkTouchFields({ agent, native }, check) {
+async function checkTouchFields({ story, agent, native }, check) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true });
   try {
     const tablet = await context.newPage();
@@ -571,6 +576,8 @@ async function checkTouchFields({ agent, native }, check) {
     }, expectations.handle);
     const client = new ApplicationClient(new BrowserTransport(tablet));
     await client.hello();
+    // The Gallery shows the story that holds the fields.
+    if (story) await tablet.evaluate(([handle, id]) => window[handle].select_story(id), [expectations.handle, story]);
     const observed = async name => {
       const { snapshot } = await client.observe();
       // A labelled field also publishes its visible label under the same
@@ -596,6 +603,12 @@ async function checkTouchFields({ agent, native }, check) {
       return box;
     };
     const releaseFrames = () => tablet.evaluate(() => window.__releaseFrames());
+    // eframe's own text agent is the input beside the canvas; a native
+    // field's element sits in its own host instead.
+    const textAgentFocused = () => tablet.evaluate(() => {
+      const element = document.activeElement;
+      return element?.tagName === 'INPUT' && element.parentElement === document.querySelector('canvas')?.parentElement;
+    });
     const focused = () => tablet.evaluate(layer => {
       const element = document.activeElement;
       return { tag: element?.tagName, name: element?.getAttribute('aria-label'), inLayer: Boolean(element?.closest(layer)) };
@@ -607,8 +620,10 @@ async function checkTouchFields({ agent, native }, check) {
     let before = await focusCount();
     await tap(agent.name, { hold: true });
     const agentNow = await focused();
+    const agentIsTextAgent = await textAgentFocused();
     const agentFocus = (await focusSince(before)).filter(entry => entry.tag === 'INPUT' && !entry.inLayer);
     await releaseFrames();
+    if (agent.textAgent) assert(agentIsTextAgent, `a tap on ${agent.name}, an egui text edit, focuses eframe's own text agent`);
     assert(agentNow.tag === 'INPUT' && !agentNow.inLayer, `a tap on ${agent.name} focuses the text agent before a frame: ${JSON.stringify(agentNow)}`);
     assert(agentFocus.length > 0 && agentFocus.every(entry => entry.inGesture), `the text agent takes focus inside touchend: ${JSON.stringify(agentFocus)}`);
     // egui then focuses the field. The agent keeps focus throughout, since
@@ -622,7 +637,21 @@ async function checkTouchFields({ agent, native }, check) {
     // egui's focus may arrive a frame or two later.
     for (let tries = 0; tries < 50 && !(await observed(agent.name)).node.focused; tries++) await tablet.waitForTimeout(100);
     assert((await observed(agent.name)).node.focused, `egui focuses ${agent.name}`);
-    check('tap focuses the text agent in the gesture', { target: agent.name });
+    check('tap focuses the text agent in the gesture', { target: agent.name, textAgent: agentIsTextAgent });
+    // Keys typed while the agent has focus reach the field, as an agent types
+    // into a password field, which takes no `stobie set-text`. A password's
+    // layer value is masked, so its length tells.
+    if (agent.type) {
+      const selector = `${LAYER} input[aria-label="${agent.name}"]`;
+      const length = (await tablet.locator(selector).inputValue()).length;
+      await tablet.keyboard.press('End');
+      await tablet.keyboard.type(agent.type);
+      await tablet.waitForFunction(([selector, length]) => document.querySelector(selector)?.value.length === length,
+        [selector, length + agent.type.length], { timeout: 5000 });
+      assert(await textAgentFocused() === agentIsTextAgent, `${agent.name} keeps its focus while typing`);
+      check('typing reaches the field through the text agent', { target: agent.name, typed: agent.type.length });
+    }
+    if (!native) return;
 
     // A native field leaves the transparent layer, over its egui field, and
     // takes focus in the gesture.

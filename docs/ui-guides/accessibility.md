@@ -138,7 +138,8 @@ snapshot, is the source.
   DOM focus to the canvas and reach egui as the same keys. Cmd or Ctrl chords,
   other than the field's own selection, clipboard, undo and caret keys, reach
   egui as application shortcuts while focus stays in the field. Password
-  fields are never edited this way. Combo boxes
+  fields are never edited this way: click or tap one, which focuses eframe's
+  text agent, and type. Combo boxes
   expose their current text. Sliders expose `aria-valuenow`, minimum and
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.
@@ -263,13 +264,17 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
   it, `locator.fill()` edits a single-line and a multiline field as typing
   would, a status change reaches its polite live region, and destroying the host
   restores the canvas;
-- in Record Desk with touch, a tap on the title focuses eframe's text agent
-  before the next animation frame. A tap on the native notes field focuses
+- in Record Desk with touch, a tap on the title, a native single-line field,
+  focuses its element before the next animation frame. A tap on the native notes field focuses
   its element there, shown and topmost over the field and outside the layer
   container, with one notes textbox in its region. A later drag on it is not
   claimed for egui, and it takes focus back from the canvas while egui keeps
   it. Inserted text reaches egui, the active field presents no frames while idle, and a tap on the
-  title returns it to the layer.
+  title returns it to the layer;
+- in the Gallery with touch, a tap on the form's password field, which egui's
+  own text edit draws and no native field replaces, focuses eframe's text
+  agent before the next animation frame, and keys typed then reach the
+  field.
 
 This proves the browser accessibility tree only. It is not screen-reader
 qualification. `tools/aria-layer-orca/run.sh` runs Record Desk under actual
