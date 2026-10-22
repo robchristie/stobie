@@ -128,6 +128,39 @@ sys.exit(int(os.environ.get('DOC_EXIT', '0')))
         self.assertTrue(self.report("workspace").exists())
         self.assertTrue(self.report("ui-no-default").exists())
 
+    def test_a_short_checkout_keeps_its_own_temporary_directory(self):
+        root = Path("/tmp/s")
+        with patch.object(Path, "mkdir"):
+            temporary, owned = rust_tests.temporary_directory(root)
+        self.assertEqual(temporary, root / ".tools/t")
+        self.assertFalse(owned)
+
+    def test_a_deep_checkout_gets_a_short_private_directory_for_its_sockets(self):
+        deep = self.root / ("worktree-" * 8)
+        deep.mkdir()
+        temporary, owned = rust_tests.temporary_directory(deep)
+        self.addCleanup(lambda: temporary.rmdir() if temporary.exists() else None)
+        self.assertTrue(owned)
+        self.assertNotIn(str(deep), str(temporary))
+        self.assertLessEqual(len(str(temporary)), rust_tests.TEMPORARY_PATH_BYTES)
+        self.assertEqual(temporary.stat().st_mode & 0o777, 0o700)
+
+    def test_a_deep_checkouts_private_directory_is_removed_after_the_run(self):
+        deep = self.root / ("worktree-" * 8)
+        deep.mkdir()
+        made = []
+        original = rust_tests.temporary_directory
+
+        def record(root):
+            temporary, owned = original(root)
+            made.append(temporary)
+            return temporary, owned
+
+        with patch.object(rust_tests, "temporary_directory", record):
+            rust_tests.run("workspace", deep)
+        self.assertEqual(len(made), 1)
+        self.assertFalse(made[0].exists())
+
 
 if __name__ == "__main__":
     unittest.main()
