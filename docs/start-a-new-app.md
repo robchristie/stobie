@@ -60,6 +60,13 @@ default, `UiPreferences::system()`; the page's own colours in
 `web/index.html` follow the same setting. Override `preferences` to offer a
 choice, as the [composition guide](application-composition.md) describes.
 
+A page served with a Content-Security-Policy that leaves `'unsafe-inline'`
+out of `style-src` must allow the `<style>` element in `web/index.html` by
+its hash, or move its rules into a stylesheet file. Stobie's own code styles
+the page only through the CSSOM, so it needs nothing more; the
+[accessibility guide](ui-guides/accessibility.md#browser-aria-layer) has the
+details.
+
 ### A browser-only application
 
 `stobie new my-app --browser-only` writes an application that runs only in
@@ -296,7 +303,8 @@ an effect it cannot read from a bounded excerpt, publish a bounded fact for it
 in `Application::observe`.
 
 Address controls by their capability IDs (`my-app.add`) or by the semantic
-IDs you give them (`my-app.draft`). Generated presentation IDs, such as
+IDs you give them (`my-app.draft`, through `TextFieldSpec::id` or
+`Frame::composer_with_id`). Generated presentation IDs, such as
 `#presentation.300df68a0e3a837e`, can differ between native and browser
 hosts.
 

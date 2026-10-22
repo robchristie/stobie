@@ -11,6 +11,8 @@ const REQUEST_BYTES = 256 * 1024;
 const RESPONSE_BYTES = 2 * 1024 * 1024;
 const SELECTOR_KEYS = new Set(['id', 'role', 'name', 'capability', 'pane', 'domain', 'argument']);
 const clock = { now: () => performance.now(), sleep: sleep };
+/** The framework capability that scrolls a node, named by its semantic ID, into view. */
+export const REVEAL_CAPABILITY = 'stobie.reveal';
 
 export class ApplicationError extends Error {
   constructor(code, message, details = {}) {
@@ -98,6 +100,22 @@ function same(a, b) {
   return sameKeys(keys, Object.keys(b).sort()) && keys.every(key => same(a[key], b[key]));
 }
 function sameKeys(a, b) { return a.length === b.length && a.every((value, index) => value === b[index]); }
+const FRAMEWORK_CAPABILITIES = new Set(['stobie.set-text', 'stobie.open-link', 'stobie.copy-text']);
+// Whether two bindings perform the same thing, as `CapabilityDescription::performs_same_as` decides.
+export function performsSameAs(a, b) {
+  const field = (value, key) => value?.[key] ?? null;
+  return typeof a.capability === 'string' && !FRAMEWORK_CAPABILITIES.has(a.capability) && a.capability === b.capability
+    && ['pane', 'argument', 'availability', 'semantic_invocable'].every(key => same(field(a, key), field(b, key)))
+    && field(a.target, 'meaning') === field(b.target, 'meaning');
+}
+// The one capability a whole discovery page names: a binding alone, or the least ID among
+// bindings that perform the same thing, which the application chooses when they are invoked.
+function oneEffect(discovered) {
+  const [first] = discovered.capabilities;
+  if (!first || discovered.total !== discovered.capabilities.length || discovered.next_cursor) return undefined;
+  if (!discovered.capabilities.every(capability => capability === first || performsSameAs(capability, first))) return undefined;
+  return discovered.capabilities.reduce((least, capability) => (capability.id < least.id ? capability : least));
+}
 export function matchesSelector(node, selected) {
   selector(selected);
   return Object.entries(selected).every(([key, value]) => {
@@ -282,14 +300,35 @@ export class ApplicationClient {
     }
   }
   async hello(options) { return this.request({ op: 'hello' }, options); }
-  async observe(options) { return (await this.request({ op: 'observe' }, options)).observation; }
+  // A read, waiting out `missing_observation` within its deadline: an
+  // application that has just started publishes after its first pass.
+  async #published(operation, { timeoutMs = this.timeoutMs, signal, ...options } = {}) {
+    const deadline = this.scheduler.now() + timeout(timeoutMs);
+    while (true) {
+      try {
+        return await this.request(operation, { ...options, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
+      } catch (error) {
+        const remaining = deadline - this.scheduler.now();
+        if (error.code !== 'missing_observation' || remaining <= 0) throw error;
+        await this.scheduler.sleep(Math.min(50, remaining), signal);
+      }
+    }
+  }
+  async observe(options) { return (await this.#published({ op: 'observe' }, options)).observation; }
   async query(selected = {}, { limit = 64, cursor, ...options } = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 256) throw failure('invalid_request', 'Query limit must be 1..256');
-    return this.request({ op: 'query', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+    return this.#published({ op: 'query', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
   }
   async discover(selected = {}, { limit = 64, cursor, ...options } = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 256) throw failure('invalid_request', 'Discovery limit must be 1..256');
-    return this.request({ op: 'discover', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+    return this.#published({ op: 'discover', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+  }
+  // Scroll the node `id` into view, so that a region observed only in view
+  // presents it; the receipt is rejected, saying why, when no pass presents
+  // it, a dialog covers it or it cannot be scrolled into view.
+  async reveal(id, options = {}) {
+    if (typeof id !== 'string' || !id) throw failure('invalid_request', 'Reveal needs a semantic ID');
+    return this.invoke({ capability: REVEAL_CAPABILITY }, { ...options, arguments: { value: id } });
   }
   async receipt(requestId, options) { return (await this.request({ op: 'receipt', request_id: requestId }, options)).receipt; }
   async cancel(requestId, options = {}) {
@@ -305,11 +344,26 @@ export class ApplicationClient {
       return { timeoutMs: milliseconds, signal };
     };
     if (!expected) {
-      const discovered = await this.discover(selected, { limit: 2, ...readOptions() });
-      if (discovered.total !== 1 || discovered.capabilities.length !== 1) {
+      let discovered = await this.discover(selected, { limit: 8, ...readOptions() });
+      // A named node out of view, such as a field below the fold of a region
+      // observed only in view: reveal it, then discover again.
+      if (discovered.total === 0 && typeof selected?.id === 'string' && selected.capability !== REVEAL_CAPABILITY) {
+        let revealed;
+        try {
+          revealed = await this.reveal(selected.id, { ...readOptions() });
+        } catch (error) {
+          if (error.code !== 'no_match') throw error;
+        }
+        if (revealed && revealed.state !== 'completed') {
+          throw failure('no_match', `Semantic invocation found no target, and revealing ${selected.id} failed: ${revealed.error?.message ?? revealed.state}`);
+        }
+        if (revealed) discovered = await this.discover(selected, { limit: 8, ...readOptions() });
+      }
+      const capability = oneEffect(discovered);
+      if (!capability) {
         throw failure(discovered.total ? 'ambiguous' : 'no_match', 'Semantic invocation requires one exact capability target');
       }
-      expected = discovered.capabilities[0].target;
+      expected = capability.target;
     }
     const result = await this.request({ op: 'invoke', selector: selector(selected), expected,
       ...(suppliedArguments !== undefined ? { arguments: suppliedArguments } : {}) }, {
@@ -384,9 +438,9 @@ export class ApplicationClient {
         if (condition.condition === 'absent') done = !node;
         if (condition.condition === 'enabled') done = node?.enabled === true;
         if (condition.condition === 'capability_enabled') {
-          const capabilities = await this.discover(selected, { limit: 2, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
-          if (capabilities.total > 1) throw failure('ambiguous', 'Capability wait requires one target; add a pane or identity');
-          capability = capabilities.capabilities[0];
+          const capabilities = await this.discover(selected, { limit: 8, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
+          capability = oneEffect(capabilities);
+          if (capabilities.total > 0 && !capability) throw failure('ambiguous', 'Capability wait requires one target; add a pane or identity');
           capabilityObservation = capabilities.observation;
           lastCapability = capability;
           lastCapabilityObservation = capabilityObservation;

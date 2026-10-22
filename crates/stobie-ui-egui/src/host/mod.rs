@@ -10,8 +10,10 @@
 //!
 //! One pass runs in this order:
 //!
-//! 1. Intents sent through an [`IntentSender`] from outside the host's passes,
-//!    such as socket messages, apply in the order they were sent.
+//! 1. A change in whether the page or window can be seen reaches
+//!    [`Application::visibility_changed`]; then intents sent through an
+//!    [`IntentSender`] from outside the host's passes, such as socket
+//!    messages, apply in the order they were sent.
 //! 2. [`Application::prepare`] adapts state to the viewport and polls workers.
 //! 3. Queued semantic invocations run, each rechecked against current state.
 //! 4. Available shortcuts are consumed with exact modifiers.
@@ -93,6 +95,13 @@ pub trait Application: 'static {
     /// default is the target's availability, leaving
     /// [`Self::perform_with`] to reject an argument it cannot use.
     ///
+    /// A hidden argument is refused without a reason ("Open is
+    /// unavailable"), so that a refusal never says what the application
+    /// chose not to present. To tell an agent why it cannot act on
+    /// something no control presents, such as an archived conversation,
+    /// return [`Availability::Disabled`] with that reason: the refusal
+    /// carries it, and nothing presented changes.
+    ///
     /// [`BoundAction`]: crate::BoundAction
     fn availability_with(
         &self,
@@ -161,7 +170,11 @@ pub trait Application: 'static {
     fn order_intents(&self, _intents: &mut [Self::Intent]) {}
 
     /// Publish bounded application facts and collection metadata with each
-    /// completed observation.
+    /// completed observation. The host adds its own facts after these: the
+    /// theme the pass was drawn in, as [`THEME_FACT`](crate::THEME_FACT)
+    /// and [`CONTRAST_FACT`](crate::CONTRAST_FACT), which replace an
+    /// application fact of the same name and do not count towards the 256
+    /// an application may publish.
     fn observe(&self, _observation: &mut Observation<'_>) {}
 
     /// Appearance preferences. The host applies the design system for them at
@@ -201,6 +214,24 @@ pub trait Application: 'static {
     /// event arrives; see [`IntentSender`]. Keep transport policy, such as
     /// which connections to open and when to reconnect, in the application.
     fn started(&mut self, _intents: IntentSender<Self::Intent>) {}
+
+    /// The page or window was hidden or shown again: a hidden browser page
+    /// (`visibilitychange`), or a minimised or fully occluded native window,
+    /// as eframe reports it. The host starts out [`HostVisibility::Visible`]
+    /// and calls this once per change, before it applies the intents sent
+    /// since, so an application can stop marking what arrives as read or
+    /// viewed while nobody can see it, and mark what is open as viewed once
+    /// it is shown. Return whether presented state changed; the pass that
+    /// follows presents it, as it presents sent intents. While hidden the
+    /// host runs no pass, but it still calls this and applies sent intents.
+    /// [`AppHost::visibility`] reads the current state.
+    fn visibility_changed(
+        &mut self,
+        _visibility: HostVisibility,
+        _state: &mut Self::UiState,
+    ) -> bool {
+        false
+    }
 
     /// Whether the browser host mirrors this application's accessibility tree
     /// into a hidden ARIA layer over its canvas, for screen readers and
@@ -263,6 +294,34 @@ macro_rules! application_identity {
 /// How soon a hidden viewport checks again whether it is visible, while it
 /// holds sent intents that no pass has presented.
 pub const HIDDEN_RECHECK: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Whether the host's page or window can be seen, as egui's viewport reports
+/// it: a hidden browser page, or a minimised or fully occluded native window,
+/// is hidden. See [`Application::visibility_changed`].
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub enum HostVisibility {
+    /// The page or window can be seen, or egui does not know.
+    #[default]
+    Visible,
+    /// The browser page is hidden, or the window is minimised or occluded.
+    Hidden,
+}
+
+impl HostVisibility {
+    /// The visibility egui's root viewport reports in `context`'s input.
+    pub fn of(context: &egui::Context) -> Self {
+        if context.input(|input| input.viewport().visible() == Some(false)) {
+            Self::Hidden
+        } else {
+            Self::Visible
+        }
+    }
+
+    /// Whether this is [`Self::Visible`].
+    pub fn is_visible(self) -> bool {
+        self == Self::Visible
+    }
+}
 
 /// Why the host asked egui for another pass.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -765,6 +824,37 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     ) -> crate::ComposerResponse<A> {
         let mut text = draft.to_owned();
         let response = presentation.composer(ui, key, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// [`Self::composer`] with the field's semantic ID `id`, and its
+    /// controls' `id.send`, `id.leading` and `id.trailing`, rather than IDs
+    /// derived from a key (see [`PresentationContext::composer_with_id`]).
+    ///
+    /// # Panics
+    ///
+    /// If the send action does not take a text argument.
+    pub fn composer_with_id(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        id: &str,
+        spec: &crate::ComposerSpec<'_, A>,
+        draft: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
+        let mut text = draft.to_owned();
+        let response = presentation.composer_with_id(ui, id, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// Emit a composer's edit and trigger what it sent or clicked.
+    fn composed(
+        &mut self,
+        response: crate::ComposerResponse<A>,
+        text: String,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
         if response.changed {
             self.intents.push(edit(text));
         }
@@ -816,7 +906,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// observes and binds only it and what it presents, refuses every other
     /// action an agent or a shortcut asks for, and hides everything else
     /// from assistive technology. When it closes, focus returns to the
-    /// control that opened it.
+    /// control that opened it, or, when that has gone, as a row its own
+    /// confirmation deleted has, to the control nearest where it was.
     pub fn dialog<R>(
         &mut self,
         ui: &mut Ui,
@@ -1169,7 +1260,11 @@ pub struct AppHost<A: Application> {
     edit_focus: Option<(egui::Id, Option<egui::Id>)>,
     /// The set-text invocation this pass applied, completed once its intents
     /// have settled.
-    completing: Option<String>,
+    completing: Option<Completing>,
+    /// Nodes to scroll into view, one at a time.
+    reveals: VecDeque<PendingReveal>,
+    /// The latest reveal that finished, and how.
+    reveal_outcome: Option<(SemanticUiId, Result<(), String>)>,
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
@@ -1184,6 +1279,8 @@ pub struct AppHost<A: Application> {
     /// Whether sent intents changed state outside a pass that presented it,
     /// as while the viewport is hidden.
     unpresented: bool,
+    /// Whether the page or window could be seen when the host last looked.
+    visibility: HostVisibility,
     /// The modal dialog the latest pass presented, and focus around it.
     modal: modal::Modal,
     /// The actions, with their panes, that the latest pass presented without
@@ -1193,6 +1290,42 @@ pub struct AppHost<A: Application> {
     /// Whether the first complete pass was reported to the startup loader.
     #[cfg(target_arch = "wasm32")]
     startup_reported: bool,
+}
+
+/// A semantic set-text edit applied in this pass, checked once the pass has
+/// presented its field.
+struct Completing {
+    request: String,
+    widget: egui::Id,
+    field: SemanticUiId,
+    /// The field's text before the edit, and the text sent.
+    before: String,
+    text: String,
+    /// Why the field did not take the edit, found once the pass presented it.
+    refused: Option<String>,
+}
+
+/// The most times a reveal asks the scroll area around its node to scroll
+/// before it settles where the node is.
+const REVEAL_SCROLLS: u32 = 4;
+
+/// The passes a reveal waits for a scroll to move its node before it takes
+/// the node to have stopped: a scroll area takes a request at the end of the
+/// pass that asked, and the node is laid out at its new place the pass after
+/// next.
+const REVEAL_SETTLE_PASSES: u32 = 2;
+
+/// One queued reveal.
+struct PendingReveal {
+    id: SemanticUiId,
+    /// The invocation for a semantic reveal; `None` for [`AppHost::reveal`].
+    request: Option<String>,
+    /// How many times it has asked to scroll.
+    scrolls: u32,
+    /// Where its node was when the latest pass saw it after a scroll, and
+    /// for how many passes it has stayed there; `None` when the next pass
+    /// asks to scroll.
+    waiting: Option<(Rect, u32)>,
 }
 
 /// One queued set-text edit.
@@ -1245,12 +1378,15 @@ impl<A: Application> AppHost<A> {
             text_edits: VecDeque::new(),
             edit_focus: None,
             completing: None,
+            reveals: VecDeque::new(),
+            reveal_outcome: None,
             fields_stale: false,
             links_to_open: Vec::new(),
             copies: Vec::new(),
             sent: Default::default(),
             sent_applied: 0,
             unpresented: false,
+            visibility: HostVisibility::Visible,
             modal: modal::Modal::default(),
             dialog_actions: Vec::new(),
             #[cfg(target_arch = "wasm32")]
@@ -1299,6 +1435,7 @@ impl<A: Application> AppHost<A> {
         }
         self.context.enable_accesskit();
         inspection.install_completion_hook(&self.context);
+        inspection.offer_reveal();
         self.inspection = Some(inspection);
         self.repaint.push(HostRepaint::AutomationEnabled);
         self.context.request_repaint();
@@ -1413,12 +1550,49 @@ impl<A: Application> AppHost<A> {
         &self.repaint
     }
 
+    /// Whether the page or window could be seen when the host last looked,
+    /// before its latest pass or while hidden; see
+    /// [`Application::visibility_changed`].
+    pub fn visibility(&self) -> HostVisibility {
+        self.visibility
+    }
+
+    /// Tell the application about a change in visibility, before sent
+    /// intents apply. Returns whether presented state changed.
+    fn update_visibility(&mut self, visibility: HostVisibility) -> bool {
+        if visibility == self.visibility {
+            return false;
+        }
+        self.visibility = visibility;
+        let changed = self.app.visibility_changed(visibility, &mut self.ui_state);
+        if changed {
+            self.fields_stale = true;
+        }
+        changed
+    }
+
+    /// What eframe's `App::logic` does before every pass and also while the
+    /// viewport is hidden: report a change in visibility, then apply sent
+    /// intents. Returns whether the viewport is hidden, in which case eframe
+    /// runs no pass.
+    #[cfg(any(feature = "eframe", feature = "test-support", test))]
+    pub(crate) fn before_pass(&mut self, context: &egui::Context) -> bool {
+        let visibility = HostVisibility::of(context);
+        if self.update_visibility(visibility) {
+            self.unpresented = true;
+        }
+        let hidden = !visibility.is_visible();
+        self.apply_sent_intents_before_pass(hidden);
+        hidden
+    }
+
     /// Run one UI pass of the hosted application over `root`.
     pub fn present(&mut self, root: &mut Ui) {
         let context = root.ctx().clone();
         // The root node covers the viewport, not content that overflowed it.
         let root_rect = root.max_rect();
         self.repaint.clear();
+        self.update_visibility(HostVisibility::of(&context));
         self.apply_sent_intents();
         // This pass presents everything applied so far.
         self.unpresented = false;
@@ -1452,6 +1626,12 @@ impl<A: Application> AppHost<A> {
             .map(|target| (target, ActionArgument::None))
             .collect();
         self.apply_text_edit(root);
+        crate::observation::request_reveal(
+            &context,
+            self.reveals
+                .front()
+                .map(|reveal| (reveal.id.clone(), reveal.waiting.is_none())),
+        );
         let mut intents = Vec::new();
         {
             let app = &self.app;
@@ -1496,6 +1676,9 @@ impl<A: Application> AppHost<A> {
         ) = self.collect(root.ctx(), root_rect);
         self.modal.end(&context, &dialogs, &mut self.repaint);
         self.fields_stale = false;
+        self.check_text_edit(&context);
+        // A reveal completes with the observation this pass publishes.
+        self.settle_reveal(&context);
         self.publish(&context);
         self.app.completed(
             &CompletedPass {
@@ -1519,8 +1702,12 @@ impl<A: Application> AppHost<A> {
         }
         // The edit's intents have now applied, so the next published pass
         // presents the application's own effect.
-        if let (Some(request), Some(inspection)) = (self.completing.take(), &self.inspection) {
-            inspection.complete(&request, Ok(()));
+        if let (Some(completing), Some(inspection)) = (self.completing.take(), &self.inspection) {
+            let outcome = match completing.refused {
+                None => Ok(()),
+                Some(reason) => Err(InspectionError::validation(reason)),
+            };
+            inspection.complete(&completing.request, outcome);
         }
         request_passes(&context, &self.repaint);
     }
@@ -1775,6 +1962,147 @@ impl<A: Application> AppHost<A> {
                 self.repaint.push(HostRepaint::Application("copy text"));
                 Ok(Execution::Completed)
             }
+            // The node scrolls into view over the coming passes, and the
+            // reveal completes with the first observation presenting it so.
+            Invocation::Reveal { request_id, id } => {
+                self.reveals.push_back(PendingReveal {
+                    id,
+                    request: Some(request_id),
+                    scrolls: 0,
+                    waiting: None,
+                });
+                self.repaint.push(HostRepaint::Application("reveal"));
+                Ok(Execution::Deferred)
+            }
+        }
+    }
+
+    /// Check, once this pass has presented it, that the field a semantic edit
+    /// applied to took the edit: a field the pass did not present, such as
+    /// one in a section collapsed since its text was set, takes nothing.
+    fn check_text_edit(&mut self, context: &egui::Context) {
+        let Some(completing) = &mut self.completing else {
+            return;
+        };
+        let presented = crate::text_coverage::recorded_text_edits(context)
+            .iter()
+            .any(|(widget, _)| *widget == completing.widget);
+        let value = presented
+            .then(|| {
+                context.accesskit_node_builder(completing.widget, |node| {
+                    node.value().unwrap_or_default().to_owned()
+                })
+            })
+            .flatten();
+        completing.refused = match value {
+            None => Some(format!("{} is no longer presented", completing.field.0)),
+            // A single-line field turns line breaks into spaces, as egui
+            // does when text is pasted into one, so a field already holding
+            // the converted text took it.
+            Some(value)
+                if value == completing.before
+                    && value != completing.text
+                    && value != completing.text.replace(['\r', '\n'], " ") =>
+            {
+                Some(format!("{} did not take the text", completing.field.0))
+            }
+            Some(_) => None,
+        };
+    }
+
+    /// Scroll the node `id` names into view over the coming passes, as the
+    /// [`REVEAL_CAPABILITY`](crate::REVEAL_CAPABILITY) does for an agent, so
+    /// that it is observed and a host test can act on it, for example by
+    /// clicking it. Each pass that presents it scrolls the innermost scroll
+    /// area around it until it is wholly in view, or as far as the area
+    /// scrolls. Run passes until [`Self::reveal_outcome`] reports the
+    /// outcome; reveals queue behind one another.
+    pub fn reveal(&mut self, id: impl Into<SemanticUiId>) {
+        self.reveals.push_back(PendingReveal {
+            id: id.into(),
+            request: None,
+            scrolls: 0,
+            waiting: None,
+        });
+        self.repaint.push(HostRepaint::Application("reveal"));
+        self.context.request_repaint();
+    }
+
+    /// The latest reveal that finished: its node's ID and `Ok` once a pass
+    /// presented the node in view, or why it could not be revealed, such as
+    /// a node no pass presents. `None` before any reveal has finished.
+    pub fn reveal_outcome(&self) -> Option<(&SemanticUiId, Result<(), &str>)> {
+        self.reveal_outcome
+            .as_ref()
+            .map(|(id, outcome)| (id, outcome.as_ref().map(|_| ()).map_err(String::as_str)))
+    }
+
+    /// Settle the pending reveal against this pass: complete it once the
+    /// node is in view, scroll for another pass while it is moving, or
+    /// reject it.
+    fn settle_reveal(&mut self, context: &egui::Context) {
+        let modal = self
+            .snapshot
+            .nodes
+            .iter()
+            .rev()
+            .find(|node| matches!(node.role, UiRole::Dialog | UiRole::AlertDialog))
+            .map(|node| format!("The dialog \"{}\" is open", node.name));
+        let Some(reveal) = self.reveals.front_mut() else {
+            return;
+        };
+        let sighting = crate::observation::reveal_sighting(context);
+        let settled = |sighting: crate::observation::RevealSighting| {
+            if sighting.in_view() {
+                Ok(())
+            } else {
+                Err(format!("{} could not be scrolled into view", reveal.id.0))
+            }
+        };
+        let outcome = match sighting {
+            None => Some(Err(format!("{} is not presented", reveal.id.0))),
+            Some(sighting) if !sighting.in_dialog && modal.is_some() => modal.map(Err),
+            Some(sighting) if sighting.wholly_in_view() => Some(Ok(())),
+            Some(sighting) if sighting.scrolled => {
+                reveal.scrolls += 1;
+                reveal.waiting = Some((sighting.rect, 0));
+                None
+            }
+            // Still where the latest pass saw it: the scroll has not taken
+            // effect yet, or the areas scroll no further.
+            Some(sighting) => match reveal.waiting {
+                Some((rect, passes)) if rect == sighting.rect => {
+                    if passes + 1 < REVEAL_SETTLE_PASSES {
+                        reveal.waiting = Some((rect, passes + 1));
+                        None
+                    } else {
+                        Some(settled(sighting))
+                    }
+                }
+                // Moved, and not yet wholly in view: scroll again from
+                // where it is now, as content still settling its layout
+                // needs.
+                Some(_) if reveal.scrolls < REVEAL_SCROLLS => {
+                    reveal.waiting = None;
+                    None
+                }
+                _ => Some(settled(sighting)),
+            },
+        };
+        let Some(outcome) = outcome else {
+            self.repaint.push(HostRepaint::Application("reveal"));
+            return;
+        };
+        let reveal = self.reveals.pop_front().expect("pending reveal");
+        if let (Some(request), Some(inspection)) = (&reveal.request, &self.inspection) {
+            inspection.complete(
+                request,
+                outcome.clone().map_err(InspectionError::validation),
+            );
+        }
+        self.reveal_outcome = Some((reveal.id, outcome));
+        if !self.reveals.is_empty() {
+            self.repaint.push(HostRepaint::Application("reveal"));
         }
     }
 
@@ -1897,7 +2225,14 @@ impl<A: Application> AppHost<A> {
         if edit.request.is_some() && previous != Some(widget) {
             self.edit_focus = Some((widget, previous));
         }
-        self.completing = edit.request;
+        self.completing = edit.request.map(|request| Completing {
+            request,
+            widget,
+            field: edit.field.clone(),
+            before: current.clone(),
+            text: edit.text.clone(),
+            refused: None,
+        });
         let text = edit.text;
         context.memory_mut(|memory| memory.request_focus(widget));
         let mut state = egui::text_edit::TextEditState::load(&context, widget).unwrap_or_default();
@@ -1967,7 +2302,6 @@ impl<A: Application> AppHost<A> {
     /// any argument, unless a control without an argument presents it.
     fn bindings(&self) -> Vec<InspectionBinding<A::Action>> {
         let mut bindings = Vec::new();
-        let mut presented = Vec::new();
         // While a modal dialog is presented, the snapshot holds only it and
         // its content; every action it does not present is refused.
         let modal = self
@@ -2053,7 +2387,6 @@ impl<A: Application> AppHost<A> {
                 // The argument that tells this binding apart from the
                 // target's others: the validated one, or the refused value
                 // as its control presents it.
-                let mut refused = None;
                 let (availability, argument) = match argument {
                     Ok(ActionArgument::None) => {
                         (self.app.availability(target), ActionArgument::None)
@@ -2063,18 +2396,13 @@ impl<A: Application> AppHost<A> {
                     // stays discoverable, carrying that value, and refuses
                     // invocation. It is not the action's own binding, which
                     // takes any value the contract allows.
-                    Err(reason) => {
-                        refused = node.and_then(|node| node.argument.clone());
-                        (
-                            Availability::Disabled {
-                                reason: format!("The control's argument is invalid: {reason}")
-                                    .into(),
-                            },
-                            refused
-                                .as_ref()
-                                .map_or(ActionArgument::None, carried_argument),
-                        )
-                    }
+                    Err(reason) => (
+                        Availability::Disabled {
+                            reason: format!("The control's argument is invalid: {reason}").into(),
+                        },
+                        node.and_then(|node| node.argument.as_ref())
+                            .map_or(ActionArgument::None, carried_argument),
+                    ),
                 };
                 // A control the dialog scrolled out of view is still its own.
                 let availability = match (&modal, node) {
@@ -2094,18 +2422,12 @@ impl<A: Application> AppHost<A> {
                 let domain = node
                     .and_then(|node| node.domain_reference.clone())
                     .or_else(|| target.pane.map(DomainReference::Pane));
-                // Several controls can present one target, such as a toolbar
-                // button and a viewport's custom action; the first is the
-                // capability's instance.
-                let key = (
-                    target,
-                    domain.clone(),
-                    refused.or_else(|| binding.argument.to_value()),
-                );
-                if presented.contains(&key) {
-                    continue;
-                }
-                presented.push(key);
+                // Several controls can present one target with one argument,
+                // such as a toolbar button and a viewport's custom action, or
+                // Show for one run in two lists: each is a binding of its own,
+                // so an agent can address any of them, and invoking them
+                // together resolves to one, because they perform the same
+                // thing (`select_invocation_target`).
                 if let Some(node) = node {
                     binding = binding.with_id(node.id.clone());
                 }
@@ -2295,6 +2617,19 @@ impl<A: Application> AppHost<A> {
             collections: Vec::new(),
         };
         self.app.observe(&mut observation);
+        // The theme this pass was drawn in, after the application's facts so
+        // that none of them stands in for it.
+        let (theme, contrast) = match self
+            .preferences
+            .theme_variant(context.theme() == egui::Theme::Dark)
+        {
+            crate::ThemeVariant::Light => ("light", "standard"),
+            crate::ThemeVariant::Dark => ("dark", "standard"),
+            crate::ThemeVariant::LightHighContrast => ("light", "high"),
+            crate::ThemeVariant::DarkHighContrast => ("dark", "high"),
+        };
+        observation.fact(crate::THEME_FACT, theme);
+        observation.fact(crate::CONTRAST_FACT, contrast);
         let metadata = CollectionMetadata {
             collections: observation.collections,
             ..Default::default()
@@ -2512,11 +2847,15 @@ mod dialog_navigation_tests;
 #[cfg(test)]
 mod dialog_tests;
 #[cfg(test)]
+mod focus_return_tests;
+#[cfg(test)]
 mod heading_tests;
 #[cfg(test)]
 mod link_tests;
 #[cfg(test)]
 mod navigation_tests;
+#[cfg(test)]
+mod reveal_tests;
 #[cfg(test)]
 mod row_tests;
 #[cfg(test)]
@@ -2527,3 +2866,5 @@ mod tests;
 mod text_field_tests;
 #[cfg(test)]
 mod text_tests;
+#[cfg(test)]
+mod theme_fact_tests;

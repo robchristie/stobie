@@ -83,6 +83,9 @@ running GPU `backend` (`webgpu` or `webgl2` in a browser, wgpu's backend name
 natively), its `adapter`, a `selection` of `preferred`, `fallback` or `forced`,
 and an optional `reason`. Other calls require the same instance. The CLI performs `hello`
 before its selected command; a JavaScript caller performs it once explicitly.
+An application that has just started answers `missing_observation` until its
+first pass publishes; the Rust client, `stobie` and the JavaScript client wait
+for it within each read's deadline.
 
 Selectors use exact AND matching across any supplied `id`, `role`, `name`,
 `capability`, `pane` and `domain`. Roles use the Rust `UiRole` snake-case values.
@@ -111,7 +114,13 @@ stobie invoke record-desk.apply
 `observe` returns the latest completed, non-discarded UI pass: its instance and
 application/build identity, monotonically
 increasing observation identity, `UiSnapshot`, bounded primitive application
-facts and collection metadata. Reading an idle host may repeatedly return the
+facts and collection metadata. A hosted application's facts also carry the
+framework's: `stobie.theme`, `light` or `dark`, and `stobie.contrast`,
+`standard` or `high`, name the theme the pass was drawn in, the
+application's appearance preference resolved against the system's
+(`THEME_FACT` and `CONTRAST_FACT`). They replace an application fact of the
+same name, so `stobie wait fact --key stobie.theme --value dark` waits for
+the page to be drawn dark. Reading an idle host may repeatedly return the
 same observation. Reads never request repaint or enumerate off-screen domain
 data. Collection metadata describes what was retained, whether it is
 virtualised and whether its observed collection is complete. A missing total
@@ -154,7 +163,7 @@ it, the one carrying it is preferred over the action's own binding, and a
 value none of several can take is `no_match`. The Rust client and `stobie`
 apply the same choice, then address the chosen control by its ID; the
 JavaScript client's `invoke` needs a selector that discovers one binding,
-such as one with `argument`. So `{"capability":"people.open"}` with `{"value":2}` invokes the
+such as one with `argument`, or several that perform the same thing. So `{"capability":"people.open"}` with `{"value":2}` invokes the
 row carrying 2 when it is presented, and otherwise the action's binding:
 
 ```sh
@@ -162,6 +171,22 @@ stobie discover people.open                # one per row, `= 2`, and the action'
 stobie invoke people.open --value 2        # the row carrying 2
 stobie invoke people.select --argument ada # the row carrying "ada"; no value needed
 ```
+
+Several controls can present one action with one value, such as Open for
+one row in two lists, or a dialog's dismiss action on its close control
+beside a Cancel button. Each is a binding of its own, with its own ID, so a
+caller can address any of them. Bindings that perform the same thing, which
+share their capability, pane, carried value, meaning, availability and
+semantic-invocation support (`CapabilityDescription::performs_same_as`), are
+one choice rather than `ambiguous`: their domains and labels may differ, and
+invocation resolves to the one with the least semantic ID. An `expected`
+target naming another of them keeps that one. Either way the action runs
+once, its receipt's `target` names the binding that ran, and its
+`after_observation` is the first observation that presents the effect, which
+is the same whichever control was chosen. Framework capabilities, such as
+two text fields' `stobie.set-text`, never perform the same thing. The Rust
+client's `discover_one`, and both clients' `invoke` without a target and
+`capability_enabled` wait, make the same choice.
 
 A row removed after discovery no longer matches (`no_match`). One removed
 after its invocation was admitted is refused when it runs: `unavailable`
@@ -180,10 +205,12 @@ over it (or deletes it), then returns focus to where it was. A single-line
 field therefore turns newlines into spaces, as a paste does, and a field's
 character limit applies. A field that held focus sees focus leave and return,
 as when a user clicks into another field and back. A disabled or password
-field is never set. Its receipt stays `queued`, and can no longer be
+field is never set; an agent in a browser fills a password by focusing the
+field and typing (see the [`stobie` guide](agent-cli.md#browser)). Its receipt stays `queued`, and can no longer be
 cancelled, until the edit has applied and the intents it caused have settled;
 it then completes with the observation that presents them. If the field is no
-longer presented by then, the receipt is rejected. Hosts publish each text
+longer presented by then, or it did not take the text, the receipt is
+rejected and says so; it never completes without the edit. Hosts publish each text
 field's text as its node's optional `value`; a combo box's `value` is its
 selected option's label.
 
@@ -213,7 +240,8 @@ callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
 observation; an intervening publication can return `stale_cursor`. Start a new
 bounded query when that occurs.
 
-`invoke` discovers exactly one target, sends its current resolved identity and
+`invoke` discovers exactly one target, or one among bindings that perform
+the same thing, sends its current resolved identity and
 meaning once, then reads the correlated receipt while it is queued. A
 completed receipt carries `after_observation`, the first observation that
 includes its effect. Wait for an observation at least that new before reading
@@ -239,6 +267,42 @@ reported explicitly. Host mutation history retains up to 256 IDs without
 eviction; reaching the limit fails closed rather than forgetting duplicate
 protection. A restart creates a new instance, so old receipts cannot be looked
 up in the new instance.
+
+## Reach controls out of view
+
+Inside a visible-only region (`observe_visible_only`), a control or text
+wholly scrolled out of view is not observed, so neither a query nor
+discovery finds it. A host that enables inspection offers the framework
+capability `stobie.reveal`, the application's, with its own ID. It takes the
+semantic ID of a node as its text argument and scrolls that node into view:
+on each pass that presents the node, the innermost scroll area around it
+scrolls until the node is wholly in view, or as far as it scrolls. Its
+receipt completes with the first observation that presents the node in
+view, and is rejected, saying why, when no pass presents the node, a modal
+dialog covers it, or the node cannot be scrolled into view at all.
+
+The Rust client's `discover_for_invocation`, and so `invoke` and
+`set_text`, `stobie invoke` and `stobie set-text`, and the JavaScript
+client's `invoke` reveal a selector's `id` when it discovers nothing, then
+discover again, all within one deadline; a failed reveal's reason appears
+in the `no_match`. `Client::reveal`, `stobie reveal ID` and the JavaScript
+`reveal(id)` reveal a node directly. A row's control has a derived ID, so
+invoke a row's action through its value instead (see above).
+
+```sh
+stobie set-text record-desk.notes.1013 'Revealed notes'   # reveals it first
+stobie reveal record-desk.notes.1013
+```
+
+A host test reveals a node with `AppHost::reveal` and runs passes until
+`AppHost::reveal_outcome` reports the outcome, then acts on it, for example
+by clicking it; the reveal works in any harness of the test's size. A
+reveal finds a node that a presentation recipe draws, including a control
+wholly clipped away, and an application node registered with
+`observe_node` at the rectangle it gives. It does not find a row that a
+virtualised list never lays out. Only the innermost scroll area around a
+node scrolls for it, and an invocation made while the view moves can still
+meet `stale_target`, which asks for discovery again.
 
 ## Content text
 
@@ -403,12 +467,15 @@ Host the application with `AppHost` (see the
 `Inspection`, installs its completion hook, and starts the native socket when
 `STOBIE_AUTOMATION_SOCKET` is set. In the browser, `web_handle!` exposes
 `enable_automation` and `automation_request`. Each completed, non-discarded pass
-is published with one binding per action target. Its identity is the first
-rendered control that presents the target, and its domain is that control's
-domain reference or, for a pane-scoped target, the pane. An application-scoped
-action with no rendered control keeps its default identity. A control
-carrying an argument has a binding of its own, and the action keeps its
-default identity unless a control without an argument presents it. A pane-scoped
+is published with one binding for each rendered control that presents an
+action, whose identity is the control's semantic ID and whose domain is that
+control's domain reference or, for a pane-scoped target, the pane. An
+application-scoped action with no rendered control keeps its default
+identity. A control carrying an argument has a binding of its own, and the
+action keeps its default identity unless a control without an argument
+presents it. Controls that present one action with one argument perform the
+same thing, and invoking them together resolves to one of them, as
+[above](#read-discover-and-invoke) describes. A pane-scoped
 action is discoverable where its control is rendered with a pane, and in the
 panes `Application::action_panes` lists. Facts come from
 `Application::observe`. Queued invocations drain on the application thread

@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { ApplicationClient, ApplicationError, SocketTransport, BrowserTransport,
-  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError, SOCKET_PATH_BYTES } from '../application-client.mjs';
+  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError, performsSameAs, SOCKET_PATH_BYTES,
+  REVEAL_CAPABILITY } from '../application-client.mjs';
 
 const rootRect = { min_x: 10, min_y: 20, max_x: 410, max_y: 320 };
 const targetRect = { min_x: 30, min_y: 40, max_x: 90, max_y: 80 };
@@ -40,6 +41,50 @@ function adapter(geometry = { x: 100, y: 200, width: 400, height: 300, device_sc
     click: async point => calls.push({ input: 'click', point }), key: async key => calls.push({ input: 'key', key }),
     text: async value => calls.push({ input: 'text', value }), capture: async path => calls.push({ input: 'capture', path }) };
 }
+
+test('reads wait for the first publication within their deadline', async () => {
+  let unpublished = 3;
+  const { client, scheduler } = await bound(op => {
+    if (unpublished > 0) { unpublished -= 1; return { error: { code: 'missing_observation', message: 'No completed pass' } }; }
+    if (op.op === 'discover') return { kind: 'discover', total: 1, capabilities: [{ target }] };
+    return { kind: 'observe', observation: observation() };
+  });
+  assert.equal((await client.observe()).id, 1);
+  assert.equal(scheduler.elapsed, 150);
+  unpublished = 2;
+  assert.equal((await client.discover({ capability: 'record.apply' })).total, 1);
+  // One that never publishes keeps its code at the deadline.
+  unpublished = Infinity;
+  await assert.rejects(client.observe({ timeoutMs: 120 }), { code: 'missing_observation' });
+});
+
+test('invoking a named node out of view reveals it, then discovers it again', async () => {
+  const field = { ...target, id: 'record.notes', capability: 'stobie.set-text' };
+  let revealed = false;
+  const { client, requests } = await bound(op => {
+    if (op.op === 'discover') {
+      if (op.selector.capability === REVEAL_CAPABILITY) return { kind: 'discover', total: 1, capabilities: [{ target: { ...target, id: REVEAL_CAPABILITY, capability: REVEAL_CAPABILITY } }] };
+      const shown = revealed && op.selector.id === 'record.notes';
+      return { kind: 'discover', total: shown ? 1 : 0, capabilities: shown ? [{ target: field }] : [] };
+    }
+    if (op.op === 'invoke' && op.expected.capability === REVEAL_CAPABILITY) {
+      if (op.arguments.value !== 'record.notes') {
+        return { kind: 'receipt', receipt: { request_id: 'r', state: 'rejected', error: { code: 'validation_failed', message: `${op.arguments.value} is not presented` } } };
+      }
+      revealed = true;
+    }
+    return { kind: 'receipt', receipt: { request_id: 'r', state: 'completed' } };
+  });
+  const receipt = await client.invoke({ id: 'record.notes', capability: 'stobie.set-text' }, { arguments: { value: 'a note' } });
+  assert.equal(receipt.state, 'completed');
+  const invoked = requests.filter(request => request.operation.op === 'invoke').map(request => request.operation.expected.id);
+  assert.deepEqual(invoked, [REVEAL_CAPABILITY, 'record.notes']);
+  // A node no pass presents fails loudly with the reveal's reason, and nothing else runs.
+  await assert.rejects(client.invoke({ id: 'record.gone', capability: 'stobie.set-text' }, { arguments: { value: 'x' } }),
+    error => { assert.equal(error.code, 'no_match'); assert.match(error.message, /record\.gone is not presented/); return true; });
+  assert.equal(requests.filter(request => request.operation.op === 'invoke').length, 3);
+  assert.equal((await client.reveal('record.gone')).state, 'rejected');
+});
 
 test('hello binds build and instance; subsequent requests carry it', async () => {
   const { client, requests } = await bound();
@@ -326,6 +371,22 @@ test('ambiguous discovery prevents semantic invocation', async () => {
   assert.equal(requests.filter(request => request.operation.op === 'invoke').length, 0);
 });
 
+test('controls that perform the same thing invoke the one with the least ID', async () => {
+  const binding = (id, overrides = {}) => ({ id, capability: 'record.apply', pane: 7, argument: 2,
+    availability: { state: 'enabled' }, semantic_invocable: true, target: { ...target, id }, ...overrides });
+  const same = [binding('record.list.apply'), binding('record.detail.apply', { domain })];
+  const { client, requests } = await bound((operation, request) => operation.op === 'discover'
+    ? { kind: 'discover', total: same.length, capabilities: same }
+    : { kind: 'receipt', receipt: { request_id: request.request_id, state: 'queued' } });
+  await client.invoke({ capability: 'record.apply' }, { wait: false });
+  assert.equal(requests.find(request => request.operation.op === 'invoke').operation.expected.id, 'record.detail.apply');
+  for (const other of [{ argument: 3 }, { pane: 8 }, { availability: { state: 'hidden' } }, { target: { ...target, meaning: 'apply:24' } }, { capability: 'stobie.copy-text' }]) {
+    const pair = [binding('record.list.apply'), binding('record.detail.apply', other)];
+    assert.equal(performsSameAs(pair[0], pair[1]), false, JSON.stringify(other));
+  }
+  assert.equal(performsSameAs(binding('a', { capability: 'stobie.copy-text' }), binding('b', { capability: 'stobie.copy-text' })), false);
+});
+
 test('slow discovery cannot consume the deadline then dispatch a mutation', async () => {
   const scheduler = fakeClock();
   const { client, requests } = await bound(() => {
@@ -412,13 +473,13 @@ test('capture preserves bracketed semantic/text observations and honest failure 
 
 test('capture keeps a successful screenshot when a bracketing observation fails', async () => {
   let reads = 0;
-  const { client } = await bound(() => ++reads === 1 ? { error: { code: 'missing_observation', message: 'Not ready' } }
+  const { client } = await bound(() => ++reads === 1 ? { error: { code: 'publication_limit', message: 'Too large' } }
     : { kind: 'observe', observation: observation() });
   const directory = await mkdtemp(join(tmpdir(), 'stobie-evidence-'));
   try {
     const evidence = await client.capture(adapter(), { path: join(directory, 'partial.png') });
     assert.equal(evidence.status, 'partial'); assert.equal(evidence.capture.status, 'captured');
-    assert.equal(evidence.before.error.code, 'missing_observation'); assert.equal(evidence.after.observation.id, 1);
+    assert.equal(evidence.before.error.code, 'publication_limit'); assert.equal(evidence.after.observation.id, 1);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 

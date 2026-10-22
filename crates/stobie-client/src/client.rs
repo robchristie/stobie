@@ -9,8 +9,8 @@ use stobie_protocol::{
     ApplicationIdentity, CapabilityDescription, CompletedObservation, INSPECTION_VERSION,
     InspectionCursor, InspectionErrorCode, InspectionLimits, InspectionOperation,
     InspectionOperationKind, InspectionReply, InspectionRequest, InspectionResult,
-    InspectionSelector, InvocationReceipt, ObservedNode, ReceiptState, RendererIdentity,
-    ResolvedTarget, SET_TEXT_CAPABILITY, UiNode,
+    InspectionSelector, InvocationReceipt, ObservedNode, REVEAL_CAPABILITY, ReceiptState,
+    RendererIdentity, ResolvedTarget, SET_TEXT_CAPABILITY, SemanticUiId, UiNode,
 };
 
 use crate::condition::{one_node, selected_ids};
@@ -72,7 +72,8 @@ impl Default for Page {
 #[derive(Clone, Debug, Default)]
 pub struct InvokeOptions {
     /// A previously discovered target; otherwise the selector must discover
-    /// exactly one.
+    /// exactly one, or several that perform the same thing
+    /// ([`CapabilityDescription::performs_same_as`]).
     pub expected: Option<ResolvedTarget>,
     /// The `arguments` object, such as `{"value": "ideas"}`.
     pub arguments: Option<serde_json::Value>,
@@ -238,9 +239,30 @@ impl<T: Transport> Client<T> {
     }
 
     fn read(&mut self, operation: InspectionOperation) -> Result<InspectionResult, ClientError> {
-        let id = self.request_id();
         let deadline = self.deadline();
-        self.request(operation, id, deadline)
+        self.read_by(operation, deadline)
+    }
+
+    /// Send a read, waiting out `missing_observation` until `deadline`: an
+    /// application that has just started publishes its first observation
+    /// after its first pass.
+    fn read_by(
+        &mut self,
+        operation: InspectionOperation,
+        deadline: Instant,
+    ) -> Result<InspectionResult, ClientError> {
+        loop {
+            let id = self.request_id();
+            match self.request(operation.clone(), id, deadline) {
+                Err(error)
+                    if error.code == "missing_observation"
+                        && Instant::now() + POLL_INTERVAL < deadline =>
+                {
+                    std::thread::sleep(POLL_INTERVAL);
+                }
+                result => return result,
+            }
+        }
     }
 
     /// Bind to the application and read its identity, limits and operations.
@@ -264,9 +286,16 @@ impl<T: Transport> Client<T> {
         })
     }
 
-    /// The latest completed observation.
+    /// The latest completed observation, waiting until the deadline for the
+    /// first one when the application has not published yet.
     pub fn observe(&mut self) -> Result<CompletedObservation, ClientError> {
-        let InspectionResult::Observe { observation } = self.read(InspectionOperation::Observe)?
+        let deadline = self.deadline();
+        self.observe_by(deadline)
+    }
+
+    fn observe_by(&mut self, deadline: Instant) -> Result<CompletedObservation, ClientError> {
+        let InspectionResult::Observe { observation } =
+            self.read_by(InspectionOperation::Observe, deadline)?
         else {
             unreachable!("checked kind")
         };
@@ -304,16 +333,29 @@ impl<T: Transport> Client<T> {
         selector: InspectionSelector,
         page: Page,
     ) -> Result<DiscoverPage, ClientError> {
+        let deadline = self.deadline();
+        self.discover_by(selector, page, deadline)
+    }
+
+    fn discover_by(
+        &mut self,
+        selector: InspectionSelector,
+        page: Page,
+        deadline: Instant,
+    ) -> Result<DiscoverPage, ClientError> {
         let InspectionResult::Discover {
             observation,
             total,
             capabilities,
             next_cursor,
-        } = self.read(InspectionOperation::Discover {
-            selector,
-            limit: page.limit,
-            cursor: page.cursor,
-        })?
+        } = self.read_by(
+            InspectionOperation::Discover {
+                selector,
+                limit: page.limit,
+                cursor: page.cursor,
+            },
+            deadline,
+        )?
         else {
             unreachable!("checked kind")
         };
@@ -325,7 +367,9 @@ impl<T: Transport> Client<T> {
         })
     }
 
-    /// The one capability a selector discovers.
+    /// The one capability a selector discovers, or, among several bindings
+    /// that perform the same thing, the one with the least ID, which an
+    /// invocation of them chooses.
     pub fn discover_one(
         &mut self,
         selector: InspectionSelector,
@@ -337,8 +381,10 @@ impl<T: Transport> Client<T> {
                 cursor: None,
             },
         )?;
+        if let Some(capability) = one_effect(&page) {
+            return Ok(capability.clone());
+        }
         match page.capabilities.as_slice() {
-            [capability] if page.total == 1 => Ok(capability.clone()),
             [] => Err(ClientError::new(
                 "no_match",
                 "the selector discovers no capability",
@@ -369,19 +415,85 @@ impl<T: Transport> Client<T> {
     /// selects, as the application does: a control carrying another value,
     /// such as another row's Open, is not a candidate, and the control
     /// carrying that value is preferred over the action's own binding.
+    ///
+    /// When nothing matches a selector that names an ID, such as a field
+    /// below the fold of a region observed only in view, and the application
+    /// offers [`REVEAL_CAPABILITY`], it reveals that ID and discovers again,
+    /// all within one deadline; a failed reveal says why in the `no_match`.
     pub fn discover_for_invocation(
+        &mut self,
+        selector: InspectionSelector,
+        arguments_for: impl FnMut(
+            &CapabilityDescription,
+        ) -> Result<Option<serde_json::Value>, ClientError>,
+    ) -> Result<(CapabilityDescription, Option<serde_json::Value>), ClientError> {
+        let deadline = self.deadline();
+        self.discover_for_invocation_by(selector, arguments_for, deadline)
+    }
+
+    fn discover_for_invocation_by(
         &mut self,
         selector: InspectionSelector,
         mut arguments_for: impl FnMut(
             &CapabilityDescription,
         ) -> Result<Option<serde_json::Value>, ClientError>,
+        deadline: Instant,
     ) -> Result<(CapabilityDescription, Option<serde_json::Value>), ClientError> {
-        let page = self.discover(
+        match self.discover_candidates(selector.clone(), &mut arguments_for, deadline) {
+            Err(error) if error.code == "no_match" => {}
+            result => return result,
+        }
+        let unmatched = |reason: Option<String>| {
+            ClientError::new(
+                "no_match",
+                match reason {
+                    Some(reason) => format!(
+                        "the selector discovers no capability, and revealing it failed: {reason}"
+                    ),
+                    None => "the selector discovers no capability".into(),
+                },
+                "run `stobie discover` to list capabilities and their IDs",
+            )
+        };
+        let Some(id) = selector
+            .id
+            .clone()
+            .filter(|_| selector.capability.as_deref() != Some(REVEAL_CAPABILITY))
+        else {
+            return Err(unmatched(None));
+        };
+        let revealed = match self.reveal_by(&id, deadline) {
+            Ok(revealed) => revealed,
+            // An application without reveal: the selector simply matches
+            // nothing.
+            Err(error) if error.code == "no_match" => return Err(unmatched(None)),
+            Err(error) => return Err(error),
+        };
+        if revealed.receipt.state != ReceiptState::Completed {
+            let reason = revealed.receipt.error.map_or_else(
+                || format!("{:?}", revealed.receipt.state),
+                |error| error.message,
+            );
+            return Err(unmatched(Some(reason)));
+        }
+        self.discover_candidates(selector, &mut arguments_for, deadline)
+    }
+
+    fn discover_candidates(
+        &mut self,
+        selector: InspectionSelector,
+        arguments_for: &mut impl FnMut(
+            &CapabilityDescription,
+        ) -> Result<Option<serde_json::Value>, ClientError>,
+        deadline: Instant,
+    ) -> Result<(CapabilityDescription, Option<serde_json::Value>), ClientError> {
+        let page = self.discover_by(
             selector,
             Page {
                 limit: stobie_protocol::INSPECTION_QUERY_LIMIT,
                 cursor: None,
             },
+            deadline,
         )?;
         if let [capability] = page.capabilities.as_slice()
             && page.total == 1
@@ -480,17 +592,29 @@ impl<T: Transport> Client<T> {
     /// `uncertain_completion`: read the receipt instead of repeating it.
     pub fn invoke(
         &mut self,
-        mut selector: InspectionSelector,
+        selector: InspectionSelector,
         options: InvokeOptions,
     ) -> Result<Invoked, ClientError> {
         let deadline = self.deadline();
+        self.invoke_by(selector, options, deadline)
+    }
+
+    fn invoke_by(
+        &mut self,
+        mut selector: InspectionSelector,
+        options: InvokeOptions,
+        deadline: Instant,
+    ) -> Result<Invoked, ClientError> {
         let arguments = options.arguments.unwrap_or(serde_json::Value::Null);
         let expected = match options.expected {
             Some(expected) => expected,
             None => {
                 let given = (!arguments.is_null()).then(|| arguments.clone());
-                let (capability, _) =
-                    self.discover_for_invocation(selector.clone(), |_| Ok(given.clone()))?;
+                let (capability, _) = self.discover_for_invocation_by(
+                    selector.clone(),
+                    |_| Ok(given.clone()),
+                    deadline,
+                )?;
                 capability
                     .parse_arguments(&arguments)
                     .map_err(ClientError::protocol)?;
@@ -563,6 +687,30 @@ impl<T: Transport> Client<T> {
         self.invoke(selector, options)
     }
 
+    /// Scroll the node `id` into view through the application's
+    /// [`REVEAL_CAPABILITY`], so that a region observed only in view presents
+    /// it and its controls can be discovered. The receipt fails, saying why,
+    /// when no pass presents the node, a dialog covers it, or it cannot be
+    /// scrolled into view.
+    pub fn reveal(&mut self, id: &SemanticUiId) -> Result<Invoked, ClientError> {
+        let deadline = self.deadline();
+        self.reveal_by(id, deadline)
+    }
+
+    fn reveal_by(&mut self, id: &SemanticUiId, deadline: Instant) -> Result<Invoked, ClientError> {
+        self.invoke_by(
+            InspectionSelector {
+                capability: Some(REVEAL_CAPABILITY.into()),
+                ..InspectionSelector::default()
+            },
+            InvokeOptions {
+                arguments: Some(serde_json::json!({ "value": id.0 })),
+                ..InvokeOptions::default()
+            },
+            deadline,
+        )
+    }
+
     /// Read a receipt until it leaves `queued` or the deadline passes.
     fn settle_receipt(
         &mut self,
@@ -607,7 +755,7 @@ impl<T: Transport> Client<T> {
         deadline: Instant,
     ) -> Result<CompletedObservation, ClientError> {
         loop {
-            let observation = self.observe()?;
+            let observation = self.observe_by(deadline)?;
             if observation.id >= id {
                 return Ok(observation);
             }
@@ -636,7 +784,7 @@ impl<T: Transport> Client<T> {
         let mut last: Option<CompletedObservation> = None;
         let mut last_error: Option<ClientError>;
         loop {
-            match self.observe() {
+            match self.observe_by(deadline) {
                 Ok(observation) => {
                     last_error = None;
                     if let Some(waited) = self.evaluate(condition, &observation, &mut baseline)? {
@@ -756,28 +904,48 @@ impl<T: Transport> Client<T> {
                 let page = self.discover(
                     selector.clone(),
                     Page {
-                        limit: 2,
+                        limit: 8,
                         cursor: None,
                     },
                 )?;
-                if page.total > 1 {
-                    return Err(ClientError::new(
-                        "ambiguous",
-                        format!("the selector discovers {} capabilities", page.total),
-                        "add the control's id, or pane or domain, to the selector",
-                    ));
-                }
-                page.capabilities
-                    .into_iter()
-                    .find(|capability| capability.availability.enabled())
-                    .map(|capability| Waited {
-                        observation: observation.clone(),
-                        node: None,
-                        capability: Some(capability),
-                    })
+                let capability = match one_effect(&page) {
+                    Some(capability) => capability.clone(),
+                    None if page.capabilities.is_empty() => return Ok(None),
+                    None => {
+                        return Err(ClientError::new(
+                            "ambiguous",
+                            format!("the selector discovers {} capabilities", page.total),
+                            "add the control's id, or pane or domain, to the selector",
+                        ));
+                    }
+                };
+                capability.availability.enabled().then(|| Waited {
+                    observation: observation.clone(),
+                    node: None,
+                    capability: Some(capability),
+                })
             }
         })
     }
+}
+
+/// The one capability a whole page discovers: a binding alone, or the least
+/// ID among bindings that perform the same thing, such as one action presented
+/// by two controls, as an invocation would resolve them.
+fn one_effect(page: &DiscoverPage) -> Option<&CapabilityDescription> {
+    let first = page.capabilities.first()?;
+    (page.next_cursor.is_none()
+        && page.total == page.capabilities.len()
+        && page
+            .capabilities
+            .iter()
+            .all(|capability| capability == first || capability.performs_same_as(first)))
+    .then(|| {
+        page.capabilities
+            .iter()
+            .min_by(|left, right| left.id.0.cmp(&right.id.0))
+    })
+    .flatten()
 }
 
 /// What the node a text or state condition names last presented, for a

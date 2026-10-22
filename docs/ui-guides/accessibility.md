@@ -122,7 +122,11 @@ snapshot, is the source.
   layer requests egui focus for its node and returns DOM focus to the canvas.
   A layer text field instead keeps DOM focus (see Values). While egui edits
   text, eframe's text agent holds DOM focus. It is named after the focused
-  field, so typing after clicking "Record title" edits that field.
+  field, so typing after clicking "Record title" edits that field. The name
+  comes from the field's visible label where it has one (AccessKit's
+  `labelled_by`, which egui's `Response::labelled_by` and Stobie's text field
+  recipe set), and otherwise from its label, as a browser names the layer
+  field.
 - **Values.** Text fields are hidden `input` and `textarea` elements whose
   `value` mirrors egui's text, so browsers and Playwright snapshots expose it.
   A focused layer field keeps DOM focus and can be edited in place, as
@@ -134,7 +138,8 @@ snapshot, is the source.
   DOM focus to the canvas and reach egui as the same keys. Cmd or Ctrl chords,
   other than the field's own selection, clipboard, undo and caret keys, reach
   egui as application shortcuts while focus stays in the field. Password
-  fields are never edited this way. Combo boxes
+  fields are never edited this way: click or tap one, which focuses eframe's
+  text agent, and type. Combo boxes
   expose their current text. Sliders expose `aria-valuenow`, minimum and
   maximum. Splitters expose the first pane's share as a percentage within
   10–90%, because Chromium ignores `aria-valuetext` on `separator`.
@@ -189,6 +194,15 @@ snapshot, is the source.
   at hidden nodes are dropped before the pass sees them. The
   [interactions guide](interactions.md#dialogs) describes the keyboard and
   agent rules.
+- **Content Security Policy.** The layer sets every style through the CSSOM
+  and keeps its rules in a constructed stylesheet that it adopts into the
+  document, so it runs under `style-src 'self'` without `'unsafe-inline'` or
+  a nonce. eframe's text agent and the startup loader also style only through
+  the CSSOM. A page must still allow its own inline styles: the `<style>`
+  element in the page `stobie new` writes needs its hash in `style-src`, or
+  moves into a stylesheet file. A browser without adoptable stylesheets
+  (Safari before 16.4) gets the rules in `<style>` elements, which such a
+  policy blocks.
 - **Limits.** The layer is positioned from the canvas's client rectangle on
   each pass. A page that scrolls, or transforms an ancestor, without a pass
   leaves it misaligned until the next pass. It is not a substitute for a text
@@ -228,7 +242,9 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 `tools/aria-layer-browser.mjs` checks each application in Chromium:
 
 - the CDP accessibility tree against reviewed expectations in
-  `tools/aria-layer-expectations.json`;
+  `tools/aria-layer-expectations.json`, with every page served under
+  `style-src 'self'` plus the hash of its own `<style>` element, and no
+  policy violation reported;
 - axe-core, with no serious or critical violation;
 - an idle application presents no frame and writes nothing;
 - hover frames write nothing;
@@ -248,13 +264,17 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
   it, `locator.fill()` edits a single-line and a multiline field as typing
   would, a status change reaches its polite live region, and destroying the host
   restores the canvas;
-- in Record Desk with touch, a tap on the title focuses eframe's text agent
-  before the next animation frame. A tap on the native notes field focuses
+- in Record Desk with touch, a tap on the title, a native single-line field,
+  focuses its element before the next animation frame. A tap on the native notes field focuses
   its element there, shown and topmost over the field and outside the layer
   container, with one notes textbox in its region. A later drag on it is not
   claimed for egui, and it takes focus back from the canvas while egui keeps
   it. Inserted text reaches egui, the active field presents no frames while idle, and a tap on the
-  title returns it to the layer.
+  title returns it to the layer;
+- in the Gallery with touch, a tap on the form's password field, which egui's
+  own text edit draws and no native field replaces, focuses eframe's text
+  agent before the next animation frame, and keys typed then reach the
+  field.
 
 This proves the browser accessibility tree only. It is not screen-reader
 qualification. `tools/aria-layer-orca/run.sh` runs Record Desk under actual

@@ -7,8 +7,8 @@ use stobie_protocol::{
     BuildIdentity, CapabilityDescription, CollectionMetadata, CompletedObservation,
     INSPECTION_VERSION, InspectionError, InspectionErrorCode, InspectionLimits,
     InspectionOperation, InspectionReply, InspectionRequest, InspectionResult, InspectionSelector,
-    InvocationReceipt, ObservationValue, ReceiptState, ResolvedTarget, SET_TEXT_CAPABILITY,
-    SemanticUiId, TextLayoutObservation, UiNode, UiRect, UiRole, UiSnapshot,
+    InvocationReceipt, ObservationValue, REVEAL_CAPABILITY, ReceiptState, ResolvedTarget,
+    SET_TEXT_CAPABILITY, SemanticUiId, TextLayoutObservation, UiNode, UiRect, UiRole, UiSnapshot,
 };
 
 use crate::{Client, ClientError, Condition, ErrorClass, InvokeOptions, Transport};
@@ -29,6 +29,12 @@ struct App {
     receipt_reads: usize,
     after: u64,
     lose_invoke_reply: bool,
+    /// How many more reads it answers `missing_observation`, as before its
+    /// first publication.
+    unpublished: usize,
+    /// The IDs a reveal has scrolled into view; `desk.far` is presented
+    /// below the fold until revealed.
+    revealed: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -97,7 +103,32 @@ fn capabilities() -> Vec<CapabilityDescription> {
         row("people.open.1", Some(1)),
         row("people.open.2", Some(2)),
         row("people.open", None),
+        // A field below the fold, observed only once revealed.
+        capability(
+            "desk.far",
+            SET_TEXT_CAPABILITY,
+            ArgumentContract::Text { max_length: None },
+        ),
+        capability(
+            REVEAL_CAPABILITY,
+            REVEAL_CAPABILITY,
+            ArgumentContract::Text {
+                max_length: Some(512),
+            },
+        ),
+        // Archive, presented for person 2 in two lists: two controls that
+        // perform the same thing.
+        archive("people.list.archive.2"),
+        archive("people.recent.archive.2"),
     ]
+}
+
+fn archive(id: &str) -> CapabilityDescription {
+    let mut capability = row(id, Some(2));
+    capability.capability = "people.archive".into();
+    capability.target.capability = capability.capability.clone();
+    capability.target.meaning = capability.capability.clone();
+    capability
 }
 
 fn row(id: &str, carried: Option<u32>) -> CapabilityDescription {
@@ -119,6 +150,26 @@ impl Transport for Fake {
     fn request(&mut self, body: &str, _deadline: Instant) -> Result<String, ClientError> {
         let request: InspectionRequest = serde_json::from_str(body).expect("a valid request");
         let mut app = self.0.borrow_mut();
+        let read = matches!(
+            request.operation,
+            InspectionOperation::Observe
+                | InspectionOperation::Query { .. }
+                | InspectionOperation::Discover { .. }
+        );
+        if read && app.unpublished > 0 {
+            app.unpublished -= 1;
+            return Ok(serde_json::to_string(&InspectionReply {
+                version: INSPECTION_VERSION,
+                request_id: request.request_id,
+                instance: app.instance.clone(),
+                result: None,
+                error: Some(InspectionError {
+                    code: InspectionErrorCode::MissingObservation,
+                    message: "no observation has been published".into(),
+                }),
+            })
+            .unwrap());
+        }
         let receipt = |state, after_observation| InspectionResult::Receipt {
             receipt: InvocationReceipt {
                 request_id: "mutation".into(),
@@ -174,10 +225,13 @@ impl Transport for Fake {
                 let capabilities: Vec<_> = capabilities()
                     .into_iter()
                     .filter(|capability| {
-                        selector
-                            .capability
-                            .as_ref()
-                            .is_none_or(|name| *name == capability.capability)
+                        (capability.id.0 != "desk.far"
+                            || app.revealed.iter().any(|id| id == "desk.far"))
+                            && selector.id.as_ref().is_none_or(|id| *id == capability.id)
+                            && selector
+                                .capability
+                                .as_ref()
+                                .is_none_or(|name| *name == capability.capability)
                             && selector.argument.as_ref().is_none_or(|argument| {
                                 capability.argument.as_ref().is_some_and(|carried| {
                                     stobie_protocol::same_argument(argument, carried)
@@ -198,9 +252,32 @@ impl Transport for Fake {
                 ..
             } => {
                 app.targets.push(expected.id.0.clone());
-                app.invocations.push((expected.capability, arguments));
+                app.invocations
+                    .push((expected.capability.clone(), arguments.clone()));
                 if app.lose_invoke_reply {
                     return Err(ClientError::connection("the socket closed", "retry"));
+                }
+                if expected.capability == REVEAL_CAPABILITY {
+                    let id = arguments["value"].as_str().unwrap_or_default().to_owned();
+                    let mut receipt = receipt(ReceiptState::Completed, Some(app.observation + 1));
+                    if id == "desk.far" {
+                        app.revealed.push(id);
+                    } else if let InspectionResult::Receipt { receipt } = &mut receipt {
+                        receipt.state = ReceiptState::Rejected;
+                        receipt.after_observation = None;
+                        receipt.error = Some(InspectionError {
+                            code: InspectionErrorCode::ValidationFailed,
+                            message: format!("{id} is not presented"),
+                        });
+                    }
+                    return Ok(serde_json::to_string(&InspectionReply {
+                        version: INSPECTION_VERSION,
+                        request_id: request.request_id,
+                        instance: app.instance.clone(),
+                        result: Some(receipt),
+                        error: None,
+                    })
+                    .unwrap());
                 }
                 app.after = app.observation + 3;
                 receipt(ReceiptState::Queued, None)
@@ -527,4 +604,115 @@ fn a_value_invokes_the_rows_control_that_carries_it() {
         "{error}"
     );
     assert_eq!(fake.0.borrow().invocations.len(), 3);
+}
+
+#[test]
+fn reads_wait_for_the_first_publication_within_the_deadline() {
+    let (mut client, fake) = client();
+    fake.0.borrow_mut().unpublished = 3;
+    assert!(client.observe().is_ok());
+    fake.0.borrow_mut().unpublished = 3;
+    let page = client
+        .discover(select("desk.edit-category"), crate::Page::default())
+        .unwrap();
+    assert_eq!(page.total, 1);
+    // An invocation discovers its target after the first publication too.
+    fake.0.borrow_mut().unpublished = 3;
+    client
+        .invoke(
+            select("desk.edit-category"),
+            InvokeOptions {
+                arguments: Some(serde_json::json!({ "value": "ideas" })),
+                ..InvokeOptions::default()
+            },
+        )
+        .unwrap();
+    // One that never publishes fails at the deadline with its code.
+    let mut client = client.with_timeout(Duration::from_millis(200));
+    fake.0.borrow_mut().unpublished = usize::MAX;
+    let started = Instant::now();
+    let error = client.observe().unwrap_err();
+    assert_eq!(error.code, "missing_observation", "{error}");
+    assert!(started.elapsed() >= Duration::from_millis(100));
+}
+
+#[test]
+fn set_text_on_a_field_out_of_view_reveals_it_first() {
+    let (mut client, fake) = client();
+    let far = InspectionSelector {
+        id: Some(SemanticUiId::new("desk.far")),
+        ..InspectionSelector::default()
+    };
+    let invoked = client
+        .set_text(far, "a note", InvokeOptions::default())
+        .unwrap();
+    assert_eq!(invoked.receipt.state, ReceiptState::Completed);
+    let app = fake.0.borrow();
+    assert_eq!(app.targets, [REVEAL_CAPABILITY, "desk.far"]);
+    assert_eq!(
+        app.invocations[0],
+        (
+            REVEAL_CAPABILITY.to_owned(),
+            serde_json::json!({ "value": "desk.far" })
+        )
+    );
+}
+
+#[test]
+fn an_id_no_pass_presents_fails_with_the_reveals_reason() {
+    let (mut client, fake) = client();
+    let error = client
+        .set_text(
+            InspectionSelector {
+                id: Some(SemanticUiId::new("desk.gone")),
+                ..InspectionSelector::default()
+            },
+            "text",
+            InvokeOptions::default(),
+        )
+        .unwrap_err();
+    assert_eq!(error.code, "no_match", "{error}");
+    assert!(
+        error.message.contains("desk.gone is not presented"),
+        "{error}"
+    );
+    // Only the reveal ran; nothing was set.
+    assert_eq!(fake.0.borrow().targets, [REVEAL_CAPABILITY]);
+    // A direct reveal reports the same failure on its receipt.
+    let revealed = client.reveal(&SemanticUiId::new("desk.gone")).unwrap();
+    assert_eq!(revealed.receipt.state, ReceiptState::Rejected);
+}
+
+#[test]
+fn controls_that_perform_the_same_thing_resolve_to_the_least_id() {
+    let (mut client, fake) = client();
+    client
+        .invoke(select("people.archive"), InvokeOptions::default())
+        .unwrap();
+    client
+        .invoke(
+            select("people.archive"),
+            InvokeOptions {
+                arguments: Some(serde_json::json!({ "value": 2 })),
+                ..InvokeOptions::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        fake.0.borrow().targets,
+        ["people.list.archive.2", "people.list.archive.2"]
+    );
+    assert_eq!(
+        client.discover_one(select("people.archive")).unwrap().id.0,
+        "people.list.archive.2"
+    );
+    let waited = client
+        .wait(&Condition::CapabilityEnabled {
+            selector: select("people.archive"),
+        })
+        .unwrap();
+    assert_eq!(waited.capability.unwrap().id.0, "people.list.archive.2");
+    // Rows carrying different values remain several choices.
+    let error = client.discover_one(select("people.open")).unwrap_err();
+    assert_eq!(error.code, "ambiguous", "{error}");
 }

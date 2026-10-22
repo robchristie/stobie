@@ -127,6 +127,19 @@ renderer". Without GPU acceleration, Chromium may need
 `--use-angle=swiftshader --enable-unsafe-swiftshader` for WebGL2. The DevTools
 client is Lantern's `lantern-core`, pinned to an exact revision.
 
+Text typed into the page, with Playwright's `keyboard.type` or `fill()` or
+with DevTools' `Input.insertText`, reaches egui through eframe's hidden text
+agent or a layer field (see the
+[browser ARIA layer](ui-guides/accessibility.md#browser-aria-layer)).
+Chromium, headless or headful, fires `input` events in those only when
+fontconfig finds a font; without one, the keys arrive and the text is
+dropped. On a host without system fonts, or a Chromium given its own
+libraries, set `FONTCONFIG_FILE` to a `fonts.conf` whose `<dir>` names a font
+directory, such as Stobie's `crates/stobie-ui-egui/assets/fonts`. `set-text`
+needs neither a font nor focus, because it edits through the application
+interface. A password field takes no `set-text`: click or tap it, which
+focuses eframe's text agent, then type with the keyboard.
+
 ## Selectors
 
 Commands that name controls take `--id`, `--role`, `--name`,
@@ -140,7 +153,9 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
 
 ## Commands
 
-- `observe` outlines the latest observation: application facts, collections,
+- `observe` outlines the latest observation: facts, including the
+  framework's `stobie.theme` (`light` or `dark`) and `stobie.contrast`
+  (`standard` or `high`) for the theme the page is drawn in, collections,
   audits, then one line per node with its role, name, state, value, the
   argument it carries, stable `#ID` and `[capabilities]`, indented by
   containment. A text field's value
@@ -166,13 +181,26 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   were `added` or `removed` (`--json` lists up to 32). A choice value may also be its option's
   label, in any case. When a capability is presented on several rows, the
   value chooses the row's control that carries it, or else the action's own
-  binding; a row's control needs no value. `--request-id` makes a retry safe; `--no-wait` returns once the
+  binding; a row's control needs no value. Controls that perform the same
+  thing, such as one row's Open in two lists, are one choice, and the one
+  with the least ID runs. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file). A
   composer's field takes its draft this way, and its send control carries
   the draft, so `invoke SEND --id ID` then sends it; see
   [composing and sending](ui-guides/interactions.md#composing-and-sending).
+  The receipt is rejected when the field did not take the text, for example
+  because the application stopped presenting it before the edit applied.
+- `reveal ID` scrolls the node with that semantic ID into view, through the
+  application's `stobie.reveal` capability (tagged `reveal` among the other
+  capabilities), so that a region observed only in view presents it and
+  its controls can be discovered. It completes with the first observation
+  that presents the node in view, and is rejected, saying why, when no pass
+  presents the node, a modal dialog covers it, or it cannot be scrolled
+  into view. `invoke` and `set-text` reveal an `--id` they do not discover,
+  then discover again, within one `--timeout`; see
+  [reaching controls out of view](application-interface.md#reach-controls-out-of-view).
 - `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
   is its URL, in a new browser tab (natively, the default browser), so the
   application stays open. The outline tags links `[open-link]`.
@@ -194,6 +222,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
 - `capabilities` prints the command registry as JSON without connecting.
 
 `--timeout MS` (default 15000) bounds each command, including its waits.
+An application that has just started answers `missing_observation` until its
+first pass publishes; every command that reads an observation waits for it
+within the timeout.
 
 ## Output
 
@@ -228,6 +259,10 @@ is printed on standard output with status 1.
 ## The Node client
 
 `tools/application-client.mjs` remains the JavaScript client the Playwright
-test harness uses, including its physical input adapters. A parity smoke
-(`tools/stobie-cli-smoke.sh`) runs the same scenarios through it and through
-`stobie`, natively and in the browser, and requires the same outcomes.
+test harness uses, including its physical input adapters. Its reads wait out
+`missing_observation` within their deadline, its `reveal(id)` scrolls a node
+into view, and `invoke` reveals an `id` it does not discover, as `stobie`
+does. A parity smoke (`tools/stobie-cli-smoke.sh`) runs the same scenarios
+through it and through `stobie`, natively and in the browser, and requires
+the same outcomes; in the browser it also sets the text of a field below
+the fold through each.

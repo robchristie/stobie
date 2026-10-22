@@ -220,6 +220,7 @@ impl PresentationContext {
     }
 
     fn push_node(&mut self, ui: &Ui, mut node: UiNode) {
+        crate::observation::reveal_at(ui, &node.id, node.rect.into());
         if node.pane.is_none() {
             node.pane = self.pane;
         }
@@ -579,6 +580,9 @@ impl PresentationContext {
         if overflowed {
             report_overflow(ui, &node.name, response.rect, row);
         }
+        // A control wholly clipped away records no node, but a reveal still
+        // finds it, at its whole rectangle.
+        crate::observation::reveal_at(ui, &node.id, response.rect);
         if response.interact_rect.is_positive() || overflowed {
             self.push_node(ui, node);
         }
@@ -694,6 +698,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if response.interact_rect.is_positive() {
             let mut node = crate::navigation_item_semantic_node(
                 &response,
@@ -751,6 +756,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if response.interact_rect.is_positive() {
             let mut node = crate::list_row_semantic_node(
                 &response,
@@ -812,6 +818,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if response.interact_rect.is_positive() {
             let mut node = crate::avatar_item_semantic_node(
                 &response,
@@ -974,6 +981,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if let Some(mut node) =
             crate::link_semantic_node(&response, spec, identity, self.parent.clone())
         {
@@ -1142,6 +1150,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), chip.response.rect);
         if let Some(node) = crate::status_chip_semantic_node(
             &chip,
             spec,

@@ -15,8 +15,8 @@ use serde::Serialize;
 use super::*;
 use crate::{
     Action, ArgumentContract, COPY_CONFIRMATION, COPY_TEXT_CAPABILITY, CapabilityDescription,
-    CopySpec, InspectionErrorCode, InspectionOperation, InspectionResult, InspectionSelector,
-    InvocationReceipt, PresentationScope, ReceiptState,
+    CopySpec, InspectionErrorCode, InspectionOperation, InspectionRequest, InspectionResult,
+    InspectionSelector, InvocationReceipt, PresentationScope, ReceiptState,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -574,7 +574,7 @@ fn each_code_block_in_a_message_bubble_copies_its_own_text() {
             .filter(|node| node.role == UiRole::Button)
             .collect();
         let names: Vec<_> = controls.iter().map(|node| node.name.as_str()).collect();
-        assert_eq!(names, ["Copy code 1", "Copy code 2"]);
+        assert_eq!(names, ["Copy code", "Copy code 2"]);
         // The controls are inside the bubble, which holds them.
         let bubble = snapshot
             .nodes
@@ -596,7 +596,7 @@ fn each_code_block_in_a_message_bubble_copies_its_own_text() {
             std::mem::take(&mut *copied.borrow_mut()),
             ["for x in xs:\n    print(x)\n"]
         );
-        harness.get_by_label("Copy code 1").click();
+        harness.get_by_label("Copy code").click();
         harness.run();
         assert_eq!(
             std::mem::take(&mut *copied.borrow_mut()),
@@ -640,10 +640,11 @@ fn a_growing_reply_keeps_each_controls_key_and_confirmation() {
     // A second block arrives while the first confirms.
     harness.state_mut().as_mut().unwrap().app_mut().source = REPLY.to_owned();
     harness.run();
+    // The first control keeps its name as well as its key.
     let snapshot = reply(&harness).ui_snapshot();
     assert_eq!(
         snapshot.node(&id(0).semantic_id()).unwrap().name,
-        "Copy code 1"
+        "Copy code"
     );
     assert_eq!(
         snapshot.node(&id(1).semantic_id()).unwrap().name,
@@ -651,4 +652,88 @@ fn a_growing_reply_keeps_each_controls_key_and_confirmation() {
     );
     assert_eq!(status(&harness, 0).as_deref(), Some("Copied"));
     assert_eq!(status(&harness, 1), None);
+    // AccessKit names them as the snapshot does.
+    harness.get_by_label("Copy code");
+    harness.get_by_label("Copy code 2");
+    let mismatches = crate::audit_accesskit(snapshot, &accesskit_tree(&harness));
+    assert!(mismatches.is_empty(), "{mismatches:?}");
+    // Each is bound under its own ID, and invoking the second copies its block.
+    harness
+        .state_mut()
+        .as_mut()
+        .unwrap()
+        .enable_inspection(Inspection::new("reply-test"));
+    harness.run();
+    let handle = |harness: &Harness<'_, Option<AppHost<Reply>>>, id: &str, operation| {
+        let inspection = reply(harness).inspection().unwrap();
+        let reply = inspection.handle(InspectionRequest {
+            version: 1,
+            request_id: id.into(),
+            instance: Some(inspection.instance()),
+            operation,
+        });
+        reply
+            .result
+            .unwrap_or_else(|| panic!("{id} failed: {:?}", reply.error))
+    };
+    let selector = InspectionSelector {
+        capability: Some(COPY_TEXT_CAPABILITY.into()),
+        ..Default::default()
+    };
+    let InspectionResult::Discover { capabilities, .. } = handle(
+        &harness,
+        "discover",
+        InspectionOperation::Discover {
+            selector: selector.clone(),
+            limit: 8,
+            cursor: None,
+        },
+    ) else {
+        panic!("not a discovery")
+    };
+    let ids: Vec<_> = capabilities
+        .iter()
+        .map(|capability| capability.id.clone())
+        .collect();
+    assert_eq!(ids, [id(0).semantic_id(), id(1).semantic_id()]);
+    copied.borrow_mut().clear();
+    let InspectionResult::Receipt { receipt } = handle(
+        &harness,
+        "copy-second",
+        InspectionOperation::Invoke {
+            selector: InspectionSelector {
+                id: Some(id(1).semantic_id()),
+                ..selector
+            },
+            expected: capabilities[1].target.clone(),
+            arguments: serde_json::Value::Null,
+        },
+    ) else {
+        panic!("not a receipt")
+    };
+    assert_eq!(receipt.state, ReceiptState::Queued, "{receipt:?}");
+    harness.run();
+    assert_eq!(copied.borrow().as_slice(), ["for x in xs:\n    print(x)\n"]);
+}
+
+/// The AccessKit tree as kittest holds it, for the parity audit.
+fn accesskit_tree<S>(harness: &Harness<'_, S>) -> egui::accesskit::TreeUpdate {
+    fn collect(
+        node: egui_kittest::kittest::AccessKitNode<'_>,
+        update: &mut egui::accesskit::TreeUpdate,
+    ) {
+        update.nodes.push((node.locate().0, node.data().clone()));
+        for child in node.children() {
+            collect(child, update);
+        }
+    }
+    let root = harness.kittest_state().root();
+    let mut update = egui::accesskit::TreeUpdate {
+        nodes: Vec::new(),
+        tree: Some(egui::accesskit::Tree::new(root.locate().0)),
+        tree_id: egui::accesskit::TreeId::ROOT,
+        focus: root.locate().0,
+    };
+    collect(root, &mut update);
+    update
 }

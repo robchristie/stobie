@@ -13,6 +13,9 @@ image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
 # Native and browser entry points for hosted applications. They leave GPU backends to the
 # application: depend on eframe with its `wgpu` feature, or the browser build has no wgpu backend.
 eframe = ["dep:eframe", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:console_error_panic_hook"]
+# Host tests for applications (`stobie_ui_egui::testing`, `web_push::PushDouble`):
+# enable it in dev-dependencies only.
+test-support = ["dep:egui_kittest"]
 
 [dependencies]
 egui.workspace = true
@@ -26,6 +29,8 @@ serde.workspace = true
 serde_json.workspace = true
 # CommonMark parsing for the Markdown recipe (MIT); no HTML renderer or command-line tool.
 pulldown-cmark = { version = "0.13.4", default-features = false }
+# The `test-support` harness (MIT OR Apache-2.0), already the crate's test harness.
+egui_kittest = { workspace = true, optional = true }
 # Applications choose further eframe features; Linux windowing needs a winit backend to build.
 # `links` lets the link recipe open URLs in the platform's default browser natively.
 eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_default_features", "x11", "wayland", "links"], optional = true }
@@ -39,10 +44,11 @@ jiff = "0.2.38"
 wasm-bindgen.workspace = true
 js-sys = "0.3.104"
 wasm-bindgen-futures = { workspace = true, optional = true }
-# eframe already enables most of these features, for the ARIA layer, renderer
-# policy and the copy recipe's clipboard; MessageEvent, ServiceWorker* and Url
-# serve Web Push (src/web_push.rs).
-web-sys = { workspace = true, features = ["AddEventListenerOptions", "Clipboard", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }
+# eframe already enables most of these features, for the ARIA layer (Css* and
+# StyleSheet style it through the CSSOM), renderer policy and the copy recipe's
+# clipboard; MessageEvent, ServiceWorker* and Url serve Web Push
+# (src/web_push.rs).
+web-sys = { workspace = true, features = ["AddEventListenerOptions", "Clipboard", "console", "CssStyleDeclaration", "CssStyleSheet", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "StyleSheet", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [[example]]

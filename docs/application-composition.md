@@ -153,8 +153,9 @@ rearrange them), followed by its actions, rechecking each action's availability
 first. It repaints only when state changed, an error was shown, a dock drag is
 active or you call `Frame::request_repaint(reason)`;
 `Frame::request_repaint_after(reason, delay)` schedules a later pass, and
-`PassContext` offers both to `prepare`. Intents sent from outside a pass apply
-before `prepare` and present in that pass (see
+`PassContext` offers both to `prepare`. A change in whether the page or window
+can be seen reaches `Application::visibility_changed`, and then intents sent
+from outside a pass apply, before `prepare`, and present in that pass (see
 [Receive events from outside](#receive-events-from-outside)). To
 persist to eframe storage, implement `Application::save`; return true from
 `take_save_request` after an action such as "Save layout" to save at once. The
@@ -220,6 +221,14 @@ if intents.send(FeedIntent::Event(event)).is_err() {
   (`HIDDEN_RECHECK`) until a visible pass presents them, so a page shown again
   catches up without input. A hidden application with nothing new does
   nothing.
+- `Application::visibility_changed` tells the application when the page or
+  window is hidden or shown again (`AppHost::visibility` reads it), before the
+  intents sent since, so it can stop marking what arrives as read while
+  nobody can see it and mark what is open as read once it is shown. The host
+  starts out `HostVisibility::Visible`. In the browser the page's
+  `visibilitychange` wakes the host; natively eframe reports a minimised or
+  fully occluded window. A window behind others but not covered, or a page
+  that has lost focus to another window, is still visible.
 - A stream that changes state on every pass delays an agent's `set-text`
   until it pauses, because a semantic edit waits for a pass that state did
   not change under.
@@ -257,6 +266,51 @@ that reads standard input on a thread.
   By default `preferences` is `UiPreferences::system()`, which follows the
   system's light or dark appearance and, in the browser, its text size; start
   an override from it to keep following what the person has not chosen.
+
+## Test it on the host
+
+Host tests run the application as eframe does, in an egui_kittest harness.
+Enable the UI crate's `test-support` feature in the application's
+dev-dependencies:
+
+```toml
+[dev-dependencies]
+stobie-ui-egui = { path = "...", features = ["test-support"] }
+```
+
+`stobie_ui_egui::testing` re-exports `egui_kittest`, so its queries, such as
+`egui_kittest::kittest::Queryable`, need no dependency of their own.
+
+`stobie_ui_egui::testing::host_harness(size, app)` builds a harness that
+runs `app` on an `AppHost` in the harness's own context, so the senders that
+`Application::started` receives and the host's repaint requests wake it:
+
+```text
+let mut harness = host_harness(egui::vec2(390.0, 844.0), Feed::default());
+harness.state().intent_sender().send(FeedIntent::Event(event)).unwrap();
+harness.run();
+assert_eq!(harness.state().app().events().len(), 1);
+harness.get_by_label("Clear").click();
+harness.run();
+```
+
+- The harness's state dereferences to the `AppHost`, so `app()`,
+  `app_mut()`, `ui_snapshot()`, `submit()` and `repaint_reasons()` are a call
+  away.
+- The application is laid out at exactly the harness's size, with no margin,
+  as in a window or browser canvas of that size, so a breakpoint such as
+  `PaneWidthClass`'s 720 points flips at that width.
+- `testing::set_visibility(&mut harness, HostVisibility::Hidden)` hides the
+  page as a browser would: each step then reports the change and applies
+  sent intents but runs no pass, until the harness is made visible.
+- `host_harness_with(builder, create)` takes egui_kittest's builder, for
+  pixels per point or step length, and creates the application from the
+  harness's context; an application that needs eframe's creation context
+  makes one with `eframe::CreationContext::_new_kittest`.
+- `web_push::PushDouble` stands in for the browser's Web Push; see
+  [Web Push](web-push.md#test-it-natively).
+
+The [Live Feed](../apps/live-feed/src/tests.rs) tests use it.
 
 ## Add undo and redo
 

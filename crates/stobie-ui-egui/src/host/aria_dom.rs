@@ -45,6 +45,11 @@
 //! the text. It returns to the layer when it loses DOM focus or egui's focus
 //! leaves its field.
 //!
+//! The layer styles its elements through the CSSOM and its rules through a
+//! constructed stylesheet that the document adopts, never through `style`
+//! attributes or `<style>` text, so it runs under a Content-Security-Policy
+//! whose `style-src` allows only the page's own styles.
+//!
 //! DOM objects are not `Send`, but egui plugins must be. The plugin therefore
 //! holds only a key into a thread-local registry; WASM runs the UI on one
 //! thread.
@@ -263,8 +268,10 @@ struct Layer {
     agent_tap: Option<(NodeId, u8)>,
     /// The native fields of the last pass, by element ID.
     native_fields: HashMap<String, NativeTextRegistration>,
+    /// The rule that lets hit targets take pointer input.
+    hit_sheet: Sheet,
     /// The visible host of native fields and its stylesheet, made on first use.
-    native_host: Option<(HtmlElement, Element)>,
+    native_host: Option<(HtmlElement, Sheet)>,
     native: Option<ActiveNative>,
     /// Whether Stobie's face is registered for native fields.
     native_font: bool,
@@ -300,7 +307,7 @@ impl Layer {
         let container: HtmlElement = document.create_element("div")?.unchecked_into();
         let container_id = format!("{}layer-{key}", aria::ARIA_ID_PREFIX);
         container.set_id(&container_id);
-        container.set_attribute("style", CONTAINER_STYLE)?;
+        set_style(&container, CONTAINER_STYLE);
         canvas.after_with_node_1(&container)?;
         let canvas_role = canvas.get_attribute("role");
         canvas.set_attribute("role", "application")?;
@@ -349,13 +356,8 @@ impl Layer {
         let options = web_sys::AddEventListenerOptions::new();
         options.set_capture(true);
         options.set_passive(false);
-        let style = document.create_element("style")?;
-        style.set_text_content(Some(HIT_RULE));
-        container.append_child(&style)?;
-        let rule = js_sys::Reflect::get(&style, &"sheet".into())
-            .and_then(|sheet| js_sys::Reflect::get(&sheet, &"cssRules".into()))
-            .and_then(|rules| js_sys::Reflect::get(&rules, &0.into()))
-            .and_then(|rule| js_sys::Reflect::get(&rule, &"style".into()))?;
+        let hit_sheet = Sheet::new(&document, &container, HIT_RULE)?;
+        let rule = hit_sheet.first_rule_style()?;
         for event_name in FORWARDED {
             let target = canvas.clone();
             let rule = rule.clone();
@@ -438,6 +440,7 @@ impl Layer {
             tap_focused: false,
             agent_tap: None,
             native_fields: HashMap::new(),
+            hit_sheet,
             native_host: None,
             native: None,
             native_font: false,
@@ -448,9 +451,11 @@ impl Layer {
 
     fn remove(mut self) {
         let _ = self.deactivate_native(false);
-        if let Some((host, _)) = &self.native_host {
+        if let Some((host, rules)) = &self.native_host {
             host.remove();
+            rules.remove(&self.document);
         }
+        self.hit_sheet.remove(&self.document);
         for (event, listener) in &self.listeners {
             let _ = self
                 .container
@@ -502,18 +507,23 @@ impl Layer {
                     .is_some_and(|(host, _)| host.contains(Some(&active))))
                 && matches!(active.tag_name().as_str(), "INPUT" | "TEXTAREA")
         });
+        // Named as the field is: by its visible label where it has one.
         let name = self
             .tree
             .active
             .as_ref()
             .filter(|_| !in_layer_field)
-            .and_then(|id| self.tree.elements.get(id))
-            .filter(|element| element.tag != "div")
-            .and_then(|element| element.attributes.get("aria-label"))
-            .map_or("Text entry", String::as_str);
+            .filter(|id| {
+                self.tree
+                    .elements
+                    .get(*id)
+                    .is_some_and(|element| element.tag != "div")
+            })
+            .and_then(|id| self.tree.accessible_name(id))
+            .unwrap_or_else(|| "Text entry".to_owned());
         if name != self.text_agent_name {
-            agent.set_attribute("aria-label", name)?;
-            self.text_agent_name = name.to_owned();
+            agent.set_attribute("aria-label", &name)?;
+            self.text_agent_name = name;
         }
         Ok(())
     }
@@ -534,10 +544,9 @@ impl Layer {
             bounds.height()
         );
         if geometry != self.container_geometry {
-            self.container
-                .set_attribute("style", &format!("{CONTAINER_STYLE}{geometry}"))?;
+            set_style(&self.container, &format!("{CONTAINER_STYLE}{geometry}"));
             if let Some((host, _)) = &self.native_host {
-                host.set_attribute("style", &format!("{NATIVE_HOST_STYLE}{geometry}"))?;
+                set_style(host, &format!("{NATIVE_HOST_STYLE}{geometry}"));
             }
             self.container_geometry = geometry;
         }
@@ -661,8 +670,7 @@ impl Layer {
             // layer style again when it returns.
             DomOp::SetStyle { id, .. } if self.is_active_native(&id) => {}
             DomOp::SetStyle { id, style } => {
-                self.element(&id)?
-                    .set_attribute("style", &format!("{ELEMENT_STYLE}{style}"))?;
+                set_style(self.element(&id)?, &format!("{ELEMENT_STYLE}{style}"));
             }
             DomOp::Place { id, parent, before } => {
                 // An active native field's placeholder holds its place.
@@ -757,10 +765,10 @@ impl Layer {
             .query_selector(&format!(":scope > [{HIT_TARGET}]"))?
             .is_none()
         {
-            let hit = self.document.create_element("span")?;
+            let hit: HtmlElement = self.document.create_element("span")?.unchecked_into();
             hit.set_attribute(HIT_TARGET, "")?;
             hit.set_attribute("aria-hidden", "true")?;
-            hit.set_attribute("style", HIT_STYLE)?;
+            set_style(&hit, HIT_STYLE);
             element.append_child(&hit)?;
         }
         Ok(())
@@ -1042,9 +1050,7 @@ fn reposition(key: u32) {
                 bounds.width(),
                 bounds.height()
             );
-            if let Err(error) = host.set_attribute("style", &style) {
-                log_error(&error);
-            }
+            set_style(host, &style);
         }
     });
 }
@@ -1186,18 +1192,17 @@ impl Layer {
     }
 
     /// The visible host of native fields and its stylesheet.
-    fn native_host(&mut self) -> Result<(HtmlElement, Element), JsValue> {
+    fn native_host(&mut self) -> Result<(HtmlElement, Sheet), JsValue> {
         if let Some((host, rules)) = &self.native_host {
             return Ok((host.clone(), rules.clone()));
         }
         let host: HtmlElement = self.document.create_element("div")?.unchecked_into();
         host.set_id(&format!("{}native-{}", aria::ARIA_ID_PREFIX, self.key));
-        host.set_attribute(
-            "style",
+        set_style(
+            &host,
             &format!("{NATIVE_HOST_STYLE}{}", self.container_geometry),
-        )?;
-        let rules = self.document.create_element("style")?;
-        host.append_child(&rules)?;
+        );
+        let rules = Sheet::new(&self.document, &host, "")?;
         // After eframe's text agent, a sibling of the canvas that eframe
         // keeps at egui's caret, so the field lies above it and a touch there
         // stays the field's.
@@ -1271,9 +1276,9 @@ impl Layer {
         let caret = registration.char_at(egui::pos2(point.0 as f32, point.1 as f32));
         let (host, rules) = self.native_host()?;
         // Move before focusing: moving a focused element blurs it.
-        let placeholder = self.document.create_element("span")?;
+        let placeholder: HtmlElement = self.document.create_element("span")?.unchecked_into();
         placeholder.set_attribute("aria-hidden", "true")?;
-        placeholder.set_attribute("style", NATIVE_PLACEHOLDER_STYLE)?;
+        set_style(&placeholder, NATIVE_PLACEHOLDER_STYLE);
         element.replace_with_with_node_1(&placeholder)?;
         // Its layer parent still owns it for assistive technology.
         let owner = placeholder
@@ -1291,14 +1296,14 @@ impl Layer {
         let style = field
             .style
             .replace("pointer-events:auto", "pointer-events:none");
-        element.set_attribute("style", &style)?;
+        set_style(&element, &style);
         element.set_attribute(aria::NATIVE_ACTIVE_ATTRIBUTE, "")?;
         if field.placeholder.is_empty() {
             element.remove_attribute("placeholder")?;
         } else {
             element.set_attribute("placeholder", &field.placeholder)?;
         }
-        rules.set_text_content(Some(&field.rules));
+        rules.set_rules(&field.rules)?;
         host.append_child(&element)?;
         focus_without_scroll(&element)?;
         let value = field_value(&element);
@@ -1349,7 +1354,7 @@ impl Layer {
         self.context.request_repaint();
         self.native = Some(ActiveNative {
             id: id.to_owned(),
-            placeholder,
+            placeholder: placeholder.into(),
             owner,
             owns,
             confirmed: false,
@@ -1386,7 +1391,7 @@ impl Layer {
         element.remove_attribute(aria::NATIVE_ACTIVE_ATTRIBUTE)?;
         element.remove_attribute("placeholder")?;
         if let Some(mirrored) = self.tree.elements.get(&active.id) {
-            element.set_attribute("style", &format!("{ELEMENT_STYLE}{}", mirrored.style))?;
+            set_style(element, &format!("{ELEMENT_STYLE}{}", mirrored.style));
         }
         // Its focus-out listener finds the layer busy and does nothing.
         if focused {
@@ -1453,16 +1458,86 @@ impl Layer {
             return self.deactivate_native(true);
         }
         if field.style != active.style {
-            element.set_attribute("style", &field.style)?;
+            set_style(&element, &field.style);
             active.style = field.style;
         }
         if field.rules != active.rules
             && let Some((_, rules)) = &self.native_host
         {
-            rules.set_text_content(Some(&field.rules));
+            rules.set_rules(&field.rules)?;
             active.rules = field.rules;
         }
         Ok(())
+    }
+}
+
+/// Set an element's whole inline style through the CSSOM, which a
+/// Content-Security-Policy without `'unsafe-inline'` allows, unlike a `style`
+/// attribute.
+fn set_style(element: &HtmlElement, css: &str) {
+    element.style().set_css_text(css);
+}
+
+/// A stylesheet the layer owns: a constructed sheet that the document
+/// adopts, which a Content-Security-Policy without `'unsafe-inline'` allows,
+/// unlike `<style>` text. A browser without constructable stylesheets gets a
+/// `<style>` element in `parent` instead.
+#[derive(Clone)]
+enum Sheet {
+    Adopted(web_sys::CssStyleSheet),
+    Element(Element),
+}
+
+impl Sheet {
+    fn new(document: &Document, parent: &Element, rules: &str) -> Result<Self, JsValue> {
+        let adoptable = js_sys::Reflect::has(document, &"adoptedStyleSheets".into())?;
+        if let Some(sheet) = web_sys::CssStyleSheet::new().ok().filter(|_| adoptable) {
+            sheet.replace_sync(rules)?;
+            let adopted = js_sys::Array::from(&document.adopted_style_sheets());
+            adopted.push(&sheet);
+            document.set_adopted_style_sheets(&adopted);
+            return Ok(Self::Adopted(sheet));
+        }
+        let element = document.create_element("style")?;
+        element.set_text_content(Some(rules));
+        parent.append_child(&element)?;
+        Ok(Self::Element(element))
+    }
+
+    fn sheet(&self) -> Result<JsValue, JsValue> {
+        match self {
+            Self::Adopted(sheet) => Ok(sheet.into()),
+            Self::Element(element) => js_sys::Reflect::get(element, &"sheet".into()),
+        }
+    }
+
+    /// The style declaration of the sheet's first rule.
+    fn first_rule_style(&self) -> Result<JsValue, JsValue> {
+        let rules = js_sys::Reflect::get(&self.sheet()?, &"cssRules".into())?;
+        let rule = js_sys::Reflect::get(&rules, &0.into())?;
+        js_sys::Reflect::get(&rule, &"style".into())
+    }
+
+    fn set_rules(&self, rules: &str) -> Result<(), JsValue> {
+        match self {
+            Self::Adopted(sheet) => sheet.replace_sync(rules),
+            Self::Element(element) => {
+                element.set_text_content(Some(rules));
+                Ok(())
+            }
+        }
+    }
+
+    fn remove(&self, document: &Document) {
+        match self {
+            Self::Adopted(sheet) => {
+                let target = JsValue::from(sheet);
+                let kept = js_sys::Array::from(&document.adopted_style_sheets())
+                    .filter(&mut |other, _, _| other != target);
+                document.set_adopted_style_sheets(&kept);
+            }
+            Self::Element(element) => element.remove(),
+        }
     }
 }
 

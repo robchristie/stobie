@@ -8,8 +8,10 @@
 // or in Chromium, the same scenarios run through the Node client and the Rust
 // CLI, each against its own fresh instance, and their outcomes must agree.
 // Natively, each command's output size is also checked against its budget and
-// reported. Run inside the smoke environment (tools/stobie-cli-smoke.sh),
-// which supplies a display.
+// reported. In Chromium, a short window then puts the notes field below the
+// fold of the detail pane, which Record Desk observes only in view, and both
+// clients set its text by revealing it first. Run inside the smoke
+// environment (tools/stobie-cli-smoke.sh), which supplies a display.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -104,7 +106,7 @@ async function runParity(startNode, startCli, finish) {
   assert.deepEqual(rustFacts, nodeFacts, 'final facts agree');
 }
 
-const report = { app, budgets: {}, parity: [] };
+const report = { app, budgets: {}, parity: [], reveal: [] };
 let browser;
 let server;
 try {
@@ -163,6 +165,38 @@ try {
       async () => { await fresh(); return viaCli; },
       async () => {},
     );
+    // A short window puts the selected record's notes below the fold. Each
+    // client, on a fresh instance, finds the field absent, sets its text by
+    // revealing it, and observes the text; a node no pass presents fails
+    // loudly.
+    await page.setViewportSize({ width: 1280, height: 400 });
+    const notes = 'record-desk.notes.1013';
+    {
+      await fresh();
+      const client = new ApplicationClient(new BrowserTransport(page));
+      await client.hello();
+      await client.invoke({ capability: 'record-desk.select-record' }, { arguments: { value: '1013' } });
+      assert.equal((await client.query({ id: notes })).total, 0, 'Node: the notes field starts below the fold');
+      const set = await client.invoke({ id: notes, capability: 'stobie.set-text' }, { arguments: { value: 'Revealed notes' } });
+      assert.equal(set.state, 'completed', 'Node: set-text reveals the field');
+      await client.wait({ condition: 'value', selector: { id: notes }, value: 'Revealed notes' });
+      const gone = await client.reveal('record-desk.no-such-node');
+      assert.equal(gone.state, 'rejected', 'Node: a reveal of a node no pass presents is rejected');
+      report.reveal.push({ client: 'node', set: set.state, missing: gone.state });
+    }
+    {
+      await fresh();
+      assert.equal(viaCli(['invoke', 'record-desk.select-record', '--value', '1013']).status, 0, 'CLI: select');
+      assert.equal(viaCli(['query', notes]).body.total, 0, 'CLI: the notes field starts below the fold');
+      const set = viaCli(['set-text', notes, 'Revealed notes']);
+      assert.equal(set.status, 0, `CLI: set-text reveals the field: ${set.stderr}`);
+      const shown = viaCli(['wait', 'value', '--id', notes, '--value', 'Revealed notes']);
+      assert.equal(shown.status, 0, `CLI: the revealed field shows its text: ${shown.stderr}`);
+      const gone = viaCli(['reveal', 'record-desk.no-such-node']);
+      assert.notEqual(gone.status, 0, 'CLI: a reveal of a node no pass presents fails');
+      assert.equal(gone.body?.receipt?.state, 'rejected', `CLI: the reveal is rejected: ${gone.stdout}`);
+      report.reveal.push({ client: 'cli', set: set.body?.receipt?.state ?? null, missing: gone.body.receipt.state });
+    }
     assert.equal(cli(['stop', 'parity-browser']).status, 0);
     // A page opened without ?automation=1 has no dispatcher to call.
     const plain = `http://127.0.0.1:${server.address().port}/`;
@@ -199,7 +233,7 @@ try {
       );
     }
   }
-  console.log(`stobie CLI smoke passed for ${app}: ${Object.entries(report.budgets).map(([command, { bytes, budget }]) => `${command} ${bytes}/${budget} B`).join(', ')}${report.parity.length ? `; ${report.parity.length} parity scenarios agree` : ''}`);
+  console.log(`stobie CLI smoke passed for ${app}: ${Object.entries(report.budgets).map(([command, { bytes, budget }]) => `${command} ${bytes}/${budget} B`).join(', ')}${report.parity.length ? `; ${report.parity.length} parity scenarios agree` : ''}${report.reveal.length ? `; ${report.reveal.length} clients set text below the fold` : ''}`);
 } finally {
   await writeFile(resolve(evidence, `stobie-cli-${app}.json`), JSON.stringify(report, null, 2));
   await browser?.close();

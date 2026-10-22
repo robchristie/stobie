@@ -11,8 +11,7 @@ impl<A: Application> eframe::App for AppHost<A> {
     fn logic(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
         // eframe calls this before each pass and also while the viewport is
         // hidden, so a hidden application keeps up with its event sources.
-        let hidden = context.input(|input| input.viewport().visible() == Some(false));
-        self.apply_sent_intents_before_pass(hidden);
+        self.before_pass(context);
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
@@ -78,6 +77,7 @@ mod web {
     use std::rc::Rc;
 
     use eframe::egui_wgpu::wgpu::{self, Backends};
+    use wasm_bindgen::closure::Closure;
     use wasm_bindgen::{JsCast, JsValue};
 
     use super::super::renderer::{self, RendererRequest, WebGpuUnavailable};
@@ -89,7 +89,45 @@ mod web {
         runner: eframe::WebRunner,
         /// The key of the ARIA layer this host installed, if any.
         layer: Rc<Cell<Option<u32>>>,
+        /// The page's `visibilitychange` listener for the running host.
+        visibility: Rc<RefCell<Option<VisibilityWake>>>,
         application: PhantomData<fn() -> A>,
+    }
+
+    /// Wakes the host when the page is hidden or shown, so that
+    /// [`Application::visibility_changed`] hears of it at once. eframe wakes
+    /// itself then only when the canvas's focus changes, and an ARIA layer
+    /// or another element may hold the focus instead. Like an
+    /// [`IntentSender`](crate::IntentSender)'s send, the wake asks for no
+    /// pass of its own: the host reads the visibility before the next pass,
+    /// or while hidden instead of one, and records a state change as usual.
+    struct VisibilityWake {
+        document: web_sys::Document,
+        listener: Closure<dyn FnMut()>,
+    }
+
+    impl VisibilityWake {
+        fn install(context: &egui::Context) -> Option<Self> {
+            let document = web_sys::window()?.document()?;
+            let context = context.clone();
+            let listener = Closure::<dyn FnMut()>::new(move || context.request_repaint());
+            document
+                .add_event_listener_with_callback(
+                    "visibilitychange",
+                    listener.as_ref().unchecked_ref(),
+                )
+                .ok()?;
+            Some(Self { document, listener })
+        }
+    }
+
+    impl Drop for VisibilityWake {
+        fn drop(&mut self) {
+            let _ = self.document.remove_event_listener_with_callback(
+                "visibilitychange",
+                self.listener.as_ref().unchecked_ref(),
+            );
+        }
     }
 
     impl<A: Application> Default for WebHost<A> {
@@ -98,6 +136,7 @@ mod web {
             Self {
                 runner: eframe::WebRunner::new(),
                 layer: Rc::default(),
+                visibility: Rc::default(),
                 application: PhantomData,
             }
         }
@@ -121,6 +160,7 @@ mod web {
         ) -> js_sys::Promise {
             let runner = self.runner.clone();
             let layer = self.layer.clone();
+            let visibility = self.visibility.clone();
             wasm_bindgen_futures::future_to_promise(async move {
                 let request = RendererRequest::from_query(&page_query())
                     .map_err(|error| JsValue::from_str(&error))?;
@@ -133,6 +173,7 @@ mod web {
                                webgpu: Option<WebGpuUnavailable>| {
                     let create = create.clone();
                     let layer = layer.clone();
+                    let visibility = visibility.clone();
                     let layer_canvas = canvas.clone();
                     runner.start(
                         canvas,
@@ -183,6 +224,8 @@ mod web {
                                     &app.identity().name,
                                 ));
                             }
+                            // A restarted host replaces its previous listener.
+                            *visibility.borrow_mut() = VisibilityWake::install(&creation.egui_ctx);
                             Ok(Box::new(AppHost::new(&creation.egui_ctx, app)))
                         }),
                     )
@@ -302,6 +345,7 @@ mod web {
             if let Some(key) = self.layer.take() {
                 super::aria_dom::remove(key);
             }
+            self.visibility.borrow_mut().take();
         }
     }
 

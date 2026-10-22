@@ -26,7 +26,12 @@ not silently consume an unavailable action. A hidden action presents nothing:
 `Frame::action`, `icon_action`, `toggle` and `PresentationContext::action`
 draw no control and publish no node for it, so a caller need not filter it.
 Its capability stays discoverable with `rendered: false`, and invoking it is
-refused as `unavailable`.
+refused as `unavailable`, without a reason: a reason for something the
+application chose not to present would say what it hides. To explain a
+refusal of something no control presents, such as an archived row an agent
+names by its ID, return `Disabled` with the reason from `availability_with`
+for that argument; the refusal carries the reason, and nothing on screen
+changes.
 
 ## Actions on rows
 
@@ -54,7 +59,12 @@ it by hand or call `trigger_with` from a row's click.
   (the JSON value an invocation would send). The host binds each such control
   as its own capability carrying that argument, and keeps the action's own
   binding, which takes any value its contract allows, unless a control without
-  an argument presents the action.
+  an argument presents the action. Two controls carrying one argument, such
+  as Open for one person in two lists, are two bindings, each with its own
+  ID; because they perform the same thing, invoking the action with that
+  value resolves to one of them rather than being ambiguous. The same holds
+  for an action without an argument presented twice, such as a dialog's
+  dismiss action on its close control and on a Cancel button.
 - **Availability.** Implement `Application::availability_with(target,
   argument)` to decide availability for one row, such as a disabled Remove on
   a pinned person, and to hide an argument that names nothing, such as a
@@ -125,7 +135,9 @@ send action that takes a text argument carries it.
   SEND --id ID` sends the draft shown. `--value TEXT` sends that text,
   through the send control when it carries it and otherwise through the
   action's own binding, under the same availability. A refused send's receipt
-  carries the application's error, and the draft stays.
+  carries the application's error, and the draft stays. Present the composer
+  with `Frame::composer_with_id` to give the field an ID agents can rely on,
+  such as `chat.composer`, and its send control `chat.composer.send`.
 
 ## Copying to the clipboard
 
@@ -178,7 +190,11 @@ presents it while its state says it is open.
   opened it: the one clicked, or focused, as it opened. A dialog that opened
   with no such control, as one an agent or the application opened, returns
   focus nowhere. A dialog that takes another's place, such as a confirm
-  after a form, returns focus to the first one's opener.
+  after a form, returns focus to the first one's opener. An opener that has
+  gone by then, such as a row's Delete whose confirmation removed the row,
+  or one something else removed while the dialog was open, hands focus to
+  the control nearest where it was (see
+  [focus whose control has gone](#focus-whose-control-has-gone)).
 - **Pointer.** Controls behind the scrim take no pointer input; a press on
   the scrim dismisses only a dialog that asks for it.
 - **Agents and shortcuts.** The host observes and binds only the dialog and
@@ -186,11 +202,42 @@ presents it while its state says it is open.
   the reason `The dialog "<title>" is open`, so an invocation is rejected as
   `unavailable` and a shortcut for it does nothing; the actions the dialog
   presents remain invocable, with their shortcuts, including one whose
-  control a long form has scrolled out of view.
+  control a long form has scrolled out of view. A reveal (`stobie.reveal`)
+  of a node behind the dialog is rejected with the same reason; one of a
+  node inside it scrolls the dialog's body.
 - **Assistive technology.** Everything behind the dialog is hidden from the
   AccessKit tree, and requests aimed at it are dropped; in the browser the
   ARIA layer holds only the dialog, a `dialog` or `alertdialog` with
   `aria-modal`.
+
+## Focus whose control has gone
+
+Back in the [navigation recipe](components.md#responsive-navigation) and a closing
+dialog return focus to the control that opened them. By then that control
+may have gone: a row hidden while its item was open, a row the dialog's own
+confirmation deleted, or one a sync removed. The host never focuses a widget
+the current pass did not present. Focus goes to:
+
+- **The opener**, while it is presented as an enabled control.
+- **The nearest control**, when it has gone: the enabled control, on the
+  opener's layer, whose centre is nearest where the opener's was, and for
+  Back within the pane of the level it returns to. In a list that is the
+  row that took the removed row's place, or the row before when the removed
+  row was the last; a row's own control hands focus to the same control on
+  that row.
+- **Nowhere**, when nothing there takes focus, such as after deleting the
+  only row.
+
+Back returns focus in this way when focus was on Back, nowhere, or on a
+control of the level that closed, such as an Archive that removed its item
+and went back. Applications need not close a confirm before its opener goes
+or keep a removed row presented: confirm and remove in one step.
+
+As a last guard, AccessKit's focus is always a node of the published tree: a
+focus request for a widget the pass did not present publishes the root as
+focused for that pass, and egui drops the request on the next. The browser's
+ARIA layer follows the same focus, so its active descendant names the
+fallback control.
 
 ## Keyboard and pointer behaviour
 

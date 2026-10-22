@@ -102,6 +102,9 @@ pub fn reading_text(
             node.set_author_id(identity.semantic_id().0);
         });
     }
+    // Text scrolled wholly out of view adds no observation, but a reveal of
+    // its semantic ID still finds it.
+    crate::observation::reveal_at(ui, &identity.semantic_id(), rect);
     if ui.clip_rect().intersect(rect).is_positive() || observation.layout_error.is_some() {
         observations.push(observation);
     }

@@ -9,12 +9,24 @@
 //! [`WebPush::start`] in [`Application::started`](crate::Application::started)
 //! connects to it, and every result arrives later as a [`PushEvent`] through
 //! the application's [`IntentSender`], like any event from outside a pass.
-//! Native builds report push as unsupported.
+//! Native builds report push as unsupported. Host tests connect it to a
+//! `PushDouble` instead, with the crate's `test-support` feature.
 
 use std::fmt;
 use std::rc::Rc;
 
 use crate::IntentSender;
+
+#[cfg(all(
+    any(test, feature = "test-support"),
+    not(all(target_arch = "wasm32", feature = "eframe"))
+))]
+mod double;
+#[cfg(all(
+    any(test, feature = "test-support"),
+    not(all(target_arch = "wasm32", feature = "eframe"))
+))]
+pub use double::{PushCall, PushDouble};
 
 /// Whether this build and browser can receive Web Push.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -104,6 +116,12 @@ pub struct WebPush {
     deliver: Rc<dyn Fn(PushEvent)>,
     #[cfg(all(target_arch = "wasm32", feature = "eframe"))]
     web: Rc<web::Shared>,
+    /// The host test's double, when one is installed.
+    #[cfg(all(
+        any(test, feature = "test-support"),
+        not(all(target_arch = "wasm32", feature = "eframe"))
+    ))]
+    double: Option<Rc<double::Double>>,
 }
 
 impl fmt::Debug for WebPush {
@@ -146,13 +164,33 @@ impl WebPush {
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
-            let push = Self { deliver };
-            (push.deliver)(PushEvent::State(PushState {
-                support: push.support(),
-                permission: None,
-                subscription: None,
-            }));
+            let push = Self {
+                #[cfg(all(
+                    any(test, feature = "test-support"),
+                    not(all(target_arch = "wasm32", feature = "eframe"))
+                ))]
+                double: double::Double::connect(&deliver),
+                deliver,
+            };
+            (push.deliver)(PushEvent::State(push.native_state()));
             push
+        }
+    }
+
+    /// What a native build reports: unsupported, or a test double's state.
+    #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
+    fn native_state(&self) -> PushState {
+        #[cfg(all(
+            any(test, feature = "test-support"),
+            not(all(target_arch = "wasm32", feature = "eframe"))
+        ))]
+        if let Some(double) = &self.double {
+            return double.state();
+        }
+        PushState {
+            support: self.support(),
+            permission: None,
+            subscription: None,
         }
     }
 
@@ -164,6 +202,13 @@ impl WebPush {
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if let Some(double) = &self.double {
+                return double.state().support;
+            }
             PushSupport::Unsupported("Web Push is available only in the browser build".into())
         }
     }
@@ -176,6 +221,13 @@ impl WebPush {
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if let Some(double) = &self.double {
+                return double.state().permission;
+            }
             None
         }
     }
@@ -192,6 +244,15 @@ impl WebPush {
     /// first [`PushEvent::State`]. A subscription made with another key must
     /// be removed with [`Self::unsubscribe`] first.
     pub fn subscribe(&self, application_server_key: &str) {
+        #[cfg(all(
+            any(test, feature = "test-support"),
+            not(all(target_arch = "wasm32", feature = "eframe"))
+        ))]
+        if let Some(double) = &self.double {
+            double.record(PushCall::Subscribe {
+                application_server_key: application_server_key.to_owned(),
+            });
+        }
         let key = match decode_application_server_key(application_server_key) {
             Ok(key) => key,
             Err(message) => return self.failed(PushOperation::Subscribe, message),
@@ -205,6 +266,14 @@ impl WebPush {
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
             let _ = key;
+            // A double's test delivers the outcome.
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if self.double.is_some() {
+                return;
+            }
             self.unsupported(PushOperation::Subscribe);
         }
     }
@@ -220,7 +289,16 @@ impl WebPush {
             }
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
-        self.unsupported(PushOperation::Unsubscribe);
+        {
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if let Some(double) = &self.double {
+                return double.record(PushCall::Unsubscribe);
+            }
+            self.unsupported(PushOperation::Unsubscribe);
+        }
     }
 
     /// Read support, permission and the subscription again; delivers
@@ -233,11 +311,16 @@ impl WebPush {
             }
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
-        (self.deliver)(PushEvent::State(PushState {
-            support: self.support(),
-            permission: None,
-            subscription: None,
-        }));
+        {
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if let Some(double) = &self.double {
+                double.record(PushCall::Refresh);
+            }
+            (self.deliver)(PushEvent::State(self.native_state()));
+        }
     }
 
     /// Show `count` on the application's icon, or clear it for 0. Returns
@@ -250,6 +333,13 @@ impl WebPush {
         }
         #[cfg(not(all(target_arch = "wasm32", feature = "eframe")))]
         {
+            #[cfg(all(
+                any(test, feature = "test-support"),
+                not(all(target_arch = "wasm32", feature = "eframe"))
+            ))]
+            if let Some(double) = &self.double {
+                return double.set_app_badge(count);
+            }
             let _ = count;
             false
         }

@@ -8,8 +8,8 @@ use serde::Serialize;
 use stobie_client::protocol::{
     ArgumentContract, Availability, COPY_TEXT_CAPABILITY, CapabilityDescription,
     CompletedObservation, DomainReference, OPEN_LINK_CAPABILITY, ObservationValue, PaneId,
-    SET_TEXT_CAPABILITY, SemanticUiId, TextComponentKind, TextContent, TextLayoutObservation,
-    TextRole, UiNode, UiRole,
+    REVEAL_CAPABILITY, SET_TEXT_CAPABILITY, SemanticUiId, TextComponentKind, TextContent,
+    TextLayoutObservation, TextRole, UiNode, UiRole,
 };
 
 /// Longest name or value shown in text output, in characters.
@@ -74,8 +74,8 @@ pub fn argument_summary(contract: &ArgumentContract) -> Option<String> {
 }
 
 /// One capability as an outline annotation: its ID (or `set-text`,
-/// `open-link` or `copy-text`), its argument, and its availability unless
-/// enabled.
+/// `open-link`, `copy-text` or `reveal`), its argument, and its availability
+/// unless enabled.
 pub fn capability_tag(capability: &CapabilityDescription) -> String {
     let mut tag = if capability.capability == SET_TEXT_CAPABILITY {
         "set-text".to_owned()
@@ -83,6 +83,8 @@ pub fn capability_tag(capability: &CapabilityDescription) -> String {
         "open-link".to_owned()
     } else if capability.capability == COPY_TEXT_CAPABILITY {
         "copy-text".to_owned()
+    } else if capability.capability == REVEAL_CAPABILITY {
+        "reveal".to_owned()
     } else {
         capability.capability.clone()
     };
@@ -91,6 +93,7 @@ pub fn capability_tag(capability: &CapabilityDescription) -> String {
     if let Some(argument) = &capability.argument {
         let _ = write!(tag, " = {argument}");
     } else if capability.capability != SET_TEXT_CAPABILITY
+        && capability.capability != REVEAL_CAPABILITY
         && let Some(argument) = argument_summary(&capability.arguments)
     {
         let _ = write!(tag, ": {argument}");

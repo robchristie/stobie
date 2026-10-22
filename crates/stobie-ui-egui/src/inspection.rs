@@ -280,6 +280,44 @@ impl CopyBinding {
     }
 }
 
+/// The application's reveal capability, which scrolls the node a semantic ID
+/// names into view. A host offers it with [`Inspection::offer_reveal`].
+fn reveal_description(observation: u64) -> CapabilityDescription {
+    let id = SemanticUiId::new(REVEAL_CAPABILITY);
+    CapabilityDescription {
+        argument: None,
+        id: id.clone(),
+        capability: REVEAL_CAPABILITY.into(),
+        pane: None,
+        domain: None,
+        label: "Reveal".into(),
+        description:
+            "Scroll the node with this semantic ID into view, so it is observed and can be acted on"
+                .into(),
+        scope: ActionScope::Application,
+        shortcut: None,
+        availability: Availability::Enabled,
+        rendered: false,
+        control_enabled: None,
+        semantic_invocable: true,
+        arguments: ArgumentContract::Text {
+            max_length: Some(REVEAL_ID_LENGTH as u32),
+        },
+        target: ResolvedTarget {
+            argument: None,
+            id,
+            capability: REVEAL_CAPABILITY.into(),
+            pane: None,
+            domain: None,
+            meaning: "reveal".into(),
+            observation,
+        },
+    }
+}
+
+/// The longest semantic ID a reveal takes, in characters.
+const REVEAL_ID_LENGTH: usize = 512;
+
 /// The framework's own bindings for one pass: text fields, links and copy
 /// controls, which hosts bind without application code.
 #[derive(Clone, Copy, Debug, Default)]
@@ -313,6 +351,15 @@ pub enum Invocation<A: ActionKey> {
     /// on its next pass and shows its confirmation or failure, which the
     /// receipt does not wait for.
     CopyText { copy: CopyBinding },
+    /// Scroll the node `id` names into view, for a host that offers reveal
+    /// with [`Inspection::offer_reveal`]. The scroll applies on later passes,
+    /// so the host defers its completion with [`Execution::Deferred`] and
+    /// reports it with [`Inspection::complete`] once a pass presents the node
+    /// in view, or rejects it.
+    Reveal {
+        request_id: String,
+        id: SemanticUiId,
+    },
 }
 
 /// How far an executed invocation got.
@@ -350,6 +397,8 @@ struct InspectionState {
     pending: VecDeque<String>,
     waker: Option<Arc<dyn Fn() + Send + Sync>>,
     staged: Option<StagedPublication>,
+    /// Whether the host scrolls nodes into view on request.
+    reveal: bool,
 }
 
 /// A clone shares retained observations and a bounded, non-evicting mutation
@@ -419,6 +468,7 @@ impl Inspection {
                 pending: VecDeque::new(),
                 waker: None,
                 staged: None,
+                reveal: false,
             })),
         })
     }
@@ -437,6 +487,13 @@ impl Inspection {
             .expect("inspection mutex poisoned")
             .instance
             .clone()
+    }
+
+    /// Publish the application's [`REVEAL_CAPABILITY`] from now on, for a
+    /// host that executes [`Invocation::Reveal`]. [`crate::AppHost`] offers
+    /// it when inspection is enabled.
+    pub fn offer_reveal(&self) {
+        self.state.lock().expect("inspection mutex poisoned").reveal = true;
     }
 
     /// Install once before the first app update, after other UI plugins. Later
@@ -548,7 +605,9 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<(), InspectionError> {
-        let publication = prepare_publication(snapshot, bindings, framework, metadata, facts)?;
+        let reveal = self.state.lock().expect("inspection mutex poisoned").reveal;
+        let publication =
+            prepare_publication(snapshot, bindings, framework, reveal, metadata, facts)?;
         self.state.lock().expect("inspection mutex poisoned").staged = Some(StagedPublication {
             viewport: context.viewport_id(),
             pass: context.cumulative_pass_nr(),
@@ -566,10 +625,12 @@ impl Inspection {
         metadata: CollectionMetadata,
         facts: BTreeMap<String, ObservationValue>,
     ) -> Result<u64, InspectionError> {
+        let reveal = self.state.lock().expect("inspection mutex poisoned").reveal;
         let publication = prepare_publication(
             snapshot,
             bindings,
             FrameworkBindings::default(),
+            reveal,
             metadata,
             facts,
         )?;
@@ -1236,7 +1297,8 @@ impl InspectionState {
                 )
             })
             .collect();
-        let capability = select_invocation_target(&candidates, |candidate| *candidate, arguments)?;
+        let chosen = select_invocation_target(&candidates, |candidate| *candidate, arguments)?;
+        let capability = discovered(&candidates, |candidate| *candidate, chosen, expected);
         validate_expected(&capability.target, expected)?;
         validate_invocable(capability)?;
         capability.parse_arguments(arguments).map(drop)
@@ -1269,17 +1331,21 @@ impl InspectionState {
             .copies
             .iter()
             .map(|copy| (copy.describe(observation), Current::Copy(copy)));
+        let reveal = self
+            .reveal
+            .then(|| (reveal_description(observation), Current::Reveal));
         let candidates: Vec<_> = actions
             .chain(fields)
             .chain(links)
             .chain(copies)
+            .chain(reveal)
             .filter(|(description, ..)| {
                 selector_matches_binding(selector, description, snapshot.node(&description.id))
             })
             .collect();
         // A target that is no longer presented, such as a removed row's
         // control, is stale rather than unknown: it was admitted.
-        let (description, current) =
+        let chosen =
             select_invocation_target(&candidates, |(description, _)| description, arguments)
                 .map_err(|error| match error.code {
                     InspectionErrorCode::NoMatch => InspectionError::new(
@@ -1292,6 +1358,12 @@ impl InspectionState {
                     ),
                     _ => error,
                 })?;
+        let (description, current) = discovered(
+            &candidates,
+            |(description, _)| description,
+            chosen,
+            expected,
+        );
         validate_expected(&description.target, expected)?;
         validate_invocable(description)?;
         let argument = description.parse_arguments(arguments)?;
@@ -1314,6 +1386,17 @@ impl InspectionState {
             Current::Copy(copy) => Invocation::CopyText {
                 copy: (*copy).clone(),
             },
+            Current::Reveal => match argument {
+                ActionArgument::Text(id) if !id.is_empty() => Invocation::Reveal {
+                    request_id: request_id.to_owned(),
+                    id: SemanticUiId::new(id),
+                },
+                _ => {
+                    return Err(InspectionError::validation(
+                        "reveal takes the semantic ID of the node to reveal",
+                    ));
+                }
+            },
         })
     }
 }
@@ -1324,25 +1407,34 @@ enum Current<'a, A: ActionKey> {
     Field(&'a TextFieldBinding),
     Link(&'a LinkBinding),
     Copy(&'a CopyBinding),
+    Reveal,
 }
 
 fn prepare_publication<A: ActionKey>(
     snapshot: UiSnapshot,
     bindings: &[InspectionBinding<A>],
     framework: FrameworkBindings<'_>,
+    reveal: bool,
     metadata: CollectionMetadata,
     facts: BTreeMap<String, ObservationValue>,
 ) -> Result<Publication, InspectionError> {
     use InspectionErrorCode as Code;
+    // The host's own facts, such as the theme, leave the application its
+    // 256.
+    let framework_facts = [THEME_FACT, CONTRAST_FACT]
+        .into_iter()
+        .filter(|key| facts.contains_key(*key))
+        .count();
     if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
         || snapshot.text.len() > INSPECTION_TEXT_LIMIT
         || bindings.len()
             + framework.text_fields.len()
             + framework.links.len()
             + framework.copies.len()
+            + usize::from(reveal)
             > INSPECTION_NODE_LIMIT
         || metadata.collections.len() > 256
-        || facts.len() > 256
+        || facts.len() - framework_facts > 256
     {
         return Err(InspectionError::new(
             Code::PublicationLimit,
@@ -1423,6 +1515,7 @@ fn prepare_publication<A: ActionKey>(
         .chain(framework.text_fields.iter().map(|field| field.describe(0)))
         .chain(framework.links.iter().map(|link| link.describe(0)))
         .chain(framework.copies.iter().map(|copy| copy.describe(0)))
+        .chain(reveal.then(|| reveal_description(0)))
         .collect();
     let publication = Publication {
         observation: CompletedObservation {
@@ -1489,6 +1582,24 @@ fn selector_matches_binding(
                 .as_ref()
                 .is_some_and(|carried| same_argument(argument, carried))
         })
+}
+
+/// Among bindings that perform what the chosen one does, the one the caller
+/// discovered and expects, so that a target taken from any of them is
+/// current; otherwise the chosen one.
+fn discovered<'a, T>(
+    candidates: &'a [T],
+    describe: impl Fn(&T) -> &CapabilityDescription,
+    chosen: &'a T,
+    expected: &ResolvedTarget,
+) -> &'a T {
+    candidates
+        .iter()
+        .find(|candidate| {
+            let candidate = describe(candidate);
+            candidate.id == expected.id && candidate.performs_same_as(describe(chosen))
+        })
+        .unwrap_or(chosen)
 }
 
 fn validate_expected(

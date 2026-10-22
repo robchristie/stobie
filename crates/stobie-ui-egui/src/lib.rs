@@ -63,6 +63,7 @@ mod actions;
 mod agreement;
 mod application_theme;
 mod clipboard;
+mod focus_return;
 // The agreement check projects the layer natively too; only the browser host
 // applies its DOM operations.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -88,6 +89,8 @@ mod semantics;
 mod style;
 #[cfg(test)]
 mod test_actions;
+#[cfg(any(test, feature = "test-support"))]
+pub mod testing;
 mod text;
 mod text_coverage;
 mod typography;

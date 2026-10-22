@@ -3,7 +3,10 @@
 # XVFB before owned_start_xvfb).
 UI_COMMAND=()
 if [[ "${STOBIE_USE_SYSTEM_UI_LIBS:-0}" != "1" ]]; then
-  UI_COMMAND=(bwrap --die-with-parent --ro-bind / / --bind "$SMOKE_TMP" /tmp
+  # The sandbox sees the host read-only and has a private /tmp, so a host
+  # TMPDIR, inside the checkout or under the host's /tmp, is read-only or
+  # missing there; temporary files go to the private /tmp instead.
+  UI_COMMAND=(bwrap --die-with-parent --ro-bind / / --bind "$SMOKE_TMP" /tmp --setenv TMPDIR /tmp
     --ro-bind /usr/bin /opt --ro-bind "$SYSROOT/usr/bin" /usr/bin
     --bind "$ROOT/.tools/runtime" "$ROOT/.tools/runtime"
     --bind "$EVIDENCE_DIR" "$EVIDENCE_DIR" --dev-bind /dev /dev --proc /proc)
