@@ -790,6 +790,56 @@ impl CapabilityDescription {
             _ => true,
         }
     }
+
+    /// Whether invoking this binding performs exactly what invoking `other`
+    /// does: both bind an application action (not a framework capability,
+    /// whose effect is on its own control) for the same pane, carrying the
+    /// same argument or neither carrying one, with the same meaning,
+    /// availability and invocation support. Two controls presenting one
+    /// action with one value, such as Show for one run in two lists, are such
+    /// bindings; only their identities, domains and presentation differ.
+    pub fn performs_same_as(&self, other: &Self) -> bool {
+        !is_framework_capability(&self.capability)
+            && self.capability == other.capability
+            && self.pane == other.pane
+            && match (&self.argument, &other.argument) {
+                (Some(left), Some(right)) => same_argument(left, right),
+                (None, None) => true,
+                _ => false,
+            }
+            && self.target.meaning == other.target.meaning
+            && self.availability == other.availability
+            && self.semantic_invocable == other.semantic_invocable
+    }
+}
+
+/// Whether `capability` is one of the framework's, whose binding acts on its
+/// own control: the field it sets, the link it opens or the text it copies.
+fn is_framework_capability(capability: &str) -> bool {
+    [
+        SET_TEXT_CAPABILITY,
+        OPEN_LINK_CAPABILITY,
+        COPY_TEXT_CAPABILITY,
+    ]
+    .contains(&capability)
+}
+
+/// The binding with the least semantic ID among several.
+fn least_id<'a, T>(
+    bindings: impl Iterator<Item = &'a T>,
+    describe: &impl Fn(&T) -> &CapabilityDescription,
+) -> &'a T {
+    bindings
+        .min_by(|left, right| describe(left).id.0.cmp(&describe(right).id.0))
+        .expect("at least one binding")
+}
+
+/// Whether every binding in `group` performs what the first does.
+fn one_effect<T>(group: &[&T], describe: &impl Fn(&T) -> &CapabilityDescription) -> bool {
+    group.split_first().is_some_and(|(first, rest)| {
+        rest.iter()
+            .all(|other| describe(first).performs_same_as(describe(other)))
+    })
 }
 
 /// The value in wire `arguments` of the form `{"value": …}`, if any.
@@ -808,6 +858,12 @@ fn sent_value(arguments: &serde_json::Value) -> Option<&serde_json::Value> {
 /// binding alone keeps it, so that its own contract refuses another value
 /// ([`CapabilityDescription::parse_arguments`]); among several, a value that
 /// none can take matches nothing.
+///
+/// Several bindings that perform the same thing
+/// ([`CapabilityDescription::performs_same_as`]), such as two controls
+/// presenting one action with one value in two lists, are one choice, as a
+/// binding alone would be: the binding with the least semantic ID is chosen,
+/// so every caller choosing among them chooses the same one.
 pub fn select_invocation_target<'a, T>(
     candidates: &'a [T],
     describe: impl Fn(&T) -> &CapabilityDescription,
@@ -822,7 +878,7 @@ pub fn select_invocation_target<'a, T>(
         .copied()
         .filter(|candidate| describe(candidate).argument.is_some())
         .collect();
-    let chosen = if sent_value(arguments).is_some() && carrying.len() == 1 {
+    let chosen = if sent_value(arguments).is_some() && one_effect(&carrying, &describe) {
         &carrying
     } else {
         &accepting
@@ -830,6 +886,9 @@ pub fn select_invocation_target<'a, T>(
     match chosen.as_slice() {
         [one] => Ok(one),
         [] if candidates.len() == 1 => Ok(&candidates[0]),
+        [] if one_effect(&candidates.iter().collect::<Vec<_>>(), &describe) => {
+            Ok(least_id(candidates.iter(), &describe))
+        }
         [] if candidates.is_empty() => Err(InspectionError::new(
             InspectionErrorCode::NoMatch,
             "selector resolves no capability binding",
@@ -838,6 +897,7 @@ pub fn select_invocation_target<'a, T>(
             InspectionErrorCode::NoMatch,
             "no matching control carries this value",
         )),
+        many if one_effect(many, &describe) => Ok(least_id(many.iter().copied(), &describe)),
         _ => Err(InspectionError::new(
             InspectionErrorCode::Ambiguous,
             "selector resolves multiple capability bindings",
@@ -1328,6 +1388,81 @@ mod tests {
             Ok(ActionArgument::Number(3.0))
         );
         assert!(action.parse_arguments(&serde_json::Value::Null).is_err());
+    }
+
+    #[test]
+    fn bindings_that_perform_the_same_thing_are_one_choice() {
+        let candidates = [
+            binding("row-b", Some(json!(2))),
+            binding("row-a", Some(json!(2.0))),
+            binding("row-c", Some(json!(3))),
+            binding("action.open", None),
+        ];
+        let select = |candidates: &[CapabilityDescription], arguments: serde_json::Value| {
+            select_invocation_target(candidates, |candidate| candidate, &arguments)
+                .map(|chosen| chosen.id.0.clone())
+                .map_err(|error| error.code)
+        };
+        // Two controls carrying 2 perform the same thing: the least ID is
+        // chosen, whatever their order.
+        assert_eq!(
+            select(&candidates, json!({ "value": 2 })),
+            Ok("row-a".into())
+        );
+        let mut reversed = candidates.clone();
+        reversed.reverse();
+        assert_eq!(select(&reversed, json!({ "value": 2 })), Ok("row-a".into()));
+        // Addressed together without a value, they are one choice too.
+        assert_eq!(select(&candidates[..2], json!(null)), Ok("row-a".into()));
+        // Another value they cannot take is refused by the chosen one's
+        // contract, as one control's would be.
+        assert_eq!(
+            select(&candidates[..2], json!({ "value": 9 })),
+            Ok("row-a".into())
+        );
+        // Controls carrying different values, or the action's own binding
+        // beside them, are still ambiguous without a value.
+        assert_eq!(
+            select(&candidates, json!(null)),
+            Err(InspectionErrorCode::Ambiguous)
+        );
+        // A difference in meaning, availability, pane or invocation support
+        // is a different effect.
+        let differ = [
+            |binding: &mut CapabilityDescription| binding.target.meaning = "revision:2".into(),
+            |binding: &mut CapabilityDescription| {
+                binding.availability = Availability::Disabled {
+                    reason: "busy".into(),
+                }
+            },
+            |binding: &mut CapabilityDescription| binding.pane = Some(PaneId(4)),
+            |binding: &mut CapabilityDescription| binding.semantic_invocable = false,
+        ];
+        for change in differ {
+            let mut pair = [candidates[0].clone(), candidates[1].clone()];
+            change(&mut pair[1]);
+            assert!(!pair[0].performs_same_as(&pair[1]));
+            assert_eq!(
+                select(&pair, json!({ "value": 2 })),
+                Err(InspectionErrorCode::Ambiguous)
+            );
+        }
+        // A domain is where a control is presented, not what it does.
+        let mut pair = [candidates[0].clone(), candidates[1].clone()];
+        pair[1].domain = Some(DomainReference::Pane(PaneId(1)));
+        pair[1].target.domain = pair[1].domain.clone();
+        assert!(pair[0].performs_same_as(&pair[1]));
+        // Framework capabilities act on their own controls: two text fields
+        // are never one choice.
+        let mut fields = [binding("first", None), binding("second", None)];
+        for field in &mut fields {
+            field.capability = SET_TEXT_CAPABILITY.into();
+        }
+        assert!(!fields[0].performs_same_as(&fields[1]));
+        assert_eq!(
+            select(&fields, json!(null)),
+            Err(InspectionErrorCode::Ambiguous)
+        );
     }
 
     #[test]

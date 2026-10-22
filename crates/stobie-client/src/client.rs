@@ -72,7 +72,8 @@ impl Default for Page {
 #[derive(Clone, Debug, Default)]
 pub struct InvokeOptions {
     /// A previously discovered target; otherwise the selector must discover
-    /// exactly one.
+    /// exactly one, or several that perform the same thing
+    /// ([`CapabilityDescription::performs_same_as`]).
     pub expected: Option<ResolvedTarget>,
     /// The `arguments` object, such as `{"value": "ideas"}`.
     pub arguments: Option<serde_json::Value>,
@@ -325,7 +326,9 @@ impl<T: Transport> Client<T> {
         })
     }
 
-    /// The one capability a selector discovers.
+    /// The one capability a selector discovers, or, among several bindings
+    /// that perform the same thing, the one with the least ID, which an
+    /// invocation of them chooses.
     pub fn discover_one(
         &mut self,
         selector: InspectionSelector,
@@ -337,8 +340,10 @@ impl<T: Transport> Client<T> {
                 cursor: None,
             },
         )?;
+        if let Some(capability) = one_effect(&page) {
+            return Ok(capability.clone());
+        }
         match page.capabilities.as_slice() {
-            [capability] if page.total == 1 => Ok(capability.clone()),
             [] => Err(ClientError::new(
                 "no_match",
                 "the selector discovers no capability",
@@ -756,28 +761,48 @@ impl<T: Transport> Client<T> {
                 let page = self.discover(
                     selector.clone(),
                     Page {
-                        limit: 2,
+                        limit: 8,
                         cursor: None,
                     },
                 )?;
-                if page.total > 1 {
-                    return Err(ClientError::new(
-                        "ambiguous",
-                        format!("the selector discovers {} capabilities", page.total),
-                        "add the control's id, or pane or domain, to the selector",
-                    ));
-                }
-                page.capabilities
-                    .into_iter()
-                    .find(|capability| capability.availability.enabled())
-                    .map(|capability| Waited {
-                        observation: observation.clone(),
-                        node: None,
-                        capability: Some(capability),
-                    })
+                let capability = match one_effect(&page) {
+                    Some(capability) => capability.clone(),
+                    None if page.capabilities.is_empty() => return Ok(None),
+                    None => {
+                        return Err(ClientError::new(
+                            "ambiguous",
+                            format!("the selector discovers {} capabilities", page.total),
+                            "add the control's id, or pane or domain, to the selector",
+                        ));
+                    }
+                };
+                capability.availability.enabled().then(|| Waited {
+                    observation: observation.clone(),
+                    node: None,
+                    capability: Some(capability),
+                })
             }
         })
     }
+}
+
+/// The one capability a whole page discovers: a binding alone, or the least
+/// ID among bindings that perform the same thing, such as one action presented
+/// by two controls, as an invocation would resolve them.
+fn one_effect(page: &DiscoverPage) -> Option<&CapabilityDescription> {
+    let first = page.capabilities.first()?;
+    (page.next_cursor.is_none()
+        && page.total == page.capabilities.len()
+        && page
+            .capabilities
+            .iter()
+            .all(|capability| capability == first || capability.performs_same_as(first)))
+    .then(|| {
+        page.capabilities
+            .iter()
+            .min_by(|left, right| left.id.0.cmp(&right.id.0))
+    })
+    .flatten()
 }
 
 /// What the node a text or state condition names last presented, for a

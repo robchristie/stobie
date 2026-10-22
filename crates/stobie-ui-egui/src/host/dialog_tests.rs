@@ -67,6 +67,8 @@ struct Planner {
     footer: bool,
     /// Save is hidden.
     save_hidden: bool,
+    /// The editor presents its dismiss action again, as Cancel at its foot.
+    cancel: bool,
     refreshed: u32,
     signed_out: bool,
     saved: Vec<(String, String)>,
@@ -132,6 +134,15 @@ impl Application for Planner {
                 }
                 if !self.footer {
                     frame.action(ui, p, Act::Save, ActionEmphasis::Primary);
+                }
+                if self.cancel {
+                    frame.action(
+                        ui,
+                        p,
+                        crate::BoundAction::new(Act::Close, ActionArgument::None)
+                            .with_label("Cancel"),
+                        ActionEmphasis::Normal,
+                    );
                 }
             });
             view.placement = Some(response.placement);
@@ -530,6 +541,61 @@ fn the_close_control_dismisses_and_focus_returns_to_the_opener() {
     assert!(!app(&harness).editing);
     assert_eq!(app(&harness).performed, [Act::Edit, Act::Close]);
     assert_eq!(focused(&harness), focus("Edit routine"));
+}
+
+#[test]
+fn a_cancel_beside_the_close_control_is_bound_and_dismisses_once() {
+    let mut harness = harness_at(
+        Planner {
+            cancel: true,
+            ..Planner::default()
+        },
+        DESKTOP,
+    );
+    open_editor(&mut harness);
+    // The close control and Cancel each present the dismiss action, and
+    // each is a binding of its own, named as its node is.
+    let bindings = discover(&harness, by_capability(Act::Close));
+    assert_eq!(bindings.len(), 2, "{bindings:?}");
+    let snapshot = host(&harness).ui_snapshot();
+    let mut names: Vec<_> = bindings
+        .iter()
+        .map(|binding| {
+            assert!(binding.rendered && binding.availability.enabled());
+            snapshot
+                .node(&binding.id)
+                .expect("a presented control")
+                .name
+                .clone()
+        })
+        .collect();
+    names.sort();
+    assert_eq!(names, ["Cancel", "Close"]);
+    // `stobie invoke planner.close` dismisses once, whichever it found.
+    invoke_action(&mut harness, Act::Close).expect("the dismiss action");
+    assert!(!app(&harness).editing);
+    assert_eq!(app(&harness).performed, [Act::Edit, Act::Close]);
+    // Cancel, addressed by its own ID, dismisses too.
+    open_editor(&mut harness);
+    let cancel = discover(&harness, by_capability(Act::Close))
+        .into_iter()
+        .find(|binding| host(&harness).ui_snapshot().node(&binding.id).unwrap().name == "Cancel")
+        .expect("Cancel's binding");
+    let receipt = invoke(
+        &mut harness,
+        "cancel",
+        by_id(&cancel.id.0),
+        cancel.target.clone(),
+        serde_json::Value::Null,
+    )
+    .expect("Cancel dismisses");
+    assert_eq!(receipt.target.map(|target| target.id), Some(cancel.id));
+    assert!(!app(&harness).editing);
+    assert_eq!(
+        app(&harness).performed,
+        [Act::Edit, Act::Close, Act::Edit, Act::Close]
+    );
+    assert_clean_audit(&harness);
 }
 
 #[test]

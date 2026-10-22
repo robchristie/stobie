@@ -154,7 +154,7 @@ it, the one carrying it is preferred over the action's own binding, and a
 value none of several can take is `no_match`. The Rust client and `stobie`
 apply the same choice, then address the chosen control by its ID; the
 JavaScript client's `invoke` needs a selector that discovers one binding,
-such as one with `argument`. So `{"capability":"people.open"}` with `{"value":2}` invokes the
+such as one with `argument`, or several that perform the same thing. So `{"capability":"people.open"}` with `{"value":2}` invokes the
 row carrying 2 when it is presented, and otherwise the action's binding:
 
 ```sh
@@ -162,6 +162,22 @@ stobie discover people.open                # one per row, `= 2`, and the action'
 stobie invoke people.open --value 2        # the row carrying 2
 stobie invoke people.select --argument ada # the row carrying "ada"; no value needed
 ```
+
+Several controls can present one action with one value, such as Open for
+one row in two lists, or a dialog's dismiss action on its close control
+beside a Cancel button. Each is a binding of its own, with its own ID, so a
+caller can address any of them. Bindings that perform the same thing, which
+share their capability, pane, carried value, meaning, availability and
+semantic-invocation support (`CapabilityDescription::performs_same_as`), are
+one choice rather than `ambiguous`: their domains and labels may differ, and
+invocation resolves to the one with the least semantic ID. An `expected`
+target naming another of them keeps that one. Either way the action runs
+once, its receipt's `target` names the binding that ran, and its
+`after_observation` is the first observation that presents the effect, which
+is the same whichever control was chosen. Framework capabilities, such as
+two text fields' `stobie.set-text`, never perform the same thing. The Rust
+client's `discover_one`, and both clients' `invoke` without a target and
+`capability_enabled` wait, make the same choice.
 
 A row removed after discovery no longer matches (`no_match`). One removed
 after its invocation was admitted is refused when it runs: `unavailable`
@@ -213,7 +229,8 @@ callers may pass `{limit, cursor}`. A returned `next_cursor` binds to the same
 observation; an intervening publication can return `stale_cursor`. Start a new
 bounded query when that occurs.
 
-`invoke` discovers exactly one target, sends its current resolved identity and
+`invoke` discovers exactly one target, or one among bindings that perform
+the same thing, sends its current resolved identity and
 meaning once, then reads the correlated receipt while it is queued. A
 completed receipt carries `after_observation`, the first observation that
 includes its effect. Wait for an observation at least that new before reading
@@ -403,12 +420,15 @@ Host the application with `AppHost` (see the
 `Inspection`, installs its completion hook, and starts the native socket when
 `STOBIE_AUTOMATION_SOCKET` is set. In the browser, `web_handle!` exposes
 `enable_automation` and `automation_request`. Each completed, non-discarded pass
-is published with one binding per action target. Its identity is the first
-rendered control that presents the target, and its domain is that control's
-domain reference or, for a pane-scoped target, the pane. An application-scoped
-action with no rendered control keeps its default identity. A control
-carrying an argument has a binding of its own, and the action keeps its
-default identity unless a control without an argument presents it. A pane-scoped
+is published with one binding for each rendered control that presents an
+action, whose identity is the control's semantic ID and whose domain is that
+control's domain reference or, for a pane-scoped target, the pane. An
+application-scoped action with no rendered control keeps its default
+identity. A control carrying an argument has a binding of its own, and the
+action keeps its default identity unless a control without an argument
+presents it. Controls that present one action with one argument perform the
+same thing, and invoking them together resolves to one of them, as
+[above](#read-discover-and-invoke) describes. A pane-scoped
 action is discoverable where its control is rendered with a pane, and in the
 panes `Application::action_panes` lists. Facts come from
 `Application::observe`. Queued invocations drain on the application thread

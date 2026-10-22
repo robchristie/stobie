@@ -98,6 +98,22 @@ function same(a, b) {
   return sameKeys(keys, Object.keys(b).sort()) && keys.every(key => same(a[key], b[key]));
 }
 function sameKeys(a, b) { return a.length === b.length && a.every((value, index) => value === b[index]); }
+const FRAMEWORK_CAPABILITIES = new Set(['stobie.set-text', 'stobie.open-link', 'stobie.copy-text']);
+// Whether two bindings perform the same thing, as `CapabilityDescription::performs_same_as` decides.
+export function performsSameAs(a, b) {
+  const field = (value, key) => value?.[key] ?? null;
+  return typeof a.capability === 'string' && !FRAMEWORK_CAPABILITIES.has(a.capability) && a.capability === b.capability
+    && ['pane', 'argument', 'availability', 'semantic_invocable'].every(key => same(field(a, key), field(b, key)))
+    && field(a.target, 'meaning') === field(b.target, 'meaning');
+}
+// The one capability a whole discovery page names: a binding alone, or the least ID among
+// bindings that perform the same thing, which the application chooses when they are invoked.
+function oneEffect(discovered) {
+  const [first] = discovered.capabilities;
+  if (!first || discovered.total !== discovered.capabilities.length || discovered.next_cursor) return undefined;
+  if (!discovered.capabilities.every(capability => capability === first || performsSameAs(capability, first))) return undefined;
+  return discovered.capabilities.reduce((least, capability) => (capability.id < least.id ? capability : least));
+}
 export function matchesSelector(node, selected) {
   selector(selected);
   return Object.entries(selected).every(([key, value]) => {
@@ -305,11 +321,12 @@ export class ApplicationClient {
       return { timeoutMs: milliseconds, signal };
     };
     if (!expected) {
-      const discovered = await this.discover(selected, { limit: 2, ...readOptions() });
-      if (discovered.total !== 1 || discovered.capabilities.length !== 1) {
+      const discovered = await this.discover(selected, { limit: 8, ...readOptions() });
+      const capability = oneEffect(discovered);
+      if (!capability) {
         throw failure(discovered.total ? 'ambiguous' : 'no_match', 'Semantic invocation requires one exact capability target');
       }
-      expected = discovered.capabilities[0].target;
+      expected = capability.target;
     }
     const result = await this.request({ op: 'invoke', selector: selector(selected), expected,
       ...(suppliedArguments !== undefined ? { arguments: suppliedArguments } : {}) }, {
@@ -384,9 +401,9 @@ export class ApplicationClient {
         if (condition.condition === 'absent') done = !node;
         if (condition.condition === 'enabled') done = node?.enabled === true;
         if (condition.condition === 'capability_enabled') {
-          const capabilities = await this.discover(selected, { limit: 2, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
-          if (capabilities.total > 1) throw failure('ambiguous', 'Capability wait requires one target; add a pane or identity');
-          capability = capabilities.capabilities[0];
+          const capabilities = await this.discover(selected, { limit: 8, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
+          capability = oneEffect(capabilities);
+          if (capabilities.total > 0 && !capability) throw failure('ambiguous', 'Capability wait requires one target; add a pane or identity');
           capabilityObservation = capabilities.observation;
           lastCapability = capability;
           lastCapabilityObservation = capabilityObservation;

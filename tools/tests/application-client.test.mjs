@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 import { ApplicationClient, ApplicationError, SocketTransport, BrowserTransport,
-  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError, SOCKET_PATH_BYTES } from '../application-client.mjs';
+  BrowserPhysicalAdapter, NativePhysicalAdapter, matchesSelector, describeApplicationError, performsSameAs, SOCKET_PATH_BYTES } from '../application-client.mjs';
 
 const rootRect = { min_x: 10, min_y: 20, max_x: 410, max_y: 320 };
 const targetRect = { min_x: 30, min_y: 40, max_x: 90, max_y: 80 };
@@ -324,6 +324,22 @@ test('ambiguous discovery prevents semantic invocation', async () => {
   const { client, requests } = await bound(() => ({ kind: 'discover', total: 2, capabilities: [{ target }, { target }] }));
   await assert.rejects(client.invoke({ capability: 'record.apply' }), { code: 'ambiguous' });
   assert.equal(requests.filter(request => request.operation.op === 'invoke').length, 0);
+});
+
+test('controls that perform the same thing invoke the one with the least ID', async () => {
+  const binding = (id, overrides = {}) => ({ id, capability: 'record.apply', pane: 7, argument: 2,
+    availability: { state: 'enabled' }, semantic_invocable: true, target: { ...target, id }, ...overrides });
+  const same = [binding('record.list.apply'), binding('record.detail.apply', { domain })];
+  const { client, requests } = await bound((operation, request) => operation.op === 'discover'
+    ? { kind: 'discover', total: same.length, capabilities: same }
+    : { kind: 'receipt', receipt: { request_id: request.request_id, state: 'queued' } });
+  await client.invoke({ capability: 'record.apply' }, { wait: false });
+  assert.equal(requests.find(request => request.operation.op === 'invoke').operation.expected.id, 'record.detail.apply');
+  for (const other of [{ argument: 3 }, { pane: 8 }, { availability: { state: 'hidden' } }, { target: { ...target, meaning: 'apply:24' } }, { capability: 'stobie.copy-text' }]) {
+    const pair = [binding('record.list.apply'), binding('record.detail.apply', other)];
+    assert.equal(performsSameAs(pair[0], pair[1]), false, JSON.stringify(other));
+  }
+  assert.equal(performsSameAs(binding('a', { capability: 'stobie.copy-text' }), binding('b', { capability: 'stobie.copy-text' })), false);
 });
 
 test('slow discovery cannot consume the deadline then dispatch a mutation', async () => {

@@ -54,7 +54,12 @@ it by hand or call `trigger_with` from a row's click.
   (the JSON value an invocation would send). The host binds each such control
   as its own capability carrying that argument, and keeps the action's own
   binding, which takes any value its contract allows, unless a control without
-  an argument presents the action.
+  an argument presents the action. Two controls carrying one argument, such
+  as Open for one person in two lists, are two bindings, each with its own
+  ID; because they perform the same thing, invoking the action with that
+  value resolves to one of them rather than being ambiguous. The same holds
+  for an action without an argument presented twice, such as a dialog's
+  dismiss action on its close control and on a Cancel button.
 - **Availability.** Implement `Application::availability_with(target,
   argument)` to decide availability for one row, such as a disabled Remove on
   a pinned person, and to hide an argument that names nothing, such as a

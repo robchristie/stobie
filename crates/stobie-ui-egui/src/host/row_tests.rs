@@ -8,9 +8,9 @@ use serde::Serialize;
 
 use super::*;
 use crate::{
-    Action, BoundAction, CapabilityDescription, InspectionErrorCode, InspectionOperation,
-    InspectionResult, InspectionSelector, InvocationReceipt, ListRowSpec, PresentationScope,
-    ReceiptState, ResolvedTarget,
+    Action, BoundAction, CapabilityDescription, DomainReference, InspectionErrorCode,
+    InspectionOperation, InspectionResult, InspectionSelector, InvocationReceipt, ListRowSpec,
+    PresentationScope, ReceiptState, ResolvedTarget,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -116,6 +116,9 @@ struct View {
     /// record the egui IDs of their responses.
     open_elsewhere: Option<u32>,
     elsewhere: Vec<egui::Id>,
+    /// The other presentations name their own domain objects, as two lists
+    /// in different places might.
+    elsewhere_domains: bool,
 }
 
 impl People {
@@ -203,6 +206,12 @@ impl Application for People {
                 .map(|scope| {
                     let mut other =
                         frame.presentation(ui, PresentationScope::new(scope), SemanticUiId::root());
+                    if view.elsewhere_domains {
+                        other = other.with_domain_reference(DomainReference::External {
+                            namespace: "list".into(),
+                            id: scope.into(),
+                        });
+                    }
                     frame
                         .action(
                             ui,
@@ -901,4 +910,149 @@ fn hidden_controls_are_scoped_by_their_presentation() {
     harness.run();
     assert_eq!(host(&harness).ui_state.elsewhere, hidden);
     assert_eq!(harness.query_all_by_label("Open").count(), 2);
+}
+
+/// Every node in the AccessKit tree the harness holds, as one update.
+fn accesskit_update(harness: &Harness<'_, Probe>) -> egui::accesskit::TreeUpdate {
+    fn collect(
+        node: egui_kittest::kittest::AccessKitNode<'_>,
+        update: &mut egui::accesskit::TreeUpdate,
+    ) {
+        update.nodes.push((node.locate().0, node.data().clone()));
+        for child in node.children() {
+            collect(child, update);
+        }
+    }
+    let root = harness.kittest_state().root();
+    let mut update = egui::accesskit::TreeUpdate {
+        nodes: Vec::new(),
+        tree: Some(egui::accesskit::Tree::new(root.locate().0)),
+        tree_id: egui::accesskit::TreeId::ROOT,
+        focus: root.locate().0,
+    };
+    collect(root, &mut update);
+    update
+}
+
+/// Each node presenting `Open` for `id`, with the targets a query gives it.
+fn open_controls(harness: &Harness<'_, Probe>, id: u32) -> Vec<(UiNode, Vec<ResolvedTarget>)> {
+    let reply = request(
+        harness,
+        "query-open",
+        InspectionOperation::Query {
+            selector: InspectionSelector {
+                capability: Some(RowAct::Open.stable_id().into()),
+                ..Default::default()
+            },
+            limit: 64,
+            cursor: None,
+        },
+    );
+    let Some(InspectionResult::Query { nodes, .. }) = reply.result else {
+        panic!("query failed: {:?}", reply.error);
+    };
+    nodes
+        .into_iter()
+        .filter(|node| node.node.argument == Some(serde_json::json!(id)))
+        .map(|node| (node.node, node.targets))
+        .collect()
+}
+
+#[test]
+fn one_action_and_value_presented_twice_is_bound_through_each_control() {
+    for domains in [false, true] {
+        let mut harness = harness(People::default());
+        with_inspection(&mut harness);
+        host_mut(&mut harness).ui_state.open_elsewhere = Some(2);
+        host_mut(&mut harness).ui_state.elsewhere_domains = domains;
+        host_mut(&mut harness).request_repaint("test");
+        harness.run();
+        // Grace's row and the two other presentations each present Open 2,
+        // and each control is its own binding, named and identified as its
+        // node is.
+        let controls = open_controls(&harness, 2);
+        assert_eq!(controls.len(), 3, "domains {domains}");
+        let mut names: Vec<_> = controls.iter().map(|(node, _)| node.name.clone()).collect();
+        names.sort();
+        assert_eq!(names, ["Open", "Open", "Open Grace"]);
+        for (node, targets) in &controls {
+            assert_eq!(targets.len(), 1, "{} has its own target", node.id.0);
+            assert_eq!(targets[0].id, node.id);
+            assert_eq!(targets[0].argument, Some(serde_json::json!(2)));
+        }
+        let bindings = discover(
+            &harness,
+            InspectionSelector {
+                argument: Some(serde_json::json!(2)),
+                ..selector(RowAct::Open)
+            },
+        );
+        assert_eq!(bindings.len(), 3);
+        // Invoking a control by its own ID performs Open 2 and reports that
+        // control.
+        let (second, _) = controls
+            .iter()
+            .find(|(node, _)| node.name == "Open")
+            .unwrap();
+        let by_id = invoke(
+            &mut harness,
+            "by-id",
+            InspectionSelector {
+                id: Some(second.id.clone()),
+                ..Default::default()
+            },
+            controls
+                .iter()
+                .find(|(node, _)| node.id == second.id)
+                .unwrap()
+                .1[0]
+                .clone(),
+            serde_json::Value::Null,
+        );
+        assert_eq!(by_id.state, ReceiptState::Completed, "{by_id:?}");
+        assert_eq!(
+            by_id.target.map(|target| target.id),
+            Some(second.id.clone())
+        );
+        // Invoking the action with the value they all carry performs it
+        // once, through whichever control the caller discovered.
+        for (index, (node, targets)) in controls.iter().enumerate() {
+            let by_value = invoke(
+                &mut harness,
+                &format!("by-value-{index}"),
+                selector(RowAct::Open),
+                targets[0].clone(),
+                serde_json::json!({ "value": 2 }),
+            );
+            assert_eq!(by_value.state, ReceiptState::Completed, "{by_value:?}");
+            assert_eq!(
+                by_value.target.map(|target| target.id),
+                Some(node.id.clone())
+            );
+        }
+        let people = host(&harness).app();
+        assert_eq!(
+            people.performed,
+            vec![(RowAct::Open, ActionArgument::Number(2.0)); 4]
+        );
+        // Controls carrying different values are still told apart.
+        let action = discover(&harness, selector(RowAct::Open))
+            .into_iter()
+            .find(|capability| capability.argument.is_none())
+            .unwrap();
+        let unsent = invoke(
+            &mut harness,
+            "no-value",
+            selector(RowAct::Open),
+            action.target,
+            serde_json::Value::Null,
+        );
+        assert_eq!(
+            unsent.error.map(|error| error.code),
+            Some(InspectionErrorCode::Ambiguous)
+        );
+        let mismatches =
+            crate::audit_accesskit(host(&harness).ui_snapshot(), &accesskit_update(&harness));
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
 }

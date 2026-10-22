@@ -166,7 +166,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   were `added` or `removed` (`--json` lists up to 32). A choice value may also be its option's
   label, in any case. When a capability is presented on several rows, the
   value chooses the row's control that carries it, or else the action's own
-  binding; a row's control needs no value. `--request-id` makes a retry safe; `--no-wait` returns once the
+  binding; a row's control needs no value. Controls that perform the same
+  thing, such as one row's Open in two lists, are one choice, and the one
+  with the least ID runs. `--request-id` makes a retry safe; `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file). A
