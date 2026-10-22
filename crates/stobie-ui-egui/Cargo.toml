@@ -39,10 +39,11 @@ jiff = "0.2.38"
 wasm-bindgen.workspace = true
 js-sys = "0.3.104"
 wasm-bindgen-futures = { workspace = true, optional = true }
-# eframe already enables most of these features, for the ARIA layer, renderer
-# policy and the copy recipe's clipboard; MessageEvent, ServiceWorker* and Url
-# serve Web Push (src/web_push.rs).
-web-sys = { workspace = true, features = ["AddEventListenerOptions", "Clipboard", "console", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }
+# eframe already enables most of these features, for the ARIA layer (Css* and
+# StyleSheet style it through the CSSOM), renderer policy and the copy recipe's
+# clipboard; MessageEvent, ServiceWorker* and Url serve Web Push
+# (src/web_push.rs).
+web-sys = { workspace = true, features = ["AddEventListenerOptions", "Clipboard", "console", "CssStyleDeclaration", "CssStyleSheet", "Document", "DomRect", "Element", "Event", "EventTarget", "FocusOptions", "HtmlCanvasElement", "HtmlElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "ServiceWorkerContainer", "ServiceWorkerRegistration", "StyleSheet", "Touch", "TouchEvent", "TouchList", "Url", "Window"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [[example]]

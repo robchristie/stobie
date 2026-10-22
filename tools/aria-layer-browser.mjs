@@ -12,10 +12,16 @@
 // the check enables on the running page only after the structural, idle and
 // hover checks, so those see the default page.
 //
+// Every page is served under a Content-Security-Policy whose `style-src`
+// allows only the page's own styles (its files, and its inline `<style>`
+// elements by hash), so the layer must style itself without inline style
+// attributes or `<style>` text; any violation fails the check.
+//
 // The applications must already be built (`cargo xtask build-web`,
 // `consumers/record-desk/build-web.sh`). Raw evidence goes to
 // STOBIE_EVIDENCE_DIR (default .tools/runtime/aria-layer).
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
@@ -46,10 +52,26 @@ const server = createServer(async (request, response) => {
   try {
     assert(path.startsWith(`${root}${sep}`), 'asset inside the application root');
     const body = await readFile(path);
-    response.writeHead(200, { 'Content-Type': types[extname(path)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
+    const headers = { 'Content-Type': types[extname(path)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' };
+    if (extname(path) === '.html') headers['Content-Security-Policy'] = stylePolicy(body.toString('utf8'));
+    response.writeHead(200, headers);
     response.end(body);
   } catch { response.writeHead(404); response.end(); }
 });
+/** Report each Content-Security-Policy violation as a page error. */
+async function reportPolicyViolations(target) {
+  await target.addInitScript(() => {
+    addEventListener('securitypolicyviolation', event => {
+      console.error(`Content-Security-Policy violation: ${event.effectiveDirective} ${event.blockedURI} ${event.sample}`);
+    }, true);
+  });
+}
+/** A policy that allows the page's own styles only: its files and, by hash, its `<style>` elements. */
+function stylePolicy(html) {
+  const hashes = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)]
+    .map(([, text]) => `'sha256-${createHash('sha256').update(text).digest('base64')}'`);
+  return `style-src 'self' ${hashes.join(' ')}`.trim();
+}
 await mkdir(evidence, { recursive: true });
 await new Promise(done => server.listen(0, '127.0.0.1', done));
 const browser = await chromium.launch({ ...hostedLinuxWebGpuLaunchOptions(), env: uiLibraryEnvironment() });
@@ -59,6 +81,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await reportPolicyViolations(page);
   // Count presented frames by their GPU submissions, and layer writes by
   // mutation records, so idle and hover can be told apart from tree changes.
   // On WebGL2, wgpu's queue submission is one `flush`.
@@ -498,6 +521,7 @@ async function checkTouchFields({ agent, native }, check) {
     const tablet = await context.newPage();
     tablet.on('pageerror', error => errors.push(error.message));
     tablet.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+    await reportPolicyViolations(tablet);
     await tablet.addInitScript(() => {
       const probe = window.__touchProbe = { submits: 0, inTouchEnd: false, held: null, focus: [] };
       for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {

@@ -189,6 +189,15 @@ snapshot, is the source.
   at hidden nodes are dropped before the pass sees them. The
   [interactions guide](interactions.md#dialogs) describes the keyboard and
   agent rules.
+- **Content Security Policy.** The layer sets every style through the CSSOM
+  and keeps its rules in a constructed stylesheet that it adopts into the
+  document, so it runs under `style-src 'self'` without `'unsafe-inline'` or
+  a nonce. eframe's text agent and the startup loader also style only through
+  the CSSOM. A page must still allow its own inline styles: the `<style>`
+  element in the page `stobie new` writes needs its hash in `style-src`, or
+  moves into a stylesheet file. A browser without adoptable stylesheets
+  (Safari before 16.4) gets the rules in `<style>` elements, which such a
+  policy blocks.
 - **Limits.** The layer is positioned from the canvas's client rectangle on
   each pass. A page that scrolls, or transforms an ancestor, without a pass
   leaves it misaligned until the next pass. It is not a substitute for a text
@@ -228,7 +237,9 @@ Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 `tools/aria-layer-browser.mjs` checks each application in Chromium:
 
 - the CDP accessibility tree against reviewed expectations in
-  `tools/aria-layer-expectations.json`;
+  `tools/aria-layer-expectations.json`, with every page served under
+  `style-src 'self'` plus the hash of its own `<style>` element, and no
+  policy violation reported;
 - axe-core, with no serious or critical violation;
 - an idle application presents no frame and writes nothing;
 - hover frames write nothing;
