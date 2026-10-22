@@ -212,6 +212,9 @@ fn present_story(
             font_scale,
             &mut observations,
         ),
+        StoryId::TypographyEmoji => {
+            typography::emoji_story(ui, tokens, font_scale, &mut observations)
+        }
         StoryId::ButtonDefault => {
             let mut focused = false;
             buttons::button_story(

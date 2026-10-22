@@ -20,8 +20,15 @@ BINARY_LIMIT_BYTES = 512 * 1024
 BINARY_ROOTS = (
     "crates/stobie-ui-egui/assets/fonts/",
     "docs/images/",
+    "tests/fixtures/",
     "tests/ui-snapshots/expected/",
 )
+# Reviewed binaries that cannot meet the binary limit, each with its exact
+# size, so any replacement is reviewed again. The emoji face is a whole
+# monochrome emoji set; assets/fonts/README.md records its provenance.
+SIZE_EXCEPTIONS = {
+    "crates/stobie-ui-egui/assets/fonts/NotoEmoji-Regular.ttf": 886628,
+}
 BINARY_SUFFIXES = {
     ".7z", ".avif", ".bin", ".bmp", ".br", ".gif", ".gz", ".ico", ".j2k", ".jp2",
     ".jpeg", ".jpg", ".jph", ".jhc", ".mov", ".mp4", ".ntf", ".nitf", ".otf",
@@ -54,7 +61,7 @@ def violations(root, paths):
         size = file.stat().st_size
         is_binary = binary(file, path)
         limit = BINARY_LIMIT_BYTES if is_binary else TEXT_LIMIT_BYTES
-        if size > limit:
+        if size > limit and SIZE_EXCEPTIONS.get(path) != size:
             kind = "binary" if is_binary else "text"
             found.append(f"{path}: {size} bytes exceeds the {limit}-byte {kind} limit")
         if EVIDENCE.fullmatch(path):

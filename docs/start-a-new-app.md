@@ -310,6 +310,27 @@ native application on a software-only X server may need `WGPU_BACKEND=gl`.
 `stobie attach` waits for a page that is still loading its application, and
 reports the page's own startup failure when it fails.
 
+## Fonts and licence notices
+
+`stobie-ui-egui` embeds Source Sans 3 and the monochrome Noto Emoji, both
+under the SIL Open Font License 1.1, so its `license` field is
+`Apache-2.0 AND OFL-1.1`. It does not enable egui's `default_fonts` feature;
+the application chooses egui's bundled fonts (Hack, Ubuntu Light, an older
+Noto Emoji and an emoji icon font) through its own dependencies. `stobie new`
+keeps them through eframe's `default_fonts` feature, and depends on `egui`
+without its default features, so that feature is the one switch. To leave
+them out, remove it; monospace text then uses Source Sans 3. Leaving them out
+makes the template's compressed WASM about 680 KB smaller.
+`cargo tree -e features -i epaint_default_fonts` shows what still enables
+them.
+
+A build that is distributed must carry each embedded font's licence and
+copyright notice. The
+[bundled-font record](../crates/stobie-ui-egui/assets/fonts/README.md) lists
+Stobie's faces, their licence files and notices; egui's fonts carry their own
+in the `epaint_default_fonts` crate. Emoji draw in one colour, the text colour,
+because egui cannot draw colour glyphs.
+
 ## Upgrade Stobie
 
 Every Stobie dependency in `Cargo.toml` names the same `rev`. To upgrade,

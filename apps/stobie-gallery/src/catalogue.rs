@@ -51,6 +51,7 @@ pub enum StoryId {
     CopyActions,
     DialogSheet,
     DialogConfirm,
+    TypographyEmoji,
     HeadingControls,
     NavigationHeader,
     ScrollLoadOlder,
@@ -61,7 +62,7 @@ pub enum StoryId {
 }
 
 impl StoryId {
-    pub const ALL: [Self; 53] = [
+    pub const ALL: [Self; 54] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -108,6 +109,7 @@ impl StoryId {
         Self::CopyActions,
         Self::DialogSheet,
         Self::DialogConfirm,
+        Self::TypographyEmoji,
         Self::HeadingControls,
         Self::NavigationHeader,
         Self::ScrollLoadOlder,
@@ -165,6 +167,7 @@ impl StoryId {
             Self::CopyActions => "copy/actions",
             Self::DialogSheet => "dialog/sheet",
             Self::DialogConfirm => "dialog/confirm",
+            Self::TypographyEmoji => "typography/emoji",
             Self::HeadingControls => "heading/controls",
             Self::NavigationHeader => "navigation/header",
             Self::ScrollLoadOlder => "scroll/load-older",
@@ -501,7 +504,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 53] = [
+pub static STORIES: [StoryDefinition; 54] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -915,6 +918,15 @@ pub static STORIES: [StoryDefinition; 53] = [
         720,
         DIALOG_STATES,
         KEYBOARD,
+    ),
+    story(
+        StoryId::TypographyEmoji,
+        "Monochrome emoji in each text role, and how sequences draw.",
+        StoryGroup::Reference,
+        480,
+        720,
+        REFERENCE_SCALE,
+        PASSIVE,
     ),
     story(
         StoryId::HeadingControls,
