@@ -262,13 +262,12 @@ so the control never covers code. Every other block keeps its place.
 
 Each control copies exactly the block's text as Stobie's Markdown parses it:
 without its fences, its language or its final line break, with tabs as four
-spaces. It is named by the application's label, such as "Copy code", when
-there is one code block, and by the label and the block's number from 1,
-such as "Copy code 2", when there are several (`CodeCopySpec::name`), so the
-names stay distinct. Controls are keyed by their block's position among the
-code blocks, so in a reply still arriving each keeps its identity, and any
-confirmation it shows, as later blocks arrive; the first control's name moves
-from "Copy code" to "Copy code 1" when a second block arrives.
+spaces. The first block's control is named by the application's label, such
+as "Copy code", and each later one by the label and the block's number, such
+as "Copy code 2" for the second (`CodeCopySpec::name`), so the names stay
+distinct. Controls are keyed by their block's position among the code
+blocks, so in a reply still arriving each keeps its identity, its name and
+any confirmation it shows as later blocks arrive.
 `CodeCopySpec` shows the glyph alone by default; `content` chooses a face with
 the label and `description` adds an accessible description. The controls
 behave as any copy control does, inside a message bubble too: they confirm

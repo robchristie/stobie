@@ -49,14 +49,16 @@ impl<'a> CodeCopySpec<'a> {
     }
 
     /// The accessible name of the control on the code block at `index`, in
-    /// document order counting from 0, among `count` code blocks: the label
-    /// alone for one block, and the label and the block's number from 1 for
-    /// several, so each name is distinct.
+    /// document order counting from 0: the label alone for the first block,
+    /// and the label and the block's number from 2 for each later one, so
+    /// each name is distinct. The name never depends on how many blocks
+    /// there are (`count`, kept for compatibility), so a control keeps its
+    /// name as later blocks of a reply still arriving appear.
     pub fn name(&self, index: usize, count: usize) -> String {
-        if count > 1 {
-            format!("{} {}", self.label, index + 1)
-        } else {
-            self.label.to_owned()
+        let _ = count;
+        match index {
+            0 => self.label.to_owned(),
+            _ => format!("{} {}", self.label, index + 1),
         }
     }
 }
@@ -67,10 +69,10 @@ impl PresentationContext {
     /// its surface. Each control copies exactly the block's text as the
     /// Markdown parses it: without its fences, its language or its final
     /// line break, with tabs as four spaces. Its name is
-    /// [`CodeCopySpec::name`], such as "Copy code", or "Copy code 2" when
-    /// there are several. Controls are keyed by the block's position among
-    /// the code blocks, so a reply still arriving keeps each control, and
-    /// any confirmation it shows, as later blocks arrive.
+    /// [`CodeCopySpec::name`]: "Copy code" for the first block and "Copy
+    /// code 2" for the second. Controls are keyed by the block's position
+    /// among the code blocks, so a reply still arriving keeps each control,
+    /// its name and any confirmation it shows, as later blocks arrive.
     ///
     /// ```
     /// use stobie_ui_egui::{CodeCopySpec, DesignTokens, MarkdownSpec,
@@ -150,10 +152,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn one_block_is_named_by_the_label_and_several_by_their_numbers() {
+    fn the_first_block_is_named_by_the_label_and_later_ones_by_their_numbers() {
         let spec = CodeCopySpec::new("Copy code", "Copied", "Couldn't copy");
         assert_eq!(spec.name(0, 1), "Copy code");
         let names: Vec<_> = (0..3).map(|index| spec.name(index, 3)).collect();
-        assert_eq!(names, ["Copy code 1", "Copy code 2", "Copy code 3"]);
+        assert_eq!(names, ["Copy code", "Copy code 2", "Copy code 3"]);
+        // However many blocks there are, a block keeps its name.
+        assert!((1..5).all(|count| spec.name(0, count) == "Copy code"));
     }
 }
