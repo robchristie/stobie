@@ -444,6 +444,18 @@ pub const COMMANDS: &[Command] = &[
         output_schema_version: SCHEMA_VERSION,
     },
     Command {
+        name: "reveal",
+        usage: "stobie reveal ID [--request-id ID] [TARGET FLAGS]",
+        summary: "Scroll a node into view by its semantic ID, so that a region observed only in view presents it; invoke and set-text reveal an ID they do not find",
+        connects: true,
+        flags: &[flag(
+            "--request-id",
+            Some("ID"),
+            "The mutation's ID; retrying with it never runs the reveal twice",
+        )],
+        output_schema_version: SCHEMA_VERSION,
+    },
+    Command {
         name: "wait",
         usage: "stobie wait CONDITION [SELECTOR FLAGS] [--value VALUE] [--key KEY] [--condition JSON] [TARGET FLAGS]",
         summary: "Wait until a condition holds: present, absent, enabled, capability_enabled, focused, selected, checked, name, value, status, selection_changed, fact, audits_clear or content",

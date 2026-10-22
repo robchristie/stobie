@@ -554,6 +554,23 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
             )?;
             Ok(invoked_output(&before, invoked))
         }
+        "reveal" => {
+            let (mut client, _, _) = connect(args)?;
+            let id = positional(0, "a semantic ID")?;
+            let before = client.observe()?;
+            let invoked = client.invoke(
+                stobie_client::protocol::InspectionSelector {
+                    capability: Some(stobie_client::protocol::REVEAL_CAPABILITY.into()),
+                    ..Default::default()
+                },
+                InvokeOptions {
+                    arguments: Some(serde_json::json!({ "value": id })),
+                    request_id: args.value("--request-id").map(ToOwned::to_owned),
+                    ..InvokeOptions::default()
+                },
+            )?;
+            Ok(invoked_output(&before, invoked))
+        }
         "wait" => {
             let (mut client, _, _) = connect(args)?;
             let condition = condition(args)?;
@@ -645,8 +662,8 @@ fn run(command: &spec::Command, args: &Args) -> Result<Output, ClientError> {
 
 fn expected_positionals(command: &str) -> usize {
     match command {
-        "launch" | "attach" | "stop" | "query" | "discover" | "invoke" | "wait" | "receipt"
-        | "cancel" => 1,
+        "launch" | "attach" | "stop" | "query" | "discover" | "invoke" | "reveal" | "wait"
+        | "receipt" | "cancel" => 1,
         "set-text" => 2,
         "new" | "serve" => 1,
         "package-web" => usize::MAX,

@@ -760,3 +760,19 @@ fn a_rows_control_is_selected_by_the_argument_it_carries() {
         "button \"Open Grace\" carrying 2 #people.open.2"
     );
 }
+
+#[test]
+fn reveal_takes_one_id_and_is_tagged_without_its_contract() {
+    let args = parse("reveal", &["desk.notes", "--request-id", "r1"]).unwrap();
+    assert_eq!(args.positional, ["desk.notes"]);
+    assert_eq!(args.value("--request-id"), Some("r1"));
+    let mut reveal = capability(
+        stobie_client::protocol::REVEAL_CAPABILITY,
+        stobie_client::protocol::REVEAL_CAPABILITY,
+        ArgumentContract::Text {
+            max_length: Some(512),
+        },
+    );
+    reveal.rendered = false;
+    assert_eq!(output::capability_tag(&reveal), "reveal");
+}
