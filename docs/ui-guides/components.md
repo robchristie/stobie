@@ -1038,7 +1038,13 @@ control is named by its action's label. `in_pane` targets a pane action.
 - **Semantics.** The field is a `MultilineTextInput` node named by the
   spec's name, whose value is the draft and whose bounds are the part shown.
   Each control is an ordinary action button node; send carries the draft as
-  its argument.
+  its argument. Their semantic IDs derive from the scope and the key; give
+  the composer a stable, published ID with `Frame::composer_with_id(ui, p,
+  "chat.composer", &spec, &self.draft, Intent::Draft)` (or
+  `PresentationContext::composer_with_id`), and the field is
+  `chat.composer` and its controls `chat.composer.send`,
+  `chat.composer.leading` and `chat.composer.trailing`. Keep the ID stable
+  and unique, as for `TextFieldSpec::id`.
 - **Responses.** `Frame::composer` returns a `ComposerResponse` with the
   field's response, whether the draft changed, the text submitted, and each
   control's target and response. `PresentationContext::composer` is the

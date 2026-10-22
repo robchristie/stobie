@@ -765,6 +765,37 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     ) -> crate::ComposerResponse<A> {
         let mut text = draft.to_owned();
         let response = presentation.composer(ui, key, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// [`Self::composer`] with the field's semantic ID `id`, and its
+    /// controls' `id.send`, `id.leading` and `id.trailing`, rather than IDs
+    /// derived from a key (see [`PresentationContext::composer_with_id`]).
+    ///
+    /// # Panics
+    ///
+    /// If the send action does not take a text argument.
+    pub fn composer_with_id(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        id: &str,
+        spec: &crate::ComposerSpec<'_, A>,
+        draft: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
+        let mut text = draft.to_owned();
+        let response = presentation.composer_with_id(ui, id, spec, &mut text, self.availability);
+        self.composed(response, text, edit)
+    }
+
+    /// Emit a composer's edit and trigger what it sent or clicked.
+    fn composed(
+        &mut self,
+        response: crate::ComposerResponse<A>,
+        text: String,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::ComposerResponse<A> {
         if response.changed {
             self.intents.push(edit(text));
         }

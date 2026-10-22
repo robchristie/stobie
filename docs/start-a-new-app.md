@@ -296,7 +296,8 @@ an effect it cannot read from a bounded excerpt, publish a bounded fact for it
 in `Application::observe`.
 
 Address controls by their capability IDs (`my-app.add`) or by the semantic
-IDs you give them (`my-app.draft`). Generated presentation IDs, such as
+IDs you give them (`my-app.draft`, through `TextFieldSpec::id` or
+`Frame::composer_with_id`). Generated presentation IDs, such as
 `#presentation.300df68a0e3a837e`, can differ between native and browser
 hosts.
 

@@ -180,6 +180,9 @@ impl PresentationContext {
     ///   the draft as its argument, so an agent invokes it by its ID, or by
     ///   the action with the draft as its value, without one.
     ///
+    /// - The field's semantic ID, and its controls', derive from this
+    ///   context's scope and `key`; [`Self::composer_with_id`] names them.
+    ///
     /// # Panics
     ///
     /// If the send action does not take a text argument.
@@ -191,6 +194,39 @@ impl PresentationContext {
         draft: &mut String,
         availability: impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
     ) -> ComposerResponse<A> {
+        let ids = ComposerIds::Scoped(self.scope.child(key));
+        self.present_composer(ui, &ids, spec, draft, availability)
+    }
+
+    /// [`Self::composer`] with the field's semantic ID `id`, and an egui ID
+    /// made from it, rather than ones derived from the scope and a key: for
+    /// a composer that agents, tests or documentation address by a stable,
+    /// published ID, such as `chat.composer`. Its controls are `id.send`,
+    /// `id.leading` and `id.trailing`. Keep `id` stable and unique, as for
+    /// [`TextFieldSpec::id`](crate::TextFieldSpec::id).
+    ///
+    /// # Panics
+    ///
+    /// If the send action does not take a text argument.
+    pub fn composer_with_id<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        id: &str,
+        spec: &ComposerSpec<'_, A>,
+        draft: &mut String,
+        availability: impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
+    ) -> ComposerResponse<A> {
+        self.present_composer(ui, &ComposerIds::Named(id), spec, draft, availability)
+    }
+
+    fn present_composer<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        ids: &ComposerIds<'_>,
+        spec: &ComposerSpec<'_, A>,
+        draft: &mut String,
+        availability: impl Fn(ActionTarget<A>, &ActionArgument) -> Availability,
+    ) -> ComposerResponse<A> {
         self.check_pass(ui);
         let send_target = spec.send.target(self.pane);
         assert!(
@@ -198,9 +234,7 @@ impl PresentationContext {
             "a composer's send action `{}` must take a text argument",
             send_target.action.stable_id()
         );
-        let scope = self.scope.child(key);
-        let field = scope.instance("field");
-        let field_id = field.egui_id();
+        let field_id = ids.field_egui_id();
         let tokens = self.tokens;
         let font_scale = self.font_scale;
 
@@ -280,7 +314,7 @@ impl PresentationContext {
                        availability: Availability,
                        emphasis: ActionEmphasis,
                        argument: Option<serde_json::Value>| {
-            let identity = scope.instance(name).action_identity();
+            let identity = ids.control(name);
             let rect = super::heading::control_place(rect, control.content, &tokens, font_scale);
             ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 context.present_action(
@@ -381,7 +415,7 @@ impl PresentationContext {
                 .data_mut(|data| data.insert_temp(height_id, field_height));
             ui.ctx().request_repaint();
         }
-        let semantic_id = field.semantic_id();
+        let semantic_id = ids.field_semantic_id();
         ui.ctx().accesskit_node_builder(field_response.id, |node| {
             node.set_label(spec.name);
             node.set_author_id(semantic_id.0.clone());
@@ -489,6 +523,45 @@ impl PresentationContext {
                 target: send_target,
                 response: send_response,
             },
+        }
+    }
+}
+
+/// Where a composer's field and controls take their identities from.
+enum ComposerIds<'a> {
+    /// Derived from a scope, as presentation IDs are.
+    Scoped(super::PresentationScope),
+    /// Named by the application: the field is `id`, a control `id.name`.
+    Named(&'a str),
+}
+
+impl ComposerIds<'_> {
+    fn field_egui_id(&self) -> egui::Id {
+        match self {
+            Self::Scoped(scope) => scope.instance("field").egui_id(),
+            Self::Named(id) => egui::Id::new(*id),
+        }
+    }
+
+    fn field_semantic_id(&self) -> crate::SemanticUiId {
+        match self {
+            Self::Scoped(scope) => scope.instance("field").semantic_id(),
+            Self::Named(id) => crate::SemanticUiId::new(*id),
+        }
+    }
+
+    fn control(&self, name: &str) -> crate::components::ActionButtonIdentity {
+        match self {
+            Self::Scoped(scope) => scope.instance(name).action_identity(),
+            Self::Named(id) => {
+                let widget_id = egui::Id::new(*id).with(name);
+                crate::components::ActionButtonIdentity {
+                    widget_id,
+                    semantic_id: crate::SemanticUiId::new(format!("{id}.{name}")),
+                    // Snapshot IDs must round-trip through JavaScript.
+                    text_instance: widget_id.value() & ((1_u64 << 53) - 1),
+                }
+            }
         }
     }
 }

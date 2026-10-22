@@ -130,7 +130,9 @@ send action that takes a text argument carries it.
   SEND --id ID` sends the draft shown. `--value TEXT` sends that text,
   through the send control when it carries it and otherwise through the
   action's own binding, under the same availability. A refused send's receipt
-  carries the application's error, and the draft stays.
+  carries the application's error, and the draft stays. Present the composer
+  with `Frame::composer_with_id` to give the field an ID agents can rely on,
+  such as `chat.composer`, and its send control `chat.composer.send`.
 
 ## Copying to the clipboard
 
