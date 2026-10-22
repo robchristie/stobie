@@ -1212,8 +1212,8 @@ struct Completing {
     refused: Option<String>,
 }
 
-/// The most times a reveal asks the scroll areas around its node to scroll,
-/// as nested areas need, before it settles where the node is.
+/// The most times a reveal asks the scroll area around its node to scroll
+/// before it settles where the node is.
 const REVEAL_SCROLLS: u32 = 4;
 
 /// The passes a reveal waits for a scroll to move its node before it takes
@@ -1941,8 +1941,9 @@ impl<A: Application> AppHost<A> {
                         Some(settled(sighting))
                     }
                 }
-                // Moved, and not yet wholly in view: scroll again, as an
-                // outer area around an inner one needs.
+                // Moved, and not yet wholly in view: scroll again from
+                // where it is now, as content still settling its layout
+                // needs.
                 Some(_) if reveal.scrolls < REVEAL_SCROLLS => {
                     reveal.waiting = None;
                     None

@@ -186,7 +186,9 @@ presents it while its state says it is open.
   the reason `The dialog "<title>" is open`, so an invocation is rejected as
   `unavailable` and a shortcut for it does nothing; the actions the dialog
   presents remain invocable, with their shortcuts, including one whose
-  control a long form has scrolled out of view.
+  control a long form has scrolled out of view. A reveal (`stobie.reveal`)
+  of a node behind the dialog is rejected with the same reason; one of a
+  node inside it scrolls the dialog's body.
 - **Assistive technology.** Everything behind the dialog is hidden from the
   AccessKit tree, and requests aimed at it are dropped; in the browser the
   ARIA layer holds only the dialog, a `dialog` or `alertdialog` with
