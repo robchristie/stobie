@@ -140,7 +140,9 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
 
 ## Commands
 
-- `observe` outlines the latest observation: application facts, collections,
+- `observe` outlines the latest observation: facts, including the
+  framework's `stobie.theme` (`light` or `dark`) and `stobie.contrast`
+  (`standard` or `high`) for the theme the page is drawn in, collections,
   audits, then one line per node with its role, name, state, value, the
   argument it carries, stable `#ID` and `[capabilities]`, indented by
   containment. A text field's value

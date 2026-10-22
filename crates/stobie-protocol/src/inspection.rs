@@ -270,6 +270,15 @@ pub const OPEN_LINK_CAPABILITY: &str = "stobie.open-link";
 /// observes the control's confirmation or failure instead.
 pub const COPY_TEXT_CAPABILITY: &str = "stobie.copy-text";
 
+/// The framework fact naming the theme a hosted application's latest
+/// observed pass was drawn in: `light` or `dark`, as the application's
+/// appearance preference resolved against the system's.
+pub const THEME_FACT: &str = "stobie.theme";
+
+/// The framework fact naming the contrast of the theme a hosted
+/// application's latest observed pass was drawn in: `standard` or `high`.
+pub const CONTRAST_FACT: &str = "stobie.contrast";
+
 /// The value a capability takes, published by discovery. An action takes at
 /// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
 /// as `"none"`; the others as objects tagged by `kind`.

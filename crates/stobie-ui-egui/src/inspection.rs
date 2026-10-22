@@ -1334,6 +1334,12 @@ fn prepare_publication<A: ActionKey>(
     facts: BTreeMap<String, ObservationValue>,
 ) -> Result<Publication, InspectionError> {
     use InspectionErrorCode as Code;
+    // The host's own facts, such as the theme, leave the application its
+    // 256.
+    let framework_facts = [THEME_FACT, CONTRAST_FACT]
+        .into_iter()
+        .filter(|key| facts.contains_key(*key))
+        .count();
     if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
         || snapshot.text.len() > INSPECTION_TEXT_LIMIT
         || bindings.len()
@@ -1342,7 +1348,7 @@ fn prepare_publication<A: ActionKey>(
             + framework.copies.len()
             > INSPECTION_NODE_LIMIT
         || metadata.collections.len() > 256
-        || facts.len() > 256
+        || facts.len() - framework_facts > 256
     {
         return Err(InspectionError::new(
             Code::PublicationLimit,
