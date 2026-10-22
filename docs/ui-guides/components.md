@@ -511,7 +511,12 @@ logical-identity contracts. `ActionButtonSpec` struct literals remain compatible
 
 The icon-only allocation is a square touch target (`touch_target_size`, 44
 points in both densities, or the scaled control height where that is larger),
-with centred square visual chrome at the control height and 16-point artwork. Artwork
+with centred square visual chrome at the control height and 16-point artwork.
+Stobie's rows, headers and composer centre labelled controls on the icon-only
+controls' line. An application that mixes the two in its own `ui.horizontal`
+row sets the row's height to the touch target first
+(`ui.set_row_height(p.tokens().touch_target_size().0)`), so egui centres each
+control on it rather than aligning their tops. Artwork
 scales with 100–150% font preferences. Its full action name and description own
 semantics and a tooltip, including a disabled reason; the icon has no separate
 accessible owner and produces no measured-text attempt. Icon+label uses one

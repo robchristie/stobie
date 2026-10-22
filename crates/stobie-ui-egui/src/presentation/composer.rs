@@ -281,6 +281,7 @@ impl PresentationContext {
                        emphasis: ActionEmphasis,
                        argument: Option<serde_json::Value>| {
             let identity = scope.instance(name).action_identity();
+            let rect = super::heading::control_place(rect, control.content, &tokens, font_scale);
             ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 context.present_action(
                     ui,

@@ -521,6 +521,20 @@ fn shift_return_types_a_newline_without_sending() {
 }
 
 #[test]
+fn a_labelled_control_shares_the_centre_line_of_the_icon_controls() {
+    let harness = harness(Chat::default());
+    let centre = |label: &str| harness.get_by_label(label).rect().center().y;
+    let dictate = harness.get_by_label("Dictate").rect();
+    // The icon-only Send takes the touch target and the labelled Dictate the
+    // control height, centred on Send's and Attach's line (within the
+    // fraction of a point by which the field's measured line height places
+    // the controls after it).
+    assert!(send_rect(&harness).height() > dictate.height());
+    assert!((centre("Dictate") - centre("Send")).abs() < 0.5);
+    assert!((centre("Attach") - centre("Send")).abs() < 0.5);
+}
+
+#[test]
 fn the_send_control_sends_and_the_field_keeps_focus() {
     let mut harness = harness(Chat::default());
     focus_field(&mut harness);

@@ -213,6 +213,9 @@ fn row(
         changed = true;
     }
     ui.horizontal_wrapped(|ui| {
+        // Icon-only Remove takes the touch target; a row as tall centres the
+        // labelled Open and Pinned on its line.
+        ui.set_row_height(p.tokens().touch_target_size().0);
         let button = |ui: &mut egui::Ui,
                       p: &mut PresentationContext,
                       action: RowAction,

@@ -199,6 +199,24 @@ pub(super) fn plan_row(
     }
 }
 
+/// Where a control showing `content` sits in `rect`, a place in a row as
+/// tall as its tallest control, such as an icon-only control's touch target:
+/// an icon-only control takes the whole place, and a labelled one keeps the
+/// control height, centred on the same line.
+pub(super) fn control_place(
+    rect: Rect,
+    content: ActionButtonContent,
+    tokens: &crate::DesignTokens,
+    font_scale: f32,
+) -> Rect {
+    if matches!(content, ActionButtonContent::IconOnly(_)) {
+        rect
+    } else {
+        let height = action_hit_height(tokens, font_scale).min(rect.height());
+        Rect::from_center_size(rect.center(), vec2(rect.width(), height))
+    }
+}
+
 /// The least width a heading keeps beside its controls: its whole text when
 /// that is shorter, otherwise three minimum hit targets at the text scale.
 pub(super) fn minimum_title_width(
@@ -389,15 +407,7 @@ impl PresentationContext {
             emphasis: control.emphasis,
             compact: false,
         };
-        // A row's place is as tall as its tallest control, such as an
-        // icon-only control's touch target; a labelled control keeps the
-        // control height, centred on the same line.
-        let rect = if matches!(control.content, ActionButtonContent::IconOnly(_)) {
-            rect
-        } else {
-            let height = action_hit_height(&self.tokens, self.font_scale).min(rect.height());
-            Rect::from_center_size(rect.center(), vec2(rect.width(), height))
-        };
+        let rect = control_place(rect, control.content, &self.tokens, self.font_scale);
         let response = ui
             .scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 self.present_action(ui, &identity, spec, control.content, name.as_deref(), value)
