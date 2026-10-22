@@ -25,7 +25,12 @@ EVIDENCE_DIR="$(cd "$EVIDENCE_DIR" && pwd)"
 # A temporary directory this script creates is removed when it exits.
 OWN_OUTSIDE=0
 if [[ -z "${STOBIE_OUTSIDE_DIR:-}" ]]; then OWN_OUTSIDE=1; fi
-OUTSIDE="${STOBIE_OUTSIDE_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/stobie-outside-XXXXXX")}"
+# A TMPDIR inside the checkout, as a worktree may set, cannot hold it.
+OUTSIDE_PARENT="${TMPDIR:-/tmp}"
+case "$(cd "$OUTSIDE_PARENT" 2>/dev/null && pwd -P)/" in
+  "$(pwd -P)/"*) OUTSIDE_PARENT=/tmp ;;
+esac
+OUTSIDE="${STOBIE_OUTSIDE_DIR:-$(mktemp -d "$OUTSIDE_PARENT/stobie-outside-XXXXXX")}"
 mkdir -p "$OUTSIDE"
 OUTSIDE="$(cd "$OUTSIDE" && pwd -P)"
 remove_outside() { if (( OWN_OUTSIDE )); then rm -rf -- "$OUTSIDE"; fi; }
