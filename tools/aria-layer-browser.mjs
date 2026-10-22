@@ -549,7 +549,10 @@ async function checkTouchFields({ agent, native }, check) {
     await client.hello();
     const observed = async name => {
       const { snapshot } = await client.observe();
-      return { node: snapshot.nodes.find(node => node.name === name), root: snapshot.nodes.find(node => node.id === snapshot.root) };
+      // A labelled field also publishes its visible label under the same
+      // name, so the field is the text input of that name.
+      const fields = new Set(['text_input', 'multiline_text_input']);
+      return { node: snapshot.nodes.find(node => node.name === name && fields.has(node.role)), root: snapshot.nodes.find(node => node.id === snapshot.root) };
     };
     await tablet.waitForTimeout(1000);
     const field = name => tablet.locator(`:is(input, textarea)[aria-label="${name}"][id^="stobie-a11y:"]`);
@@ -574,8 +577,9 @@ async function checkTouchFields({ agent, native }, check) {
       return { tag: element?.tagName, name: element?.getAttribute('aria-label'), inLayer: Boolean(element?.closest(layer)) };
     }, LAYER);
 
-    // An ordinary text field: eframe's text agent takes focus in the gesture,
-    // before egui has run a frame.
+    // A single-line field: eframe's text agent, or the field's own native
+    // field where the host presents it natively (as Stobie's text field
+    // recipe is), takes focus in the gesture, before egui has run a frame.
     let before = await focusCount();
     await tap(agent.name, { hold: true });
     const agentNow = await focused();
@@ -590,6 +594,9 @@ async function checkTouchFields({ agent, native }, check) {
       && document.activeElement.getAttribute('aria-label') === name, agent.name, { timeout: 5000 });
     const agentAfter = await focusSince(before);
     assert(agentAfter.every(entry => entry.tag === 'INPUT' && !entry.inLayer), `the text agent keeps focus while egui takes it: ${JSON.stringify(agentAfter)}`);
+    // A native single-line field has its name before egui runs a frame, so
+    // egui's focus may arrive a frame or two later.
+    for (let tries = 0; tries < 50 && !(await observed(agent.name)).node.focused; tries++) await tablet.waitForTimeout(100);
     assert((await observed(agent.name)).node.focused, `egui focuses ${agent.name}`);
     check('tap focuses the text agent in the gesture', { target: agent.name });
 
@@ -707,9 +714,12 @@ async function checkTouchFields({ agent, native }, check) {
     }, { name: native.name, layer: LAYER }, { timeout: 5000 });
     const returned = await tablet.evaluate(({ name, layer }) => {
       const element = document.querySelector(`textarea[aria-label="${name}"][id^="stobie-a11y:"]`);
+      // The other field, if it is itself active natively, leaves its own
+      // placeholder in the layer.
+      const other = document.activeElement?.hasAttribute('data-stobie-native-active') ? 1 : 0;
       return {
         clipped: element.style.clipPath !== '',
-        placeholders: document.querySelectorAll(`${layer} span[aria-hidden="true"]:not([data-stobie-hit-target])`).length,
+        placeholders: document.querySelectorAll(`${layer} span[aria-hidden="true"]:not([data-stobie-hit-target])`).length - other,
         agentFocused: document.activeElement?.tagName === 'INPUT' && !document.activeElement.closest(layer),
         value: element.value,
       };

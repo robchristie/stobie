@@ -349,3 +349,8 @@ compressed; the Gallery's growth is mostly its seven new stories.
   such as page zoom, is not a text size. No device check is claimed.
 - A dialog has one footer action; a footer with several actions is left for
   a later need.
+- Record Desk's fields now use the text field recipe, which a touch device
+  edits in a native field, so the ARIA layer's touch check now taps a
+  native single-line field where it tapped a plain egui text edit. No
+  maintained consumer keeps a plain egui text edit, so eframe's own text
+  agent on a touch device is no longer exercised by that check.
