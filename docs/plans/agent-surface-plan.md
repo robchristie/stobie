@@ -61,7 +61,9 @@ each locally:
 - **Set-text completes only when the text applied.** The host compares the
   field's value in the published tree with the edit and checks that the pass
   recorded it; an edit that did not apply, for example because its field
-  vanished first, is rejected with a reason instead of completing.
+  vanished first, is rejected with a reason instead of completing. A
+  single-line field that already holds the text with its line breaks turned
+  into spaces, as egui turns them, took it.
 - **Stale-target rejections stay.** An invoke made as the view re-presents is
   still rejected with `stale_target` or "is no longer presented": loud, typed
   and retryable.
@@ -187,7 +189,7 @@ each locally:
 | --- | --- | --- |
 | Reveal, set-text that fails loudly, clients that wait | Landed | `host/reveal_tests.rs`; `stobie-client` tests; `tools/tests/application-client.test.mjs`; `tools/stobie-cli-smoke.mjs` sets a field below the fold in a 1280x400 browser through both clients |
 | Bindings, header labels, Copy names, composer ID, hidden refusal | Landed | `host/row_tests.rs`, `host/dialog_tests.rs`, `presentation/heading_tests.rs`, `host/copy_tests.rs`, `presentation/composer_tests.rs`; `stobie-protocol` and both clients' equivalence tests |
-| Focus return and the theme facts | Landed | `host/focus_return_tests.rs` (9 of 11 fail at the base revision, 5 with kittest's focus panic); `host/theme_fact_tests.rs` |
+| Focus return and the theme facts | Landed | `host/focus_return_tests.rs` (at the base revision, 7 of its first 9 tests failed, 5 with kittest's focus panic); `host/theme_fact_tests.rs` |
 | Host harness, visibility and the Web Push double | Landed | `testing/tests.rs`; Live Feed's host tests and browser smoke (hide and show with nothing focused) |
 | ARIA layer under `style-src 'self'`, text agent naming, touch and password coverage, sandbox `TMPDIR` | Landed | `tools/aria-layer-browser.mjs` under the policy for the Lab, Gallery and Record Desk; `aria/tests.rs`; `tools/tests/test_xvfb_display.py`; `tools/tests/test_rust_tests.py` |
 
@@ -237,6 +239,11 @@ Measured with `cargo xtask web-size` in the production stage.
 - Discovery now lists `stobie.reveal`, every observation carries the two
   theme facts, and an action presented by two controls has two bindings;
   tests that count capabilities, facts or bindings exactly change.
+- With several code blocks the first Copy control is named "Copy code", not
+  "Copy code 1"; a `HeaderControl` whose bound action has `with_label` or
+  `with_short_label` is named and measured by them; and a `set-text` whose
+  field did not take the text is rejected where it used to complete. Tests
+  that assert the old names or outcomes change.
 
 ## Limits
 

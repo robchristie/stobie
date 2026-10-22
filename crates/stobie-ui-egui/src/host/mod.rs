@@ -1996,7 +1996,14 @@ impl<A: Application> AppHost<A> {
             .flatten();
         completing.refused = match value {
             None => Some(format!("{} is no longer presented", completing.field.0)),
-            Some(value) if value == completing.before && value != completing.text => {
+            // A single-line field turns line breaks into spaces, as egui
+            // does when text is pasted into one, so a field already holding
+            // the converted text took it.
+            Some(value)
+                if value == completing.before
+                    && value != completing.text
+                    && value != completing.text.replace(['\r', '\n'], " ") =>
+            {
                 Some(format!("{} did not take the text", completing.field.0))
             }
             Some(_) => None,

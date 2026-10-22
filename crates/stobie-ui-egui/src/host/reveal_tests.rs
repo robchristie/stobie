@@ -541,3 +541,17 @@ fn set_text_on_a_field_gone_before_the_edit_applies_fails_loudly() {
     );
     assert_eq!(host(&harness).app().name, "");
 }
+
+#[test]
+fn set_text_that_a_single_line_field_already_holds_converted_completes() {
+    let mut harness = harness(Account {
+        plain: true,
+        name: "Robin Hood".into(),
+        ..Account::default()
+    });
+    // egui turns the line break into a space, giving the text the field
+    // already holds: the edit applied, and changed nothing.
+    let receipt = invoke(&mut harness, "same", set_text_on(NAME), "Robin\nHood");
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    assert_eq!(host(&harness).app().name, "Robin Hood");
+}
