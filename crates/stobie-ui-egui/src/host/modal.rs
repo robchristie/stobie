@@ -7,7 +7,11 @@
 //! - Focus moves into a dialog when it opens, and back into it if it lands
 //!   behind it (an arrow key can move egui's focus to any widget); a focused
 //!   control behind a dialog would still take Space and Return.
-//! - Focus returns to the control that opened the dialog when it closes.
+//! - Focus returns to the control that opened the dialog when it closes,
+//!   or, when that control has gone, to the presented control nearest
+//!   where it was.
+//! - AccessKit's focus is always a node of its tree, the root when the
+//!   focused widget was not presented.
 //! - Assistive technology sees only the dialog: every other top-level layer
 //!   below it is hidden in the AccessKit tree, and requests aimed at nodes
 //!   outside what is shown are dropped before the pass sees them.
@@ -21,13 +25,14 @@ use std::sync::Arc;
 use egui::accesskit::{NodeId, TreeId};
 
 use super::HostRepaint;
+use crate::focus_return::FocusReturn;
 use crate::observation::DialogRegistration;
 
 /// The modal dialog the latest pass presented, and the focus around it.
 struct ModalState {
     dialog: DialogRegistration,
     /// The control focus returns to when the dialog closes.
-    opener: Option<egui::Id>,
+    opener: Option<FocusReturn>,
     /// The widget inside the dialog that last had focus.
     last_inside: Option<egui::Id>,
     /// Whether focus has been moved into the dialog.
@@ -148,7 +153,8 @@ impl Modal {
                 let opener = [clicked, self.focus_at_start, previous_click]
                     .into_iter()
                     .flatten()
-                    .find(|widget| layer_of(context, *widget) != Some(dialog.layer));
+                    .find(|widget| layer_of(context, *widget) != Some(dialog.layer))
+                    .and_then(|widget| FocusReturn::remember(context, widget));
                 self.state = Some(ModalState {
                     dialog: dialog.clone(),
                     opener,
@@ -172,10 +178,14 @@ impl Modal {
                 self.state = Some(state);
             }
             (Some(state), None) => {
-                if let Some(opener) = state.opener
-                    && layer_of(context, opener).is_some()
+                // The opener, or the control nearest where it was when it
+                // has gone, such as the next row's when the dialog's own
+                // confirmation removed the opener's row.
+                if let Some(target) = state
+                    .opener
+                    .and_then(|opener| opener.target(context, egui::Rect::EVERYTHING))
                 {
-                    context.memory_mut(|memory| memory.request_focus(opener));
+                    context.memory_mut(|memory| memory.request_focus(target));
                     repaint.push(HostRepaint::Application("dialog focus"));
                 }
             }
@@ -185,7 +195,8 @@ impl Modal {
 }
 
 /// Hides every top-level layer below the modal layer from assistive
-/// technology, and records which nodes stay shown.
+/// technology, and records which nodes stay shown. It also keeps the
+/// update's focus inside its tree.
 struct ModalScreen;
 
 impl egui::Plugin for ModalScreen {
@@ -209,6 +220,14 @@ impl egui::Plugin for ModalScreen {
         });
         let Some(shown_layers) = shown_layers else {
             context.data_mut(|data| data.remove::<Reachable>(reachable_id()));
+            // Focus requested for a widget this pass did not present names a
+            // node outside the tree, which assistive technology cannot
+            // follow; egui drops that focus on the next pass.
+            if let Some(tree) = &update.tree
+                && !update.nodes.iter().any(|(id, _)| *id == update.focus)
+            {
+                update.focus = tree.root;
+            }
             return;
         };
         let Some(root) = update.tree.as_ref().map(|tree| tree.root) else {

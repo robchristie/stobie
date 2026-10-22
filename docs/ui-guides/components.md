@@ -755,8 +755,11 @@ with Pinned, Hide and Edit profile.
   is invocable in every layout, shown or not.
 - Keyboard focus follows the reader. Opening a level that shows Back moves
   focus that was somewhere to Back; Back returns focus to the control that
-  opened the level, such as its row or the detail toggle. Agents' changes
-  take no focus that nobody had. Each control is an ordinary Tab stop.
+  opened the level, such as its row or the detail toggle, or, when that
+  control has gone, as a row hidden while its item was open, to the control
+  nearest where it was ([focus whose control has gone](interactions.md#focus-whose-control-has-gone)).
+  Agents' changes take no focus that nobody had. Each control is an
+  ordinary Tab stop.
 - The recipe pushes no browser history. The in-app Back is the way back;
   the browser's Back and the platform's back gesture leave the page as they
   do for any page.

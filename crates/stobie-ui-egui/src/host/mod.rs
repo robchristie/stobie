@@ -816,7 +816,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// observes and binds only it and what it presents, refuses every other
     /// action an agent or a shortcut asks for, and hides everything else
     /// from assistive technology. When it closes, focus returns to the
-    /// control that opened it.
+    /// control that opened it, or, when that has gone, as a row its own
+    /// confirmation deleted has, to the control nearest where it was.
     pub fn dialog<R>(
         &mut self,
         ui: &mut Ui,
@@ -2511,6 +2512,8 @@ mod copy_tests;
 mod dialog_navigation_tests;
 #[cfg(test)]
 mod dialog_tests;
+#[cfg(test)]
+mod focus_return_tests;
 #[cfg(test)]
 mod heading_tests;
 #[cfg(test)]
