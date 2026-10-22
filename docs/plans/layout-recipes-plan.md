@@ -3,7 +3,7 @@
 Status: complete
 Delivery: [PR #127](https://github.com/robchristie/stobie/pull/127)
 
-A chat application built on Stobie, with a household's settings forms, a
+A chat application built on Stobie, with settings forms, a
 conversation list and a routine editor, met a set of layout and recipe gaps
 and worked around each locally:
 
@@ -162,7 +162,7 @@ and worked around each locally:
 
 ## Design review contract
 
-- **Task.** Settle a household's routines and conversations on a phone and a
+- **Task.** Settle routines and conversations on a phone and a
   desktop: edit a routine in a sheet and save it while the form is scrolled;
   choose how it repeats and on which days; delete it from a confirm; read a
   conversation's header (avatar, name, status, Pin, Hide, Edit profile, the
