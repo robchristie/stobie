@@ -53,6 +53,49 @@ struct Collector {
     copies: Vec<(CopyRegistration, bool)>,
     dialogs: Vec<DialogRegistration>,
     dialog_actions: Vec<DialogAction>,
+    /// The node the host is scrolling into view, kept across passes.
+    reveal: Option<RevealProbe>,
+}
+
+/// A node the host is scrolling into view, and where the latest pass that
+/// presented it found it.
+#[derive(Clone, Debug)]
+struct RevealProbe {
+    id: crate::SemanticUiId,
+    /// Whether this pass scrolls the node into view, or waits for an
+    /// earlier scroll to take effect.
+    scroll: bool,
+    sighting: Option<(u64, RevealSighting)>,
+}
+
+/// How far, in points, a revealed node may lie past the edge of its view and
+/// still count as wholly in view.
+const REVEAL_TOLERANCE: f32 = 0.5;
+
+/// Where a pass presented the node being revealed: its whole rectangle,
+/// before clipping, and the clip it was presented within.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct RevealSighting {
+    pub rect: Rect,
+    pub clip: Rect,
+    /// Whether it was presented inside a modal dialog.
+    pub in_dialog: bool,
+    /// Whether this pass asked the scroll areas around it to bring it into
+    /// view, which they do over the coming passes.
+    pub scrolled: bool,
+}
+
+impl RevealSighting {
+    /// Whether any of the node is in view.
+    pub fn in_view(&self) -> bool {
+        self.clip.intersect(self.rect).is_positive()
+    }
+
+    /// Whether all of the node is in view, allowing for the fraction of a
+    /// point a scroll area leaves when it aligns a node to its edge.
+    pub fn wholly_in_view(&self) -> bool {
+        self.clip.expand(REVEAL_TOLERANCE).contains_rect(self.rect)
+    }
 }
 
 /// An action a modal dialog presents without an argument, with its pane:
@@ -358,10 +401,75 @@ pub(crate) fn take(context: &Context) -> PassObservations {
     })
 }
 
+/// Reveal the node `id` in this pass, or stop revealing with `None`: the
+/// pass records where it presents the node, and with `scroll` asks the
+/// scroll areas around it to bring it into view.
+pub(crate) fn request_reveal(context: &Context, reveal: Option<(crate::SemanticUiId, bool)>) {
+    let key = collector_id(context.viewport_id());
+    context.data_mut(|data| {
+        data.get_temp_mut_or_default::<Collector>(key).reveal =
+            reveal.map(|(id, scroll)| RevealProbe {
+                id,
+                scroll,
+                sighting: None,
+            });
+    });
+}
+
+/// Where the current pass presented the node being revealed, if it did.
+pub(crate) fn reveal_sighting(context: &Context) -> Option<RevealSighting> {
+    let pass = context.cumulative_pass_nr();
+    let key = collector_id(context.viewport_id());
+    context.data(|data| {
+        data.get_temp::<Collector>(key)?
+            .reveal?
+            .sighting
+            .filter(|(seen, _)| *seen == pass)
+            .map(|(_, sighting)| sighting)
+    })
+}
+
+/// Note that the node `id` is presented at `rect`, its whole rectangle before
+/// clipping, and scroll it into view if the host is revealing it, asks this
+/// pass to scroll and it is not wholly in view. Presenters call this for
+/// every node they present, including one wholly clipped away that records
+/// no node; the first call in a pass is the node's place.
+pub(crate) fn reveal_at(ui: &Ui, id: &crate::SemanticUiId, rect: Rect) {
+    let context = ui.ctx();
+    let pass = context.cumulative_pass_nr();
+    let key = collector_id(context.viewport_id());
+    let clip = ui.clip_rect();
+    let scroll = context.data_mut(|data| {
+        let collector = data.get_temp_mut_or_default::<Collector>(key);
+        let in_dialog = collector.dialog > 0;
+        let Some(probe) = collector.reveal.as_mut().filter(|probe| probe.id == *id) else {
+            return false;
+        };
+        if probe.sighting.is_some_and(|(seen, _)| seen == pass) {
+            return false;
+        }
+        let mut sighting = RevealSighting {
+            rect,
+            clip,
+            in_dialog,
+            scrolled: false,
+        };
+        sighting.scrolled = probe.scroll && !sighting.wholly_in_view();
+        probe.sighting = Some((pass, sighting));
+        sighting.scrolled
+    });
+    if scroll {
+        // The innermost scroll area around the node takes the request when
+        // it ends this pass, and moves it over the coming passes.
+        ui.scroll_to_rect_animation(rect, None, egui::style::ScrollAnimation::none());
+    }
+}
+
 /// Register a recipe's own node without cloning it when no host collects.
 pub(crate) fn observe_recipe_node(ui: &Ui, node: &UiNode) {
     let context = ui.ctx();
     if is_enabled(context, context.viewport_id()) {
+        reveal_at(ui, &node.id, node.rect.into());
         record_with_origin(
             context,
             context.viewport_id(),
@@ -380,6 +488,7 @@ pub(crate) fn observe_recipe_node(ui: &Ui, node: &UiNode) {
 /// recipe's.
 pub fn observe_node(ui: &Ui, node: UiNode) {
     let context = ui.ctx();
+    reveal_at(ui, &node.id, node.rect.into());
     record(
         context,
         context.viewport_id(),

@@ -1169,7 +1169,11 @@ pub struct AppHost<A: Application> {
     edit_focus: Option<(egui::Id, Option<egui::Id>)>,
     /// The set-text invocation this pass applied, completed once its intents
     /// have settled.
-    completing: Option<String>,
+    completing: Option<Completing>,
+    /// Nodes to scroll into view, one at a time.
+    reveals: VecDeque<PendingReveal>,
+    /// The latest reveal that finished, and how.
+    reveal_outcome: Option<(SemanticUiId, Result<(), String>)>,
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
@@ -1193,6 +1197,42 @@ pub struct AppHost<A: Application> {
     /// Whether the first complete pass was reported to the startup loader.
     #[cfg(target_arch = "wasm32")]
     startup_reported: bool,
+}
+
+/// A semantic set-text edit applied in this pass, checked once the pass has
+/// presented its field.
+struct Completing {
+    request: String,
+    widget: egui::Id,
+    field: SemanticUiId,
+    /// The field's text before the edit, and the text sent.
+    before: String,
+    text: String,
+    /// Why the field did not take the edit, found once the pass presented it.
+    refused: Option<String>,
+}
+
+/// The most times a reveal asks the scroll areas around its node to scroll,
+/// as nested areas need, before it settles where the node is.
+const REVEAL_SCROLLS: u32 = 4;
+
+/// The passes a reveal waits for a scroll to move its node before it takes
+/// the node to have stopped: a scroll area takes a request at the end of the
+/// pass that asked, and the node is laid out at its new place the pass after
+/// next.
+const REVEAL_SETTLE_PASSES: u32 = 2;
+
+/// One queued reveal.
+struct PendingReveal {
+    id: SemanticUiId,
+    /// The invocation for a semantic reveal; `None` for [`AppHost::reveal`].
+    request: Option<String>,
+    /// How many times it has asked to scroll.
+    scrolls: u32,
+    /// Where its node was when the latest pass saw it after a scroll, and
+    /// for how many passes it has stayed there; `None` when the next pass
+    /// asks to scroll.
+    waiting: Option<(Rect, u32)>,
 }
 
 /// One queued set-text edit.
@@ -1245,6 +1285,8 @@ impl<A: Application> AppHost<A> {
             text_edits: VecDeque::new(),
             edit_focus: None,
             completing: None,
+            reveals: VecDeque::new(),
+            reveal_outcome: None,
             fields_stale: false,
             links_to_open: Vec::new(),
             copies: Vec::new(),
@@ -1299,6 +1341,7 @@ impl<A: Application> AppHost<A> {
         }
         self.context.enable_accesskit();
         inspection.install_completion_hook(&self.context);
+        inspection.offer_reveal();
         self.inspection = Some(inspection);
         self.repaint.push(HostRepaint::AutomationEnabled);
         self.context.request_repaint();
@@ -1452,6 +1495,12 @@ impl<A: Application> AppHost<A> {
             .map(|target| (target, ActionArgument::None))
             .collect();
         self.apply_text_edit(root);
+        crate::observation::request_reveal(
+            &context,
+            self.reveals
+                .front()
+                .map(|reveal| (reveal.id.clone(), reveal.waiting.is_none())),
+        );
         let mut intents = Vec::new();
         {
             let app = &self.app;
@@ -1496,6 +1545,9 @@ impl<A: Application> AppHost<A> {
         ) = self.collect(root.ctx(), root_rect);
         self.modal.end(&context, &dialogs, &mut self.repaint);
         self.fields_stale = false;
+        self.check_text_edit(&context);
+        // A reveal completes with the observation this pass publishes.
+        self.settle_reveal(&context);
         self.publish(&context);
         self.app.completed(
             &CompletedPass {
@@ -1519,8 +1571,12 @@ impl<A: Application> AppHost<A> {
         }
         // The edit's intents have now applied, so the next published pass
         // presents the application's own effect.
-        if let (Some(request), Some(inspection)) = (self.completing.take(), &self.inspection) {
-            inspection.complete(&request, Ok(()));
+        if let (Some(completing), Some(inspection)) = (self.completing.take(), &self.inspection) {
+            let outcome = match completing.refused {
+                None => Ok(()),
+                Some(reason) => Err(InspectionError::validation(reason)),
+            };
+            inspection.complete(&completing.request, outcome);
         }
         request_passes(&context, &self.repaint);
     }
@@ -1775,6 +1831,139 @@ impl<A: Application> AppHost<A> {
                 self.repaint.push(HostRepaint::Application("copy text"));
                 Ok(Execution::Completed)
             }
+            // The node scrolls into view over the coming passes, and the
+            // reveal completes with the first observation presenting it so.
+            Invocation::Reveal { request_id, id } => {
+                self.reveals.push_back(PendingReveal {
+                    id,
+                    request: Some(request_id),
+                    scrolls: 0,
+                    waiting: None,
+                });
+                self.repaint.push(HostRepaint::Application("reveal"));
+                Ok(Execution::Deferred)
+            }
+        }
+    }
+
+    /// Check, once this pass has presented it, that the field a semantic edit
+    /// applied to took the edit: a field the pass did not present, such as
+    /// one in a section collapsed since its text was set, takes nothing.
+    fn check_text_edit(&mut self, context: &egui::Context) {
+        let Some(completing) = &mut self.completing else {
+            return;
+        };
+        let presented = crate::text_coverage::recorded_text_edits(context)
+            .iter()
+            .any(|(widget, _)| *widget == completing.widget);
+        let value = presented
+            .then(|| {
+                context.accesskit_node_builder(completing.widget, |node| {
+                    node.value().unwrap_or_default().to_owned()
+                })
+            })
+            .flatten();
+        completing.refused = match value {
+            None => Some(format!("{} is no longer presented", completing.field.0)),
+            Some(value) if value == completing.before && value != completing.text => {
+                Some(format!("{} did not take the text", completing.field.0))
+            }
+            Some(_) => None,
+        };
+    }
+
+    /// Scroll the node `id` names into view over the coming passes, as the
+    /// [`REVEAL_CAPABILITY`](crate::REVEAL_CAPABILITY) does for an agent, so
+    /// that it is observed and a host test can act on it, for example by
+    /// clicking it. Each pass that presents it scrolls the innermost scroll
+    /// area around it until it is wholly in view, or as far as the area
+    /// scrolls. Run passes until [`Self::reveal_outcome`] reports the
+    /// outcome; reveals queue behind one another.
+    pub fn reveal(&mut self, id: impl Into<SemanticUiId>) {
+        self.reveals.push_back(PendingReveal {
+            id: id.into(),
+            request: None,
+            scrolls: 0,
+            waiting: None,
+        });
+        self.repaint.push(HostRepaint::Application("reveal"));
+        self.context.request_repaint();
+    }
+
+    /// The latest reveal that finished: its node's ID and `Ok` once a pass
+    /// presented the node in view, or why it could not be revealed, such as
+    /// a node no pass presents. `None` before any reveal has finished.
+    pub fn reveal_outcome(&self) -> Option<(&SemanticUiId, Result<(), &str>)> {
+        self.reveal_outcome
+            .as_ref()
+            .map(|(id, outcome)| (id, outcome.as_ref().map(|_| ()).map_err(String::as_str)))
+    }
+
+    /// Settle the pending reveal against this pass: complete it once the
+    /// node is in view, scroll for another pass while it is moving, or
+    /// reject it.
+    fn settle_reveal(&mut self, context: &egui::Context) {
+        let modal = self
+            .snapshot
+            .nodes
+            .iter()
+            .rev()
+            .find(|node| matches!(node.role, UiRole::Dialog | UiRole::AlertDialog))
+            .map(|node| format!("The dialog \"{}\" is open", node.name));
+        let Some(reveal) = self.reveals.front_mut() else {
+            return;
+        };
+        let sighting = crate::observation::reveal_sighting(context);
+        let settled = |sighting: crate::observation::RevealSighting| {
+            if sighting.in_view() {
+                Ok(())
+            } else {
+                Err(format!("{} could not be scrolled into view", reveal.id.0))
+            }
+        };
+        let outcome = match sighting {
+            None => Some(Err(format!("{} is not presented", reveal.id.0))),
+            Some(sighting) if !sighting.in_dialog && modal.is_some() => modal.map(Err),
+            Some(sighting) if sighting.wholly_in_view() => Some(Ok(())),
+            Some(sighting) if sighting.scrolled => {
+                reveal.scrolls += 1;
+                reveal.waiting = Some((sighting.rect, 0));
+                None
+            }
+            // Still where the latest pass saw it: the scroll has not taken
+            // effect yet, or the areas scroll no further.
+            Some(sighting) => match reveal.waiting {
+                Some((rect, passes)) if rect == sighting.rect => {
+                    if passes + 1 < REVEAL_SETTLE_PASSES {
+                        reveal.waiting = Some((rect, passes + 1));
+                        None
+                    } else {
+                        Some(settled(sighting))
+                    }
+                }
+                // Moved, and not yet wholly in view: scroll again, as an
+                // outer area around an inner one needs.
+                Some(_) if reveal.scrolls < REVEAL_SCROLLS => {
+                    reveal.waiting = None;
+                    None
+                }
+                _ => Some(settled(sighting)),
+            },
+        };
+        let Some(outcome) = outcome else {
+            self.repaint.push(HostRepaint::Application("reveal"));
+            return;
+        };
+        let reveal = self.reveals.pop_front().expect("pending reveal");
+        if let (Some(request), Some(inspection)) = (&reveal.request, &self.inspection) {
+            inspection.complete(
+                request,
+                outcome.clone().map_err(InspectionError::validation),
+            );
+        }
+        self.reveal_outcome = Some((reveal.id, outcome));
+        if !self.reveals.is_empty() {
+            self.repaint.push(HostRepaint::Application("reveal"));
         }
     }
 
@@ -1897,7 +2086,14 @@ impl<A: Application> AppHost<A> {
         if edit.request.is_some() && previous != Some(widget) {
             self.edit_focus = Some((widget, previous));
         }
-        self.completing = edit.request;
+        self.completing = edit.request.map(|request| Completing {
+            request,
+            widget,
+            field: edit.field.clone(),
+            before: current.clone(),
+            text: edit.text.clone(),
+            refused: None,
+        });
         let text = edit.text;
         context.memory_mut(|memory| memory.request_focus(widget));
         let mut state = egui::text_edit::TextEditState::load(&context, widget).unwrap_or_default();
@@ -2517,6 +2713,8 @@ mod heading_tests;
 mod link_tests;
 #[cfg(test)]
 mod navigation_tests;
+#[cfg(test)]
+mod reveal_tests;
 #[cfg(test)]
 mod row_tests;
 #[cfg(test)]

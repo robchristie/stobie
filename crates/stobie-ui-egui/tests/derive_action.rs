@@ -301,7 +301,13 @@ fn an_enum_with_no_variants_declares_no_actions_and_hosts_an_application() {
     let Some(InspectionResult::Discover { capabilities, .. }) = reply.result else {
         panic!("discovery failed: {:?}", reply.error);
     };
-    assert!(capabilities.is_empty(), "{capabilities:?}");
+    // Only the framework's own capabilities, such as reveal, remain.
+    assert!(
+        capabilities
+            .iter()
+            .all(|capability| capability.capability.starts_with("stobie.")),
+        "{capabilities:?}"
+    );
     let snapshot = host.ui_snapshot();
     assert!(
         snapshot.nodes.iter().any(|node| node.id == snapshot.root),
