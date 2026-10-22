@@ -153,8 +153,51 @@ fn perform(&mut self, target: ActionTarget<Action>, _: &mut ()) -> Result<bool, 
 - `NotificationRoute` carries the absolute `url` and the `path` after the
   scope, such as `?item=inbox`.
 - Native builds report push as unsupported: `State` arrives at once with
-  `PushSupport::Unsupported`, and the operations deliver `Failed`.
+  `PushSupport::Unsupported`, and the operations deliver `Failed`, unless a
+  test has installed a `PushDouble` (see
+  [Test it natively](#test-it-natively)).
 - Dropping `WebPush` stops listening for routes.
+
+## Test it natively
+
+The UI crate's `test-support` feature, enabled in an application's
+dev-dependencies, adds `web_push::PushDouble`, which stands in for the
+browser in native host tests. Install it before the host starts the
+application, for example before `testing::host_harness` (see
+[Test it on the host](application-composition.md#test-it-on-the-host)), and
+keep it for the test; dropping it uninstalls it.
+
+```text
+let push = PushDouble::install();
+let mut harness = host_harness(egui::vec2(390.0, 844.0), Chat::default());
+harness.get_by_label("Turn on notifications").click();
+harness.run();
+assert_eq!(push.take_calls()[1..], [PushCall::Subscribe { application_server_key: KEY.into() }]);
+push.deliver(PushEvent::Subscribed(subscription));
+harness.run();
+assert!(harness.state().app().subscribed());
+```
+
+- Every `WebPush` started on the test's thread connects to it and records
+  each call as a `PushCall`: `Start`, `Subscribe` with its key, `Unsubscribe`,
+  `Refresh` and `SetAppBadge`. `calls()` reads them and `take_calls()` drains
+  them; `badge()` is the latest count.
+- `start` and `refresh` deliver `State` at once from `set_state`, which is
+  supported, permission not yet asked and no subscription until a test
+  changes it; `support()` and `permission()` read it too. Set it before
+  start to test a relaunch with permission granted or a subscription held.
+- `subscribe` and `unsubscribe` deliver nothing, as the browser does while
+  its prompt is open: the test delivers `Subscribed`, `Unsubscribed` or
+  `Failed` with `deliver`, and a `Route` as the service worker would for a
+  tapped notification. A key that is not a VAPID public key still fails at
+  once.
+- `set_badges(false)` makes `set_app_badge` report no badges.
+- `deliver` sends through the application's sender, so the host applies the
+  event at the start of its next pass; it returns false when no `WebPush` is
+  connected.
+
+The double tests the application's side only; the worker and the browser's
+behaviour are covered by the tests under [Verification](#verification).
 
 ## iPhone and iPad
 
@@ -181,6 +224,9 @@ fn perform(&mut self, target: ActionTarget<Action>, _: &mut ()) -> Result<bool, 
 
 ## Verification
 
+- `stobie-ui-egui`'s host tests drive an application through
+  `PushDouble`: start, subscribe, the browser's results, routes and the
+  badge.
 - Unit tests in `stobie-build` cover the opt-in tag and the worker it adds.
 - `tools/tests/service-worker-push.test.mjs` runs the generated worker in
   Node against stand-in browser objects: declarative and bare payloads, the

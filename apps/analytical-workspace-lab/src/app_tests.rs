@@ -1,6 +1,7 @@
 //! The hosted Lab: actions, gestures and layout through the framework host.
 
 use egui_kittest::Harness;
+use stobie_ui_egui::testing::{TestHost, host_harness_with};
 use stobie_ui_egui::{
     Inspection, InspectionOperation, InspectionRequest, InspectionResult, InspectionSelector,
     ReceiptState, ResolvedTarget,
@@ -8,36 +9,28 @@ use stobie_ui_egui::{
 
 use super::*;
 
-type Probe = Option<AnalyticalWorkspaceApp>;
+type Probe = TestHost<Lab>;
 
-/// The Lab hosted in a 1440×900 window, constructed on the first pass as eframe
-/// would construct it, without stored state or a GPU.
+/// The Lab hosted in a 1440×900 window, created as eframe creates it,
+/// without stored state or a GPU.
 fn harness() -> Harness<'static, Probe> {
-    let mut harness = Harness::builder()
-        .with_size(egui::vec2(1440.0, 900.0))
-        .build_ui_state(
-            |ui, probe: &mut Probe| match probe {
-                Some(host) => host.present(ui),
-                None => {
-                    let creation = eframe::CreationContext::_new_kittest(ui.ctx().clone());
-                    let mut host = AppHost::new(ui.ctx(), Lab::new(&creation));
-                    host.enable_inspection(Inspection::new("lab-test"));
-                    *probe = Some(host);
-                    ui.ctx().request_repaint();
-                }
-            },
-            None,
-        );
+    let mut harness = host_harness_with(
+        Harness::builder().with_size(egui::vec2(1440.0, 900.0)),
+        |context| Lab::new(&eframe::CreationContext::_new_kittest(context.clone())),
+    );
+    harness
+        .state_mut()
+        .enable_inspection(Inspection::new("lab-test"));
     harness.run_steps(6);
     harness
 }
 
 fn host<'a>(harness: &'a Harness<'_, Probe>) -> &'a AnalyticalWorkspaceApp {
-    harness.state().as_ref().unwrap()
+    harness.state()
 }
 
 fn lab<'a>(harness: &'a mut Harness<'_, Probe>) -> &'a mut Lab {
-    harness.state_mut().as_mut().unwrap().app_mut()
+    harness.state_mut().app_mut()
 }
 
 fn viewport(harness: &Harness<'_, Probe>, pane: PaneId) -> egui::Rect {
@@ -398,11 +391,7 @@ fn a_preference_change_counts_one_repaint() {
     let before = preferences(&harness);
     let mut changed = host(&harness).app().preferences;
     changed.font_scale = 1.25;
-    harness
-        .state_mut()
-        .as_mut()
-        .unwrap()
-        .submit(Intent::Preferences(changed));
+    harness.state_mut().submit(Intent::Preferences(changed));
     // The pass that reapplies appearance records it once; later passes do not.
     harness.step();
     assert_eq!(preferences(&harness), before + 1);

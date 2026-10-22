@@ -267,6 +267,51 @@ that reads standard input on a thread.
   system's light or dark appearance and, in the browser, its text size; start
   an override from it to keep following what the person has not chosen.
 
+## Test it on the host
+
+Host tests run the application as eframe does, in an egui_kittest harness.
+Enable the UI crate's `test-support` feature in the application's
+dev-dependencies:
+
+```toml
+[dev-dependencies]
+stobie-ui-egui = { path = "...", features = ["test-support"] }
+```
+
+`stobie_ui_egui::testing` re-exports `egui_kittest`, so its queries, such as
+`egui_kittest::kittest::Queryable`, need no dependency of their own.
+
+`stobie_ui_egui::testing::host_harness(size, app)` builds a harness that
+runs `app` on an `AppHost` in the harness's own context, so the senders that
+`Application::started` receives and the host's repaint requests wake it:
+
+```text
+let mut harness = host_harness(egui::vec2(390.0, 844.0), Feed::default());
+harness.state().intent_sender().send(FeedIntent::Event(event)).unwrap();
+harness.run();
+assert_eq!(harness.state().app().events().len(), 1);
+harness.get_by_label("Clear").click();
+harness.run();
+```
+
+- The harness's state dereferences to the `AppHost`, so `app()`,
+  `app_mut()`, `ui_snapshot()`, `submit()` and `repaint_reasons()` are a call
+  away.
+- The application is laid out at exactly the harness's size, with no margin,
+  as in a window or browser canvas of that size, so a breakpoint such as
+  `PaneWidthClass`'s 720 points flips at that width.
+- `testing::set_visibility(&mut harness, HostVisibility::Hidden)` hides the
+  page as a browser would: each step then reports the change and applies
+  sent intents but runs no pass, until the harness is made visible.
+- `host_harness_with(builder, create)` takes egui_kittest's builder, for
+  pixels per point or step length, and creates the application from the
+  harness's context; an application that needs eframe's creation context
+  makes one with `eframe::CreationContext::_new_kittest`.
+- `web_push::PushDouble` stands in for the browser's Web Push; see
+  [Web Push](web-push.md#test-it-natively).
+
+The [Live Feed](../apps/live-feed/src/tests.rs) tests use it.
+
 ## Add undo and redo
 
 Core's `History<C>` (`use stobie_core::{Command, History};`) records completed
