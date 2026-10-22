@@ -1,20 +1,10 @@
-use egui_kittest::Harness;
-use stobie_ui_egui::AppHost;
+use stobie_ui_egui::testing::egui_kittest::kittest::Queryable;
+use stobie_ui_egui::testing::{HostHarness, host_harness, set_visibility};
 
 use super::*;
 
-fn harness() -> Harness<'static, AppHost<LiveFeed>> {
-    let mut harness = Harness::builder()
-        .with_size(egui::vec2(640.0, 480.0))
-        .build_ui_state(
-            |ui, host: &mut AppHost<LiveFeed>| host.present(ui),
-            AppHost::new(&egui::Context::default(), LiveFeed::default()),
-        );
-    // The host must share the harness's context to be woken through it.
-    let context = harness.ctx.clone();
-    *harness.state_mut() = AppHost::new(&context, LiveFeed::default());
-    harness.run();
-    harness
+fn harness() -> HostHarness<LiveFeed> {
+    host_harness(egui::vec2(640.0, 480.0), LiveFeed::default())
 }
 
 fn event(seq: u64, text: &str) -> FeedIntent {
@@ -45,6 +35,30 @@ fn an_idle_feed_wakes_for_an_event_and_presents_it() {
     intents.send(event(1, "First")).unwrap();
     harness.run();
     assert_eq!(harness.state().app().feed().received, 1);
+}
+
+#[test]
+fn events_that_arrive_while_hidden_are_counted_until_the_next_absence() {
+    let mut harness = harness();
+    let intents = harness.state().intent_sender();
+    intents.send(event(1, "Seen")).unwrap();
+    harness.run();
+
+    set_visibility(&mut harness, HostVisibility::Hidden);
+    harness.step();
+    intents.send(event(2, "Away")).unwrap();
+    intents.send(event(3, "Away too")).unwrap();
+    harness.step();
+    assert_eq!(harness.state().app().arrived_while_hidden(), 2);
+    set_visibility(&mut harness, HostVisibility::Visible);
+    harness.run();
+    let summary = "3 received, last 3, 2 while away";
+    harness.get_by_label(summary);
+
+    // Hiding again starts a new count.
+    set_visibility(&mut harness, HostVisibility::Hidden);
+    harness.step();
+    assert_eq!(harness.state().app().arrived_while_hidden(), 0);
 }
 
 #[test]

@@ -25,8 +25,9 @@ pub mod stdin;
 use serde::Serialize;
 use stobie_ui_egui::{
     Action, ActionEmphasis, ActionTarget, Application, ApplicationIdentity, Availability,
-    ContentTextSpec, Frame, IntentSender, Observation, PresentationScope, SemanticUiId,
-    TextInteraction, TextOverflow, TextRole, application_identity, observe_visible_only,
+    ContentTextSpec, Frame, HostVisibility, IntentSender, Observation, PresentationScope,
+    SemanticUiId, TextInteraction, TextOverflow, TextRole, application_identity,
+    observe_visible_only,
 };
 
 pub use feed::{Connection, Feed, FeedEvent};
@@ -69,6 +70,10 @@ pub struct LiveFeed {
     feed: Feed,
     connection: Connection,
     error: Option<String>,
+    /// Whether the page or window is hidden, as the host reports it.
+    hidden: bool,
+    /// Events that arrived while the page or window was last hidden.
+    arrived_while_hidden: u64,
     source: Source,
     #[cfg(target_arch = "wasm32")]
     socket: Option<socket::FeedSocket>,
@@ -88,6 +93,11 @@ impl LiveFeed {
 
     pub fn connection(&self) -> Connection {
         self.connection
+    }
+
+    /// Events that arrived while the page or window was last hidden.
+    pub fn arrived_while_hidden(&self) -> u64 {
+        self.arrived_while_hidden
     }
 }
 
@@ -119,6 +129,15 @@ impl Application for LiveFeed {
         }
     }
 
+    fn visibility_changed(&mut self, visibility: HostVisibility, _: &mut ()) -> bool {
+        self.hidden = !visibility.is_visible();
+        if self.hidden {
+            // A new absence starts; what the last one brought has been seen.
+            return std::mem::take(&mut self.arrived_while_hidden) > 0;
+        }
+        false
+    }
+
     fn ui(&self, ui: &mut egui::Ui, _: &mut (), frame: &mut Frame<'_, FeedAction, FeedIntent>) {
         egui::CentralPanel::default().show(ui, |ui| {
             let mut p = frame.presentation(
@@ -133,10 +152,13 @@ impl Application for LiveFeed {
             };
             ui.horizontal(|ui| {
                 frame.action(ui, &mut p, FeedAction::Clear, ActionEmphasis::Normal);
-                let summary = format!(
+                let mut summary = format!(
                     "{} received, last {}",
                     self.feed.received, self.feed.last_sequence
                 );
+                if self.arrived_while_hidden > 0 {
+                    summary += &format!(", {} while away", self.arrived_while_hidden);
+                }
                 p.content(ui, "summary", &summary, line(TextRole::Secondary));
             });
             ui.separator();
@@ -162,7 +184,13 @@ impl Application for LiveFeed {
 
     fn apply(&mut self, intent: FeedIntent, _: &mut ()) -> Result<bool, String> {
         Ok(match intent {
-            FeedIntent::Event(event) => self.feed.receive(event),
+            FeedIntent::Event(event) => {
+                let received = self.feed.receive(event);
+                if received && self.hidden {
+                    self.arrived_while_hidden += 1;
+                }
+                received
+            }
             FeedIntent::Connection(connection) => {
                 let changed = connection != self.connection || self.error.is_some();
                 self.connection = connection;
@@ -195,6 +223,7 @@ impl Application for LiveFeed {
         observation.fact("received", self.feed.received);
         observation.fact("missed", self.feed.missed);
         observation.fact("shown", self.feed.events.len());
+        observation.fact("arrived_while_hidden", self.arrived_while_hidden);
         let latest = self.feed.events.back().map_or("", |event| &event.text);
         observation.fact("latest", latest.chars().take(200).collect::<String>());
     }

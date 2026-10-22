@@ -13,6 +13,9 @@ image-rendering = ["dep:egui-wgpu", "dep:wgpu", "dep:stobie-render-wgpu"]
 # Native and browser entry points for hosted applications. They leave GPU backends to the
 # application: depend on eframe with its `wgpu` feature, or the browser build has no wgpu backend.
 eframe = ["dep:eframe", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:console_error_panic_hook"]
+# Host tests for applications (`stobie_ui_egui::testing`, `web_push::PushDouble`):
+# enable it in dev-dependencies only.
+test-support = ["dep:egui_kittest"]
 
 [dependencies]
 egui.workspace = true
@@ -26,6 +29,8 @@ serde.workspace = true
 serde_json.workspace = true
 # CommonMark parsing for the Markdown recipe (MIT); no HTML renderer or command-line tool.
 pulldown-cmark = { version = "0.13.4", default-features = false }
+# The `test-support` harness (MIT OR Apache-2.0), already the crate's test harness.
+egui_kittest = { workspace = true, optional = true }
 # Applications choose further eframe features; Linux windowing needs a winit backend to build.
 # `links` lets the link recipe open URLs in the platform's default browser natively.
 eframe = { version = "0.36.1", default-features = false, features = ["wgpu_no_default_features", "x11", "wayland", "links"], optional = true }

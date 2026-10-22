@@ -89,6 +89,8 @@ mod semantics;
 mod style;
 #[cfg(test)]
 mod test_actions;
+#[cfg(any(test, feature = "test-support"))]
+pub mod testing;
 mod text;
 mod text_coverage;
 mod typography;
