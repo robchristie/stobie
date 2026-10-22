@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 3223460178482947
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 785,
+        "min_y": 200.8125,
+        "max_x": 983,
+        "max_y": 217.8125
+      },
+      "painted_rect": {
+        "min_x": 785,
+        "min_y": 200.8125,
+        "max_x": 909.28125,
+        "max_y": 217.8125
+      },
+      "clip_rect": {
+        "min_x": 785,
+        "min_y": 200.8125,
+        "max_x": 983,
+        "max_y": 217.8125
+      },
+      "overflow": "ellipsis",
+      "interaction": "selectable",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Last seen today at 09:41",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7155247083511283
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 701,
+        "min_y": 288,
+        "max_x": 983,
+        "max_y": 306
+      },
+      "painted_rect": {
+        "min_x": 701,
+        "min_y": 288,
+        "max_x": 856.25,
+        "max_y": 306
+      },
+      "clip_rect": {
+        "min_x": 701,
+        "min_y": 288,
+        "max_x": 983,
+        "max_y": 306
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "The hall is booked for Friday.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 1337864787992173
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 785,
+        "min_y": 178.3125,
+        "max_x": 983,
+        "max_y": 200.8125
+      },
+      "painted_rect": {
+        "min_x": 785,
+        "min_y": 180.5625,
+        "max_x": 968.9375,
+        "max_y": 198.5625
+      },
+      "clip_rect": {
+        "min_x": 785,
+        "min_y": 178.3125,
+        "max_x": 983,
+        "max_y": 200.8125
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Grace Brewster Murray Hopper",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 3,
+    "attempted_components": 3,
+    "successful_components": 3,
+    "failed_components": 0,
+    "native_text_controls": 24,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

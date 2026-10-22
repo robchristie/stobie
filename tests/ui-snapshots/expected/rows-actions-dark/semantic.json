@@ -42,9 +42,9 @@
       "description": "Computer scientist; Select the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 314.5,
+        "min_y": 338.5,
         "max_x": 1150,
-        "max_y": 358.25
+        "max_y": 382.25
       },
       "enabled": true,
       "focused": false,
@@ -62,9 +62,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 587.8125,
-        "min_y": 460,
+        "min_y": 502,
         "max_x": 643.75,
-        "max_y": 492
+        "max_y": 534
       },
       "enabled": true,
       "focused": false,
@@ -83,9 +83,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 169.75,
+        "min_y": 175.75,
         "max_x": 580.8125,
-        "max_y": 201.75
+        "max_y": 207.75
       },
       "enabled": true,
       "focused": false,
@@ -103,9 +103,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 587.8125,
-        "min_y": 266.5,
+        "min_y": 284.5,
         "max_x": 643.75,
-        "max_y": 298.5
+        "max_y": 316.5
       },
       "enabled": true,
       "focused": false,
@@ -124,9 +124,9 @@
       "description": "Rear admiral and computer scientist; Select the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 217.75,
+        "min_y": 229.75,
         "max_x": 1150,
-        "max_y": 261.5
+        "max_y": 273.5
       },
       "enabled": true,
       "focused": false,
@@ -145,8 +145,8 @@
       "rect": {
         "min_x": 650.75,
         "min_y": 169.75,
-        "max_x": 682.75,
-        "max_y": 201.75
+        "max_x": 694.75,
+        "max_y": 213.75
       },
       "enabled": false,
       "focused": false,
@@ -165,9 +165,9 @@
       "description": "Remove the person with this ID",
       "rect": {
         "min_x": 650.75,
-        "min_y": 460,
-        "max_x": 682.75,
-        "max_y": 492
+        "min_y": 496,
+        "max_x": 694.75,
+        "max_y": 540
       },
       "enabled": true,
       "focused": false,
@@ -185,9 +185,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 460,
+        "min_y": 502,
         "max_x": 580.8125,
-        "max_y": 492
+        "max_y": 534
       },
       "enabled": true,
       "focused": false,
@@ -205,9 +205,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 587.8125,
-        "min_y": 363.25,
+        "min_y": 393.25,
         "max_x": 643.75,
-        "max_y": 395.25
+        "max_y": 425.25
       },
       "enabled": true,
       "focused": false,
@@ -226,9 +226,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 266.5,
+        "min_y": 284.5,
         "max_x": 580.8125,
-        "max_y": 298.5
+        "max_y": 316.5
       },
       "enabled": true,
       "focused": false,
@@ -246,9 +246,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 363.25,
+        "min_y": 393.25,
         "max_x": 580.8125,
-        "max_y": 395.25
+        "max_y": 425.25
       },
       "enabled": true,
       "focused": false,
@@ -286,9 +286,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 587.8125,
-        "min_y": 169.75,
+        "min_y": 175.75,
         "max_x": 643.75,
-        "max_y": 201.75
+        "max_y": 207.75
       },
       "enabled": true,
       "focused": false,
@@ -307,9 +307,9 @@
       "description": "Remove the person with this ID",
       "rect": {
         "min_x": 650.75,
-        "min_y": 363.25,
-        "max_x": 682.75,
-        "max_y": 395.25
+        "min_y": 387.25,
+        "max_x": 694.75,
+        "max_y": 431.25
       },
       "enabled": true,
       "focused": false,
@@ -327,9 +327,9 @@
       "description": "Remove the person with this ID",
       "rect": {
         "min_x": 650.75,
-        "min_y": 266.5,
-        "max_x": 682.75,
-        "max_y": 298.5
+        "min_y": 278.5,
+        "max_x": 694.75,
+        "max_y": 322.5
       },
       "enabled": true,
       "focused": false,
@@ -347,9 +347,9 @@
       "description": "Mathematician at NASA; Select the person with this ID",
       "rect": {
         "min_x": 534,
-        "min_y": 411.25,
+        "min_y": 447.25,
         "max_x": 1150,
-        "max_y": 455
+        "max_y": 491
       },
       "enabled": true,
       "focused": false,

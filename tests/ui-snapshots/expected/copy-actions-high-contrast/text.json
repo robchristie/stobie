@@ -11,21 +11,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 703,
-        "min_y": 561,
+        "min_y": 563,
         "max_x": 943.40625,
-        "max_y": 603
+        "max_y": 605
       },
       "painted_rect": {
         "min_x": 768.296875,
-        "min_y": 569.5,
+        "min_y": 571.5,
         "max_x": 878.109375,
-        "max_y": 594.5
+        "max_y": 596.5
       },
       "clip_rect": {
         "min_x": 703,
-        "min_y": 561,
+        "min_y": 563,
         "max_x": 943.40625,
-        "max_y": 603
+        "max_y": 605
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -75,21 +75,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 734,
-        "min_y": 651,
+        "min_y": 653,
         "max_x": 845.59375,
-        "max_y": 693
+        "max_y": 695
       },
       "painted_rect": {
         "min_x": 734,
-        "min_y": 659.5,
+        "min_y": 661.5,
         "max_x": 817.1875,
-        "max_y": 684.5
+        "max_y": 686.5
       },
       "clip_rect": {
         "min_x": 734,
-        "min_y": 651,
+        "min_y": 653,
         "max_x": 845.59375,
-        "max_y": 693
+        "max_y": 695
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -144,21 +144,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 620,
+        "min_y": 622,
         "max_x": 990,
-        "max_y": 646
+        "max_y": 648
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 620,
+        "min_y": 622,
         "max_x": 853.4375,
-        "max_y": 646
+        "max_y": 648
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 620,
+        "min_y": 622,
         "max_x": 990,
-        "max_y": 646
+        "max_y": 648
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -255,21 +255,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 530,
+        "min_y": 532,
         "max_x": 990,
-        "max_y": 556
+        "max_y": 558
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 530,
+        "min_y": 532,
         "max_x": 828.25,
-        "max_y": 556
+        "max_y": 558
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 530,
+        "min_y": 532,
         "max_x": 990,
-        "max_y": 556
+        "max_y": 558
       },
       "overflow": "ellipsis",
       "interaction": "inert",

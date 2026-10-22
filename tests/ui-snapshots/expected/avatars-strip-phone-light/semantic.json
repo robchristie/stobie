@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "avatars/strip",
+      "rect": {
+        "min_x": 682,
+        "min_y": 54,
+        "max_x": 1002,
+        "max_y": 414
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.00c6de1379a6f182",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Planner",
+      "description": "Open the conversation with this ID; Current destination",
+      "rect": {
+        "min_x": 767,
+        "min_y": 195,
+        "max_x": 833,
+        "max_y": 281.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": true,
+      "actions": [
+        "gallery.pinned.open"
+      ],
+      "argument": "planner"
+    },
+    {
+      "id": "presentation.159ddfcb18c51910",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Librarian",
+      "description": "Open the conversation with this ID",
+      "rect": {
+        "min_x": 913,
+        "min_y": 195,
+        "max_x": 979,
+        "max_y": 281.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.pinned.open"
+      ],
+      "argument": "librarian"
+    },
+    {
+      "id": "presentation.5dece07dc151ee78",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Ada",
+      "description": "Open the conversation with this ID",
+      "rect": {
+        "min_x": 694,
+        "min_y": 195,
+        "max_x": 760,
+        "max_y": 281.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.pinned.open"
+      ],
+      "argument": "ada"
+    },
+    {
+      "id": "presentation.603bf49cdce8fffc",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Edsger",
+      "description": "Open the conversation with this ID",
+      "rect": {
+        "min_x": 986,
+        "min_y": 195,
+        "max_x": 990,
+        "max_y": 281.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.pinned.open"
+      ],
+      "argument": "edsger"
+    },
+    {
+      "id": "presentation.cf53d42d7fb97a92",
+      "parent": "gallery.story",
+      "role": "navigation_item",
+      "name": "Grace Brewster Murray Hopper",
+      "description": "Open the conversation with this ID",
+      "rect": {
+        "min_x": 840,
+        "min_y": 195,
+        "max_x": 906,
+        "max_y": 281.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.pinned.open"
+      ],
+      "argument": "grace"
+    }
+  ],
+  "semantic_audit": []
+}

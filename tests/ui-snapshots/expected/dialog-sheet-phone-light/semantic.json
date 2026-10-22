@@ -25,14 +25,15 @@
       "name": "Name",
       "rect": {
         "min_x": 9,
-        "min_y": 610,
+        "min_y": 595,
         "max_x": 381,
-        "max_y": 631.25
+        "max_y": 627.25
       },
       "enabled": true,
       "focused": true,
       "selected": false,
       "actions": [],
+      "text_selectable": true,
       "value": "Morning briefing"
     },
     {
@@ -42,14 +43,15 @@
       "name": "Prompt",
       "rect": {
         "min_x": 9,
-        "min_y": 656.25,
+        "min_y": 652.25,
         "max_x": 381,
-        "max_y": 712
+        "max_y": 719
       },
       "enabled": true,
       "focused": false,
       "selected": false,
       "actions": [],
+      "text_selectable": true,
       "value": "Summarise the weather, my calendar and the overnight news."
     },
     {
@@ -59,10 +61,10 @@
       "name": "Close",
       "description": "Close the editor without saving",
       "rect": {
-        "min_x": 349,
-        "min_y": 558,
+        "min_x": 337,
+        "min_y": 528,
         "max_x": 381,
-        "max_y": 590
+        "max_y": 572
       },
       "enabled": true,
       "focused": false,
@@ -78,7 +80,7 @@
       "name": "Edit routine",
       "rect": {
         "min_x": 0,
-        "min_y": 549,
+        "min_y": 519,
         "max_x": 390,
         "max_y": 844
       },
@@ -88,15 +90,15 @@
       "actions": []
     },
     {
-      "id": "presentation.5d4e22f273a512e9",
+      "id": "presentation.bc35f39abc5d66fb",
       "parent": "presentation.513b7c3f8200089e",
       "role": "button",
       "name": "Save",
       "description": "Save the routine and close the editor",
       "rect": {
-        "min_x": 9,
+        "min_x": 341.28125,
         "min_y": 803,
-        "max_x": 48.71875,
+        "max_x": 381,
         "max_y": 835
       },
       "enabled": true,
@@ -114,9 +116,9 @@
       "description": "Send a notification when the routine runs",
       "rect": {
         "min_x": 9,
-        "min_y": 760,
+        "min_y": 767,
         "max_x": 381,
-        "max_y": 792
+        "max_y": 799
       },
       "enabled": true,
       "focused": false,

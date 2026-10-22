@@ -43,8 +43,8 @@
       "rect": {
         "min_x": 534,
         "min_y": 158,
-        "max_x": 566,
-        "max_y": 190
+        "max_x": 578,
+        "max_y": 202
       },
       "enabled": true,
       "focused": false,
@@ -66,9 +66,9 @@
       "description": "Persist the current workspace layout",
       "rect": {
         "min_x": 534,
-        "min_y": 195,
+        "min_y": 207,
         "max_x": 637.5,
-        "max_y": 227
+        "max_y": 239
       },
       "enabled": true,
       "focused": false,
@@ -85,9 +85,9 @@
       "description": "Undo the most recent change",
       "rect": {
         "min_x": 534,
-        "min_y": 269,
-        "max_x": 566,
-        "max_y": 301
+        "min_y": 293,
+        "max_x": 578,
+        "max_y": 337
       },
       "enabled": false,
       "focused": false,
@@ -105,9 +105,9 @@
       "description": "Link or unlink this camera with camera group A",
       "rect": {
         "min_x": 534,
-        "min_y": 232,
-        "max_x": 566,
-        "max_y": 264
+        "min_y": 244,
+        "max_x": 578,
+        "max_y": 288
       },
       "enabled": true,
       "focused": false,

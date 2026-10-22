@@ -1,0 +1,736 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "choice/segmented",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.02e158ae6992dda4",
+      "parent": "presentation.0736ba811ca9c65b",
+      "role": "radio_button",
+      "name": "Weekly",
+      "description": "Choose how often the routine runs",
+      "rect": {
+        "min_x": 748.75,
+        "min_y": 178,
+        "max_x": 852.125,
+        "max_y": 210
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.repeat"
+      ],
+      "argument": "weekly"
+    },
+    {
+      "id": "presentation.06bc6a5523755d00",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Friday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 534,
+        "min_y": 502,
+        "max_x": 575.375,
+        "max_y": 534
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "fri"
+    },
+    {
+      "id": "presentation.0736ba811ca9c65b",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Repeats",
+      "rect": {
+        "min_x": 534,
+        "min_y": 178,
+        "max_x": 959.5,
+        "max_y": 210
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.08a77222163b8f86",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Saturday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 760.875,
+        "min_y": 394,
+        "max_x": 802.25,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "sat"
+    },
+    {
+      "id": "presentation.0e23174a531eba03",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Notify on",
+      "rect": {
+        "min_x": 534,
+        "min_y": 394,
+        "max_x": 847.625,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.11152661564b8888",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Tuesday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 579.375,
+        "min_y": 394,
+        "max_x": 620.75,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "tue"
+    },
+    {
+      "id": "presentation.1d1e23927fe806cb",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Monday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 534,
+        "min_y": 394,
+        "max_x": 575.375,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "mon"
+    },
+    {
+      "id": "presentation.219580a6f6e367ea",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Monday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 534,
+        "min_y": 466,
+        "max_x": 575.375,
+        "max_y": 498
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "mon"
+    },
+    {
+      "id": "presentation.2bd4416b3528ebdd",
+      "parent": "presentation.0736ba811ca9c65b",
+      "role": "radio_button",
+      "name": "Daily",
+      "description": "Choose how often the routine runs",
+      "rect": {
+        "min_x": 534,
+        "min_y": 178,
+        "max_x": 637.375,
+        "max_y": 210
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.repeat"
+      ],
+      "argument": "daily"
+    },
+    {
+      "id": "presentation.2f46ce81d5d888a0",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Friday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 715.5,
+        "min_y": 394,
+        "max_x": 756.875,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "fri"
+    },
+    {
+      "id": "presentation.2fc04862c3ab857a",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Wednesday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 624.75,
+        "min_y": 466,
+        "max_x": 666.125,
+        "max_y": 498
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "wed"
+    },
+    {
+      "id": "presentation.47fd1f269924871d",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Runs on",
+      "rect": {
+        "min_x": 534,
+        "min_y": 250,
+        "max_x": 847.625,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.5157d2f4bbcba2bb",
+      "parent": "presentation.df480547d6a3abf4",
+      "role": "radio_button",
+      "name": "Never",
+      "description": "Choose when the routine reminds you",
+      "rect": {
+        "min_x": 962.53125,
+        "min_y": 322,
+        "max_x": 1101.375,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.reminder"
+      ],
+      "argument": "never"
+    },
+    {
+      "id": "presentation.592b81bee8ade470",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Tuesday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 579.375,
+        "min_y": 466,
+        "max_x": 620.75,
+        "max_y": 498
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "tue"
+    },
+    {
+      "id": "presentation.59914fc9f994a02c",
+      "parent": "presentation.0736ba811ca9c65b",
+      "role": "radio_button",
+      "name": "Every few hours",
+      "description": "Choose how often the routine runs",
+      "rect": {
+        "min_x": 856.125,
+        "min_y": 178,
+        "max_x": 959.5,
+        "max_y": 210
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.repeat"
+      ],
+      "disabled_reason": "Turned off for this routine",
+      "argument": "hourly"
+    },
+    {
+      "id": "presentation.67b1213eb1d898d6",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Saturday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 579.375,
+        "min_y": 502,
+        "max_x": 620.75,
+        "max_y": 534
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "sat"
+    },
+    {
+      "id": "presentation.7628bc8bb73579d8",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Tuesday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 579.375,
+        "min_y": 250,
+        "max_x": 620.75,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "tue"
+    },
+    {
+      "id": "presentation.789dafccd40ed8fb",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Thursday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 670.125,
+        "min_y": 394,
+        "max_x": 711.5,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "thu"
+    },
+    {
+      "id": "presentation.7d9f9036218d8602",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Wednesday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 624.75,
+        "min_y": 394,
+        "max_x": 666.125,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "wed"
+    },
+    {
+      "id": "presentation.83c4782e2acc120b",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Thursday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 670.125,
+        "min_y": 466,
+        "max_x": 711.5,
+        "max_y": 498
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "thu"
+    },
+    {
+      "id": "presentation.9140f361d56429ce",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Thursday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 670.125,
+        "min_y": 250,
+        "max_x": 711.5,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "thu"
+    },
+    {
+      "id": "presentation.95de7edcc0b0b7b8",
+      "parent": "presentation.ddcc970634c72af6",
+      "role": "button",
+      "name": "Sunday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 624.75,
+        "min_y": 502,
+        "max_x": 666.125,
+        "max_y": 534
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "sun"
+    },
+    {
+      "id": "presentation.9b27829d687a6f9f",
+      "parent": "presentation.df480547d6a3abf4",
+      "role": "radio_button",
+      "name": "Fifteen minutes before",
+      "description": "Choose when the routine reminds you",
+      "rect": {
+        "min_x": 676.84375,
+        "min_y": 322,
+        "max_x": 815.6875,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.reminder"
+      ],
+      "argument": "before"
+    },
+    {
+      "id": "presentation.a8df8bbb89b36ff0",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Saturday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 760.875,
+        "min_y": 250,
+        "max_x": 802.25,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "sat"
+    },
+    {
+      "id": "presentation.b1af2e12448b3d80",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Sunday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 806.25,
+        "min_y": 250,
+        "max_x": 847.625,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "sun"
+    },
+    {
+      "id": "presentation.b8523059c64e3baa",
+      "parent": "presentation.0e23174a531eba03",
+      "role": "button",
+      "name": "Sunday",
+      "description": "Notify on this day, or stop",
+      "rect": {
+        "min_x": 806.25,
+        "min_y": 394,
+        "max_x": 847.625,
+        "max_y": 426
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.notify"
+      ],
+      "disabled_reason": "Notifications are off",
+      "argument": "sun"
+    },
+    {
+      "id": "presentation.bcf365a7a00eafa4",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Monday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 534,
+        "min_y": 250,
+        "max_x": 575.375,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "mon"
+    },
+    {
+      "id": "presentation.cb26b119639f5b82",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Friday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 715.5,
+        "min_y": 250,
+        "max_x": 756.875,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "fri"
+    },
+    {
+      "id": "presentation.d3ac0d0c35de4bcf",
+      "parent": "presentation.0736ba811ca9c65b",
+      "role": "radio_button",
+      "name": "Weekdays",
+      "description": "Choose how often the routine runs",
+      "rect": {
+        "min_x": 641.375,
+        "min_y": 178,
+        "max_x": 744.75,
+        "max_y": 210
+      },
+      "enabled": true,
+      "focused": true,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.repeat"
+      ],
+      "argument": "weekdays"
+    },
+    {
+      "id": "presentation.dd0fed43cc0e261f",
+      "parent": "presentation.df480547d6a3abf4",
+      "role": "radio_button",
+      "name": "The evening before",
+      "description": "Choose when the routine reminds you",
+      "rect": {
+        "min_x": 819.6875,
+        "min_y": 322,
+        "max_x": 958.53125,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.reminder"
+      ],
+      "argument": "evening"
+    },
+    {
+      "id": "presentation.dd99b552c8fb851f",
+      "parent": "presentation.df480547d6a3abf4",
+      "role": "radio_button",
+      "name": "At the start time",
+      "description": "Choose when the routine reminds you",
+      "rect": {
+        "min_x": 534,
+        "min_y": 322,
+        "max_x": 672.84375,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.routine.reminder"
+      ],
+      "argument": "start"
+    },
+    {
+      "id": "presentation.ddcc970634c72af6",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Runs on",
+      "rect": {
+        "min_x": 534,
+        "min_y": 466,
+        "max_x": 711.5,
+        "max_y": 534
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.df480547d6a3abf4",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Reminder",
+      "rect": {
+        "min_x": 534,
+        "min_y": 322,
+        "max_x": 1101.375,
+        "max_y": 354
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.f5f1a8d88d0aa563",
+      "parent": "presentation.47fd1f269924871d",
+      "role": "button",
+      "name": "Wednesday",
+      "description": "Run the routine on this day, or stop",
+      "rect": {
+        "min_x": 624.75,
+        "min_y": 250,
+        "max_x": 666.125,
+        "max_y": 282
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.routine.day"
+      ],
+      "argument": "wed"
+    }
+  ],
+  "semantic_audit": []
+}

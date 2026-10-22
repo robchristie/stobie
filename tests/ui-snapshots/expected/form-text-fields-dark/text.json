@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 3947205099835239
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 201.25,
+        "max_x": 1150,
+        "max_y": 217.25
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 201.25,
+        "max_x": 608.78125,
+        "max_y": 217.25
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 201.25,
+        "max_x": 1150,
+        "max_y": 217.25
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Invitation code",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 4052670132009456
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 492.5,
+        "max_x": 1150,
+        "max_y": 508.5
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 492.5,
+        "max_x": 616.8125,
+        "max_y": 508.5
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 492.5,
+        "max_x": 1150,
+        "max_y": 508.5
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Account number",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 4494663435510066
+      },
+      "role": "error",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 259.5,
+        "max_x": 1150,
+        "max_y": 277.5
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 259.5,
+        "max_x": 757.09375,
+        "max_y": 277.5
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 259.5,
+        "max_x": 1150,
+        "max_y": 277.5
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 4,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "An invitation code has six letters or digits.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 5444710058483025
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 550.75,
+        "max_x": 1150,
+        "max_y": 567.75
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 550.75,
+        "max_x": 774.25,
+        "max_y": 567.75
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 550.75,
+        "max_x": 1150,
+        "max_y": 567.75
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 4,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Assigned when you join; it cannot be changed.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 6059203908375345
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 309.5,
+        "max_x": 1150,
+        "max_y": 325.5
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 309.5,
+        "max_x": 582.15625,
+        "max_y": 325.5
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 309.5,
+        "max_x": 1150,
+        "max_y": 325.5
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Password",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 6634061205557487
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 282.5,
+        "max_x": 1150,
+        "max_y": 299.5
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 282.5,
+        "max_x": 732.34375,
+        "max_y": 299.5
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 282.5,
+        "max_x": 1150,
+        "max_y": 299.5
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 4,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Six letters or digits from the invitation.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 7785924567584490
+      },
+      "role": "secondary",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 465.5,
+        "max_x": 1150,
+        "max_y": 482.5
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 465.5,
+        "max_x": 659,
+        "max_y": 482.5
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 465.5,
+        "max_x": 1150,
+        "max_y": 482.5
+      },
+      "overflow": "wrap",
+      "interaction": "selectable",
+      "declared_max_lines": 4,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Return starts a new line.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 7796510844375198
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 372.75,
+        "max_x": 1150,
+        "max_y": 388.75
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 372.75,
+        "max_x": 585.25,
+        "max_y": 388.75
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 372.75,
+        "max_x": 1150,
+        "max_y": 388.75
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "About you",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 8375866190452272
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 1150,
+        "max_y": 154
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 601.65625,
+        "max_y": 154
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 1150,
+        "max_y": 154
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Display name",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 9,
+    "attempted_components": 9,
+    "successful_components": 9,
+    "failed_components": 0,
+    "native_text_controls": 29,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text",
+      "native_text_edit_text"
+    ]
+  }
+}

@@ -28,7 +28,7 @@
         "min_x": 520,
         "min_y": 387,
         "max_x": 920,
-        "max_y": 513.25
+        "max_y": 513
       },
       "enabled": true,
       "focused": false,
@@ -43,9 +43,9 @@
       "description": "Keep the routine",
       "rect": {
         "min_x": 774.59375,
-        "min_y": 472.25,
+        "min_y": 472,
         "max_x": 857.59375,
-        "max_y": 504.25
+        "max_y": 504
       },
       "enabled": true,
       "focused": true,
@@ -62,9 +62,9 @@
       "description": "Delete the routine and its history",
       "rect": {
         "min_x": 862.59375,
-        "min_y": 472.25,
+        "min_y": 472,
         "max_x": 911,
-        "max_y": 504.25
+        "max_y": 504
       },
       "enabled": true,
       "focused": false,

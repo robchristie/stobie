@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1353191705804795
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 553,
+        "min_y": 370,
+        "max_x": 1038.60009765625,
+        "max_y": 406
+      },
+      "painted_rect": {
+        "min_x": 553,
+        "min_y": 370,
+        "max_x": 967.8125,
+        "max_y": 406
+      },
+      "clip_rect": {
+        "min_x": 553,
+        "min_y": 370,
+        "max_x": 1038.60009765625,
+        "max_y": 406
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "cargo nextest run --workspace --all-features\ncargo clippy --workspace --all-targets -- -D warnings",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2459423003684787
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 546,
+        "min_y": 423,
+        "max_x": 1045.60009765625,
+        "max_y": 441
+      },
+      "painted_rect": {
+        "min_x": 546,
+        "min_y": 423,
+        "max_x": 724.75,
+        "max_y": 441
+      },
+      "clip_rect": {
+        "min_x": 546,
+        "min_y": 423,
+        "max_x": 1045.60009765625,
+        "max_y": 441
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Both print a summary at the end.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 462467389367034
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 929,
+        "min_y": 145,
+        "max_x": 1138,
+        "max_y": 163
+      },
+      "painted_rect": {
+        "min_x": 929,
+        "min_y": 145,
+        "max_x": 1137,
+        "max_y": 163
+      },
+      "clip_rect": {
+        "min_x": 929,
+        "min_y": 145,
+        "max_x": 1138,
+        "max_y": 163
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "How do I run the checks before I push?",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5736696457665571
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 553,
+        "min_y": 261,
+        "max_x": 1038.60009765625,
+        "max_y": 279
+      },
+      "painted_rect": {
+        "min_x": 553,
+        "min_y": 261,
+        "max_x": 834.75,
+        "max_y": 279
+      },
+      "clip_rect": {
+        "min_x": 553,
+        "min_y": 261,
+        "max_x": 1038.60009765625,
+        "max_y": 279
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "cargo install --locked cargo-nextest",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6765902407180110
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 546,
+        "min_y": 296,
+        "max_x": 1045.60009765625,
+        "max_y": 314
+      },
+      "painted_rect": {
+        "min_x": 546,
+        "min_y": 296,
+        "max_x": 848.21875,
+        "max_y": 314
+      },
+      "clip_rect": {
+        "min_x": 546,
+        "min_y": 296,
+        "max_x": 1045.60009765625,
+        "max_y": 314
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Then run the whole suite, which stops at the first failure:",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8353531774492894
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 546,
+        "min_y": 187,
+        "max_x": 1045.60009765625,
+        "max_y": 205
+      },
+      "painted_rect": {
+        "min_x": 546,
+        "min_y": 187,
+        "max_x": 661.3125,
+        "max_y": 205
+      },
+      "clip_rect": {
+        "min_x": 546,
+        "min_y": 187,
+        "max_x": 1045.60009765625,
+        "max_y": 205
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Install the tools once:",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 6,
+    "attempted_components": 6,
+    "successful_components": 6,
+    "failed_components": 0,
+    "native_text_controls": 24,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

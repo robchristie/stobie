@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "scroll/load-older",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.16835f76d2d77c0a",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Load older",
+      "description": "Show the page of messages before the oldest one shown",
+      "rect": {
+        "min_x": 534,
+        "min_y": 341.1875,
+        "max_x": 609.125,
+        "max_y": 373.1875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.conversation.load_older"
+      ]
+    },
+    {
+      "id": "presentation.1d8d23d8835f55ed",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 524,
+        "max_x": 652,
+        "max_y": 556
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.3218a55909bfd8d2",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 718,
+        "max_x": 763,
+        "max_y": 750
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.3acca711151a6936",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 674,
+        "max_x": 638,
+        "max_y": 706
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.3e0cd0e0a3229092",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 568,
+        "max_x": 778,
+        "max_y": 600
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.78aa69b44782f14f",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 642,
+        "min_y": 612,
+        "max_x": 1150,
+        "max_y": 662
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.bd8e5fff441fadeb",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 650,
+        "min_y": 462,
+        "max_x": 1150,
+        "max_y": 512
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.eabd80c1941062c7",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 418,
+        "max_x": 763,
+        "max_y": 450
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.fc1a719f038e81b2",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Ada Lovelace",
+      "rect": {
+        "min_x": 534,
+        "min_y": 378.1875,
+        "max_x": 1057.60009765625,
+        "max_y": 406
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

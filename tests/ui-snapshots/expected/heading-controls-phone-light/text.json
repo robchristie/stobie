@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "action_button",
+        "instance": 5093317766378979
+      },
+      "role": "button_label",
+      "horizontal_alignment": "centre",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 921.6875,
+        "min_y": 264,
+        "max_x": 981,
+        "max_y": 292
+      },
+      "painted_rect": {
+        "min_x": 921.84375,
+        "min_y": 269.5,
+        "max_x": 980.84375,
+        "max_y": 286.5
+      },
+      "clip_rect": {
+        "min_x": 921.6875,
+        "min_y": 264,
+        "max_x": 981,
+        "max_y": 292
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 30304186185591
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 221,
+        "max_x": 990,
+        "max_y": 239
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 221,
+        "max_x": 861.78125,
+        "max_y": 239
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 221,
+        "max_x": 990,
+        "max_y": 239
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Three routines run before nine.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5684318440867340
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 299,
+        "max_x": 990,
+        "max_y": 317
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 299,
+        "max_x": 895.1875,
+        "max_y": 317
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 299,
+        "max_x": 990,
+        "max_y": 317
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Rear admiral and computing pioneer.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6070877281621296
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 431,
+        "max_x": 990,
+        "max_y": 449
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 431,
+        "max_x": 830.375,
+        "max_y": 449
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 431,
+        "max_x": 990,
+        "max_y": 449
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Bread, apples and coffee.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 3155710230361207
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 182.75,
+        "max_x": 942,
+        "max_y": 205.25
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 185,
+        "max_x": 797,
+        "max_y": 203
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 182.75,
+        "max_x": 942,
+        "max_y": 205.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Morning routines",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 4523557116013741
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 344.75,
+        "max_x": 990,
+        "max_y": 367.25
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 347,
+        "max_x": 916.6875,
+        "max_y": 365
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 344.75,
+        "max_x": 990,
+        "max_y": 367.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Shared shopping list for the weekend",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "section_heading",
+        "instance": 6659842966805175
+      },
+      "role": "section_heading",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "centre",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 266.75,
+        "max_x": 860.6875,
+        "max_y": 289.25
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 269,
+        "max_x": 854.5,
+        "max_y": 287
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 266.75,
+        "max_x": 860.6875,
+        "max_y": 289.25
+      },
+      "overflow": "ellipsis",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": true,
+      "content": {
+        "kind": "excerpt",
+        "text": "Grace Brewster Murray Hopper",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 7,
+    "attempted_components": 7,
+    "successful_components": 7,
+    "failed_components": 0,
+    "native_text_controls": 24,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

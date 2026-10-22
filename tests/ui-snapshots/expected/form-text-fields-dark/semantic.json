@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.join.about",
+      "parent": "gallery.story",
+      "role": "multiline_text_input",
+      "name": "About you",
+      "description": "Return starts a new line.",
+      "rect": {
+        "min_x": 534,
+        "min_y": 393.75,
+        "max_x": 1150,
+        "max_y": 460.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true,
+      "value": ""
+    },
+    {
+      "id": "gallery.join.account",
+      "parent": "gallery.story",
+      "role": "text_input",
+      "name": "Account number",
+      "description": "Assigned when you join; it cannot be changed.",
+      "rect": {
+        "min_x": 534,
+        "min_y": 513.5,
+        "max_x": 1150,
+        "max_y": 545.75
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true,
+      "value": "40 2215 0093"
+    },
+    {
+      "id": "gallery.join.code.status",
+      "parent": "gallery.story",
+      "role": "status",
+      "name": "An invitation code has six letters or digits.",
+      "rect": {
+        "min_x": 534,
+        "min_y": 259.5,
+        "max_x": 1150,
+        "max_y": 277.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.join.code",
+      "parent": "gallery.story",
+      "role": "text_input",
+      "name": "Invitation code",
+      "description": "An invitation code has six letters or digits.\nSix letters or digits from the invitation.",
+      "rect": {
+        "min_x": 534,
+        "min_y": 222.25,
+        "max_x": 1150,
+        "max_y": 254.5
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true,
+      "value": "QX7-44"
+    },
+    {
+      "id": "gallery.join.name",
+      "parent": "gallery.story",
+      "role": "text_input",
+      "name": "Display name",
+      "rect": {
+        "min_x": 534,
+        "min_y": 159,
+        "max_x": 1150,
+        "max_y": 191.25
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true,
+      "value": ""
+    },
+    {
+      "id": "gallery.join.password",
+      "parent": "gallery.story",
+      "role": "text_input",
+      "name": "Password",
+      "rect": {
+        "min_x": 534,
+        "min_y": 330.5,
+        "max_x": 1150,
+        "max_y": 362.75
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "form/text-fields",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    }
+  ],
+  "semantic_audit": []
+}

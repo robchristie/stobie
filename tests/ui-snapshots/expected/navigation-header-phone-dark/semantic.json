@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "navigation/header",
+      "rect": {
+        "min_x": 682,
+        "min_y": 54,
+        "max_x": 1002,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.345a84698ede1801",
+      "parent": "presentation.3ca76fe85628d95d",
+      "role": "button",
+      "name": "Details",
+      "description": "Show or hide this conversation's details",
+      "rect": {
+        "min_x": 939,
+        "min_y": 228,
+        "max_x": 983,
+        "max_y": 272
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.header.details"
+      ]
+    },
+    {
+      "id": "presentation.3ca76fe85628d95d",
+      "parent": "gallery.story",
+      "role": "pane",
+      "name": "Grace Brewster Murray Hopper",
+      "rect": {
+        "min_x": 694,
+        "min_y": 172,
+        "max_x": 990,
+        "max_y": 762
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.4fcc7a6d137235a3",
+      "parent": "presentation.3ca76fe85628d95d",
+      "role": "button",
+      "name": "Edit profile",
+      "description": "Edit this person's profile",
+      "rect": {
+        "min_x": 891,
+        "min_y": 228,
+        "max_x": 935,
+        "max_y": 272
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.edit_profile"
+      ]
+    },
+    {
+      "id": "presentation.679c67392ec8be92",
+      "parent": "presentation.3ca76fe85628d95d",
+      "role": "button",
+      "name": "Hide Grace Brewster Murray Hopper",
+      "description": "Hide this conversation from the list",
+      "rect": {
+        "min_x": 843,
+        "min_y": 228,
+        "max_x": 887,
+        "max_y": 272
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.hide"
+      ],
+      "argument": "grace"
+    },
+    {
+      "id": "presentation.6f139f1d415ef699",
+      "parent": "presentation.3ca76fe85628d95d",
+      "role": "button",
+      "name": "Back",
+      "description": "Return to the previous level",
+      "rect": {
+        "min_x": 701,
+        "min_y": 176,
+        "max_x": 745,
+        "max_y": 220
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.back"
+      ]
+    },
+    {
+      "id": "presentation.90b9951f60c3049a",
+      "parent": "presentation.3ca76fe85628d95d",
+      "role": "button",
+      "name": "Pinned Grace Brewster Murray Hopper",
+      "description": "Pin or unpin this conversation",
+      "rect": {
+        "min_x": 795,
+        "min_y": 228,
+        "max_x": 839,
+        "max_y": 272
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.header.pin"
+      ],
+      "argument": "grace"
+    }
+  ],
+  "semantic_audit": []
+}
