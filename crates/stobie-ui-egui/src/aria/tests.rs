@@ -795,6 +795,73 @@ fn a_tap_finds_the_topmost_editable_text_field_shown_there() {
     assert_eq!(at(300.0, 10.0), None);
 }
 
+/// The AccessKit update of a pass that shows a plain egui field labelled
+/// only by a visible label, as `Response::labelled_by` does, and focuses it.
+fn labelled_field_update() -> TreeUpdate {
+    let context = egui::Context::default();
+    context.enable_accesskit();
+    let mut title = String::from("Compare field notes");
+    let mut update = None;
+    for _ in 0..2 {
+        let mut output = context.run_ui(egui::RawInput::default(), |ui| {
+            let label = ui.label("Title");
+            let field = ui.add(egui::TextEdit::singleline(&mut title));
+            let field = field.labelled_by(label.id);
+            ui.memory_mut(|memory| memory.request_focus(field.id));
+        });
+        output.textures_delta.clear();
+        update = output.platform_output.accesskit_update;
+    }
+    update.expect("an AccessKit update")
+}
+
+#[test]
+fn a_field_labelled_by_a_visible_label_is_named_by_it() {
+    let tree = project(&labelled_field_update(), 1.0);
+    let field = tree.active.as_deref().expect("the focused field");
+    assert_eq!(tree.elements[field].tag, "input");
+    // egui names the field only through the relationship, so a name taken
+    // from `aria-label` alone would be missing.
+    assert!(!tree.elements[field].attributes.contains_key("aria-label"));
+    assert!(
+        tree.elements[field]
+            .attributes
+            .contains_key("aria-labelledby")
+    );
+    assert_eq!(tree.accessible_name(field).as_deref(), Some("Title"));
+
+    // The relationship takes precedence over `aria-label`, as in browsers,
+    // and `aria-label` names a field without one.
+    let mut caption = node(Role::Label, &[]);
+    caption.set_value("Record title");
+    let mut labelled = node(Role::TextInput, &[]);
+    labelled.set_label("Title field");
+    labelled.push_labelled_by(NodeId(2));
+    labelled.set_author_id("labelled");
+    let mut plain = node(Role::TextInput, &[]);
+    plain.set_label("Record notes");
+    plain.set_author_id("plain");
+    let mut unnamed = node(Role::TextInput, &[]);
+    unnamed.set_author_id("unnamed");
+    let tree = project(
+        &update(
+            vec![
+                (1, node(Role::Window, &[2, 3, 4, 5])),
+                (2, caption),
+                (3, labelled),
+                (4, plain),
+                (5, unnamed),
+            ],
+            1,
+        ),
+        1.0,
+    );
+    let name = |id: &str| tree.accessible_name(&format!("stobie-a11y:{id}"));
+    assert_eq!(name("labelled").as_deref(), Some("Record title"));
+    assert_eq!(name("plain").as_deref(), Some("Record notes"));
+    assert_eq!(name("unnamed"), None);
+}
+
 #[test]
 fn a_tap_stays_within_egui_click_distance_and_time() {
     assert!(is_tap((10.0, 10.0), (14.0, 14.0), 0.1));

@@ -72,6 +72,48 @@ pub struct AriaTree {
     pub native: BTreeMap<String, NativeField>,
 }
 
+impl AriaTree {
+    /// The name a browser gives an element from what the layer writes: the
+    /// text of the elements its `aria-labelledby` lists, which takes
+    /// precedence, or its `aria-label`. A field that egui labels only through
+    /// a visible label, as `Response::labelled_by` does, has a name this way.
+    pub fn accessible_name(&self, id: &str) -> Option<String> {
+        let element = self.elements.get(id)?;
+        let labelled = element.attributes.get("aria-labelledby").map(|ids| {
+            ids.split_whitespace()
+                .filter_map(|label| self.text_of(label))
+                .collect::<Vec<_>>()
+                .join(" ")
+        });
+        labelled
+            .filter(|name| !name.is_empty())
+            .or_else(|| element.attributes.get("aria-label").cloned())
+            .filter(|name| !name.trim().is_empty())
+    }
+
+    /// A labelling element's text: its `aria-label`, or else its own and its
+    /// descendants' text.
+    fn text_of(&self, id: &str) -> Option<String> {
+        let element = self.elements.get(id)?;
+        if let Some(label) = element.attributes.get("aria-label") {
+            return Some(label.clone());
+        }
+        let parts: Vec<String> = element
+            .text
+            .iter()
+            .cloned()
+            .chain(
+                element
+                    .children
+                    .iter()
+                    .filter_map(|child| self.text_of(child)),
+            )
+            .filter(|part| !part.trim().is_empty())
+            .collect();
+        (!parts.is_empty()).then(|| parts.join(" "))
+    }
+}
+
 /// An element a pointer acts on, with the part of it that is shown.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointerTarget {

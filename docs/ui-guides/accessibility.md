@@ -122,7 +122,11 @@ snapshot, is the source.
   layer requests egui focus for its node and returns DOM focus to the canvas.
   A layer text field instead keeps DOM focus (see Values). While egui edits
   text, eframe's text agent holds DOM focus. It is named after the focused
-  field, so typing after clicking "Record title" edits that field.
+  field, so typing after clicking "Record title" edits that field. The name
+  comes from the field's visible label where it has one (AccessKit's
+  `labelled_by`, which egui's `Response::labelled_by` and Stobie's text field
+  recipe set), and otherwise from its label, as a browser names the layer
+  field.
 - **Values.** Text fields are hidden `input` and `textarea` elements whose
   `value` mirrors egui's text, so browsers and Playwright snapshots expose it.
   A focused layer field keeps DOM focus and can be edited in place, as

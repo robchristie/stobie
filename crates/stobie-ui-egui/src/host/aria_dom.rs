@@ -507,18 +507,23 @@ impl Layer {
                     .is_some_and(|(host, _)| host.contains(Some(&active))))
                 && matches!(active.tag_name().as_str(), "INPUT" | "TEXTAREA")
         });
+        // Named as the field is: by its visible label where it has one.
         let name = self
             .tree
             .active
             .as_ref()
             .filter(|_| !in_layer_field)
-            .and_then(|id| self.tree.elements.get(id))
-            .filter(|element| element.tag != "div")
-            .and_then(|element| element.attributes.get("aria-label"))
-            .map_or("Text entry", String::as_str);
+            .filter(|id| {
+                self.tree
+                    .elements
+                    .get(*id)
+                    .is_some_and(|element| element.tag != "div")
+            })
+            .and_then(|id| self.tree.accessible_name(id))
+            .unwrap_or_else(|| "Text entry".to_owned());
         if name != self.text_agent_name {
-            agent.set_attribute("aria-label", name)?;
-            self.text_agent_name = name.to_owned();
+            agent.set_attribute("aria-label", &name)?;
+            self.text_agent_name = name;
         }
         Ok(())
     }
