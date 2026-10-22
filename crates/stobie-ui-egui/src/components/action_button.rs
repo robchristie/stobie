@@ -16,6 +16,11 @@ pub enum ActionEmphasis {
     QuietBorderless,
     Normal,
     Primary,
+    /// Normal chrome with the label, artwork and border in the error colour,
+    /// for an action that loses something, such as "Delete for good". A
+    /// press keeps the hover fill (the error colour is validated on it) and
+    /// adds the inset outline in the error colour.
+    Destructive,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -439,6 +444,7 @@ pub(crate) fn present_button(
         face.emphasis,
         ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
     );
+    let destructive = face.emphasis == ActionEmphasis::Destructive;
     let fill = if !enabled {
         // Disabled keeps its resting or on treatment in a muted form: a
         // toggled-on action still looks on, and a quiet one gains no fill.
@@ -451,6 +457,8 @@ pub(crate) fn present_button(
         }
     } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_background.into()
+    } else if destructive && (face.state.pressed() || response.is_pointer_button_down_on()) {
+        tokens.colours.surface_hover.into()
     } else if face.state.pressed() || response.is_pointer_button_down_on() {
         tokens.colours.selection_background.into()
     } else if response.hovered() {
@@ -472,6 +480,8 @@ pub(crate) fn present_button(
             Stroke::NONE
         } else if enabled && face.emphasis == ActionEmphasis::Primary && response.hovered() {
             Stroke::new(1.0, tokens.colours.action_primary_foreground)
+        } else if enabled && destructive {
+            Stroke::new(1.0, tokens.colours.status_error)
         } else {
             Stroke::new(1.0, tokens.colours.border_control)
         },
@@ -493,6 +503,8 @@ pub(crate) fn present_button(
                     tokens.colours.text_muted
                 } else if face.emphasis == ActionEmphasis::Primary {
                     tokens.colours.action_primary_foreground
+                } else if destructive {
+                    tokens.colours.status_error
                 } else {
                     tokens.colours.selection_indicator
                 },
@@ -514,6 +526,8 @@ pub(crate) fn present_button(
         tokens.colours.text_muted
     } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_foreground
+    } else if destructive {
+        tokens.colours.status_error
     } else {
         tokens.colours.text_primary
     };
@@ -636,7 +650,7 @@ mod tests {
     };
 
     #[test]
-    fn emitted_action_label_vertices_use_primary_pressed_and_disabled_foregrounds() {
+    fn emitted_action_label_vertices_use_primary_destructive_pressed_and_disabled_foregrounds() {
         for (theme, (emphasis, disabled, pointer_down)) in [
             ThemeVariant::Light,
             ThemeVariant::Dark,
@@ -650,6 +664,9 @@ mod tests {
                 (ActionEmphasis::Primary, false, true),
                 (ActionEmphasis::Normal, false, true),
                 (ActionEmphasis::Primary, true, false),
+                (ActionEmphasis::Destructive, false, false),
+                (ActionEmphasis::Destructive, false, true),
+                (ActionEmphasis::Destructive, true, false),
             ]
             .map(|state| (theme, state))
         }) {
@@ -728,6 +745,8 @@ mod tests {
                 tokens.colours.text_muted
             } else if emphasis == ActionEmphasis::Primary {
                 tokens.colours.action_primary_foreground
+            } else if emphasis == ActionEmphasis::Destructive {
+                tokens.colours.status_error
             } else {
                 tokens.colours.text_primary
             }

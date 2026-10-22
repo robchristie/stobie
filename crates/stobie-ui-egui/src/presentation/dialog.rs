@@ -201,6 +201,10 @@ pub struct DialogSpec<'a, A> {
     pub backdrop_dismisses: bool,
     /// Its width while centred, in points at the reference font scale.
     pub width: f32,
+    /// An action in a fixed footer below the scrolling content, such as
+    /// Save on a long form, so it stays in reach however far the form
+    /// scrolls. None by default.
+    pub footer: Option<A>,
 }
 
 impl<'a, A> DialogSpec<'a, A> {
@@ -213,7 +217,18 @@ impl<'a, A> DialogSpec<'a, A> {
             sheet_height: SheetHeight::Content,
             backdrop_dismisses: false,
             width: DIALOG_WIDTH,
+            footer: None,
         }
+    }
+
+    /// Present `action` in a fixed footer below the scrolling content, as
+    /// the dialog's primary control at the footer's end, as a confirm puts
+    /// its confirm control. It follows the content in focus order, before
+    /// the close control; its availability comes from the dialog's
+    /// `availability`, and while hidden no footer is reserved.
+    pub fn footer(mut self, action: A) -> Self {
+        self.footer = Some(action);
+        self
     }
 
     /// A sheet: a bottom sheet at phone widths, centred on a wide screen.
@@ -256,6 +271,13 @@ pub struct DialogResponse<A: ActionKey, R> {
     /// The close control's response; its rectangle is empty while dismiss is
     /// hidden.
     pub close: Response,
+    /// The footer action's resolved target, when the spec has one.
+    pub footer: Option<ActionTarget<A>>,
+    /// Whether the footer action was pressed this pass. Trigger it.
+    pub footer_pressed: bool,
+    /// The footer control's response; its rectangle is empty when there is
+    /// no footer action or it is hidden.
+    pub footer_response: Response,
     pub placement: DialogPlacement,
     /// The dialog's surface.
     pub rect: Rect,
@@ -411,7 +433,8 @@ impl PresentationContext {
     ///   no wider than the screen allows. As a bottom sheet it spans the
     ///   screen and is as tall as its content, up to the screen's height
     ///   less the application bar's; full height, it covers the screen.
-    /// - Content taller than the room scrolls, below a fixed title.
+    /// - Content taller than the room scrolls, below a fixed title and above
+    ///   the footer action, when [`DialogSpec::footer`] gives one.
     /// - It sits within egui's content rectangle, which the web shell keeps
     ///   clear of the home-screen app's safe areas and the on-screen
     ///   keyboard.
@@ -447,8 +470,35 @@ impl PresentationContext {
         } else {
             0.0
         };
+        let footer = spec.footer.map(|action| {
+            let target = action.into_target(self.pane);
+            let availability = availability(target, &ActionArgument::None);
+            (target, availability)
+        });
+        let footer_visible = footer
+            .as_ref()
+            .is_some_and(|(_, availability)| availability.visible());
+        let footer_width = match &footer {
+            Some((target, _)) if footer_visible => {
+                action_button_size(
+                    ui,
+                    target.action.specification().label,
+                    ActionButtonContent::Text,
+                    &tokens,
+                    font_scale,
+                )
+                .intrinsic
+            }
+            _ => 0.0,
+        };
+        let footer_height = if footer_visible {
+            action_hit_height(&tokens, font_scale)
+        } else {
+            0.0
+        };
         let scope = self.scope.child(key);
         let close_identity = scope.instance("stobie.dialog.close").action_identity();
+        let footer_identity = scope.instance("stobie.dialog.footer").action_identity();
         let pass = self.present_modal(
             ui,
             Chrome {
@@ -458,41 +508,78 @@ impl PresentationContext {
                 role: UiRole::Dialog,
                 geometry,
                 close_width,
-                footer_height: 0.0,
+                footer_height,
                 escape_dismisses: dismiss_availability.enabled(),
             },
             content,
             |ui, child, slots| {
+                // The footer follows the content in focus order, before the
+                // close control.
+                let footer_response = match &footer {
+                    Some((target, availability)) if footer_visible => {
+                        let width = footer_width.min(slots.footer.width());
+                        let rect = Rect::from_min_size(
+                            pos2(slots.footer.right() - width, slots.footer.top()),
+                            vec2(width, slots.footer.height()),
+                        );
+                        ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
+                            child.present_action(
+                                ui,
+                                &footer_identity,
+                                ActionButtonSpec {
+                                    target: *target,
+                                    availability: availability.clone(),
+                                    state: ActionButtonState::Momentary,
+                                    emphasis: ActionEmphasis::Primary,
+                                    compact: false,
+                                },
+                                ActionButtonContent::Text,
+                                None,
+                                None,
+                            )
+                        })
+                        .inner
+                    }
+                    _ => ui.interact(Rect::NOTHING, footer_identity.widget_id, Sense::hover()),
+                };
                 if !dismiss_availability.visible() {
-                    return ui.interact(Rect::NOTHING, close_identity.widget_id, Sense::hover());
+                    let close =
+                        ui.interact(Rect::NOTHING, close_identity.widget_id, Sense::hover());
+                    return (close, footer_response);
                 }
-                ui.scope_builder(UiBuilder::new().max_rect(slots.close), |ui| {
-                    child.present_action(
-                        ui,
-                        &close_identity,
-                        ActionButtonSpec {
-                            target: dismiss,
-                            availability: dismiss_availability.clone(),
-                            state: ActionButtonState::Momentary,
-                            emphasis: ActionEmphasis::QuietBorderless,
-                            compact: false,
-                        },
-                        close_content,
-                        None,
-                        None,
-                    )
-                })
-                .inner
+                let close = ui
+                    .scope_builder(UiBuilder::new().max_rect(slots.close), |ui| {
+                        child.present_action(
+                            ui,
+                            &close_identity,
+                            ActionButtonSpec {
+                                target: dismiss,
+                                availability: dismiss_availability.clone(),
+                                state: ActionButtonState::Momentary,
+                                emphasis: ActionEmphasis::QuietBorderless,
+                                compact: false,
+                            },
+                            close_content,
+                            None,
+                            None,
+                        )
+                    })
+                    .inner;
+                (close, footer_response)
             },
         );
-        let dismissed = pass.after.clicked()
+        let (close, footer_response) = pass.after;
+        let dismissed = close.clicked()
             || pass.escape
             || (spec.backdrop_dismisses && dismiss_availability.enabled() && pass.backdrop);
         DialogResponse {
             inner: pass.inner,
             dismissed,
             dismiss,
-            close: pass.after,
+            close,
+            footer_pressed: footer_response.clicked(),
+            footer: footer.map(|(target, _)| target),
+            footer_response,
             placement,
             rect: pass.rect,
         }
@@ -839,19 +926,32 @@ impl PresentationContext {
                             .min_scrolled_height(body_max)
                             .auto_shrink([false, false]);
                     }
-                    let inner = scroll
-                        .show(content, |ui| {
-                            ui.set_width(ui.available_width());
-                            body(ui, &mut child)
-                        })
-                        .inner;
+                    // The body's room is its own, not what is left below
+                    // the surface's position from the last pass, so a
+                    // footer below it does not grow the surface a little
+                    // more each pass.
+                    let body_room =
+                        Rect::from_min_size(content.cursor().min, vec2(inner_width, body_max));
+                    let inner = content.scope_builder(UiBuilder::new().max_rect(body_room), |ui| {
+                        scroll
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                body(ui, &mut child)
+                            })
+                            .inner
+                    });
+                    let body_bottom = inner.response.rect.bottom();
+                    let inner = inner.inner;
 
-                    // Fixed controls below the body.
+                    // Fixed controls below the body, exactly `gap` below it as
+                    // the room above assumed, whatever the item spacing.
                     let footer = if chrome.footer_height > 0.0 {
-                        content.add_space(gap);
-                        content
-                            .allocate_space(vec2(inner_width, chrome.footer_height))
-                            .1
+                        let footer = Rect::from_min_size(
+                            pos2(content.cursor().min.x, body_bottom + gap),
+                            vec2(inner_width, chrome.footer_height),
+                        );
+                        content.advance_cursor_after_rect(footer);
+                        footer
                     } else {
                         Rect::NOTHING
                     };
@@ -919,7 +1019,9 @@ impl PresentationContext {
             self.raw_presentations.append(&mut child.raw_presentations);
         }
 
-        let measured = modal.response.rect.height();
+        // A surface taller than the room is placed at the room's height, so
+        // only a change within it lays the dialog out again.
+        let measured = modal.response.rect.height().min(max_height);
         if placement != DialogPlacement::FullScreen && (measured - height).abs() > 0.5 {
             context.data_mut(|data| data.insert_temp(height_id, measured));
             context.request_discard("a dialog is placed at its measured height");

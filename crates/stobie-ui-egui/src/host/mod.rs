@@ -807,7 +807,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
 
     /// Present a modal dialog or sheet with `content` inside it (see
     /// [`PresentationContext::dialog`]), and trigger its dismiss action when
-    /// the close control, Escape or the scrim dismisses it. Present it in
+    /// the close control, Escape or the scrim dismisses it, or its footer action
+    /// (see [`DialogSpec::footer`](crate::DialogSpec::footer)) when pressed. Present it in
     /// every pass while the application's state says it is open, after what
     /// is behind it; dismiss, and the actions inside it, close it.
     ///
@@ -830,6 +831,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         });
         if response.dismissed {
             self.triggers.push((response.dismiss, ActionArgument::None));
+        } else if let Some(footer) = response.footer.filter(|_| response.footer_pressed) {
+            self.triggers.push((footer, ActionArgument::None));
         }
         response
     }

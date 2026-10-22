@@ -405,7 +405,8 @@ the independent keyboard-focus ring. A pointer press on an ordinary action uses
 selection colours, while a primary action retains its primary pair. Disabled
 foreground is resolved before text layout, including for primary actions.
 Pressed/selected actions also paint an inset state outline using the
-selection indicator (primary foreground on Primary), separate from the outer
+selection indicator (primary foreground on Primary, the error colour on
+Destructive), separate from the outer
 focus ring, so the on state is never told by fill colour alone. A disabled
 action keeps its on state in a muted form: a dimmed selection fill and a
 muted-text inset outline. A disabled `QuietBorderless` action stays borderless

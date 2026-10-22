@@ -533,6 +533,11 @@ border. Hover fills have their own colour, distinct from the selection fill
 of a toggled-on action. A disabled toggled-on action keeps a dimmed selection
 fill and a muted inset outline; a disabled `QuietBorderless` action stays
 borderless and unfilled. Resting text-only layout remains compatible.
+`Destructive` is Normal chrome whose label, artwork, border and pressed
+outline take `status.error`, for an action that loses something ("Delete for
+good"); a press keeps the hover fill, on which the error colour is validated
+at the body-text target, and a disabled destructive action is muted like any
+other.
 
 The following helper compiles as a rustdoc example on `icon_action`. Handle the
 returned click through your application's intent/command route and publish the
@@ -764,22 +769,27 @@ actions open and close it. In a hosted application:
 
 ```text
 if editing {
-    let spec = DialogSpec::new("Edit routine", Act::CloseEditor).sheet();
+    let spec = DialogSpec::new("Edit routine", Act::CloseEditor)
+        .sheet()
+        .footer(Act::SaveRoutine);
     frame.dialog(ui, p, "editor", &spec, |ui, frame, p| form(ui, frame, p));
 }
 if confirming {
-    frame.confirm(ui, p, "delete", &ConfirmSpec::new(
+    let spec = ConfirmSpec::new(
         "Delete “Morning briefing”?",
         "The routine and its schedule are removed. This cannot be undone.",
         Act::Delete,
         Act::KeepRoutine,
-    ));
+    )
+    .confirm_emphasis(ActionEmphasis::Destructive);
+    frame.confirm(ui, p, "delete", &spec);
 }
 ```
 
 Present it after what is behind it, in every pass while it is open.
 `Frame::dialog` triggers the dismiss action when the close control, Escape
-or (with `backdrop_dismisses`) the scrim dismisses it; `Frame::confirm`
+or (with `backdrop_dismisses`) the scrim dismisses it, and the footer action
+when it is pressed; `Frame::confirm`
 triggers confirm or cancel. `PresentationContext::dialog` and
 `PresentationContext::confirm` are the scoped forms, which report what
 happened for the caller to route.
@@ -792,6 +802,11 @@ happened for the caller to route.
   that needs the room. A confirm is centred, 400 points wide. The title is a
   fixed header with the close control at its end; content taller than the
   room scrolls beneath it.
+- **Footer.** `.footer(action)` presents one action, such as Save, as the
+  dialog's primary control at the end of a fixed footer below the scrolling
+  content, so it stays in reach however long the form is. It follows the
+  content in focus order, before the close control; its availability comes
+  from the dialog's, and a hidden footer action reserves no footer.
 - **Safe areas and the keyboard.** A dialog sits inside egui's content
   rectangle, and safe areas are the web shell's: the PWA template pads the
   page by the device's safe-area insets and, with `fitViewport`, sizes it
@@ -804,7 +819,8 @@ happened for the caller to route.
   what was typed; a confirm's scrim never dismisses.
 - **Confirm.** Cancel comes first and takes focus when it opens, so a stray
   Return does not confirm; Escape cancels. The confirm control is labelled
-  with what it does and is primary unless `confirm_emphasis` says otherwise.
+  with what it does and is primary unless `confirm_emphasis` says otherwise;
+  `ActionEmphasis::Destructive` marks one that loses something.
   The buttons end a row, or stack across the dialog when the row does not
   fit.
 - **Work under way.** A disabled dismiss action, as while the dialog's work
@@ -817,8 +833,9 @@ happened for the caller to route.
 - **Fields.** A form's text fields use the [text field](#text-fields)
   recipe, as elsewhere; on iOS they edit through the native field.
 
-Gallery `dialog/sheet` (a routine editor with two text fields and a switch,
-over the routine it edits) and `dialog/confirm` (deleting that routine) use
+Gallery `dialog/sheet` (a routine editor with two text fields, a switch and
+Save in its footer, over the routine it edits) and `dialog/confirm` (deleting
+that routine, with a destructive Delete) use
 this production API at every Gallery width; Narrow shows the bottom sheet.
 
 ## Rows and their actions

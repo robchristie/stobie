@@ -1212,6 +1212,9 @@ mod tests {
                 ("colour.status.success", "colour.surface.panel"),
                 ("colour.status.warning", "colour.surface.panel"),
                 ("colour.status.error", "colour.surface.panel"),
+                // A destructive action's label at rest, hovered and pressed.
+                ("colour.status.error", "colour.surface.raised"),
+                ("colour.status.error", "colour.surface.hover"),
             ] {
                 let ratio = contrast(
                     required_colour(&values, foreground).unwrap(),

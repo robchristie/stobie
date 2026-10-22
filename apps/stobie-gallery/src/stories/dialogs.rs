@@ -193,7 +193,11 @@ fn button(
 /// Returns whether the state changed.
 fn editor(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFixtureState) -> bool {
     let mut changed = false;
-    let spec = DialogSpec::new("Edit routine", RoutineAction::Close).sheet();
+    // Save sits in the sheet's fixed footer, in reach however far the form
+    // scrolls.
+    let spec = DialogSpec::new("Edit routine", RoutineAction::Close)
+        .sheet()
+        .footer(RoutineAction::Save);
     let response = p.dialog(
         ui,
         "editor",
@@ -229,11 +233,9 @@ fn editor(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFixt
                 state.notify = !state.notify;
                 changed = true;
             }
-            ui.add_space(p.tokens().spacing.section.0);
-            button(ui, p, RoutineAction::Save, ActionEmphasis::Primary, true).clicked()
         },
     );
-    if response.inner {
+    if response.footer_pressed {
         state.saved += 1;
         state.open = false;
         changed = true;
@@ -256,7 +258,8 @@ fn confirm(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFix
             "The routine stops running and its history is removed. This can\u{2019}t be undone.",
             RoutineAction::ConfirmDelete,
             RoutineAction::Keep,
-        ),
+        )
+        .confirm_emphasis(ActionEmphasis::Destructive),
         |_, _| Availability::Enabled,
     );
     if response.confirmed {

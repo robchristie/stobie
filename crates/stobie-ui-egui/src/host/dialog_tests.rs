@@ -63,6 +63,10 @@ struct Planner {
     saving: bool,
     /// The editor's form is taller than the screen, so Save scrolls away.
     long: bool,
+    /// Save is in the editor's fixed footer rather than at the form's foot.
+    footer: bool,
+    /// Save is hidden.
+    save_hidden: bool,
     refreshed: u32,
     signed_out: bool,
     saved: Vec<(String, String)>,
@@ -93,6 +97,7 @@ impl Application for Planner {
             Act::Close if self.saving => Availability::Disabled {
                 reason: "The routine is saving".into(),
             },
+            Act::Save if self.save_hidden => Availability::Hidden,
             _ => Availability::Enabled,
         }
     }
@@ -114,6 +119,9 @@ impl Application for Planner {
             if self.full {
                 spec = spec.full_height();
             }
+            if self.footer {
+                spec = spec.footer(Act::Save);
+            }
             let response = frame.dialog(ui, &mut p, "editor", &spec, |ui, frame, p| {
                 let name = TextFieldSpec::new("Name").id(NAME);
                 frame.text_field(ui, p, NAME, &name, &self.name, Intent::Name);
@@ -122,7 +130,9 @@ impl Application for Planner {
                 if self.long {
                     ui.add_space(2000.0);
                 }
-                frame.action(ui, p, Act::Save, ActionEmphasis::Primary);
+                if !self.footer {
+                    frame.action(ui, p, Act::Save, ActionEmphasis::Primary);
+                }
             });
             view.placement = Some(response.placement);
             view.rect = Some(response.rect);
@@ -703,6 +713,107 @@ fn assistive_technology_sees_only_the_modal_dialog() {
     assert_eq!(app(&harness).saved.len(), 1);
     assert!(!app(&harness).editing);
     assert!(!hidden_from_assistive_technology(&harness, "Refresh"));
+}
+
+#[test]
+fn a_footer_action_stays_in_reach_while_a_long_form_scrolls() {
+    let planner = Planner {
+        long: true,
+        footer: true,
+        ..Planner::default()
+    };
+    let mut harness = harness_at(planner, PHONE);
+    open_editor(&mut harness);
+    assert_eq!(view(&harness).placement, Some(DialogPlacement::BottomSheet));
+    let rect = view(&harness).rect.unwrap();
+    let screen = harness.ctx.content_rect();
+    // Save is on screen, inside the sheet at the end of its footer, below
+    // the form, although the form is far taller than the screen.
+    let save = harness.get_by_label("Save").rect();
+    assert!(screen.contains_rect(save), "{save:?} outside {screen:?}");
+    assert!(rect.contains_rect(save), "{save:?} outside {rect:?}");
+    let prompt = harness.get_by_label("Prompt").rect();
+    assert!(save.top() > prompt.bottom(), "{save:?} above {prompt:?}");
+    assert!(
+        (save.right() - prompt.right()).abs() < 1.0,
+        "at the end: {save:?} beside {prompt:?}"
+    );
+    let snapshot = host(&harness).ui_snapshot();
+    let observed = snapshot.by_action(Act::Save).next().expect("Save observed");
+    assert!(observed.enabled);
+    // It follows the form in focus order, before Close.
+    let mut order = Vec::new();
+    for _ in 0..3 {
+        press(&mut harness, Modifiers::NONE, Key::Tab);
+        order.push(focused(&harness).unwrap());
+    }
+    assert_eq!(order, ["Prompt", "Save", "Close"]);
+    // A press triggers it, once, through the host.
+    harness.get_by_label("Save").click();
+    harness.run();
+    assert!(!app(&harness).editing);
+    assert_eq!(app(&harness).saved.len(), 1);
+    assert_eq!(
+        app(&harness)
+            .performed
+            .iter()
+            .filter(|action| **action == Act::Save)
+            .count(),
+        1
+    );
+    // An agent reaches it too.
+    open_editor(&mut harness);
+    let receipt = invoke_action(&mut harness, Act::Save).unwrap();
+    assert_eq!(receipt.state, ReceiptState::Completed, "{receipt:?}");
+    assert_eq!(app(&harness).saved.len(), 2);
+    assert_clean_audit(&harness);
+}
+
+#[test]
+fn a_centred_dialog_puts_its_footer_action_at_the_end() {
+    let planner = Planner {
+        footer: true,
+        ..Planner::default()
+    };
+    let mut harness = harness_at(planner, DESKTOP);
+    open_editor(&mut harness);
+    assert_eq!(view(&harness).placement, Some(DialogPlacement::Centred));
+    let rect = view(&harness).rect.unwrap();
+    let save = harness.get_by_label("Save").rect();
+    let prompt = harness.get_by_label("Prompt").rect();
+    assert!(rect.contains_rect(save), "{save:?} outside {rect:?}");
+    assert!(save.top() > prompt.bottom(), "{save:?} above {prompt:?}");
+    assert!(save.width() < rect.width() / 2.0, "{save:?} in {rect:?}");
+    assert!(
+        (save.right() - prompt.right()).abs() < 1.0,
+        "at the end: {save:?} beside {prompt:?}"
+    );
+    assert_clean_audit(&harness);
+}
+
+#[test]
+fn a_hidden_footer_action_reserves_no_footer() {
+    let height = |footer: bool, save_hidden: bool| {
+        let planner = Planner {
+            footer,
+            save_hidden,
+            ..Planner::default()
+        };
+        let mut harness = harness_at(planner, DESKTOP);
+        open_editor(&mut harness);
+        harness.run();
+        let snapshot = host(&harness).ui_snapshot();
+        assert_eq!(
+            snapshot.by_action(Act::Save).next().is_some(),
+            !save_hidden,
+            "{:?}",
+            snapshot.nodes
+        );
+        view(&harness).rect.unwrap().height()
+    };
+    let without = height(false, true);
+    assert!((height(true, true) - without).abs() < 0.5);
+    assert!(height(true, false) > without + 20.0);
 }
 
 #[test]
