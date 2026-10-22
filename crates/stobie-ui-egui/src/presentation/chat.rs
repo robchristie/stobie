@@ -402,6 +402,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if response.interact_rect.is_positive() {
             let mut node = crate::conversation_row_semantic_node(
                 &response,
@@ -457,6 +458,7 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        crate::observation::reveal_at(ui, &identity.semantic_id(), response.rect);
         if response.interact_rect.is_positive() {
             let mut node = crate::switch_semantic_node(
                 &response,

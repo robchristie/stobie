@@ -173,6 +173,17 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   composer's field takes its draft this way, and its send control carries
   the draft, so `invoke SEND --id ID` then sends it; see
   [composing and sending](ui-guides/interactions.md#composing-and-sending).
+  The receipt is rejected when the field did not take the text, for example
+  because the application stopped presenting it before the edit applied.
+- `reveal ID` scrolls the node with that semantic ID into view, through the
+  application's `stobie.reveal` capability (tagged `reveal` among the other
+  capabilities), so that a region observed only in view presents it and
+  its controls can be discovered. It completes with the first observation
+  that presents the node in view, and is rejected, saying why, when no pass
+  presents the node, a modal dialog covers it, or it cannot be scrolled
+  into view. `invoke` and `set-text` reveal an `--id` they do not discover,
+  then discover again, within one `--timeout`; see
+  [reaching controls out of view](application-interface.md#reach-controls-out-of-view).
 - `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
   is its URL, in a new browser tab (natively, the default browser), so the
   application stays open. The outline tags links `[open-link]`.
@@ -194,6 +205,9 @@ is its text and a combo box's is its selected option's label. Capabilities witho
 - `capabilities` prints the command registry as JSON without connecting.
 
 `--timeout MS` (default 15000) bounds each command, including its waits.
+An application that has just started answers `missing_observation` until its
+first pass publishes; every command that reads an observation waits for it
+within the timeout.
 
 ## Output
 
@@ -228,6 +242,10 @@ is printed on standard output with status 1.
 ## The Node client
 
 `tools/application-client.mjs` remains the JavaScript client the Playwright
-test harness uses, including its physical input adapters. A parity smoke
-(`tools/stobie-cli-smoke.sh`) runs the same scenarios through it and through
-`stobie`, natively and in the browser, and requires the same outcomes.
+test harness uses, including its physical input adapters. Its reads wait out
+`missing_observation` within their deadline, its `reveal(id)` scrolls a node
+into view, and `invoke` reveals an `id` it does not discover, as `stobie`
+does. A parity smoke (`tools/stobie-cli-smoke.sh`) runs the same scenarios
+through it and through `stobie`, natively and in the browser, and requires
+the same outcomes; in the browser it also sets the text of a field below
+the fold through each.

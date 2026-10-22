@@ -11,6 +11,8 @@ const REQUEST_BYTES = 256 * 1024;
 const RESPONSE_BYTES = 2 * 1024 * 1024;
 const SELECTOR_KEYS = new Set(['id', 'role', 'name', 'capability', 'pane', 'domain', 'argument']);
 const clock = { now: () => performance.now(), sleep: sleep };
+/** The framework capability that scrolls a node, named by its semantic ID, into view. */
+export const REVEAL_CAPABILITY = 'stobie.reveal';
 
 export class ApplicationError extends Error {
   constructor(code, message, details = {}) {
@@ -282,14 +284,35 @@ export class ApplicationClient {
     }
   }
   async hello(options) { return this.request({ op: 'hello' }, options); }
-  async observe(options) { return (await this.request({ op: 'observe' }, options)).observation; }
+  // A read, waiting out `missing_observation` within its deadline: an
+  // application that has just started publishes after its first pass.
+  async #published(operation, { timeoutMs = this.timeoutMs, signal, ...options } = {}) {
+    const deadline = this.scheduler.now() + timeout(timeoutMs);
+    while (true) {
+      try {
+        return await this.request(operation, { ...options, timeoutMs: Math.max(1, deadline - this.scheduler.now()), signal });
+      } catch (error) {
+        const remaining = deadline - this.scheduler.now();
+        if (error.code !== 'missing_observation' || remaining <= 0) throw error;
+        await this.scheduler.sleep(Math.min(50, remaining), signal);
+      }
+    }
+  }
+  async observe(options) { return (await this.#published({ op: 'observe' }, options)).observation; }
   async query(selected = {}, { limit = 64, cursor, ...options } = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 256) throw failure('invalid_request', 'Query limit must be 1..256');
-    return this.request({ op: 'query', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+    return this.#published({ op: 'query', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
   }
   async discover(selected = {}, { limit = 64, cursor, ...options } = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 256) throw failure('invalid_request', 'Discovery limit must be 1..256');
-    return this.request({ op: 'discover', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+    return this.#published({ op: 'discover', selector: selector(selected), limit, ...(cursor ? { cursor } : {}) }, options);
+  }
+  // Scroll the node `id` into view, so that a region observed only in view
+  // presents it; the receipt is rejected, saying why, when no pass presents
+  // it, a dialog covers it or it cannot be scrolled into view.
+  async reveal(id, options = {}) {
+    if (typeof id !== 'string' || !id) throw failure('invalid_request', 'Reveal needs a semantic ID');
+    return this.invoke({ capability: REVEAL_CAPABILITY }, { ...options, arguments: { value: id } });
   }
   async receipt(requestId, options) { return (await this.request({ op: 'receipt', request_id: requestId }, options)).receipt; }
   async cancel(requestId, options = {}) {
@@ -305,7 +328,21 @@ export class ApplicationClient {
       return { timeoutMs: milliseconds, signal };
     };
     if (!expected) {
-      const discovered = await this.discover(selected, { limit: 2, ...readOptions() });
+      let discovered = await this.discover(selected, { limit: 2, ...readOptions() });
+      // A named node out of view, such as a field below the fold of a region
+      // observed only in view: reveal it, then discover again.
+      if (discovered.total === 0 && typeof selected?.id === 'string' && selected.capability !== REVEAL_CAPABILITY) {
+        let revealed;
+        try {
+          revealed = await this.reveal(selected.id, { ...readOptions() });
+        } catch (error) {
+          if (error.code !== 'no_match') throw error;
+        }
+        if (revealed && revealed.state !== 'completed') {
+          throw failure('no_match', `Semantic invocation found no target, and revealing ${selected.id} failed: ${revealed.error?.message ?? revealed.state}`);
+        }
+        if (revealed) discovered = await this.discover(selected, { limit: 2, ...readOptions() });
+      }
       if (discovered.total !== 1 || discovered.capabilities.length !== 1) {
         throw failure(discovered.total ? 'ambiguous' : 'no_match', 'Semantic invocation requires one exact capability target');
       }

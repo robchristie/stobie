@@ -1320,7 +1320,12 @@ AnchoredScrollArea::new("messages", area).show(ui, |ui, rows| {
   and the AccessKit tree. Its action is still bound and discoverable, so an
   agent finds it with `discover` by capability and `invoke`s it directly
   rather than scrolling to the control first; the area keeps the reader's
-  place as it does for a click.
+  place as it does for a click. A field or other control an agent must
+  reach by its ID, such as a text field below the fold, is revealed with
+  the framework's `stobie.reveal` capability, which `invoke` and `set-text`
+  use for an ID they do not find, and a host test reveals one with
+  `AppHost::reveal` before clicking it; see
+  [reach controls out of view](../application-interface.md#reach-controls-out-of-view).
 
 Gallery `scroll/load-older` shows a conversation with a "Load older"
 control in its header, which stays in view and prepends a page of older

@@ -83,6 +83,9 @@ running GPU `backend` (`webgpu` or `webgl2` in a browser, wgpu's backend name
 natively), its `adapter`, a `selection` of `preferred`, `fallback` or `forced`,
 and an optional `reason`. Other calls require the same instance. The CLI performs `hello`
 before its selected command; a JavaScript caller performs it once explicitly.
+An application that has just started answers `missing_observation` until its
+first pass publishes; the Rust client, `stobie` and the JavaScript client wait
+for it within each read's deadline.
 
 Selectors use exact AND matching across any supplied `id`, `role`, `name`,
 `capability`, `pane` and `domain`. Roles use the Rust `UiRole` snake-case values.
@@ -183,7 +186,8 @@ as when a user clicks into another field and back. A disabled or password
 field is never set. Its receipt stays `queued`, and can no longer be
 cancelled, until the edit has applied and the intents it caused have settled;
 it then completes with the observation that presents them. If the field is no
-longer presented by then, the receipt is rejected. Hosts publish each text
+longer presented by then, or it did not take the text, the receipt is
+rejected and says so; it never completes without the edit. Hosts publish each text
 field's text as its node's optional `value`; a combo box's `value` is its
 selected option's label.
 
@@ -239,6 +243,42 @@ reported explicitly. Host mutation history retains up to 256 IDs without
 eviction; reaching the limit fails closed rather than forgetting duplicate
 protection. A restart creates a new instance, so old receipts cannot be looked
 up in the new instance.
+
+## Reach controls out of view
+
+Inside a visible-only region (`observe_visible_only`), a control or text
+wholly scrolled out of view is not observed, so neither a query nor
+discovery finds it. A host that enables inspection offers the framework
+capability `stobie.reveal`, the application's, with its own ID. It takes the
+semantic ID of a node as its text argument and scrolls that node into view:
+on each pass that presents the node, the innermost scroll area around it
+scrolls until the node is wholly in view, or as far as it scrolls. Its
+receipt completes with the first observation that presents the node in
+view, and is rejected, saying why, when no pass presents the node, a modal
+dialog covers it, or the node cannot be scrolled into view at all.
+
+The Rust client's `discover_for_invocation`, and so `invoke` and
+`set_text`, `stobie invoke` and `stobie set-text`, and the JavaScript
+client's `invoke` reveal a selector's `id` when it discovers nothing, then
+discover again, all within one deadline; a failed reveal's reason appears
+in the `no_match`. `Client::reveal`, `stobie reveal ID` and the JavaScript
+`reveal(id)` reveal a node directly. A row's control has a derived ID, so
+invoke a row's action through its value instead (see above).
+
+```sh
+stobie set-text record-desk.notes.1013 'Revealed notes'   # reveals it first
+stobie reveal record-desk.notes.1013
+```
+
+A host test reveals a node with `AppHost::reveal` and runs passes until
+`AppHost::reveal_outcome` reports the outcome, then acts on it, for example
+by clicking it; the reveal works in any harness of the test's size. A
+reveal finds a node that a presentation recipe draws, including a control
+wholly clipped away, and an application node registered with
+`observe_node` at the rectangle it gives. It does not find a row that a
+virtualised list never lays out. Only the innermost scroll area around a
+node scrolls for it, and an invocation made while the view moves can still
+meet `stale_target`, which asks for discovery again.
 
 ## Content text
 

@@ -270,6 +270,14 @@ pub const OPEN_LINK_CAPABILITY: &str = "stobie.open-link";
 /// observes the control's confirmation or failure instead.
 pub const COPY_TEXT_CAPABILITY: &str = "stobie.copy-text";
 
+/// The framework capability that scrolls a node into view, such as a field
+/// below the fold of a scrolled region, so it is observed and can be acted
+/// on. It is the application's, with its own ID, and takes the semantic ID
+/// of the node to reveal as its text argument. It completes once a published
+/// observation presents the node in view, and is rejected when no pass
+/// presents the node or it cannot be scrolled into view.
+pub const REVEAL_CAPABILITY: &str = "stobie.reveal";
+
 /// The value a capability takes, published by discovery. An action takes at
 /// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
 /// as `"none"`; the others as objects tagged by `kind`.
