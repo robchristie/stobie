@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "markdown/code-copy",
+      "rect": {
+        "min_x": 522,
+        "min_y": 54,
+        "max_x": 1162,
+        "max_y": 774
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.545b58a6bf8e42c0",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "Assistant",
+      "rect": {
+        "min_x": 534,
+        "min_y": 180,
+        "max_x": 1057.60009765625,
+        "max_y": 448
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.8436afd04bcb66ac",
+      "parent": "presentation.545b58a6bf8e42c0",
+      "role": "button",
+      "name": "Copy code 1",
+      "rect": {
+        "min_x": 997.59375,
+        "min_y": 217,
+        "max_x": 1041.59375,
+        "max_y": 261
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.8d4b8324fae89f69",
+      "parent": "gallery.story",
+      "role": "section",
+      "name": "You",
+      "rect": {
+        "min_x": 917,
+        "min_y": 138,
+        "max_x": 1150,
+        "max_y": 170
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.be180359f4dc3c07",
+      "parent": "presentation.545b58a6bf8e42c0",
+      "role": "button",
+      "name": "Copy code 2",
+      "rect": {
+        "min_x": 997.59375,
+        "min_y": 326,
+        "max_x": 1041.59375,
+        "max_y": 370
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

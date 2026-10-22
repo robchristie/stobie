@@ -172,7 +172,11 @@ fn measured_label(
     } else {
         present_accessible_measured_text(ui, &measured, rect, component, None)
     };
-    observations.push(observation);
+    // Text wholly scrolled or clipped out of view is not observed; a failed
+    // layout always is.
+    if ui.clip_rect().intersect(rect).is_positive() || observation.layout_error.is_some() {
+        observations.push(observation);
+    }
     if measured.truncated() {
         text_response.clone().on_hover_text(measured.galley.text());
     }
@@ -229,7 +233,9 @@ pub fn measured_inline_label(
         } else {
             present_accessible_measured_text(ui, &measured, rect, component, None)
         };
-        observations.push(observation);
+        if ui.clip_rect().intersect(rect).is_positive() || observation.layout_error.is_some() {
+            observations.push(observation);
+        }
         if truncated {
             text_response.on_hover_text(text);
         }
@@ -311,13 +317,16 @@ fn heading_impl(
             rect.width().max(0.5),
         );
         let truncated = measured.truncated();
-        observations.push(paint_measured_text(
+        let observation = paint_measured_text(
             &ui.painter_at(rect),
             &measured,
             rect,
             TextComponentId::new(TextComponentKind::SectionHeading, instance),
             None,
-        ));
+        );
+        if ui.clip_rect().intersect(rect).is_positive() || observation.layout_error.is_some() {
+            observations.push(observation);
+        }
         if truncated {
             response.clone().on_hover_text(text);
         }
@@ -576,6 +585,96 @@ mod tests {
             });
             next.textures_delta.clear();
         }
+    }
+
+    #[test]
+    fn bounded_text_wholly_out_of_view_is_not_observed_unless_it_failed() {
+        let context = egui::Context::default();
+        crate::install_typography_fonts(&context);
+        let tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let present = |ui: &mut egui::Ui, observations: &mut Vec<TextLayoutObservation>| {
+            measured_content_label(
+                ui,
+                1,
+                "Label",
+                TextRole::Body,
+                TextOverflow::Wrap,
+                2,
+                TextInteraction::Selectable,
+                &tokens,
+                1.0,
+                observations,
+            );
+            section_heading(ui, 2, "Heading", &tokens, 1.0, observations);
+            measured_inline_label(
+                ui,
+                3,
+                "Inline",
+                TextRole::Body,
+                120.0,
+                TextInteraction::Inert,
+                &tokens,
+                1.0,
+                observations,
+            );
+            // An invalid line limit fails its layout.
+            measured_content_label(
+                ui,
+                4,
+                "Failed",
+                TextRole::Body,
+                TextOverflow::Wrap,
+                24,
+                TextInteraction::Selectable,
+                &tokens,
+                1.0,
+                observations,
+            );
+        };
+        let (mut hidden, mut shown) = (Vec::new(), Vec::new());
+        let mut output = context.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(600.0, 400.0),
+                )),
+                ..Default::default()
+            },
+            |ui| {
+                ui.scope(|ui| {
+                    // A clip far from where the text is laid out, as a scroll
+                    // area's when it is scrolled far away.
+                    ui.set_clip_rect(Rect::from_min_size(
+                        egui::pos2(0.0, 2_000.0),
+                        egui::vec2(600.0, 10.0),
+                    ));
+                    present(ui, &mut hidden);
+                });
+                present(ui, &mut shown);
+            },
+        );
+        output.textures_delta.clear();
+        let instances = |observations: &[TextLayoutObservation]| {
+            observations
+                .iter()
+                .map(|observation| observation.component_id.instance)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(instances(&hidden), [4], "only the failed layout");
+        assert!(hidden[0].layout_error.is_some());
+        assert_eq!(instances(&shown), [1, 2, 3, 4]);
+        // Only the failure is a finding: the text out of view raises none.
+        let failed = hidden[0].component_id;
+        assert!(
+            audit_text_layouts(&hidden).iter().all(|finding| matches!(
+                finding,
+                crate::TextAuditFinding::LayoutFailed { component_id, .. }
+                    | crate::TextAuditFinding::InvalidUsefulBounds { component_id }
+                    if *component_id == failed
+            )),
+            "{:?}",
+            audit_text_layouts(&hidden)
+        );
     }
 
     #[test]

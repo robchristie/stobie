@@ -42,31 +42,26 @@ pub fn unread_dot_colour(tokens: &DesignTokens, behind: Option<Color32>) -> Colo
 }
 
 /// A conversation row's fill: the selection fill for the current row (or
-/// one being pressed), and a raised surface for a hovered one. The themes
-/// fill a quiet hover with the selection's colour, so a hovered row with
-/// that fill would look current; the raised surface keeps them apart.
+/// one being pressed), and the hover surface, which every authored theme
+/// keeps apart from selection, for a hovered one.
 fn row_fill(tokens: &DesignTokens, current: bool, hovered: bool) -> Option<Color32> {
     if current {
         Some(tokens.colours.selection_background.into())
     } else if hovered {
-        Some(tokens.colours.surface_raised.into())
+        Some(tokens.colours.surface_hover.into())
     } else {
         None
     }
 }
 
-/// Muted text's colour on `fill`: the muted colour where it reads on the
-/// fill as well as the theme validates it on a panel (7:1 in a theme whose
-/// muted text reaches that, otherwise 4.5:1), otherwise primary text. A
-/// selection or hover fill can be too close to muted text for it.
+/// Muted text's colour on `fill`: the muted colour where it reaches 4.5:1
+/// on the fill, otherwise primary text. Theme validation already holds
+/// muted text to 4.5:1 (7:1 in high contrast) on the hover, selection and
+/// raised fills, so every authored theme and `ApplicationTheme` keeps its
+/// muted text; this keeps tokens assembled by hand legible too.
 pub(crate) fn muted_text_on(tokens: &DesignTokens, fill: Color32) -> crate::Rgba8 {
     let muted = tokens.colours.text_muted;
-    let target = if contrast_ratio(muted.into(), tokens.colours.surface_panel.into()) >= 7.0 {
-        7.0
-    } else {
-        4.5
-    };
-    if contrast_ratio(muted.into(), fill) >= target {
+    if contrast_ratio(muted.into(), fill) >= 4.5 {
         muted
     } else {
         tokens.colours.text_primary
@@ -690,6 +685,8 @@ mod tests {
             // A hovered row never looks like the current one.
             assert_ne!(current, hovered, "{theme:?}");
             assert_ne!(hovered, Color32::from(colours.surface_panel), "{theme:?}");
+            // Hover has its own fill, so the row needs no stand-in surface.
+            assert_eq!(hovered, Color32::from(colours.surface_hover), "{theme:?}");
             for behind in [None, Some(current), Some(hovered)] {
                 let dot = unread_dot_colour(&tokens, behind);
                 let surfaces: Vec<Color32> = match behind {
@@ -714,7 +711,22 @@ mod tests {
                     contrast_ratio(muted_text_on(&tokens, fill).into(), fill) >= 4.5,
                     "{theme:?} muted text on {fill:?}"
                 );
+                // The authored themes keep muted text muted on both fills;
+                // the primary-text fallback is only a safety net.
+                assert_eq!(
+                    muted_text_on(&tokens, fill),
+                    colours.text_muted,
+                    "{theme:?} muted text falls back on {fill:?}"
+                );
             }
         }
+    }
+
+    #[test]
+    fn muted_text_turns_primary_on_a_hand_assembled_fill_too_close_to_it() {
+        let mut tokens = DesignTokens::resolve(ThemeVariant::Dark, DensityVariant::Comfortable);
+        let fill = Color32::from(tokens.colours.selection_background);
+        tokens.colours.text_muted = tokens.colours.selection_background;
+        assert_eq!(muted_text_on(&tokens, fill), tokens.colours.text_primary);
     }
 }

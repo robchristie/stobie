@@ -705,6 +705,126 @@
       "data_fixture": "gallery-seed-v1",
       "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
       "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "heading-controls-phone-light",
+      "story": "heading/controls",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "navigation-header-phone-dark",
+      "story": "navigation/header",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "scroll-load-older-dark",
+      "story": "scroll/load-older",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "choice-segmented-light",
+      "story": "choice/segmented",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "choice-segmented-phone-high-contrast",
+      "story": "choice/segmented",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "high",
+        "density": "comfortable",
+        "font_scale": 1.5,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "form-text-fields-dark",
+      "story": "form/text-fields",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "avatars-strip-phone-light",
+      "story": "avatars/strip",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "markdown-code-copy-dark",
+      "story": "markdown/code-copy",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
     }
   ]
 }

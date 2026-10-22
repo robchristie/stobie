@@ -34,11 +34,9 @@ impl AppearanceWorkbench {
     }
 
     fn accept_edits(&mut self) -> bool {
-        // The only non-strict candidate allowed is an exact restoration of the
-        // authored analytical reference, never an edited legacy palette.
-        match ApplicationTheme::new(self.colours).or_else(|error| {
-            ApplicationTheme::from_analytical_colours(self.colours).map_err(|_| error)
-        }) {
+        // Every palette, the analytical reference included, passes strict
+        // validation before it becomes the preview.
+        match ApplicationTheme::new(self.colours) {
             Ok(theme) => {
                 self.theme = theme;
                 self.error = None;
@@ -117,12 +115,7 @@ impl AppearanceWorkbench {
                 && let Some(json) = self.export_json() {
                 context.copy_text(json);
             }
-            if self.theme.colours() == ApplicationTheme::analytical().colours() {
-                ui.label("Analytical reference uses legacy contrast compatibility. Only its exact original colours can use this exception; edits must meet all text contrast checks.");
-                ui.label("Reference JSON requires ApplicationTheme::from_analytical_colours; it does not pass ApplicationTheme::new.");
-            } else {
-                ui.label("Export is ThemeColours JSON for ApplicationTheme::new in checked-in application source.");
-            }
+            ui.label("Export is ThemeColours JSON for ApplicationTheme::new in checked-in application source.");
             ui.label("Snapshot baselines require separate review.");
         });
         self.open = open;
@@ -157,39 +150,39 @@ fn authored_theme(index: usize) -> ApplicationTheme {
 }
 
 fn author_palette(colour: &mut ColourTokens, dark: bool, high: bool, warm: bool) {
-    let (canvas, panel, raised, selection, text, muted, marker, decorative, control) =
+    let (canvas, panel, raised, hover, selection, text, muted, marker, decorative, control) =
         if high && dark {
             (
-                0x000000, 0x000000, 0x0a0a0a, 0x171717, 0xffffff, 0xdddddd, 0xffffff, 0x666666,
-                0xaaaaaa,
+                0x000000, 0x000000, 0x0a0a0a, 0x101010, 0x171717, 0xffffff, 0xdddddd, 0xffffff,
+                0x666666, 0xaaaaaa,
             )
         } else if high {
             (
-                0xffffff, 0xffffff, 0xfafafa, 0xe9e9e9, 0x000000, 0x222222, 0x000000, 0x999999,
-                0x555555,
+                0xffffff, 0xffffff, 0xfafafa, 0xf2f2f2, 0xe9e9e9, 0x000000, 0x222222, 0x000000,
+                0x999999, 0x555555,
             )
         } else if dark {
             (
-                0x131315, 0x18181b, 0x27272c, 0x303036, 0xf0f0f2, 0xbcbcc5, 0xc3c4cc, 0x333338,
-                0x767680,
+                0x131315, 0x18181b, 0x27272c, 0x2a2a30, 0x303036, 0xf0f0f2, 0xbcbcc5, 0xc3c4cc,
+                0x333338, 0x767680,
             )
         } else if warm {
             (
-                0xf3f0e9, 0xfaf8f3, 0xffffff, 0xe3ddd2, 0x242320, 0x55514a, 0x60564a, 0xdad4ca,
-                0x81796d,
+                0xf3f0e9, 0xfaf8f3, 0xffffff, 0xece8e0, 0xe3ddd2, 0x242320, 0x55514a, 0x60564a,
+                0xdad4ca, 0x81796d,
             )
         } else {
             (
-                0xf1f1f3, 0xf8f8fa, 0xffffff, 0xe2e2e8, 0x242428, 0x55555d, 0x565662, 0xd7d7dd,
-                0x7c7c86,
+                0xf1f1f3, 0xf8f8fa, 0xffffff, 0xececf0, 0xe2e2e8, 0x242428, 0x55555d, 0x565662,
+                0xd7d7dd, 0x7c7c86,
             )
         };
     colour.surface_canvas = rgb(canvas);
     colour.surface_panel = rgb(panel);
     colour.surface_raised = rgb(raised);
-    colour.surface_hover = rgb(selection);
+    colour.surface_hover = rgb(hover);
     colour.selection_background = rgb(selection);
-    colour.action_quiet_hover = rgb(selection);
+    colour.action_quiet_hover = rgb(hover);
     colour.text_primary = rgb(text);
     colour.text_muted = rgb(muted);
     colour.selection_indicator = rgb(marker);
@@ -210,6 +203,24 @@ fn author_palette(colour: &mut ColourTokens, dark: bool, high: bool, warm: bool)
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn authored_presets_keep_hover_apart_from_selection() {
+        for index in 0..=2 {
+            let colours = authored_theme(index).colours();
+            for (mode, colour) in [
+                ("light", colours.light),
+                ("dark", colours.dark),
+                ("light high contrast", colours.light_high_contrast),
+                ("dark high contrast", colours.dark_high_contrast),
+            ] {
+                for hover in [colour.surface_hover, colour.action_quiet_hover] {
+                    assert_ne!(hover, colour.selection_background, "preset {index} {mode}");
+                    assert_ne!(hover, colour.surface_raised, "preset {index} {mode}");
+                }
+            }
+        }
+    }
 
     #[test]
     fn status_chips_keep_contrast_on_authored_application_surfaces() {
@@ -379,18 +390,20 @@ mod tests {
     }
 
     #[test]
-    fn analytical_export_is_exact_legacy_compatibility_and_edits_are_strict() {
+    fn analytical_export_is_strict_and_edits_are_strict() {
         let mut workbench = AppearanceWorkbench::default();
         let reference = workbench.theme.clone();
         let exported: ThemeColours =
             serde_json::from_str(&workbench.export_json().unwrap()).unwrap();
-        assert!(ApplicationTheme::new(exported).is_err());
+        // The reference needs no exemption: it passes strict validation, and
+        // the exact-reference route still accepts it.
+        assert_eq!(ApplicationTheme::new(exported).unwrap(), reference);
         assert_eq!(
             ApplicationTheme::from_analytical_colours(exported).unwrap(),
             reference
         );
-        // Even an edit outside the contrast roles cannot extend the exception.
-        workbench.colours.dark.border_decorative.red ^= 1;
+        // An edit that fails a contrast check keeps the reference preview.
+        workbench.colours.dark.selection_background = workbench.colours.dark.text_muted;
         assert!(!workbench.accept_edits());
         assert_eq!(workbench.effective_theme(), reference);
         assert!(workbench.export_json().is_none());

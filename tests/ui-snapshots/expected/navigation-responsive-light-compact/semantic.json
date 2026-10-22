@@ -43,9 +43,9 @@
       "description": "Shortest route found; 12 Oct; Open the conversation with this ID",
       "rect": {
         "min_x": 370,
-        "min_y": 247,
+        "min_y": 259,
         "max_x": 690,
-        "max_y": 293
+        "max_y": 305
       },
       "enabled": true,
       "focused": false,
@@ -63,9 +63,9 @@
       "description": "Trajectory checked by hand; 1 Sep; Open the conversation with this ID",
       "rect": {
         "min_x": 370,
-        "min_y": 296,
+        "min_y": 308,
         "max_x": 690,
-        "max_y": 342
+        "max_y": 354
       },
       "enabled": true,
       "focused": false,
@@ -83,9 +83,9 @@
       "description": "1 unread message; The hall is booked for Friday; Mon; Open the conversation with this ID",
       "rect": {
         "min_x": 370,
-        "min_y": 198,
+        "min_y": 210,
         "max_x": 690,
-        "max_y": 244
+        "max_y": 256
       },
       "enabled": true,
       "focused": false,
@@ -103,9 +103,9 @@
       "description": "The notes on the engine are ready; 09:41; Open the conversation with this ID",
       "rect": {
         "min_x": 370,
-        "min_y": 149,
+        "min_y": 161,
         "max_x": 690,
-        "max_y": 195
+        "max_y": 207
       },
       "enabled": true,
       "focused": false,
@@ -124,8 +124,8 @@
       "rect": {
         "min_x": 695,
         "min_y": 109,
-        "max_x": 727,
-        "max_y": 141
+        "max_x": 739,
+        "max_y": 153
       },
       "enabled": true,
       "focused": false,

@@ -42,9 +42,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 694,
-        "min_y": 275.625,
+        "min_y": 276.625,
         "max_x": 755.21875,
-        "max_y": 317.625
+        "max_y": 318.625
       },
       "enabled": true,
       "focused": false,
@@ -62,9 +62,9 @@
       "description": "Contre-amirale, informaticienne et autrice du premier compilateur; Select the person with this ID",
       "rect": {
         "min_x": 694,
-        "min_y": 333.625,
+        "min_y": 335.625,
         "max_x": 990,
-        "max_y": 394.25
+        "max_y": 396.25
       },
       "enabled": false,
       "focused": false,
@@ -83,9 +83,9 @@
       "description": "Remove the person with this ID",
       "rect": {
         "min_x": 844.125,
-        "min_y": 399.25,
-        "max_x": 886.125,
-        "max_y": 441.25
+        "min_y": 401.25,
+        "max_x": 888.125,
+        "max_y": 445.25
       },
       "enabled": false,
       "focused": false,
@@ -104,9 +104,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 762.21875,
-        "min_y": 399.25,
+        "min_y": 402.25,
         "max_x": 837.125,
-        "max_y": 441.25
+        "max_y": 444.25
       },
       "enabled": false,
       "focused": false,
@@ -126,9 +126,9 @@
       "description": "Informaticus; Select the person with this ID",
       "rect": {
         "min_x": 694,
-        "min_y": 457.25,
+        "min_y": 461.25,
         "max_x": 990,
-        "max_y": 517.875
+        "max_y": 521.875
       },
       "enabled": true,
       "focused": false,
@@ -146,7 +146,7 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 694,
-        "min_y": 522.875,
+        "min_y": 527.875,
         "max_x": 755.21875,
         "max_y": 541
       },
@@ -187,8 +187,8 @@
       "rect": {
         "min_x": 844.125,
         "min_y": 275.625,
-        "max_x": 886.125,
-        "max_y": 317.625
+        "max_x": 888.125,
+        "max_y": 319.625
       },
       "enabled": false,
       "focused": false,
@@ -207,7 +207,7 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 762.21875,
-        "min_y": 522.875,
+        "min_y": 527.875,
         "max_x": 837.125,
         "max_y": 541
       },
@@ -228,8 +228,8 @@
       "description": "Remove the person with this ID",
       "rect": {
         "min_x": 844.125,
-        "min_y": 522.875,
-        "max_x": 886.125,
+        "min_y": 526.875,
+        "max_x": 888.125,
         "max_y": 541
       },
       "enabled": true,
@@ -248,9 +248,9 @@
       "description": "Open the person with this ID",
       "rect": {
         "min_x": 694,
-        "min_y": 399.25,
+        "min_y": 402.25,
         "max_x": 755.21875,
-        "max_y": 441.25
+        "max_y": 444.25
       },
       "enabled": false,
       "focused": false,
@@ -269,9 +269,9 @@
       "description": "Keep the person with this ID at the top",
       "rect": {
         "min_x": 762.21875,
-        "min_y": 275.625,
+        "min_y": 276.625,
         "max_x": 837.125,
-        "max_y": 317.625
+        "max_y": 318.625
       },
       "enabled": true,
       "focused": false,

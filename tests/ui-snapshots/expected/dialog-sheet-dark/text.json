@@ -4,28 +4,28 @@
     {
       "component_id": {
         "kind": "action_button",
-        "instance": 3979074391577321
+        "instance": 6178820421674747
       },
       "role": "button_label",
       "horizontal_alignment": "centre",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 462,
-        "min_y": 572,
-        "max_x": 487.71875,
-        "max_y": 600
+        "min_x": 952.28125,
+        "min_y": 584,
+        "max_x": 978,
+        "max_y": 612
       },
       "painted_rect": {
-        "min_x": 462,
-        "min_y": 577.5,
-        "max_x": 487.71875,
-        "max_y": 594.5
+        "min_x": 952.28125,
+        "min_y": 589.5,
+        "max_x": 978,
+        "max_y": 606.5
       },
       "clip_rect": {
-        "min_x": 462,
-        "min_y": 572,
-        "max_x": 487.71875,
-        "max_y": 600
+        "min_x": 952.28125,
+        "min_y": 584,
+        "max_x": 978,
+        "max_y": 612
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -43,21 +43,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 453,
-        "min_y": 494,
+        "min_y": 518,
         "max_x": 987,
-        "max_y": 511
+        "max_y": 535
       },
       "painted_rect": {
         "min_x": 453,
-        "min_y": 494,
+        "min_y": 518,
         "max_x": 542.59375,
-        "max_y": 511
+        "max_y": 535
       },
       "clip_rect": {
         "min_x": 453,
-        "min_y": 494,
+        "min_y": 518,
         "max_x": 987,
-        "max_y": 511
+        "max_y": 535
       },
       "overflow": "wrap",
       "interaction": "inert",
@@ -73,37 +73,74 @@
     {
       "component_id": {
         "kind": "content_label",
-        "instance": 4225788912024369
+        "instance": 2888852833059508
       },
       "role": "caption",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 453,
-        "min_y": 334,
+        "min_y": 336,
         "max_x": 987,
-        "max_y": 350
+        "max_y": 352
       },
       "painted_rect": {
         "min_x": 453,
-        "min_y": 334,
+        "min_y": 336,
         "max_x": 482.71875,
-        "max_y": 350
+        "max_y": 352
       },
       "clip_rect": {
         "min_x": 453,
-        "min_y": 334.25,
+        "min_y": 336,
         "max_x": 987,
-        "max_y": 350
+        "max_y": 352
       },
-      "overflow": "ellipsis",
+      "overflow": "wrap",
       "interaction": "inert",
-      "declared_max_lines": 1,
+      "declared_max_lines": 2,
       "line_count": 1,
       "truncated": false,
       "content": {
         "kind": "excerpt",
         "text": "Name",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "content_label",
+        "instance": 5191910737009065
+      },
+      "role": "caption",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 453,
+        "min_y": 399.25,
+        "max_x": 987,
+        "max_y": 415.25
+      },
+      "painted_rect": {
+        "min_x": 453,
+        "min_y": 399.25,
+        "max_x": 490.8125,
+        "max_y": 415.25
+      },
+      "clip_rect": {
+        "min_x": 453,
+        "min_y": 399.25,
+        "max_x": 987,
+        "max_y": 415.25
+      },
+      "overflow": "wrap",
+      "interaction": "inert",
+      "declared_max_lines": 2,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Prompt",
         "truncated": false
       }
     },
@@ -117,21 +154,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 453,
-        "min_y": 473,
+        "min_y": 497,
         "max_x": 987,
-        "max_y": 489
+        "max_y": 513
       },
       "painted_rect": {
         "min_x": 453,
-        "min_y": 473,
+        "min_y": 497,
         "max_x": 499.5625,
-        "max_y": 489
+        "max_y": 513
       },
       "clip_rect": {
         "min_x": 453,
-        "min_y": 473,
+        "min_y": 497,
         "max_x": 987,
-        "max_y": 489
+        "max_y": 513
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -146,43 +183,6 @@
     },
     {
       "component_id": {
-        "kind": "content_label",
-        "instance": 600180895677835
-      },
-      "role": "caption",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "top",
-      "allocated_rect": {
-        "min_x": 453,
-        "min_y": 386.25,
-        "max_x": 987,
-        "max_y": 402.25
-      },
-      "painted_rect": {
-        "min_x": 453,
-        "min_y": 386.25,
-        "max_x": 490.8125,
-        "max_y": 402.25
-      },
-      "clip_rect": {
-        "min_x": 453,
-        "min_y": 386.25,
-        "max_x": 987,
-        "max_y": 402.25
-      },
-      "overflow": "ellipsis",
-      "interaction": "inert",
-      "declared_max_lines": 1,
-      "line_count": 1,
-      "truncated": false,
-      "content": {
-        "kind": "excerpt",
-        "text": "Prompt",
-        "truncated": false
-      }
-    },
-    {
-      "component_id": {
         "kind": "section_heading",
         "instance": 5600992902640627
       },
@@ -191,21 +191,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 453,
-        "min_y": 301.75,
-        "max_x": 950,
-        "max_y": 324.25
+        "min_y": 297.75,
+        "max_x": 938,
+        "max_y": 320.25
       },
       "painted_rect": {
         "min_x": 453,
-        "min_y": 304,
+        "min_y": 300,
         "max_x": 524.03125,
-        "max_y": 322
+        "max_y": 318
       },
       "clip_rect": {
         "min_x": 453,
-        "min_y": 301.75,
-        "max_x": 950,
-        "max_y": 324.25
+        "min_y": 297.75,
+        "max_x": 938,
+        "max_y": 320.25
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -228,21 +228,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 462,
-        "min_y": 521,
+        "min_y": 545,
         "max_x": 935,
-        "max_y": 553
+        "max_y": 577
       },
       "painted_rect": {
         "min_x": 462,
-        "min_y": 528.5,
+        "min_y": 552.5,
         "max_x": 562.8125,
-        "max_y": 545.5
+        "max_y": 569.5
       },
       "clip_rect": {
         "min_x": 462,
-        "min_y": 521,
+        "min_y": 545,
         "max_x": 935,
-        "max_y": 553
+        "max_y": 577
       },
       "overflow": "ellipsis",
       "interaction": "inert",

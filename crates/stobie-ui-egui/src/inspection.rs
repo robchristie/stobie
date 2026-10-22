@@ -291,6 +291,7 @@ pub struct FrameworkBindings<'a> {
 
 /// One admitted invocation, executed on the application thread.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum Invocation<A: ActionKey> {
     /// Perform an application action with its validated argument.
     Action {

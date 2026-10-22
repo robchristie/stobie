@@ -254,6 +254,9 @@ that reads standard input on a thread.
 - Never request an unconditional repaint.
 - Override `preferences` and `theme` to change appearance; the host reapplies
   the design system when they change and resolves `Frame::tokens` from them.
+  By default `preferences` is `UiPreferences::system()`, which follows the
+  system's light or dark appearance and, in the browser, its text size; start
+  an override from it to keep following what the person has not chosen.
 
 ## Add undo and redo
 

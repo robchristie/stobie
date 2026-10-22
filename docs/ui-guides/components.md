@@ -70,8 +70,11 @@ when clipping, and omit fully hidden nodes from current visible snapshots.
 
 The current component layer covers action buttons, dock tabs and overflow,
 splitters, application and pane toolbars, property rows, result rows, status
-badges, navigation items, list rows, composers, avatars, message bubbles,
-conversation rows, unread dots, switches, copy controls, responsive navigation, dialogs, sheets, confirms and virtual thumbnail cells. Their deterministic examples are the
+badges, navigation items, list rows, composers, avatars and avatar items,
+message bubbles, conversation rows, unread dots, switches, copy controls,
+segmented choices, headings with controls, responsive navigation, dialogs,
+sheets, confirms, text fields, anchored scroll areas, pane footers and virtual
+thumbnail cells. Their deterministic examples are the
 gallery catalogue stories, including `tabs/many-long-labels`, `tabs/narrow`,
 `splitter/hover-active`, `toolbar/narrow`, `property-row/long-value`,
 `status/error-long-message`, and the virtual-grid stories.
@@ -246,10 +249,37 @@ out of view add no observation or node, while coverage counts every attempt.
 Choose `TextInteraction::Inert` only where a parent owns the pointer; links
 stay activatable.
 
+### Copying a code block
+
+Use `PresentationContext::markdown_with_code_copy(ui, key, source, spec,
+&CodeCopySpec::new(label, confirmation, failure))` to give each code block
+its own [copy control](#copy), such as a reply whose commands a person will
+paste. Plain `markdown` presents none. Each block gains a strip across its
+top, inside its raised surface and in place of its top padding, as tall as an
+action's hit height; the control sits at the strip's trailing end with
+`QuietBorderless` emphasis, and the code wraps beneath it at its full width,
+so the control never covers code. Every other block keeps its place.
+
+Each control copies exactly the block's text as Stobie's Markdown parses it:
+without its fences, its language or its final line break, with tabs as four
+spaces. It is named by the application's label, such as "Copy code", when
+there is one code block, and by the label and the block's number from 1,
+such as "Copy code 2", when there are several (`CodeCopySpec::name`), so the
+names stay distinct. Controls are keyed by their block's position among the
+code blocks, so in a reply still arriving each keeps its identity, and any
+confirmation it shows, as later blocks arrive; the first control's name moves
+from "Copy code" to "Copy code 1" when a second block arrives.
+`CodeCopySpec` shows the glyph alone by default; `content` chooses a face with
+the label and `description` adds an accessible description. The controls
+behave as any copy control does, inside a message bubble too: they confirm
+without moving the bubble or each other.
+
 Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
-font_scale, observations)` and publish the returned `link_nodes`. Gallery
-`markdown/digest` and `markdown/long-narrow` use the production recipe; the
-[evidence record](../markdown-evidence.md) retains the review.
+font_scale, observations)` and publish the returned `link_nodes`; it presents
+no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
+production recipe and `markdown/code-copy` a reply with a copy control on
+each of its code blocks; the [evidence record](../markdown-evidence.md)
+retains the review.
 
 ## Links
 
@@ -350,6 +380,8 @@ p.copy(ui, "copy-code", &CopySpec::new(&code, "Copy code", "Copied", "Couldn't c
   the user should read it, with content text; an application that must not
   publish a secret withholds that content text and keeps the copy control.
 
+[Markdown code blocks](#copying-a-code-block) can each carry a copy control.
+
 Gallery `copy/actions` presents a copy control beside a code, an icon-only
 control under a message, a long localised label and confirmation, and a
 disabled control; the [snapshot guide](../../tests/ui-snapshots/README.md)
@@ -397,6 +429,26 @@ let observed = presentation.finish(ui);
 text_layouts.extend(observed.text_layouts);
 semantic_nodes.extend(observed.semantic_nodes);
 ```
+
+A heading with controls at its end, such as a section's title with Edit,
+is one `heading_row(ui, key, text, controls, availability)` call
+(`Frame::heading_row` in a hosted application, which also triggers each
+clicked control with its argument). Each `HeaderControl` is an action, an
+`ActionTarget` or a `BoundAction`, icon-only unless built with other
+content, and may be a toggle whose pressed state the application owns. The
+controls keep their whole size at the row's end in the order given, and the
+heading elides in the room they leave, keeping its full text for assistive
+technology. When the controls would leave the heading less than its least
+width (its whole text, or three minimum hit targets), they take a line of
+their own below it, end-aligned, and the response says so (`wrapped`). Do
+not put controls after `heading` or `content` in `ui.horizontal`: those
+take the whole width they are given, which pushes what follows past the
+row's end. A visible action control laid out past its row's end keeps its
+semantic node, so the semantic audit reports it (an invalid rectangle once
+it is wholly out of sight) rather than it vanishing from agents and
+assistive technology, and debug builds mark it on screen. Gallery
+`heading/controls` shows one, two and five controls beside short and long
+titles at a phone's width.
 
 An action specification paints the production component and records its matching
 snapshot node and, when painted, measured text. Its widget identity is separate from
@@ -457,8 +509,14 @@ label. `action_with_content` accepts the explicit `ActionButtonContent` choice.
 These methods share capability, availability, emphasis, toggle, response and
 logical-identity contracts. `ActionButtonSpec` struct literals remain compatible.
 
-The icon-only allocation is a square token minimum hit target (32 points at the
-reference scale), with centred square visual chrome and 16-point artwork. Artwork
+The icon-only allocation is a square touch target (`touch_target_size`, 44
+points in both densities, or the scaled control height where that is larger),
+with centred square visual chrome at the control height and 16-point artwork.
+Stobie's rows, headers and composer centre labelled controls on the icon-only
+controls' line. An application that mixes the two in its own `ui.horizontal`
+row sets the row's height to the touch target first
+(`ui.set_row_height(p.tokens().touch_target_size().0)`), so egui centres each
+control on it rather than aligning their tops. Artwork
 scales with 100–150% font preferences. Its full action name and description own
 semantics and a tooltip, including a disabled reason; the icon has no separate
 accessible owner and produces no measured-text attempt. Icon+label uses one
@@ -473,11 +531,18 @@ overflow. Selecting `icon_action` is an explicit caller decision, retaining a
 usable name; the component never silently collapses its label. Text-only layout
 and its historical identities remain compatible. Quiet, QuietBorderless, Normal
 and Primary share the existing enabled, pressed/selected, disabled and focus
-rules; icons use the exact resolved label foreground. Enabled pressed/selected
-actions have an inset state outline separate from keyboard focus, and Primary
-hover changes its outer border. These shared chrome corrections make states
-visible even when the analytical reference aliases hover and selection fills;
-resting text-only layout and appearance remain compatible.
+rules; icons use the exact resolved label foreground. Pressed/selected
+actions have an inset state outline separate from keyboard focus, so the on
+state never relies on fill colour alone, and Primary hover changes its outer
+border. Hover fills have their own colour, distinct from the selection fill
+of a toggled-on action. A disabled toggled-on action keeps a dimmed selection
+fill and a muted inset outline; a disabled `QuietBorderless` action stays
+borderless and unfilled. Resting text-only layout remains compatible.
+`Destructive` is Normal chrome whose label, artwork, border and pressed
+outline take `status.error`, for an action that loses something ("Delete for
+good"); a press keeps the hover fill, on which the error colour is validated
+at the body-text target, and a disabled destructive action is muted like any
+other.
 
 The following helper compiles as a rustdoc example on `icon_action`. Handle the
 returned click through your application's intent/command route and publish the
@@ -629,6 +694,35 @@ when shown, the item otherwise) and turns the detail over on the toggle.
 controls' responses for the caller to route, and each pane's observations,
 which it has already registered.
 
+The open item's header can also hold an avatar, a one-line subtitle such as
+a status, and the item's own controls, such as Pinned, Hide and Edit
+profile. Pass them as `NavigationOptions` to `Frame::navigation_with` (or
+`PresentationContext::navigation_with`), which also returns each header
+control's response in the order given and, in the hosted form, triggers it
+with its argument:
+
+```text
+let options = NavigationOptions::new()
+    .with_avatar(AvatarSpec::person(&bot.name, AvatarSize::Header))
+    .with_subtitle(status)
+    .with_control(HeaderControl::icon(BoundAction::new(Act::Pin, bot.id.as_str()), IconId::Check)
+        .pressed(bot.pinned))
+    .with_control(HeaderControl::icon(Act::EditProfile, IconId::Edit));
+frame.navigation_with(ui, p, "bots", &spec, &options, |ui, p, frame, pane| /* as above */);
+```
+
+The header reads Back, the avatar, the title over the subtitle, the
+controls and the detail toggle last; that is also its focus order. The
+controls belong to the content's pane, its node and AccessKit region, like
+the toggle. They keep their whole size and the title elides in the room
+they leave; when they would leave it less than its least width (its whole
+text, or three minimum hit targets), the controls and the toggle take a
+second line of the header, end-aligned, so none is dropped. At a phone's
+390 points, Back, an avatar, a title and three icon controls besides the
+toggle fit on one line at the reference text size; give further actions
+their place in the detail. Gallery `navigation/header` shows a long title
+with Pinned, Hide and Edit profile.
+
 - Destinations are a dynamic list: one row per item, each a `BoundAction`
   with the item's ID as its argument, so one action opens any of them.
   Use `Frame::conversation_row` for rows with an avatar, a preview and a
@@ -636,13 +730,19 @@ which it has already registered.
   destinations with an icon and an optional badge
   (`PresentationContext::bound_navigation_item` is the scoped form). Mark the
   open item's row `selected`; it is a `NavigationItem` with `aria-current`.
-- Headers are the application bar's height. Back is an `ArrowLeft` icon
+- Headers are at least the application bar's height. Back is an `ArrowLeft` icon
   named by the Back action's label, at the start, wherever the level it
   closes covers the one beneath: every pushed level in the stack, and the
   detail in the split. The title is a section heading that elides, and the
   content's header carries the detail toggle, an icon toggle named by its
   action's label whose pressed state says whether the detail shows. A
   hidden availability presents no control.
+- Bodies: the content's, the detail's and the empty prompt's are inset
+  from the pane's edges by as much as the header's controls
+  (`spacing.inline`), so messages and controls keep off the screen's edge
+  on a phone and the pane's edges beside other panes; the list's is not, so
+  its rows fill its width. `NavigationOptions::with_body_inset(pane,
+  inset)` turns either default over, such as for a full-width media pane.
 - Semantics: each pane but the empty content is a `Pane` node and an
   AccessKit region named by its title, holding its header's controls and
   its body's nodes; the content's pane carries `NavigationContent.reference`,
@@ -674,22 +774,27 @@ actions open and close it. In a hosted application:
 
 ```text
 if editing {
-    let spec = DialogSpec::new("Edit routine", Act::CloseEditor).sheet();
+    let spec = DialogSpec::new("Edit routine", Act::CloseEditor)
+        .sheet()
+        .footer(Act::SaveRoutine);
     frame.dialog(ui, p, "editor", &spec, |ui, frame, p| form(ui, frame, p));
 }
 if confirming {
-    frame.confirm(ui, p, "delete", &ConfirmSpec::new(
+    let spec = ConfirmSpec::new(
         "Delete “Morning briefing”?",
         "The routine and its schedule are removed. This cannot be undone.",
         Act::Delete,
         Act::KeepRoutine,
-    ));
+    )
+    .confirm_emphasis(ActionEmphasis::Destructive);
+    frame.confirm(ui, p, "delete", &spec);
 }
 ```
 
 Present it after what is behind it, in every pass while it is open.
 `Frame::dialog` triggers the dismiss action when the close control, Escape
-or (with `backdrop_dismisses`) the scrim dismisses it; `Frame::confirm`
+or (with `backdrop_dismisses`) the scrim dismisses it, and the footer action
+when it is pressed; `Frame::confirm`
 triggers confirm or cancel. `PresentationContext::dialog` and
 `PresentationContext::confirm` are the scoped forms, which report what
 happened for the caller to route.
@@ -702,6 +807,11 @@ happened for the caller to route.
   that needs the room. A confirm is centred, 400 points wide. The title is a
   fixed header with the close control at its end; content taller than the
   room scrolls beneath it.
+- **Footer.** `.footer(action)` presents one action, such as Save, as the
+  dialog's primary control at the end of a fixed footer below the scrolling
+  content, so it stays in reach however long the form is. It follows the
+  content in focus order, before the close control; its availability comes
+  from the dialog's, and a hidden footer action reserves no footer.
 - **Safe areas and the keyboard.** A dialog sits inside egui's content
   rectangle, and safe areas are the web shell's: the PWA template pads the
   page by the device's safe-area insets and, with `fitViewport`, sizes it
@@ -714,7 +824,8 @@ happened for the caller to route.
   what was typed; a confirm's scrim never dismisses.
 - **Confirm.** Cancel comes first and takes focus when it opens, so a stray
   Return does not confirm; Escape cancels. The confirm control is labelled
-  with what it does and is primary unless `confirm_emphasis` says otherwise.
+  with what it does and is primary unless `confirm_emphasis` says otherwise;
+  `ActionEmphasis::Destructive` marks one that loses something.
   The buttons end a row, or stack across the dialog when the row does not
   fit.
 - **Work under way.** A disabled dismiss action, as while the dialog's work
@@ -724,12 +835,12 @@ happened for the caller to route.
   holding what it presents and marked modal for assistive technology. While
   one is presented the host observes, binds and shows assistive technology
   only it (see [interactions](interactions.md#dialogs)).
-- **Fields.** A form's text fields are `NativeTextEdit`s presented through
-  `PresentationContext::native`, labelled for AccessKit and observed as text
-  inputs, as elsewhere; on iOS they edit through the native field.
+- **Fields.** A form's text fields use the [text field](#text-fields)
+  recipe, as elsewhere; on iOS they edit through the native field.
 
-Gallery `dialog/sheet` (a routine editor with two text fields and a switch,
-over the routine it edits) and `dialog/confirm` (deleting that routine) use
+Gallery `dialog/sheet` (a routine editor with two text fields, a switch and
+Save in its footer, over the routine it edits) and `dialog/confirm` (deleting
+that routine, with a destructive Delete) use
 this production API at every Gallery width; Narrow shows the bottom sheet.
 
 ## Rows and their actions
@@ -774,7 +885,117 @@ the [snapshot guide](../../tests/ui-snapshots/README.md) lists their fixtures.
 Buttons, icon actions and toggles carrying a bound action keep their visible
 label and measurements; their accessible name and tooltip add the subject,
 and `PresentationContext::bound_action` is the low-level form. A hidden
-availability for a row's argument presents nothing for it.
+availability for a row's argument presents nothing for it. A control whose
+visible label is not the action's, such as Edit on each routine where the
+action is Edit routine, gives its own with `BoundAction::with_label`; it
+shows that label and is named by it followed by the subject.
+`with_short_label` shows a shorter label still and keeps the label as the
+name and tooltip. `PresentationContext::labelled_bound_action` is the
+low-level form.
+
+## Segmented choice
+
+Use `Frame::segmented_choice` for a short set of options bound to one action
+whose argument is the option chosen, such as how often a routine repeats or
+the days it runs on. Declare the action's argument as a `ChoiceArgument`, or
+any contract its options' arguments satisfy.
+
+```text
+let repeats = ChoiceOption::choices::<Repeat>(|repeat| repeat == routine.repeat);
+frame.segmented_choice(ui, p, Action::Repeat, &SegmentedChoiceSpec::single("Repeats", &repeats));
+let days: Vec<_> = Day::CHOICES.iter().map(|(day, _, label)|
+    ChoiceOption::choice(*day, routine.runs_on(*day)).with_short_label(&label[..3])).collect();
+frame.segmented_choice(ui, p, Action::Day, &SegmentedChoiceSpec::multiple("Runs on", &days));
+```
+
+- **Task.** Choose one of a few options, or any number of them, in place,
+  without opening a menu. Use a combo box for a long or open-ended list.
+- **Modes.** A single choice is a radio group: the chosen option is checked,
+  Tab enters the group at the chosen option (else the first enabled one) and
+  leaves it, and the arrow keys, Home and End move to and choose another
+  enabled option, wrapping. A multiple choice is a group of toggles, each
+  pressed while chosen and each a Tab stop. Either way activating an option
+  performs the action with its argument; the application changes its state
+  and presents the new selection, so a refused change shows nothing chosen
+  that is not.
+- **Layout.** Options sit side by side in the order given, each as wide as
+  the widest label shown and at least the token minimum hit size, with
+  `spacing.unit` between them. Where the width is short they wrap into
+  balanced rows, such as four and three, rather than eliding; a label wider
+  than the whole width elides and keeps its name. Seven weekdays with short
+  labels fit one row at 390 points wide and wrap legibly at larger text.
+- **Face.** Options use the action button face: the chosen option takes the
+  selected pair, focus the outer ring and a disabled option the disabled
+  colours. `availability` (the host's `availability_with` for each option's
+  argument) disables an option with its reason or hides it, taking no space
+  and leaving the set.
+- **Names.** Each option is named by its label; a short label ("Tue") is
+  shown with the label ("Tuesday") as its tooltip. The group is named by the
+  specification's name; show the same words as the choice's heading.
+- **Semantics.** Each option publishes its argument, so the host binds each
+  as its own capability and agents see one control per option. The group is
+  a `Section` node; see [accessibility](accessibility.md) for its roles.
+
+Low-level callers use `PresentationContext::segmented_choice` with an
+availability function and perform `SegmentedChoiceResponse::activated`
+themselves. Gallery `choice/segmented` presents a single choice focused at
+its chosen option beside an unavailable one, weekday toggles with short
+labels, long labels that wrap whole, a choice unavailable throughout and the
+weekdays in a narrow column.
+
+## Text fields
+
+A form's text field is a visible caption above a field, with an optional
+description and error line beneath it. In a hosted pane:
+
+```text
+let name = TextFieldSpec::new("Name").hint("Morning briefing");
+frame.text_field(ui, p, "name", &name, &self.name, Intent::Name);
+let code = TextFieldSpec::new("Invitation code")
+    .spellcheck(false)
+    .description("Six letters or digits from the invitation.")
+    .error(self.code_error.as_deref());
+let code = frame.text_field(ui, p, "code", &code, &self.code, Intent::Code);
+if code.submitted { /* Return in the field: submit the form */ }
+```
+
+`TextFieldSpec::new` takes the caption, which also names the field; builder
+methods add `multiline(rows)` and `max_rows`, a `hint`, a `description`, an
+`error`, `password`, `spellcheck(false)` for codes and addresses, and `id`
+for a field whose published semantic ID agents and smokes already use. The
+words are the application's.
+
+- **Layout.** A `Caption` line (wrapping to two, then elided) above a
+  frameless `NativeTextEdit` in `Body` text, as wide as the space offered and
+  padded, as in a composer, so that one line fills the token hit height. Its
+  ground is the text-field ground with the control corner radius; its border
+  is the control border, the focus ring while it has focus, the error colour
+  while it shows an error, and the subtle border while disabled. The error,
+  then the description, follow as measured, selectable `Error` and
+  `Secondary` text, each wrapping to four lines.
+- **Editing.** A single-line field reports `submitted` for Return and keeps
+  focus; a multiline field types a newline and grows from `rows` to
+  `max_rows`. A disabled `Ui` disables the field. On a touch device a tap
+  makes it the platform's own field. A `password` field is a single line
+  that egui masks; it is never the native field and has no spelling help.
+- **Semantics.** The field's AccessKit node is labelled by the caption (and
+  carries it as its label), described by the error then the description, and
+  marked invalid while it has an error. It is observed as a `TextInput` or
+  `MultilineTextInput` node named by the caption, so agents fill it with
+  `set-text`. A password field is a `PasswordInput` for assistive technology,
+  so the host publishes no value for it and offers no `set-text`. An empty
+  polite `Status` is always present beneath it and takes the error's words
+  when one appears, so assistive technology announces it once; while it shows
+  an error the snapshot has a `Status` node with the same words.
+- **Responses.** `Frame::text_field` takes the text and an intent
+  constructor and emits the edited text as that intent; it returns a
+  `TextFieldResponse` with the field's and caption's responses, `changed` and
+  `submitted`. `PresentationContext::text_field` is the low-level form: it
+  edits a `&mut String`.
+
+Gallery `form/text-fields` presents an empty field with its hint, a
+description with an error, a password, a multiline field and a disabled
+field; `dialog/sheet` uses the recipe in a routine editor.
 
 ## Composer
 
@@ -881,7 +1102,7 @@ fn people(ui: &mut egui::Ui, p: &mut PresentationContext, photo: Option<egui::lo
   initials are not observed: it is decorative, like an icon, and the row,
   heading or control beside it names the person or thing. An avatar that
   acts (a pinned person who opens a conversation) belongs inside a control
-  with that name.
+  with that name, such as an avatar item.
 
 Low-level callers use `avatar(ui, &spec, tokens, font_scale)`, or
 `paint_avatar(painter, &spec, rect, tokens)` to paint into the largest
@@ -889,6 +1110,49 @@ square in `rect`; `avatar_initials` and `avatar_eye_colour` expose the
 derivations. Gallery `avatars/figures` shows each size, people (including
 the glyph fallback), the built-in and application shapes, and images; the
 [snapshot guide](../../tests/ui-snapshots/README.md) lists its fixtures.
+
+### Avatar items and strips
+
+A strip of pinned people or things, whose avatar is itself the target,
+presents each as an avatar item inside `PresentationContext::avatar_strip`.
+In a hosted pane:
+
+```text
+p.avatar_strip(ui, "pinned", |ui, p| {
+    for person in &self.pinned {
+        let spec = AvatarItemSpec::new(AvatarSpec::person(&person.name, AvatarSize::Strip), &person.name)
+            .selected(self.open == Some(person.id));
+        frame.avatar_item(ui, p, BoundAction::new(Action::Open, person.id), &spec);
+    }
+});
+```
+
+- **Layout.** One target holds the avatar at `AvatarSize::Strip` (whatever
+  size the spec gives) over one centred `Caption` line, elided with an
+  ellipsis, within block padding: `avatar_item_size` gives its size, at
+  least the token hit size each way. The strip lays items in one row
+  `spacing.inline` apart and scrolls sideways when it is wider than the
+  space offered, as on a phone; focusing an item scrolls it into view.
+- **States.** Hover uses the quiet action hover fill, press the selection
+  pair with an inset outline, and keyboard focus the focus ring around the
+  whole item. The current item (`selected`) takes the selection background
+  and a selection-indicator marker beneath its caption. A disabled item
+  fades its avatar, mutes its caption and keeps its reason in its tooltip
+  and description.
+- **Semantics.** Each item is one `NavigationItem` node, and one AccessKit
+  button, named by the whole caption, described by the spec's
+  `description` or the action's, `selected` and `aria-current` while
+  current, carrying its `BoundAction`'s argument so agents open it by its
+  ID. The avatar adds no node; the strip adds none. Each enabled item is a
+  Tab stop; Enter, Space and a pointer release activate it. The caption is a
+  `NavigationLabel` measurement under a `NavigationItem` parent.
+- **Responses.** `Frame::avatar_item` triggers the action with its argument
+  when clicked; `PresentationContext::avatar_item` takes the target,
+  availability and argument and leaves triggering to the caller. Low-level
+  callers use `avatar_item` and publish `avatar_item_semantic_node`.
+
+Gallery `avatars/strip` shows a strip with the open item current, a long
+name elided and an unavailable item; at phone width it scrolls.
 
 ## Chat recipes
 
@@ -931,7 +1195,15 @@ for message in &self.messages {
   the bound. The bubble measures its content after presenting it and keeps
   that width for later passes, laying out once more when the content's
   text, the way it is set (density, contrast or text size) or the column
-  changes. Content inside sees `message_bubble_tokens`: its surfaces are
+  changes. It measures only while wholly in view, because content scrolled
+  out of view skips its paint: a bubble partly scrolled away keeps its
+  width, and one first presented partly in view, or taller than its view,
+  keeps the maximum width until it is wholly in view, so a bubble holding
+  controls such as a Copy below its text settles wherever it is scrolled.
+  The fit is the bubble's own: egui lays a widget out once, before its
+  content's width is known, so Stobie offers no general "hug the content"
+  measure: other content that should hug sits in a bubble or sizes itself
+  from text measured with egui's layout before presenting it. Content inside sees `message_bubble_tokens`: its surfaces are
   the fill, so links and code blocks are checked against it, and muted text
   becomes primary text on a fill too close to it. The bubble publishes a
   `Section` named by `spec.sender` (the application's words, such as "You"
@@ -955,12 +1227,12 @@ for message in &self.messages {
   the unread words, the preview, the time and the action's description,
   separated by "; "; a disabled row adds its reason. The current row has the
   selection fill and indicator, and a hovered current row adds a control
-  border. A hovered row has the raised surface, not the quiet action hover,
-  because the themes give that hover the selection's colour and a hovered
-  row would look current. Press uses the selection pair with an inset
-  outline, and keyboard focus the outer focus ring. Muted text on any of
-  those fills becomes primary text where it would read below its validated
-  contrast. Each enabled row is a Tab stop; Enter, Space and a pointer
+  border. A hovered row has the hover surface, which every theme keeps
+  apart from selection, so it never looks current. Press uses the selection
+  pair with an inset outline, and keyboard focus the outer focus ring. Theme
+  validation keeps muted text at its contrast floor on those fills; muted
+  text becomes primary text only on hand-assembled tokens where it would
+  read below 4.5:1. Each enabled row is a Tab stop; Enter, Space and a pointer
   release open it. The measurements are `ConversationRowTitle`,
   `ConversationRowPreview` and `ConversationRowTime` under a
   `ConversationRow` parent; like other control text they carry no content
@@ -1001,6 +1273,64 @@ switch label, a disabled switch, and bubbles holding a long link and code,
 and scrolls. The [snapshot guide](../../tests/ui-snapshots/README.md) lists
 their fixtures.
 
+## Scrolling: keeping the reader's place and a pane's footer
+
+egui keeps a scroll area's offset from the top of its content, so rows an
+application inserts above the ones in view, such as older messages a "Load
+older" control brings in, push what the reader was reading down and out of
+view; `stick_to_bottom` covers only the content's end. `AnchoredScrollArea`
+wraps a vertical `egui::ScrollArea` the application configures and keeps
+the reader's place:
+
+```text
+let area = egui::ScrollArea::vertical().stick_to_bottom(true).auto_shrink(false);
+AnchoredScrollArea::new("messages", area).show(ui, |ui, rows| {
+    frame.action(ui, p, Action::LoadOlder, ActionEmphasis::Normal);
+    for message in &self.messages {
+        rows.row(ui, message.id, |ui| {
+            p.message_bubble(ui, ("message", message.id), spec(message), |ui, p| { /* … */ });
+        });
+    }
+    rows.footer(ui, |ui| { /* an account block, a status line */ });
+});
+```
+
+- **Rows.** `ScrollRows::row(ui, key, add)` presents one row named by a
+  stable key from the application's data, such as a message ID, never its
+  position. After each pass the area remembers the first row in view and
+  where it was; when rows are inserted, removed or resized above it, it
+  moves the offset by as much and lays the pass out again
+  (`request_discard`), so the first frame that shows the new rows already
+  shows the reader's row where it was. A reader at the content's end stays
+  at the end: with `stick_to_bottom`, a row appended at the end scrolls
+  into view and rows prepended above leave the view as it was. Content
+  outside a row, such as the "Load older" control, is never the anchor.
+  Only the content's own changes move the offset; a wheel, a drag or a
+  scroll to a control scrolls as before. Nothing repaints unless content
+  moved.
+- **Footer.** `ScrollRows::footer(ui, add)`, called last, presents a
+  footer at the foot of the view while the content above it is short and
+  after the last row once it is long. It measures its own height as it is
+  presented and keeps it in egui's temporary data; when that moves the
+  footer, the pass is laid out again, so the application adds no spacer and
+  asks for no repaint.
+- **Agents and a control out of view.** A long scrolled list belongs in an
+  `observe_visible_only` region, which leaves out what is scrolled out of
+  view: a "Load older" control above the view is absent from the snapshot
+  and the AccessKit tree. Its action is still bound and discoverable, so an
+  agent finds it with `discover` by capability and `invoke`s it directly
+  rather than scrolling to the control first; the area keeps the reader's
+  place as it does for a click.
+
+Gallery `scroll/load-older` shows a conversation with a "Load older"
+control in its header, which stays in view and prepends a page of older
+messages whether the reader is scrolled up or at the newest message, and a
+short list pane whose footer sits at the pane's foot. The physical browser
+journey `tools/scroll-browser-smoke.sh`, run through full verification,
+checks in both themes at desktop and phone widths that the message the
+reader was reading stays where it was on screen, scrolled up and at the
+end, and where the footer sits.
+
 ## Local date and time
 
 Format instants for people with `stobie_ui_egui::local_time`, never with
@@ -1020,9 +1350,15 @@ Instants are `Timestamp`s: whole milliseconds since the Unix epoch, in years
 | `long_date` | Tuesday 14 April 2026 | Tuesday 14 April 2026 |
 | `relative_day` | Today, Yesterday, Tomorrow, Tuesday (within the last six days), then the short date | the same |
 | `relative_day_and_time` | Yesterday at 7:00 AM | Yesterday at 07:00 |
+| `relative_day_in_sentence`, inside a sentence | today, yesterday, tomorrow, on Tuesday, on 14 Apr | the same |
+| `relative_day_and_time_in_sentence` | today at 3:30 PM, on Saturday at 9:41 AM, on 14 Apr at 7:00 AM | today at 15:30 |
 | `compact`, for a list row | 9:41 AM today, otherwise the relative day | 09:41 |
 | `utc_offset` | UTC+9:30, UTC-3:30, UTC | the same |
 | `format_duration` (a free function) | 45 s, 12 min, 2 h 10 min, 1 day 4 h | the same |
+
+The `_in_sentence` forms continue a sentence ("Signed in today at 3:30 PM",
+"Reset on Saturday at 9:41 AM"); begin a sentence, a label or a list row with
+the capitalised forms. Both classify the day the same way.
 
 With month before day (United States English) the dates read "Apr 14",
 "Apr 14, 2025" and "Tuesday, April 14, 2026". `TimeZone::name` gives the
@@ -1085,4 +1421,20 @@ it when the zone or locale may have changed, such as when the application
 returns to the foreground. Times shown relative to now ("Today", "in 2 h")
 change as time passes: schedule a later pass with
 `Frame::request_repaint_after` for the next change rather than repainting
-every frame.
+every frame. `until_next_day` gives how long until the day in the zone
+changes, which is when every relative day and every time of day that
+`compact` shows changes. It is exact across a daylight-saving change, even
+one that skips midnight; where the zone's answers disagree, or past
+`Timestamp::MAX`, it gives at most an hour. Ask again in each pass that shows
+such text, so the request follows the clock:
+
+```rust,ignore
+// In `ui`, beside a list whose rows show `local.compact(sent)`.
+frame.request_repaint_after("the local day changes", local.until_next_day());
+```
+
+The repaint then has a recorded reason and runs once a day while the
+application is otherwise idle. A timer that fires early finds the same day and
+asks again for the few milliseconds left. A wall clock set by hand, or a sleep
+that pauses timers, can make the pass late; egui also repaints on input
+and when the page or window regains focus.

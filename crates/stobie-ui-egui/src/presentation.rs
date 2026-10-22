@@ -2,18 +2,25 @@
 
 use std::hash::Hash;
 
-use egui::{Response, Ui};
+use egui::{Rect, Response, Ui, pos2};
 
 mod chat;
+mod choice;
+mod code_copy;
 mod composer;
 mod copy;
 mod dialog;
+mod heading;
 mod navigation;
+mod scroll;
+mod text_field;
 
 pub use chat::{
     MessageBubbleSpec, MessageSide, message_bubble_fill, message_bubble_max_width,
     message_bubble_tokens,
 };
+pub use choice::{ChoiceMode, ChoiceOption, SegmentedChoiceResponse, SegmentedChoiceSpec};
+pub use code_copy::CodeCopySpec;
 pub use composer::{
     COMPOSER_DEFAULT_MAX_ROWS, ComposerControl, ComposerControlResponse, ComposerResponse,
     ComposerSpec,
@@ -23,10 +30,13 @@ pub use dialog::{
     CONFIRM_WIDTH, ConfirmResponse, ConfirmSpec, DIALOG_WIDTH, DialogLayout, DialogPlacement,
     DialogResponse, DialogSpec, SheetHeight,
 };
+pub use heading::{HeaderControl, HeaderControlResponse, HeadingRowResponse};
 pub use navigation::{
     NavigationContent, NavigationControlResponse, NavigationDetail, NavigationLayout,
-    NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
+    NavigationOptions, NavigationPane, NavigationPaneResponse, NavigationResponse, NavigationSpec,
 };
+pub use scroll::{AnchoredScrollArea, ScrollRows};
+pub use text_field::{TextFieldResponse, TextFieldSpec};
 
 use crate::{
     ActionArgument, ActionButtonContent, ActionButtonIdentity, ActionButtonSpec, ActionKey,
@@ -163,6 +173,20 @@ impl Drop for PresentationContext {
             let text = std::mem::take(&mut self.text_layouts);
             self.register(nodes, text);
         }
+    }
+}
+
+/// Mark a control laid out past the end of its row in debug builds, where
+/// the row's end is, in the manner of egui's own layout warnings.
+fn report_overflow(ui: &Ui, name: &str, rect: Rect, row: Rect) {
+    if cfg!(debug_assertions) {
+        let at = pos2(
+            rect.left().clamp(row.left(), row.right()),
+            rect.top().max(ui.clip_rect().top()),
+        );
+        ui.ctx()
+            .debug_painter()
+            .error(at, format!("{name:?} is laid out past the end of its row"));
     }
 }
 
@@ -420,6 +444,26 @@ impl PresentationContext {
         argument: &ActionArgument,
         name: Option<&str>,
     ) -> Response {
+        self.labelled_bound_action(ui, key, spec, content, argument, name, None)
+    }
+
+    /// [`Self::bound_action`] with the control's own visible `label`, such
+    /// as "Tue", in place of the action's; `name`, such as "Tuesday", stays
+    /// its accessible name and shows in its tooltip when it differs. Hosted
+    /// applications give a [`BoundAction`](crate::BoundAction) its label with
+    /// [`with_label`](crate::BoundAction::with_label) and
+    /// [`with_short_label`](crate::BoundAction::with_short_label) instead.
+    #[allow(clippy::too_many_arguments)]
+    pub fn labelled_bound_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        argument: &ActionArgument,
+        name: Option<&str>,
+        label: Option<&str>,
+    ) -> Response {
         self.check_pass(ui);
         let value = argument.to_value();
         let identity = match &value {
@@ -429,7 +473,35 @@ impl PresentationContext {
                 .action_identity(),
             None => self.scope.instance(key).action_identity(),
         };
-        self.present_action(ui, &identity, spec, content, name, value)
+        let labels = crate::components::ControlLabels {
+            name,
+            visible: label,
+        };
+        self.present_labelled_action(ui, &identity, spec, content, labels, value)
+    }
+
+    /// The empty response of a hidden action's control: no space, paint,
+    /// focus, semantic node or text observation, under the identity
+    /// [`Self::bound_action`] would give the control, so that it is scoped
+    /// by this presentation and `key` as a shown control is.
+    pub(crate) fn hidden_action(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let identity = match argument.to_value() {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        ui.interact(
+            egui::Rect::NOTHING,
+            identity.action_identity().widget_id,
+            egui::Sense::hover(),
+        )
     }
 
     pub(crate) fn present_action<A: ActionKey>(
@@ -441,15 +513,33 @@ impl PresentationContext {
         name: Option<&str>,
         argument: Option<serde_json::Value>,
     ) -> Response {
+        let labels = crate::components::ControlLabels {
+            name,
+            visible: None,
+        };
+        self.present_labelled_action(ui, identity, spec, content, labels, argument)
+    }
+
+    fn present_labelled_action<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        identity: &ActionButtonIdentity,
+        spec: ActionButtonSpec<A>,
+        content: ActionButtonContent,
+        labels: crate::components::ControlLabels<'_>,
+        argument: Option<serde_json::Value>,
+    ) -> Response {
+        let name = labels.name;
         let target = spec.target;
         let state = spec.state;
         let availability = spec.availability.clone();
+        let row = ui.max_rect();
         let response = crate::components::present_action_button(
             ui,
             spec,
             identity,
             content,
-            name,
+            labels,
             &self.tokens,
             self.font_scale,
             &mut self.text_layouts,
@@ -478,7 +568,18 @@ impl PresentationContext {
         if self.domain_reference.is_some() {
             node.domain_reference = self.domain_reference.clone();
         }
-        if response.interact_rect.is_positive() {
+        // A visible control laid out past the end of its row, such as one
+        // after a heading that took the row's width, is a layout fault, not
+        // a control scrolled out of view: it keeps its node, so the semantic
+        // audit reports it (an invalid rectangle once it is wholly out of
+        // sight), and debug builds mark it on screen.
+        let overflowed = availability.visible()
+            && (response.rect.right() > row.right() + 0.5
+                || response.rect.left() < row.left() - 0.5);
+        if overflowed {
+            report_overflow(ui, &node.name, response.rect, row);
+        }
+        if response.interact_rect.is_positive() || overflowed {
             self.push_node(ui, node);
         }
         response
@@ -668,6 +769,96 @@ impl PresentationContext {
         response
     }
 
+    /// Present one pinned person or thing in a strip, whose avatar over its
+    /// caption is one target performing `target`, carrying `argument`, such
+    /// as the item's ID. It is a navigation item named by the caption and
+    /// current while `spec` is selected. Its identity combines `key` with the
+    /// argument. Hosted applications use
+    /// [`Frame::avatar_item`](crate::Frame::avatar_item), which triggers the
+    /// action when clicked. Hidden availability returns an empty hover
+    /// response without observations. Present items inside
+    /// [`Self::avatar_strip`].
+    pub fn avatar_item<A: ActionKey>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::AvatarItemSpec<'_>,
+        target: crate::ActionTarget<A>,
+        availability: &crate::Availability,
+        argument: &ActionArgument,
+    ) -> Response {
+        self.check_pass(ui);
+        let value = argument.to_value();
+        let identity = match &value {
+            Some(value) => self
+                .scope
+                .instance((key, "stobie.argument", value.to_string())),
+            None => self.scope.instance(key),
+        };
+        if !availability.visible() {
+            return ui.interact(
+                egui::Rect::NOTHING,
+                identity.egui_id(),
+                egui::Sense::hover(),
+            );
+        }
+        let response = crate::avatar_item(
+            ui,
+            spec,
+            target,
+            availability,
+            identity,
+            &self.tokens,
+            self.font_scale,
+            &mut self.text_layouts,
+        );
+        if response.interact_rect.is_positive() {
+            let mut node = crate::avatar_item_semantic_node(
+                &response,
+                spec,
+                target,
+                availability,
+                value,
+                identity,
+                self.parent.clone(),
+            );
+            if self.domain_reference.is_some() {
+                node.domain_reference = self.domain_reference.clone();
+            }
+            self.push_node(ui, node);
+        }
+        response
+    }
+
+    /// Lay out a strip of avatar items in one row, `spacing.inline` apart,
+    /// that scrolls sideways when it is wider than the space offered, as on
+    /// a phone. Focusing an item scrolls it into view. Its height is the
+    /// items' height; the strip adds no semantic node.
+    pub fn avatar_strip<R>(
+        &mut self,
+        ui: &mut Ui,
+        key: impl Hash + std::fmt::Debug,
+        add: impl FnOnce(&mut Ui, &mut Self) -> R,
+    ) -> R {
+        self.check_pass(ui);
+        let identity = self.scope.instance((key, "stobie.avatar-strip"));
+        let gap = self.tokens.spacing.inline.0;
+        egui::ScrollArea::horizontal()
+            .id_salt(identity.egui_id())
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = gap;
+                    add(ui, self)
+                })
+                .inner
+            })
+            .inner
+    }
+
+    /// A section heading: one line at the width it is given, eliding with
+    /// its full text kept. It takes the whole available width, so put
+    /// controls beside it with [`Self::heading_row`].
     pub fn heading(
         &mut self,
         ui: &mut Ui,
@@ -676,6 +867,15 @@ impl PresentationContext {
     ) -> Response {
         self.check_pass(ui);
         let identity = self.scope.instance(key);
+        self.heading_with_identity(ui, identity, text)
+    }
+
+    fn heading_with_identity(
+        &mut self,
+        ui: &mut Ui,
+        identity: PresentationId,
+        text: &str,
+    ) -> Response {
         let response = crate::pane_content::scoped_section_heading(
             ui,
             identity.text_instance(),

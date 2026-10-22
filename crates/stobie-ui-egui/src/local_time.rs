@@ -514,6 +514,69 @@ impl LocalTime {
         format!("{day} at {}", self.time_of(&civil))
     }
 
+    /// The [relative day](LocalTime::relative_day) as it reads inside a
+    /// sentence: "today", "yesterday", "tomorrow", "on Tuesday" and "on
+    /// 14 Apr", for text such as "Changed on Tuesday".
+    pub fn relative_day_in_sentence(&self, at: Timestamp) -> String {
+        self.relative_day_in_sentence_of(&self.civil(at), &self.civil(self.now()))
+    }
+
+    /// The relative day and the time of day as they read inside a sentence:
+    /// "today at 3:30 PM", "on Saturday at 9:41 AM", "on 14 Apr at 7:00 AM",
+    /// for text such as "Signed in today at 3:30 PM".
+    pub fn relative_day_and_time_in_sentence(&self, at: Timestamp) -> String {
+        let civil = self.civil(at);
+        let day = self.relative_day_in_sentence_of(&civil, &self.civil(self.now()));
+        format!("{day} at {}", self.time_of(&civil))
+    }
+
+    /// How long until the day in this zone changes, from the clock's current
+    /// time: when "Today" becomes "Yesterday" and a time of day in
+    /// [`compact`](LocalTime::compact) becomes a day. Schedule one pass then,
+    /// such as with `Frame::request_repaint_after`, rather than repainting
+    /// while waiting.
+    ///
+    /// The day changes at the next midnight on the zone's wall clock, or at
+    /// the first instant of the next day where a daylight-saving change skips
+    /// midnight, so a day with a change is 23 or 25 hours long. The duration
+    /// is exact when the zone's offset changes at most once before the next
+    /// day; where the zone's answers do not agree on when the day changes, it
+    /// is at most an hour, so asking again then cannot be late by more.
+    pub fn until_next_day(&self) -> Duration {
+        let now = self.now();
+        let today = self.civil(now);
+        let day = today.day_number();
+        let millis_into_day = (i64::from(today.hour) * 3_600
+            + i64::from(today.minute) * 60
+            + i64::from(today.second))
+            * MILLIS_PER_SECOND
+            + now.0.rem_euclid(MILLIS_PER_SECOND);
+        // Midnight if the offset holds until then.
+        let guess = now.0 + SECONDS_PER_DAY * MILLIS_PER_SECOND - millis_into_day;
+        let mut next = guess;
+        for _ in 0..3 {
+            if next <= now.0 || next > Timestamp::MAX.0 {
+                break;
+            }
+            let (at_next, before) = (
+                self.zone.civil(Timestamp(next)),
+                self.zone.civil(Timestamp(next - 1)),
+            );
+            if at_next.day_number() != day && before.day_number() == day {
+                return Timestamp(next).saturating_duration_since(now);
+            }
+            // The offset changed before `next`: midnight on the offset that
+            // `next` has, which also finds the first instant of a day whose
+            // midnight a change skipped.
+            next = ((day + 1) * SECONDS_PER_DAY - i64::from(at_next.utc_offset_seconds))
+                * MILLIS_PER_SECOND;
+        }
+        Timestamp(guess)
+            .saturating_duration_since(now)
+            .min(UNVERIFIED_DAY_CHANGE)
+            .max(Duration::from_millis(1))
+    }
+
     /// The time of day for an instant today, and otherwise the
     /// [relative day](LocalTime::relative_day): what a list of
     /// conversations shows beside each one.
@@ -545,12 +608,22 @@ impl LocalTime {
     }
 
     fn relative_day_of(&self, civil: &CivilDateTime, today: &CivilDateTime) -> String {
-        match civil.day_number() - today.day_number() {
-            0 => "Today".into(),
-            -1 => "Yesterday".into(),
-            1 => "Tomorrow".into(),
-            -6..=-2 => civil.weekday.name().into(),
-            _ => self.short_date_of(civil, today),
+        match RelativeDay::of(civil, today) {
+            RelativeDay::Today => "Today".into(),
+            RelativeDay::Yesterday => "Yesterday".into(),
+            RelativeDay::Tomorrow => "Tomorrow".into(),
+            RelativeDay::Weekday(weekday) => weekday.name().into(),
+            RelativeDay::Date => self.short_date_of(civil, today),
+        }
+    }
+
+    fn relative_day_in_sentence_of(&self, civil: &CivilDateTime, today: &CivilDateTime) -> String {
+        match RelativeDay::of(civil, today) {
+            RelativeDay::Today => "today".into(),
+            RelativeDay::Yesterday => "yesterday".into(),
+            RelativeDay::Tomorrow => "tomorrow".into(),
+            RelativeDay::Weekday(weekday) => format!("on {}", weekday.name()),
+            RelativeDay::Date => format!("on {}", self.short_date_of(civil, today)),
         }
     }
 
@@ -570,6 +643,34 @@ impl LocalTime {
         }
     }
 }
+
+/// Which relative day a civil date is, shared by the sentence-initial and
+/// in-sentence forms.
+enum RelativeDay {
+    Today,
+    Yesterday,
+    Tomorrow,
+    /// Two to six days before today, by the weekday's name.
+    Weekday(Weekday),
+    /// Any other day, by its short date.
+    Date,
+}
+
+impl RelativeDay {
+    fn of(civil: &CivilDateTime, today: &CivilDateTime) -> Self {
+        match civil.day_number() - today.day_number() {
+            0 => Self::Today,
+            -1 => Self::Yesterday,
+            1 => Self::Tomorrow,
+            -6..=-2 => Self::Weekday(civil.weekday),
+            _ => Self::Date,
+        }
+    }
+}
+
+/// The longest [`LocalTime::until_next_day`] gives when the zone's answers do
+/// not agree on when the day changes.
+const UNVERIFIED_DAY_CHANGE: Duration = Duration::from_secs(3_600);
 
 /// A duration for people, in its largest two units, rounded down: "45 s",
 /// "12 min", "2 h", "2 h 10 min", "1 day 4 h", "3 days".
@@ -907,6 +1008,166 @@ mod tests {
         let in_utc = local.clone().with_zone(TimeZone::utc());
         assert_eq!(in_utc.relative_day(utc(2026, 4, 15, 23, 59)), "Yesterday");
         assert_eq!(in_utc.relative_day(utc(2026, 4, 16, 0, 0)), "Today");
+    }
+
+    #[test]
+    fn in_sentence_forms_share_the_relative_day() {
+        // Thursday 16 April 2026, 10:00 in Adelaide.
+        let now = utc(2026, 4, 16, 0, 30);
+        let local = adelaide(now);
+        let days_ago = |days: i64| Timestamp::from_unix_millis(now.0 - days * 24 * HOUR).unwrap();
+        for (days, initial, in_sentence) in [
+            (0, "Today", "today"),
+            (1, "Yesterday", "yesterday"),
+            (-1, "Tomorrow", "tomorrow"),
+            (5, "Saturday", "on Saturday"),
+            (7, "9 Apr", "on 9 Apr"),
+            (-2, "18 Apr", "on 18 Apr"),
+            (365, "16 Apr 2025", "on 16 Apr 2025"),
+        ] {
+            assert_eq!(local.relative_day(days_ago(days)), initial);
+            assert_eq!(local.relative_day_in_sentence(days_ago(days)), in_sentence);
+            assert_eq!(
+                local.relative_day_and_time_in_sentence(days_ago(days)),
+                format!("{in_sentence} at 10:00 AM")
+            );
+        }
+        let us = local.clone().with_locale(TimeLocale::ENGLISH_US);
+        assert_eq!(
+            us.relative_day_and_time_in_sentence(days_ago(365)),
+            "on Apr 16, 2025 at 10:00 AM"
+        );
+        assert_eq!(
+            local
+                .with_locale(GB)
+                .relative_day_and_time_in_sentence(days_ago(5)),
+            "on Saturday at 10:00"
+        );
+    }
+
+    /// The first instant after the clock's time whose day differs, found a
+    /// minute and then a second at a time: an oracle for `until_next_day`.
+    fn next_day_by_scan(local: &LocalTime) -> Duration {
+        let now = local.now();
+        let day = local.civil(now).day_number();
+        let same_day = |at: i64| local.civil(Timestamp(at)).day_number() == day;
+        // Days change on whole seconds: every offset is whole seconds.
+        let mut at = now.0 - now.0.rem_euclid(1_000) + 1_000;
+        while same_day(at + 60_000) {
+            at += 60_000;
+        }
+        while same_day(at) {
+            at += 1_000;
+        }
+        Timestamp(at).saturating_duration_since(now)
+    }
+
+    #[test]
+    fn the_next_day_starts_at_the_next_midnight_on_the_zone_clock() {
+        // 00:00 on Thursday 16 April 2026 in Adelaide (+9:30).
+        let midnight = utc(2026, 4, 15, 14, 30);
+        let at = |millis: i64| adelaide(Timestamp::from_unix_millis(midnight.0 + millis).unwrap());
+        assert_eq!(at(0).until_next_day(), Duration::from_secs(86_400));
+        assert_eq!(at(1).until_next_day(), Duration::from_millis(86_399_999));
+        assert_eq!(at(-1).until_next_day(), Duration::from_millis(1));
+        assert_eq!(at(-500).until_next_day(), Duration::from_millis(500));
+        assert_eq!(at(-60_000).until_next_day(), Duration::from_secs(60));
+        assert_eq!(
+            at(-HOUR * 14).until_next_day(),
+            Duration::from_secs(14 * 3_600)
+        );
+        // In UTC the same instant is 14:30, so its day changes at 00:00 UTC.
+        let in_utc = at(0).with_zone(TimeZone::utc());
+        assert_eq!(
+            in_utc.until_next_day(),
+            Duration::from_secs(9 * 3_600 + 30 * 60)
+        );
+        // The day it gives is the day `compact` and `relative_day` change.
+        let now = at(-90_000);
+        let changes =
+            Timestamp::from_unix_millis(now.now().0 + now.until_next_day().as_millis() as i64)
+                .unwrap();
+        assert_eq!(now.relative_day(midnight), "Tomorrow");
+        assert_eq!(
+            now.clone()
+                .with_clock(Clock::Fixed(changes))
+                .relative_day(midnight),
+            "Today"
+        );
+        let just_before = Timestamp::from_unix_millis(changes.0 - 1).unwrap();
+        assert_eq!(
+            now.with_clock(Clock::Fixed(just_before))
+                .relative_day(midnight),
+            "Tomorrow"
+        );
+    }
+
+    #[test]
+    fn the_next_day_counts_daylight_saving_days_of_23_and_25_hours() {
+        // Adelaide's 25-hour 5 April 2026, from its midnight (+10:30) and
+        // from after 02:00 became 02:00 again (+9:30).
+        assert_eq!(
+            adelaide(utc(2026, 4, 4, 13, 30)).until_next_day(),
+            Duration::from_secs(25 * 3_600)
+        );
+        assert_eq!(
+            adelaide(utc(2026, 4, 4, 17, 30)).until_next_day(),
+            Duration::from_secs(21 * 3_600)
+        );
+        // Its 23-hour 4 October 2026.
+        assert_eq!(
+            adelaide(utc(2026, 10, 3, 14, 30)).until_next_day(),
+            Duration::from_secs(23 * 3_600)
+        );
+        // Santiago changes at midnight. On 4 April 2026, 24:00 (-3:00) becomes
+        // 23:00 (-4:00): from 22:00 the day lasts three more hours.
+        let santiago = |at| {
+            LocalTime::new(
+                TimeZone::named("America/Santiago").unwrap(),
+                AU,
+                Clock::Fixed(at),
+            )
+        };
+        assert_eq!(
+            santiago(utc(2026, 4, 5, 1, 0)).until_next_day(),
+            Duration::from_secs(3 * 3_600)
+        );
+        // On 5 September 2026, 24:00 (-4:00) becomes 01:00 (-3:00): midnight
+        // never happens, and from 23:00 the next day starts in an hour, at 01:00.
+        let saturday = santiago(utc(2026, 9, 6, 3, 0));
+        assert_eq!(saturday.until_next_day(), Duration::from_secs(3_600));
+        let then = Timestamp::from_unix_millis(utc(2026, 9, 6, 3, 0).0 + HOUR).unwrap();
+        assert_eq!(
+            (saturday.civil(then).day, saturday.civil(then).hour),
+            (6, 1)
+        );
+    }
+
+    #[test]
+    fn the_next_day_agrees_with_a_scan_around_daylight_saving_changes() {
+        let starts = [
+            ("Australia/Adelaide", utc(2026, 4, 3, 12, 0)),
+            ("Australia/Adelaide", utc(2026, 10, 2, 12, 0)),
+            ("America/Santiago", utc(2026, 4, 3, 12, 0)),
+            ("America/Santiago", utc(2026, 9, 4, 12, 0)),
+            ("America/New_York", utc(2026, 3, 7, 12, 0)),
+            ("America/New_York", utc(2026, 10, 31, 12, 0)),
+            ("Pacific/Chatham", utc(2026, 4, 3, 12, 0)),
+            ("Australia/Lord_Howe", utc(2026, 4, 3, 12, 0)),
+        ];
+        for (zone, start) in starts {
+            let zone = TimeZone::named(zone).unwrap();
+            // Every 37 minutes and 13.5 seconds across three days.
+            for step in 0..((3 * 24 * 60) / 37) {
+                let now = Timestamp::from_unix_millis(start.0 + step * 2_233_500).unwrap();
+                let local = LocalTime::new(zone.clone(), AU, Clock::Fixed(now));
+                assert_eq!(
+                    local.until_next_day(),
+                    next_day_by_scan(&local),
+                    "{zone:?} at {now:?}"
+                );
+            }
+        }
     }
 
     #[test]

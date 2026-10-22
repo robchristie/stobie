@@ -11,21 +11,21 @@
       "vertical_alignment": "centre",
       "allocated_rect": {
         "min_x": 1099.125,
-        "min_y": 148.25,
+        "min_y": 154.25,
         "max_x": 1137,
-        "max_y": 176.25
+        "max_y": 182.25
       },
       "painted_rect": {
         "min_x": 1099.125,
-        "min_y": 153.75,
+        "min_y": 159.75,
         "max_x": 1137,
-        "max_y": 170.75
+        "max_y": 176.75
       },
       "clip_rect": {
         "min_x": 1099.125,
-        "min_y": 148.25,
+        "min_y": 154.25,
         "max_x": 1137,
-        "max_y": 176.25
+        "max_y": 182.25
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -42,22 +42,22 @@
       "horizontal_alignment": "centre",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 1063.125,
-        "min_y": 226.5,
-        "max_x": 1101,
-        "max_y": 254.5
+        "min_x": 1051.125,
+        "min_y": 244.5,
+        "max_x": 1089,
+        "max_y": 272.5
       },
       "painted_rect": {
-        "min_x": 1063.125,
-        "min_y": 232,
-        "max_x": 1101,
-        "max_y": 249
+        "min_x": 1051.125,
+        "min_y": 250,
+        "max_x": 1089,
+        "max_y": 267
       },
       "clip_rect": {
-        "min_x": 1063.125,
-        "min_y": 226.5,
-        "max_x": 1101,
-        "max_y": 254.5
+        "min_x": 1051.125,
+        "min_y": 244.5,
+        "max_x": 1089,
+        "max_y": 272.5
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -74,22 +74,22 @@
       "horizontal_alignment": "centre",
       "vertical_alignment": "centre",
       "allocated_rect": {
-        "min_x": 1063.125,
-        "min_y": 338.5,
-        "max_x": 1101,
-        "max_y": 366.5
+        "min_x": 1051.125,
+        "min_y": 368.5,
+        "max_x": 1089,
+        "max_y": 396.5
       },
       "painted_rect": {
-        "min_x": 1063.125,
-        "min_y": 344,
-        "max_x": 1101,
-        "max_y": 361
+        "min_x": 1051.125,
+        "min_y": 374,
+        "max_x": 1089,
+        "max_y": 391
       },
       "clip_rect": {
-        "min_x": 1063.125,
-        "min_y": 338.5,
-        "max_x": 1101,
-        "max_y": 366.5
+        "min_x": 1051.125,
+        "min_y": 368.5,
+        "max_x": 1089,
+        "max_y": 396.5
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -144,21 +144,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 199.25,
+        "min_y": 211.25,
         "max_x": 1150,
-        "max_y": 215.25
+        "max_y": 227.25
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 199.25,
+        "min_y": 211.25,
         "max_x": 636.5625,
-        "max_y": 215.25
+        "max_y": 227.25
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 199.25,
+        "min_y": 211.25,
         "max_x": 1150,
-        "max_y": 215.25
+        "max_y": 227.25
       },
       "overflow": "ellipsis",
       "interaction": "inert",
@@ -181,21 +181,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 277.5,
+        "min_y": 301.5,
         "max_x": 1150,
-        "max_y": 293.5
+        "max_y": 317.5
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 277.5,
+        "min_y": 301.5,
         "max_x": 651.6875,
-        "max_y": 293.5
+        "max_y": 317.5
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 277.5,
+        "min_y": 301.5,
         "max_x": 1150,
-        "max_y": 293.5
+        "max_y": 317.5
       },
       "overflow": "ellipsis",
       "interaction": "inert",

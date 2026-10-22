@@ -1,11 +1,16 @@
+mod avatar_strip;
 mod avatars;
 mod buttons;
 mod chat;
+mod choice;
+mod code_copy;
 mod composer;
 mod copy;
 mod data;
 mod dialogs;
 mod dock;
+mod fields;
+mod headers;
 mod icons;
 mod markdown;
 mod navigation;
@@ -13,6 +18,7 @@ mod reading;
 mod reference;
 mod responsive;
 mod rows;
+mod scroll;
 mod status_chips;
 mod toolbars;
 mod typography;
@@ -25,12 +31,15 @@ use stobie_ui_egui::{
 
 use crate::catalogue::{StoryId, story_definition};
 
+pub use avatar_strip::AvatarStripFixtureState;
 pub use chat::ChatFixtureState;
 pub use dialogs::DialogFixtureState;
 pub(crate) use dock::DockSceneState;
+pub use fields::FieldFixtureState;
 pub use icons::{IconControl, IconFixtureState};
 pub use navigation::{Destination, NavigationFixtureState};
 pub use responsive::ResponsiveFixtureState;
+pub use scroll::ScrollFixtureState;
 pub use status_chips::StatusChipFixtureState;
 
 /// Per-story fixture state. Selecting another story resets it.
@@ -46,6 +55,11 @@ pub(crate) struct StoryState {
     pub(crate) chat: ChatFixtureState,
     pub(crate) responsive: ResponsiveFixtureState,
     pub(crate) dialog: DialogFixtureState,
+    pub(crate) header: headers::HeaderFixtureState,
+    pub(crate) scroll: ScrollFixtureState,
+    pub(crate) choice: choice::ChoiceFixtureState,
+    pub(crate) fields: FieldFixtureState,
+    pub(crate) avatar_strip: AvatarStripFixtureState,
 }
 
 /// What a story reports besides the observations it registers.
@@ -157,6 +171,24 @@ fn present_story(
             &mut state.dialog,
             &mut report,
         ),
+        StoryId::HeadingControls | StoryId::NavigationHeader => headers::story(
+            ui,
+            story,
+            tokens,
+            font_scale,
+            &mut state.header,
+            &mut report,
+        ),
+        StoryId::ChoiceSegmented => {
+            choice::story(ui, tokens, font_scale, &mut state.choice, &mut report)
+        }
+        StoryId::AvatarsStrip => {
+            avatar_strip::story(ui, tokens, font_scale, &mut state.avatar_strip, &mut report)
+        }
+        StoryId::MarkdownCodeCopy => code_copy::story(ui, tokens, font_scale, &mut report),
+        StoryId::FormTextFields => {
+            fields::story(ui, tokens, font_scale, &mut state.fields, &mut report)
+        }
         StoryId::IconsVocabulary => observe_visible_only(ui, |ui| {
             // The vocabulary scrolls at large display scales: audit only the
             // captions that are fully visible.
@@ -287,6 +319,9 @@ fn present_story(
         }
         StoryId::ReferenceDiagnostics => {
             reference::diagnostics_story(ui, tokens, font_scale, &mut observations)
+        }
+        StoryId::ScrollLoadOlder => {
+            scroll::story(ui, tokens, font_scale, &mut state.scroll, &mut report)
         }
     }
     report.selectable |= observations.iter().any(selectable);

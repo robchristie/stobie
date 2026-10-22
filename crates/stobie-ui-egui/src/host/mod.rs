@@ -165,9 +165,16 @@ pub trait Application: 'static {
     fn observe(&self, _observation: &mut Observation<'_>) {}
 
     /// Appearance preferences. The host applies the design system for them at
-    /// startup and whenever they change, and resolves [`Frame::tokens`].
+    /// startup and whenever they change, and resolves [`Frame::tokens`]. It
+    /// asks in every pass, so keep this cheap.
+    ///
+    /// The default, [`UiPreferences::system`], follows the system's light or
+    /// dark appearance and, in the browser, its text size. Override it to
+    /// offer a choice: start from [`UiPreferences::system`] to keep following
+    /// what the person has not chosen, or pin a theme, as tests and evidence
+    /// do, for a deterministic appearance.
     fn preferences(&self) -> UiPreferences {
-        UiPreferences::default()
+        UiPreferences::system()
     }
 
     /// The colour theme the design system and [`Frame::tokens`] resolve,
@@ -459,6 +466,33 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         )
     }
 
+    /// Present a segmented choice of `spec`'s options, bound to one action
+    /// whose argument is the option activated, such as a choice ID (see
+    /// [`PresentationContext::segmented_choice`]). Activating an option, by
+    /// clicking it or, in a single choice, moving to it with the arrow keys,
+    /// triggers the action with that option's argument; the application
+    /// records the choice in [`Application::perform_with`] and presents it on
+    /// a later pass. Each option's availability is the application's for its
+    /// argument, and agents see one control per option.
+    pub fn segmented_choice(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: &crate::SegmentedChoiceSpec<'_>,
+    ) -> crate::SegmentedChoiceResponse {
+        let target = target.into_target(presentation.pane());
+        let availability = self.availability;
+        let response =
+            presentation.segmented_choice(ui, target.action, target, spec, |target, argument| {
+                availability(target, argument)
+            });
+        if let Some(argument) = response.activated_argument(spec) {
+            self.triggers.push((target, argument.clone()));
+        }
+        response
+    }
+
     /// Present one row of a list whose whole surface performs the action for
     /// that row, named by `spec.title`, and trigger it with the row's argument
     /// when clicked. Pass a [`BoundAction`](crate::BoundAction) carrying the
@@ -474,6 +508,36 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         let target = bound.target();
         let availability = (self.availability)(target, bound.argument());
         let response = presentation.list_row(
+            ui,
+            bound.action(),
+            spec,
+            target,
+            &availability,
+            bound.argument(),
+        );
+        if response.clicked() {
+            self.triggers.push((target, bound.argument().clone()));
+        }
+        response
+    }
+
+    /// Present one pinned person or thing in a strip: its avatar over its
+    /// caption in one target, named by the caption, that triggers the action
+    /// with its argument when clicked (see [`crate::avatar_item`]). Pass a
+    /// [`BoundAction`](crate::BoundAction) carrying the item's ID, so agents
+    /// open it by that ID, and present items inside
+    /// [`PresentationContext::avatar_strip`]. A hidden item presents nothing.
+    pub fn avatar_item(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        target: impl IntoActionTarget<A>,
+        spec: &crate::AvatarItemSpec<'_>,
+    ) -> Response {
+        let bound = target.into_bound(presentation.pane());
+        let target = bound.target();
+        let availability = (self.availability)(target, bound.argument());
+        let response = presentation.avatar_item(
             ui,
             bound.action(),
             spec,
@@ -551,6 +615,69 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
             }
         }
         response
+    }
+
+    /// [`Self::navigation`] with `options`: an avatar, a subtitle and
+    /// controls in the open item's header, and which bodies are inset (see
+    /// [`PresentationContext::navigation_with`]). Back, the toggle and each
+    /// header control trigger their actions, with their arguments, when
+    /// clicked; the controls' responses come back in the order given.
+    pub fn navigation_with(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::NavigationSpec<'_, A>,
+        options: &crate::NavigationOptions<'_, A>,
+        mut render: impl FnMut(&mut Ui, &mut PresentationContext, &mut Self, crate::NavigationPane),
+    ) -> (
+        crate::NavigationResponse<A>,
+        Vec<crate::HeaderControlResponse<A>>,
+    ) {
+        let availability = self.availability;
+        let (response, controls) = presentation.navigation_with(
+            ui,
+            key,
+            spec,
+            options,
+            availability,
+            |ui, presentation, pane| render(ui, presentation, self, pane),
+        );
+        for control in [&response.back, &response.toggle].into_iter().flatten() {
+            if control.response.clicked() {
+                self.triggers.push((control.target, ActionArgument::None));
+            }
+        }
+        self.trigger_header_controls(&controls);
+        (response, controls)
+    }
+
+    /// Present a heading with controls at its trailing edge, on one line
+    /// when they fit beside the title and with the controls on a line of
+    /// their own below it when they do not (see
+    /// [`PresentationContext::heading_row`]). Each control triggers its
+    /// action, with its argument, when clicked; a hidden one presents
+    /// nothing.
+    pub fn heading_row(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        text: &str,
+        controls: &[crate::HeaderControl<A>],
+    ) -> crate::HeadingRowResponse<A> {
+        let response = presentation.heading_row(ui, key, text, controls, self.availability);
+        self.trigger_header_controls(&response.controls);
+        response
+    }
+
+    fn trigger_header_controls(&mut self, controls: &[crate::HeaderControlResponse<A>]) {
+        for control in controls {
+            if control.response.clicked() {
+                self.triggers
+                    .push((control.target, control.argument.clone()));
+            }
+        }
     }
 
     /// Present one conversation in a list: its avatar, name, one-line
@@ -656,9 +783,32 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         response
     }
 
+    /// Present a labelled text field for the application's text (see
+    /// [`PresentationContext::text_field`] for its conventions). The text
+    /// stays the application's: an edit emits `edit(text)` with the whole
+    /// new text, to apply in [`Application::apply`]. The response reports
+    /// whether Return submitted a single-line field.
+    pub fn text_field(
+        &mut self,
+        ui: &mut Ui,
+        presentation: &mut PresentationContext,
+        key: impl Hash + std::fmt::Debug,
+        spec: &crate::TextFieldSpec<'_>,
+        text: &str,
+        edit: impl FnOnce(String) -> I,
+    ) -> crate::TextFieldResponse {
+        let mut edited = text.to_owned();
+        let response = presentation.text_field(ui, key, spec, &mut edited);
+        if response.changed {
+            self.intents.push(edit(edited));
+        }
+        response
+    }
+
     /// Present a modal dialog or sheet with `content` inside it (see
     /// [`PresentationContext::dialog`]), and trigger its dismiss action when
-    /// the close control, Escape or the scrim dismisses it. Present it in
+    /// the close control, Escape or the scrim dismisses it, or its footer action
+    /// (see [`DialogSpec::footer`](crate::DialogSpec::footer)) when pressed. Present it in
     /// every pass while the application's state says it is open, after what
     /// is behind it; dismiss, and the actions inside it, close it.
     ///
@@ -681,6 +831,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         });
         if response.dismissed {
             self.triggers.push((response.dismiss, ActionArgument::None));
+        } else if let Some(footer) = response.footer.filter(|_| response.footer_pressed) {
+            self.triggers.push((footer, ActionArgument::None));
         }
         response
     }
@@ -721,15 +873,7 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
         // A hidden action, such as one whose row argument names nothing,
         // presents no control and publishes no node.
         if !availability.visible() {
-            return ui.interact(
-                egui::Rect::NOTHING,
-                egui::Id::new((
-                    "stobie.hidden-action",
-                    bound.action().stable_id(),
-                    bound.argument().to_value().map(|value| value.to_string()),
-                )),
-                egui::Sense::hover(),
-            );
+            return presentation.hidden_action(ui, key, bound.argument());
         }
         let spec = ActionButtonSpec {
             target,
@@ -738,11 +882,24 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
             emphasis,
             compact: false,
         };
-        let response = if *bound.argument() == ActionArgument::None && bound.subject().is_none() {
+        let labelled = bound.label().is_some() || bound.short_label().is_some();
+        let response = if *bound.argument() == ActionArgument::None
+            && bound.subject().is_none()
+            && !labelled
+        {
             presentation.action_with_content(ui, key, spec, content)
         } else {
-            let name = bound.subject().map(|_| bound.accessible_name());
-            presentation.bound_action(ui, key, spec, content, bound.argument(), name.as_deref())
+            let name = (bound.subject().is_some() || bound.label().is_some())
+                .then(|| bound.accessible_name());
+            presentation.labelled_bound_action(
+                ui,
+                key,
+                spec,
+                content,
+                bound.argument(),
+                name.as_deref(),
+                labelled.then(|| bound.visible_label()),
+            )
         };
         if response.clicked() {
             self.triggers.push((target, bound.argument().clone()));
@@ -1893,19 +2050,31 @@ impl<A: Application> AppHost<A> {
                 if meaning.is_empty() {
                     meaning = "stable".into();
                 }
+                // The argument that tells this binding apart from the
+                // target's others: the validated one, or the refused value
+                // as its control presents it.
+                let mut refused = None;
                 let (availability, argument) = match argument {
                     Ok(ActionArgument::None) => {
                         (self.app.availability(target), ActionArgument::None)
                     }
                     Ok(argument) => (self.app.availability_with(target, &argument), argument),
                     // A control carrying an argument its contract refuses
-                    // stays discoverable, and refuses invocation.
-                    Err(reason) => (
-                        Availability::Disabled {
-                            reason: format!("The control's argument is invalid: {reason}").into(),
-                        },
-                        ActionArgument::None,
-                    ),
+                    // stays discoverable, carrying that value, and refuses
+                    // invocation. It is not the action's own binding, which
+                    // takes any value the contract allows.
+                    Err(reason) => {
+                        refused = node.and_then(|node| node.argument.clone());
+                        (
+                            Availability::Disabled {
+                                reason: format!("The control's argument is invalid: {reason}")
+                                    .into(),
+                            },
+                            refused
+                                .as_ref()
+                                .map_or(ActionArgument::None, carried_argument),
+                        )
+                    }
                 };
                 // A control the dialog scrolled out of view is still its own.
                 let availability = match (&modal, node) {
@@ -1928,7 +2097,11 @@ impl<A: Application> AppHost<A> {
                 // Several controls can present one target, such as a toolbar
                 // button and a viewport's custom action; the first is the
                 // capability's instance.
-                let key = (target, domain.clone(), binding.argument.to_value());
+                let key = (
+                    target,
+                    domain.clone(),
+                    refused.or_else(|| binding.argument.to_value()),
+                );
                 if presented.contains(&key) {
                     continue;
                 }
@@ -2054,32 +2227,43 @@ impl<A: Application> AppHost<A> {
             &nodes,
             observed.copies.into_iter().map(|(copy, _)| copy).collect(),
         );
-        // Visible-only surfaces scroll, so they submit partially visible text.
-        // Audit their measured successes only when complete; keep every failed
-        // attempt and all other text as presented. Reading text and links
-        // declare that a scroll surface clips them, and their recipes omit
-        // text scrolled fully out of view, so their partial text stays.
+        // Visible-only surfaces scroll, so they submit partly visible text.
+        // Publish what is at least partly in view, with the clip it was drawn
+        // within, and omit successful text wholly scrolled out of view; keep
+        // every failed attempt and all other text as presented. Reading text
+        // and links declare that a scroll surface clips them, and their
+        // recipes omit text scrolled fully out of view.
+        let mut scrolled = Vec::new();
         let text: Vec<_> = observed
             .text
             .into_iter()
-            .map(|observed| (observed.text, observed.visible_only))
-            .filter(|(text, visible_only)| {
-                !visible_only
+            .filter(|observed| {
+                let text = &observed.text;
+                !observed.visible_only
                     || text.layout_error.is_some()
                     || text.overflow == crate::TextOverflow::WrapUnbounded
-                    || (text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
-                        && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
-                        && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
-                        && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0)
+                    || (text.clip_rect.max_x > text.clip_rect.min_x
+                        && text.clip_rect.max_y > text.clip_rect.min_y)
             })
-            .map(|(text, _)| text)
+            .enumerate()
+            .map(|(index, observed)| {
+                if observed.visible_only
+                    && observed.text.layout_error.is_none()
+                    && observed.text.overflow != crate::TextOverflow::WrapUnbounded
+                    && !fully_visible(&observed.text)
+                {
+                    scrolled.push(index);
+                }
+                observed.text
+            })
             .collect();
+        let text_audit = audit_visible_only_text(&text, &scrolled);
         let mut snapshot = UiSnapshot {
             frame: self.passes,
             pixels_per_point: context.pixels_per_point(),
             root: SemanticUiId::root(),
             nodes,
-            text_audit: audit_text_layouts(&text),
+            text_audit,
             text_audit_coverage: Some(text_audit_coverage(context, &text)),
             text,
             semantic_audit: Vec::new(),
@@ -2139,6 +2323,46 @@ type Candidate<'a, A> = (
     Option<&'a UiNode>,
     Result<ActionArgument, String>,
 );
+
+/// A control's argument as it presents it, for a value its action's
+/// contract refuses: text, a boolean or a number, or none for any other JSON.
+fn carried_argument(value: &serde_json::Value) -> ActionArgument {
+    match value {
+        serde_json::Value::String(text) => ActionArgument::Text(text.clone()),
+        serde_json::Value::Bool(value) => ActionArgument::Boolean(*value),
+        serde_json::Value::Number(number) => number
+            .as_f64()
+            .map_or(ActionArgument::None, ActionArgument::Number),
+        _ => ActionArgument::None,
+    }
+}
+
+/// Whether `text`'s clip leaves its whole allocation in view, to a point.
+fn fully_visible(text: &TextLayoutObservation) -> bool {
+    text.clip_rect.min_x <= text.allocated_rect.min_x + 1.0
+        && text.clip_rect.min_y <= text.allocated_rect.min_y + 1.0
+        && text.clip_rect.max_x >= text.allocated_rect.max_x - 1.0
+        && text.clip_rect.max_y >= text.allocated_rect.max_y - 1.0
+}
+
+/// Audit published text, where the observations at `scrolled` are bounded
+/// text a visible-only region shows only in part. The region's edge cutting
+/// such text is scrolling, not a layout defect, so each is audited as though
+/// its whole allocation were in view; everything else about its layout is
+/// audited as presented. The published observations keep their clips.
+fn audit_visible_only_text(
+    text: &[TextLayoutObservation],
+    scrolled: &[usize],
+) -> Vec<crate::TextAuditFinding> {
+    if scrolled.is_empty() {
+        return audit_text_layouts(text);
+    }
+    let mut audited = text.to_vec();
+    for &index in scrolled {
+        audited[index].clip_rect = audited[index].allocated_rect;
+    }
+    audit_text_layouts(&audited)
+}
 
 /// Bind each registered copy control whose button node this pass published,
 /// with that node's pane, domain and availability. A control clipped out of
@@ -2272,7 +2496,11 @@ fn pair_text_fields(
 }
 
 #[cfg(test)]
+mod avatar_item_tests;
+#[cfg(test)]
 mod chat_tests;
+#[cfg(test)]
+mod choice_tests;
 #[cfg(test)]
 mod composer_tests;
 #[cfg(test)]
@@ -2284,12 +2512,18 @@ mod dialog_navigation_tests;
 #[cfg(test)]
 mod dialog_tests;
 #[cfg(test)]
+mod heading_tests;
+#[cfg(test)]
 mod link_tests;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
 mod row_tests;
 #[cfg(test)]
+mod scroll_tests;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod text_field_tests;
 #[cfg(test)]
 mod text_tests;

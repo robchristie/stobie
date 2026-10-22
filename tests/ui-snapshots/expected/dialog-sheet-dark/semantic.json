@@ -25,14 +25,15 @@
       "name": "Name",
       "rect": {
         "min_x": 453,
-        "min_y": 355,
+        "min_y": 357,
         "max_x": 987,
-        "max_y": 376.25
+        "max_y": 389.25
       },
       "enabled": true,
       "focused": true,
       "selected": false,
       "actions": [],
+      "text_selectable": true,
       "value": "Morning briefing"
     },
     {
@@ -42,14 +43,15 @@
       "name": "Prompt",
       "rect": {
         "min_x": 453,
-        "min_y": 407.25,
+        "min_y": 420.25,
         "max_x": 987,
-        "max_y": 463
+        "max_y": 487
       },
       "enabled": true,
       "focused": false,
       "selected": false,
       "actions": [],
+      "text_selectable": true,
       "value": "Summarise the weather, my calendar and the overnight news."
     },
     {
@@ -59,10 +61,10 @@
       "name": "Close",
       "description": "Close the editor without saving",
       "rect": {
-        "min_x": 955,
-        "min_y": 297,
+        "min_x": 943,
+        "min_y": 287,
         "max_x": 987,
-        "max_y": 329
+        "max_y": 331
       },
       "enabled": true,
       "focused": false,
@@ -78,9 +80,9 @@
       "name": "Edit routine",
       "rect": {
         "min_x": 440,
-        "min_y": 284,
+        "min_y": 274,
         "max_x": 1000,
-        "max_y": 615.25
+        "max_y": 627
       },
       "enabled": true,
       "focused": false,
@@ -88,16 +90,16 @@
       "actions": []
     },
     {
-      "id": "presentation.5d4e22f273a512e9",
+      "id": "presentation.bc35f39abc5d66fb",
       "parent": "presentation.513b7c3f8200089e",
       "role": "button",
       "name": "Save",
       "description": "Save the routine and close the editor",
       "rect": {
-        "min_x": 453,
-        "min_y": 570,
-        "max_x": 496.71875,
-        "max_y": 602
+        "min_x": 943.28125,
+        "min_y": 582,
+        "max_x": 987,
+        "max_y": 614
       },
       "enabled": true,
       "focused": false,
@@ -114,9 +116,9 @@
       "description": "Send a notification when the routine runs",
       "rect": {
         "min_x": 453,
-        "min_y": 521,
+        "min_y": 545,
         "max_x": 987,
-        "max_y": 553
+        "max_y": 577
       },
       "enabled": true,
       "focused": false,

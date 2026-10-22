@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "heading/controls",
+      "rect": {
+        "min_x": 682,
+        "min_y": 54,
+        "max_x": 1002,
+        "max_y": 574
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.37840d973cf9f9dd",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Muted",
+      "description": "Mute or unmute this conversation",
+      "rect": {
+        "min_x": 898,
+        "min_y": 382,
+        "max_x": 942,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": [
+        "gallery.header.mute"
+      ]
+    },
+    {
+      "id": "presentation.3d63720d6daae4ba",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Share",
+      "description": "Share a link to this list",
+      "rect": {
+        "min_x": 802,
+        "min_y": 382,
+        "max_x": 846,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.share"
+      ]
+    },
+    {
+      "id": "presentation.3d92690bf698f0c0",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Settings",
+      "description": "Change this list's settings",
+      "rect": {
+        "min_x": 946,
+        "min_y": 382,
+        "max_x": 990,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.settings"
+      ]
+    },
+    {
+      "id": "presentation.914f2e0f612d2bc6",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Edit",
+      "description": "Edit this section",
+      "rect": {
+        "min_x": 946,
+        "min_y": 172,
+        "max_x": 990,
+        "max_y": 216
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.edit"
+      ]
+    },
+    {
+      "id": "presentation.b3921858743175e3",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Edit profile",
+      "description": "Edit this person's profile",
+      "rect": {
+        "min_x": 912.6875,
+        "min_y": 262,
+        "max_x": 990,
+        "max_y": 294
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.edit_profile"
+      ]
+    },
+    {
+      "id": "presentation.b4a4ee731058f3b6",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Search",
+      "description": "Search this list",
+      "rect": {
+        "min_x": 850,
+        "min_y": 382,
+        "max_x": 894,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.search"
+      ]
+    },
+    {
+      "id": "presentation.b69ebcc8002da4be",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Edit",
+      "description": "Edit this section",
+      "rect": {
+        "min_x": 754,
+        "min_y": 382,
+        "max_x": 798,
+        "max_y": 426
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [
+        "gallery.header.edit"
+      ]
+    },
+    {
+      "id": "presentation.ddae57b7886d184e",
+      "parent": "gallery.story",
+      "role": "button",
+      "name": "Pinned Grace Brewster Murray Hopper",
+      "description": "Pin or unpin this conversation",
+      "rect": {
+        "min_x": 864.6875,
+        "min_y": 256,
+        "max_x": 908.6875,
+        "max_y": 300
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": [
+        "gallery.header.pin"
+      ],
+      "argument": "grace"
+    }
+  ],
+  "semantic_audit": []
+}

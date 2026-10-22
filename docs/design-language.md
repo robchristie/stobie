@@ -41,7 +41,10 @@ Light and dark are equal authored modes. High contrast is an orthogonal
 preference with a light and dark result, not a colour inversion. Authored
 foreground/background text pairs target at least WCAG 2.2 AA 4.5:1 in standard
 modes and 7:1 in high-contrast modes. The token compiler tests primary and
-muted text on core surfaces, text on selection, and text on the accent.
+muted text on the canvas, panel, raised, hover, quiet-hover and selection
+fills, text on the accent, and the focus ring and selection marker at 3:1. It
+also requires the hover fills to differ from selection and the resting
+surfaces in every theme.
 
 ## Geometry, density and hit targets
 
@@ -53,6 +56,10 @@ Compact density uses 32-point application chrome, 24-point visual controls and
 Visual geometry and interaction geometry are distinct. A compact control may
 paint at 24 points while retaining at least a 32-point hit target; pointer and
 keyboard affordances must not shrink simply because information density rises.
+An icon-only action, which has no label to aim at, takes a square 44-point
+touch target (`icon.touchTargetSize`) in both densities, while its chrome
+paints at the control height, centred within it. Text actions keep the
+density's minimum hit size, padded to at least that width for short labels.
 The analytical reference uses three-point corner radii. Components may increase their
 allocation for 125% or 150% font scale, but must not silently reduce hit size.
 
@@ -269,8 +276,8 @@ and hold any content, such as Markdown with lists, links and code. A
 conversation list is a column of full-width rows: a decorative avatar, the
 name, a one-line preview, the time and, while there is something unread, a
 small accent dot; the current conversation keeps the selection fill and
-marker, and a hovered row takes the raised surface so it never looks
-current. A switch is a settings row whose label always shows; its state is
+marker, and a hovered row takes the hover surface, which every theme keeps
+apart from selection, so it never looks current. A switch is a settings row whose label always shows; its state is
 the track and thumb (an accent track with the thumb at the end for on, an
 outlined track with the thumb at the start for off), never the row's fill.
 Names, previews, times, unread words and states are stated in words for
@@ -374,13 +381,13 @@ reusable component increments.
 `ApplicationTheme::new(ThemeColours)` accepts four complete typed colour sets:
 light, dark, light high contrast and dark high contrast. Its private validated
 state prevents a partially edited theme becoming the production resolver.
-`ApplicationTheme::analytical()` preserves the original default colours under
-an explicit legacy compatibility policy. Those colours do not pass the stricter
-muted-text state checks for new application themes. Exact analytical JSON can
-round-trip through `ApplicationTheme::from_analytical_colours`; that constructor
-accepts only equality with all four complete authored reference palettes. Any
-edit, including to an otherwise unchecked role, must use `ApplicationTheme::new`
-and satisfy strict validation. Neither route silently adjusts the palette.
+`ApplicationTheme::analytical()` resolves the authored default colours, which
+pass the same strict validation as any application theme. Exact analytical JSON
+also round-trips through `ApplicationTheme::from_analytical_colours`, kept for
+applications that already call it; that constructor accepts only equality with
+all four complete authored reference palettes. Any edit, including to an
+otherwise unchecked role, must use `ApplicationTheme::new` and satisfy strict
+validation. Neither route silently adjusts the palette.
 
 Applications call `theme.resolve(variant, density, typography_profile)` for
 custom recipes and `apply_design_system_with_theme` for native styles. Both
@@ -397,10 +404,13 @@ actions omit their resting outline, retain hover treatment and always retain
 the independent keyboard-focus ring. A pointer press on an ordinary action uses
 selection colours, while a primary action retains its primary pair. Disabled
 foreground is resolved before text layout, including for primary actions.
-Enabled pressed/selected actions also paint an inset state outline using the
-selection indicator (primary foreground on Primary), separate from the outer
-focus ring. This distinguishes active feedback where the reference theme aliases
-hover and selection fills. Primary hover changes its outer border to the primary
+Pressed/selected actions also paint an inset state outline using the
+selection indicator (primary foreground on Primary, the error colour on
+Destructive), separate from the outer
+focus ring, so the on state is never told by fill colour alone. A disabled
+action keeps its on state in a muted form: a dimmed selection fill and a
+muted-text inset outline. A disabled `QuietBorderless` action stays borderless
+and unfilled. Primary hover changes its outer border to the primary
 foreground while retaining its foreground/background pair.
 
 New themes validate opaque primary and muted text on canvas, panel, raised,
@@ -422,9 +432,8 @@ Parse and validate once at build/startup; never parse colours per frame. The
 framework does not acquire application names, runtime selectors or a stylesheet
 language. The gallery workbench exports this exact type for checking into an
 application repository. Invalid edits preserve the last accepted preview and
-disable export. The workbench identifies analytical exports as legacy
-compatibility, names the exact-reference import route, and applies strict
-validation to every edited palette. The analytical token generator remains
+disable export. The workbench applies strict validation to every palette,
+the analytical reference included. The analytical token generator remains
 unchanged as the default source-authoring route, with the new semantic roles
 generated from its checked-in source.
 
@@ -463,6 +472,33 @@ Schema version 1 persists with the application state; missing fields and
 unknown current values fall back independently, obsolete schema versions reset
 predictably, and font scale is clamped to 100–150%. System appearance resolves
 against egui's current system theme.
+
+`UiPreferences::default()` is dark at 100% whatever the system's settings, for
+applications that set up egui themselves. `UiPreferences::system()` follows
+the system instead: system appearance, and the font scale
+`system_font_scale()` reads. It is what `Application::preferences` returns by
+default, so an application on the framework host follows the person's light or
+dark setting and text size until it offers its own choice; an application that
+offers one starts from `UiPreferences::system()` for what the person has not
+chosen. Tests and evidence pin an appearance rather than follow the host's.
+
+`system_font_scale()` is 100% natively. In the browser it is the root
+element's computed font size over 16 CSS pixels, which follows the browser's
+text size setting, such as Chromium's Settings > Appearance > Font size. In a
+WebKit browser it is the larger of that and the system body text size
+(`-apple-system-body`) over its default of 17 pixels, which follows Dynamic
+Type on iOS and iPadOS. Stobie measures that body size on a hidden element it
+removes before anything paints, so no page template opts the page's own text
+into Dynamic Type and nothing else the page draws changes. Smaller sizes give
+100%, so the default iOS size and macOS Safari's smaller body text change
+nothing. The browser reads again when the page regains focus, is shown again
+(`visibilitychange`, `pageshow`) or is resized: a text size is changed in the
+browser's or the system's settings, outside the page, and returning to the
+page raises one of those events and a pass, in which the host reapplies the
+design system with a recorded reason. Between those events asking costs
+nothing. `tools/text-size-browser.sh` (gallery-browser stage) checks Chromium's
+setting, a root size set by the page, the bounds and a change while running;
+the Dynamic Type route has not been checked on an iOS device.
 
 The token source, generator, generated Rust and component recipe are Stobie
 project code under the repository's Apache-2.0 licence. The bundled Source Sans 3 and Noto Emoji fonts are separately licensed under SIL OFL 1.1; see the

@@ -37,7 +37,8 @@ impl std::fmt::Display for ThemeValidationError {
 impl std::error::Error for ThemeValidationError {}
 
 impl ApplicationTheme {
-    /// Compatible analytical reference appearance, with unchanged authored colours.
+    /// The analytical reference appearance, from the authored token source.
+    /// Its colours pass the same validation as [`Self::new`].
     pub fn analytical() -> Self {
         let colours = |variant| DesignTokens::resolve(variant, DensityVariant::Comfortable).colours;
         Self {
@@ -53,10 +54,10 @@ impl ApplicationTheme {
 
     /// Import only the exact authored analytical reference palette.
     ///
-    /// This explicit compatibility route preserves historical colours that do
-    /// not meet the strict muted-text state checks in [`Self::new`]. It accepts
-    /// no edits, including changes to otherwise unchecked roles. Edited themes
-    /// must pass [`Self::new`]; this is not a general validation bypass.
+    /// The reference now passes [`Self::new`] too, which is the route for any
+    /// palette, so this remains only for applications that already call it.
+    /// It accepts no edits, including changes to otherwise unchecked roles;
+    /// it is not a general validation bypass.
     pub fn from_analytical_colours(colours: ThemeColours) -> Result<Self, ThemeValidationError> {
         let reference = Self::analytical();
         if colours != reference.colours {
@@ -228,7 +229,9 @@ mod tests {
     #[test]
     fn analytical_resolution_is_compatible_and_application_pairs_are_validated() {
         let theme = ApplicationTheme::analytical();
-        assert!(ApplicationTheme::new(theme.colours()).is_err());
+        // The reference meets strict validation in every mode, muted text on
+        // hover and selection included, so it needs no exemption.
+        assert_eq!(ApplicationTheme::new(theme.colours()).unwrap(), theme);
         let json = serde_json::to_string(&theme.colours()).unwrap();
         assert_eq!(
             ApplicationTheme::from_analytical_colours(serde_json::from_str(&json).unwrap())

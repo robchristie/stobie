@@ -3,8 +3,8 @@ use serde::Serialize;
 use stobie_ui_egui::{
     ActionArgument, ActionButtonSpec, ActionButtonState, ActionEmphasis, ActionKey, ActionScope,
     ActionSpec, ActionTarget, Availability, ConfirmSpec, ContentTextSpec, DesignTokens, DialogSpec,
-    NativeTextControlKind, NativeTextEdit, PresentationContext, PresentationScope, SemanticUiId,
-    SwitchSpec, TextInteraction, TextOverflow, TextRole, UiNode, UiRole,
+    PresentationContext, PresentationScope, SemanticUiId, SwitchSpec, TextFieldSpec,
+    TextInteraction, TextOverflow, TextRole,
 };
 
 use super::StoryReport;
@@ -193,7 +193,11 @@ fn button(
 /// Returns whether the state changed.
 fn editor(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFixtureState) -> bool {
     let mut changed = false;
-    let spec = DialogSpec::new("Edit routine", RoutineAction::Close).sheet();
+    // Save sits in the sheet's fixed footer, in reach however far the form
+    // scrolls.
+    let spec = DialogSpec::new("Edit routine", RoutineAction::Close)
+        .sheet()
+        .footer(RoutineAction::Save);
     let response = p.dialog(
         ui,
         "editor",
@@ -201,9 +205,13 @@ fn editor(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFixt
         |_, _| Availability::Enabled,
         |ui, p| {
             let gap = p.tokens().spacing.block.0;
-            changed |= field(ui, p, NAME_FIELD, "Name", &mut state.name, false);
+            let name = TextFieldSpec::new("Name").id(NAME_FIELD);
+            changed |= p.text_field(ui, NAME_FIELD, &name, &mut state.name).changed;
             ui.add_space(gap);
-            changed |= field(ui, p, PROMPT_FIELD, "Prompt", &mut state.prompt, true);
+            let prompt = TextFieldSpec::new("Prompt").id(PROMPT_FIELD).multiline(3);
+            changed |= p
+                .text_field(ui, PROMPT_FIELD, &prompt, &mut state.prompt)
+                .changed;
             ui.add_space(gap);
             p.content(ui, "schedule-label", "Schedule", CAPTION);
             p.content(ui, "schedule", SCHEDULE, DETAIL);
@@ -225,11 +233,9 @@ fn editor(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFixt
                 state.notify = !state.notify;
                 changed = true;
             }
-            ui.add_space(p.tokens().spacing.section.0);
-            button(ui, p, RoutineAction::Save, ActionEmphasis::Primary, true).clicked()
         },
     );
-    if response.inner {
+    if response.footer_pressed {
         state.saved += 1;
         state.open = false;
         changed = true;
@@ -252,7 +258,8 @@ fn confirm(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFix
             "The routine stops running and its history is removed. This can\u{2019}t be undone.",
             RoutineAction::ConfirmDelete,
             RoutineAction::Keep,
-        ),
+        )
+        .confirm_emphasis(ActionEmphasis::Destructive),
         |_, _| Availability::Enabled,
     );
     if response.confirmed {
@@ -265,52 +272,10 @@ fn confirm(ui: &mut egui::Ui, p: &mut PresentationContext, state: &mut DialogFix
     false
 }
 
-/// A labelled text field observed as a text input, so agents can fill it
-/// with `stobie set-text`. Returns whether the text changed.
-fn field(
-    ui: &mut egui::Ui,
-    p: &mut PresentationContext,
-    id: &'static str,
-    label: &str,
-    text: &mut String,
-    multiline: bool,
-) -> bool {
-    p.content(ui, (id, "label"), label, CAPTION);
-    let before = text.clone();
-    let width = ui.available_width();
-    let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-        let edit = if multiline {
-            NativeTextEdit::multiline(text, egui::Id::new(id)).desired_rows(3)
-        } else {
-            NativeTextEdit::singleline(text, egui::Id::new(id))
-        };
-        let response = edit.desired_width(width).show(ui);
-        ui.ctx().accesskit_node_builder(response.id, |node| {
-            node.set_label(label);
-            node.set_author_id(id.to_owned());
-        });
-        (response, ())
-    });
-    let mut node = UiNode::container(
-        SemanticUiId::new(id),
-        Some(p.parent().clone()),
-        if multiline {
-            UiRole::MultilineTextInput
-        } else {
-            UiRole::TextInput
-        },
-        response.rect.into(),
-    );
-    node.name = label.into();
-    node.focused = response.has_focus();
-    p.observe_node(ui, node);
-    *text != before
-}
-
 #[cfg(test)]
 mod tests {
     use stobie_ui_egui::{
-        ApplicationTheme, DensityVariant, ThemeVariant, audit_accesskit, audit_text_layouts,
+        ApplicationTheme, DensityVariant, ThemeVariant, UiRole, audit_accesskit, audit_text_layouts,
     };
 
     use super::*;

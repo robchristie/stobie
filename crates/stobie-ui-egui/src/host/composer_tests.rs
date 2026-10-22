@@ -420,6 +420,19 @@ fn the_field_grows_with_its_lines_up_to_its_limit_then_scrolls() {
     );
     // The controls sit on the field's line, at its height.
     assert!((send_rect(&harness).bottom() - one.bottom()).abs() < 0.5);
+    // The icon-only Send and Attach controls take a whole touch target.
+    let touch = host(&harness)
+        .preferences
+        .tokens(true)
+        .touch_target_size()
+        .0;
+    let leading = view(&harness).leading.as_ref().unwrap().rect;
+    for rect in [send_rect(&harness), leading] {
+        assert!(
+            rect.width() >= touch && rect.height() >= touch,
+            "an icon control is a touch target: {rect:?}"
+        );
+    }
 
     focus_field(&mut harness);
     type_text(&mut harness, "one");
@@ -505,6 +518,20 @@ fn shift_return_types_a_newline_without_sending() {
 
     press(&mut harness, Modifiers::NONE, Key::Enter);
     assert_eq!(app(&harness).sent, ["first\nsecond"]);
+}
+
+#[test]
+fn a_labelled_control_shares_the_centre_line_of_the_icon_controls() {
+    let harness = harness(Chat::default());
+    let centre = |label: &str| harness.get_by_label(label).rect().center().y;
+    let dictate = harness.get_by_label("Dictate").rect();
+    // The icon-only Send takes the touch target and the labelled Dictate the
+    // control height, centred on Send's and Attach's line (within the
+    // fraction of a point by which the field's measured line height places
+    // the controls after it).
+    assert!(send_rect(&harness).height() > dictate.height());
+    assert!((centre("Dictate") - centre("Send")).abs() < 0.5);
+    assert!((centre("Attach") - centre("Send")).abs() < 0.5);
 }
 
 #[test]

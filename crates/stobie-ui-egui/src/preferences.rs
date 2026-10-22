@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DensityVariant, DesignTokens, ThemeVariant};
 
+#[cfg(target_arch = "wasm32")]
+#[path = "preferences/web.rs"]
+mod web;
+
 pub const UI_PREFERENCES_SCHEMA_VERSION: u32 = 1;
 pub const MIN_FONT_SCALE: f32 = 1.0;
 pub const MAX_FONT_SCALE: f32 = 1.5;
@@ -72,6 +76,19 @@ impl Default for UiPreferences {
 }
 
 impl UiPreferences {
+    /// What an application shows until it chooses otherwise: the system's
+    /// light or dark appearance and its text size ([`system_font_scale`]),
+    /// with the other fields at their defaults. `Application::preferences`
+    /// returns it by default. [`UiPreferences::default`] is unchanged: dark,
+    /// at 100%, whatever the system's settings.
+    pub fn system() -> Self {
+        Self {
+            appearance: AppearancePreference::System,
+            font_scale: system_font_scale(),
+            ..Self::default()
+        }
+    }
+
     /// Returns a safe current-schema value. Obsolete schema versions reset as
     /// one unit; malformed individual current fields fall back independently.
     pub fn validated(self) -> Self {
@@ -133,9 +150,114 @@ impl UiPreferences {
     }
 }
 
+/// The text size the platform asks for, as a font scale from
+/// [`MIN_FONT_SCALE`] to [`MAX_FONT_SCALE`].
+///
+/// In the browser it is the root element's computed font size over 16 CSS
+/// pixels, which follows the browser's text size setting (and any stylesheet
+/// that sets the root's size), or in a WebKit browser the larger of that and
+/// the system body text size (`-apple-system-body`, which follows Dynamic
+/// Type on iOS and iPadOS) over its default of 17 pixels. Smaller sizes give
+/// 100%. It is read when first asked for and again after the page regains
+/// focus, is shown again or is resized, so a setting changed in another tab
+/// or in the system's settings applies when the person returns. Natively it
+/// is 100%: Stobie does not yet read a desktop text size.
+pub fn system_font_scale() -> f32 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        web::font_scale()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        MIN_FONT_SCALE
+    }
+}
+
+/// The browser's root font size at 100%, in CSS pixels.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+const ROOT_TEXT_PIXELS: f32 = 16.0;
+/// WebKit's system body text size at the default Dynamic Type size.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+const SYSTEM_BODY_TEXT_PIXELS: f32 = 17.0;
+
+/// The font scale for a computed root font size and, in WebKit, the system
+/// body font size, both as CSS values such as `"20px"`.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+fn font_scale_for(root: Option<&str>, system_body: Option<&str>) -> f32 {
+    let root = root
+        .and_then(css_pixels)
+        .map(|pixels| pixels / ROOT_TEXT_PIXELS);
+    let body = system_body
+        .and_then(css_pixels)
+        .map(|pixels| pixels / SYSTEM_BODY_TEXT_PIXELS);
+    root.into_iter()
+        .chain(body)
+        .fold(MIN_FONT_SCALE, f32::max)
+        .min(MAX_FONT_SCALE)
+}
+
+/// A computed CSS length in pixels, such as `"16px"` or `"17.5px"`.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+fn css_pixels(value: &str) -> Option<f32> {
+    let pixels: f32 = value.trim().strip_suffix("px")?.parse().ok()?;
+    (pixels.is_finite() && pixels > 0.0).then_some(pixels)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn system_preferences_follow_the_system_and_default_stays_dark() {
+        let system = UiPreferences::system();
+        assert_eq!(system.appearance, AppearancePreference::System);
+        assert_eq!(system.font_scale, MIN_FONT_SCALE);
+        assert_eq!(
+            system,
+            UiPreferences {
+                appearance: AppearancePreference::System,
+                ..UiPreferences::default()
+            }
+        );
+        assert_eq!(system.validated(), system);
+        // Applications outside the host build on the default and rely on it.
+        assert_eq!(
+            UiPreferences::default().appearance,
+            AppearancePreference::Dark
+        );
+        assert_eq!(system_font_scale(), MIN_FONT_SCALE);
+    }
+
+    #[test]
+    fn browser_text_sizes_give_a_bounded_font_scale() {
+        for (root, body, scale) in [
+            (Some("16px"), None, 1.0),
+            (Some("20px"), None, 1.25),
+            (Some("24px"), None, 1.5),
+            (Some("32px"), None, 1.5),
+            (Some("12px"), None, 1.0),
+            (Some(" 18.4px "), None, 1.15),
+            // iOS at its default Dynamic Type size, and larger.
+            (Some("16px"), Some("17px"), 1.0),
+            (Some("16px"), Some("21px"), 21.0 / 17.0),
+            (Some("16px"), Some("53px"), 1.5),
+            // macOS Safari's smaller body text leaves the root's size.
+            (Some("20px"), Some("13px"), 1.25),
+            (None, None, 1.0),
+            (Some(""), None, 1.0),
+            (Some("1.25em"), None, 1.0),
+            (Some("120%"), None, 1.0),
+            (Some("px"), None, 1.0),
+            (Some("-20px"), None, 1.0),
+            (Some("NaNpx"), None, 1.0),
+            (Some("infpx"), None, 1.0),
+            (Some("0px"), Some("bogus"), 1.0),
+        ] {
+            let actual = font_scale_for(root, body);
+            assert!((actual - scale).abs() < 1e-6, "{root:?} {body:?}: {actual}");
+            assert!((MIN_FONT_SCALE..=MAX_FONT_SCALE).contains(&actual));
+        }
+    }
 
     #[test]
     fn preferences_migrate_missing_fields_and_unknown_values() {

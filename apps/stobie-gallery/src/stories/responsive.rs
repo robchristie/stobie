@@ -404,9 +404,10 @@ fn messages(ui: &mut egui::Ui, p: &mut PresentationContext, conversation: &Conve
         .id_salt("navigation-content")
         .auto_shrink([false, false])
         .show(ui, |ui| {
+            // The recipe insets the body from the pane's edges.
             let margin = p.tokens().spacing.section.0;
             egui::Frame::new()
-                .inner_margin(egui::Margin::same(margin as i8))
+                .inner_margin(egui::Margin::symmetric(0, margin as i8))
                 .show(ui, |ui| {
                     let preview = if conversation.preview.is_empty() {
                         "Here is this week's plan."
@@ -437,9 +438,10 @@ fn messages(ui: &mut egui::Ui, p: &mut PresentationContext, conversation: &Conve
 
 /// The open conversation's details.
 fn details(ui: &mut egui::Ui, p: &mut PresentationContext, conversation: &Conversation) {
+    // The recipe insets the body from the pane's edges.
     let margin = p.tokens().spacing.section.0;
     egui::Frame::new()
-        .inner_margin(egui::Margin::same(margin as i8))
+        .inner_margin(egui::Margin::symmetric(0, margin as i8))
         .show(ui, |ui| {
             p.property_row(ui, "name", "Name", conversation.title);
             p.property_row(ui, "last", "Last message", conversation.time);

@@ -41,10 +41,10 @@
       "name": "Send",
       "description": "Send the message",
       "rect": {
-        "min_x": 1114,
-        "min_y": 336.5,
+        "min_x": 1102,
+        "min_y": 360.5,
         "max_x": 1146,
-        "max_y": 368.5
+        "max_y": 404.5
       },
       "enabled": true,
       "focused": false,
@@ -61,10 +61,10 @@
       "name": "Send",
       "description": "Send the message",
       "rect": {
-        "min_x": 1114,
-        "min_y": 224.5,
+        "min_x": 1102,
+        "min_y": 236.5,
         "max_x": 1146,
-        "max_y": 256.5
+        "max_y": 280.5
       },
       "enabled": true,
       "focused": false,
@@ -80,10 +80,10 @@
       "role": "multiline_text_input",
       "name": "Message",
       "rect": {
-        "min_x": 574,
-        "min_y": 302.5,
-        "max_x": 1050,
-        "max_y": 368.5
+        "min_x": 586,
+        "min_y": 326.5,
+        "max_x": 1038,
+        "max_y": 404.5
       },
       "enabled": true,
       "focused": false,
@@ -98,10 +98,10 @@
       "name": "Dictate",
       "description": "Dictate a message",
       "rect": {
-        "min_x": 1054.125,
-        "min_y": 336.5,
-        "max_x": 1110,
-        "max_y": 368.5
+        "min_x": 1042.125,
+        "min_y": 366.5,
+        "max_x": 1098,
+        "max_y": 398.5
       },
       "enabled": true,
       "focused": false,
@@ -118,9 +118,9 @@
       "description": "Attach a file to the message",
       "rect": {
         "min_x": 538,
-        "min_y": 336.5,
-        "max_x": 570,
-        "max_y": 368.5
+        "min_y": 360.5,
+        "max_x": 582,
+        "max_y": 404.5
       },
       "enabled": true,
       "focused": false,
@@ -137,9 +137,9 @@
       "description": "Dictate a message",
       "rect": {
         "min_x": 1090.125,
-        "min_y": 146.25,
+        "min_y": 152.25,
         "max_x": 1146,
-        "max_y": 178.25
+        "max_y": 184.25
       },
       "enabled": true,
       "focused": false,
@@ -154,10 +154,10 @@
       "role": "multiline_text_input",
       "name": "Message",
       "rect": {
-        "min_x": 574,
+        "min_x": 586,
         "min_y": 146,
         "max_x": 1086,
-        "max_y": 178.25
+        "max_y": 190.25
       },
       "enabled": true,
       "focused": false,
@@ -172,10 +172,10 @@
       "name": "Dictate",
       "description": "Dictate a message",
       "rect": {
-        "min_x": 1054.125,
-        "min_y": 224.5,
-        "max_x": 1110,
-        "max_y": 256.5
+        "min_x": 1042.125,
+        "min_y": 242.5,
+        "max_x": 1098,
+        "max_y": 274.5
       },
       "enabled": true,
       "focused": false,
@@ -193,8 +193,8 @@
       "rect": {
         "min_x": 538,
         "min_y": 146,
-        "max_x": 570,
-        "max_y": 178
+        "max_x": 582,
+        "max_y": 190
       },
       "enabled": true,
       "focused": false,
@@ -209,10 +209,10 @@
       "role": "multiline_text_input",
       "name": "Message",
       "rect": {
-        "min_x": 574,
-        "min_y": 224.25,
-        "max_x": 1050,
-        "max_y": 256.5
+        "min_x": 586,
+        "min_y": 236.25,
+        "max_x": 1038,
+        "max_y": 280.5
       },
       "enabled": true,
       "focused": false,
@@ -228,9 +228,9 @@
       "description": "Attach a file to the message",
       "rect": {
         "min_x": 538,
-        "min_y": 224.25,
-        "max_x": 570,
-        "max_y": 256.25
+        "min_y": 236.25,
+        "max_x": 582,
+        "max_y": 280.25
       },
       "enabled": true,
       "focused": false,

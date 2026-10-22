@@ -178,6 +178,12 @@ pub fn measure_text(
     // Position the complete galley explicitly when painting. Keeping the job
     // left-origin avoids double-applying centre/end alignment offsets.
     job.halign = Align::Min;
+    let ellipsis = TextWrapping {
+        max_width,
+        max_rows: usize::from(spec.max_lines),
+        break_anywhere: true,
+        overflow_character: Some('…'),
+    };
     job.wrap = match spec.overflow {
         TextOverflow::Clip | TextOverflow::Scroll | TextOverflow::Expand => {
             TextWrapping::no_max_width()
@@ -188,13 +194,11 @@ pub fn measure_text(
             break_anywhere: false,
             overflow_character: Some('…'),
         },
-        TextOverflow::Ellipsis => TextWrapping {
-            max_width,
-            max_rows: usize::from(spec.max_lines),
-            break_anywhere: true,
-            overflow_character: Some('…'),
-        },
+        TextOverflow::Ellipsis => ellipsis,
         TextOverflow::WrapUnbounded => unreachable!("validation rejects unbounded text"),
+        // A policy this version does not know elides, which keeps the text
+        // within its allocation.
+        _ => ellipsis,
     };
     job.break_on_newline = spec.overflow == TextOverflow::Wrap;
     job.sections[0].format = TextFormat {

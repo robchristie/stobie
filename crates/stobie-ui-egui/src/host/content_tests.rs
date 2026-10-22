@@ -32,6 +32,18 @@ const MARKDOWN: &str =
 struct Notes {
     reply: String,
     password: String,
+    /// Present, first, a heading and a label that each cross the fold of a
+    /// short scroll area, and a heading wholly below it.
+    fold: Option<Fold>,
+}
+
+/// How the observation of the text at a fold is published.
+#[derive(Clone, Copy, PartialEq)]
+enum Fold {
+    /// Inside a visible-only region, as in a dock pane.
+    VisibleOnly,
+    /// Outside any, as presented.
+    AsPresented,
 }
 
 impl Default for Notes {
@@ -39,8 +51,47 @@ impl Default for Notes {
         Self {
             reply: "A long reply. ".repeat(40),
             password: PASSWORD.to_owned(),
+            fold: None,
         }
     }
+}
+
+const FOLD_HEADING: &str = "Heading at the fold";
+const FOLD_LABEL: &str = "Label at the fold";
+const BELOW_FOLD: &str = "Heading wholly below the fold";
+
+/// A heading and a label, each in its own short scroll area that cuts it
+/// through the middle, and a heading wholly out of view.
+fn fold(ui: &mut Ui, p: &mut crate::PresentationContext) {
+    egui::ScrollArea::vertical()
+        .id_salt("fold-heading")
+        .min_scrolled_height(40.0)
+        .max_height(40.0)
+        .show(ui, |ui| {
+            ui.add_space(28.0);
+            p.heading(ui, "fold-heading", FOLD_HEADING);
+            ui.add_space(400.0);
+            p.heading(ui, "below-fold", BELOW_FOLD);
+        });
+    egui::ScrollArea::vertical()
+        .id_salt("fold-label")
+        .min_scrolled_height(40.0)
+        .max_height(40.0)
+        .show(ui, |ui| {
+            ui.add_space(30.0);
+            p.content(
+                ui,
+                "fold-label",
+                FOLD_LABEL,
+                ContentTextSpec {
+                    role: TextRole::Body,
+                    overflow: TextOverflow::Wrap,
+                    max_lines: 2,
+                    interaction: TextInteraction::Selectable,
+                },
+            );
+            ui.add_space(400.0);
+        });
 }
 
 impl Application for Notes {
@@ -57,6 +108,19 @@ impl Application for Notes {
     }
 
     fn ui(&self, ui: &mut Ui, _: &mut (), frame: &mut Frame<'_, Act, String>) {
+        match self.fold {
+            Some(Fold::VisibleOnly) => crate::observe_visible_only(ui, |ui| {
+                let mut p =
+                    frame.presentation(ui, PresentationScope::new("notes"), SemanticUiId::root());
+                fold(ui, &mut p);
+            }),
+            Some(Fold::AsPresented) => {
+                let mut p =
+                    frame.presentation(ui, PresentationScope::new("notes"), SemanticUiId::root());
+                fold(ui, &mut p);
+            }
+            None => {}
+        }
         let mut p = frame.presentation(ui, PresentationScope::new("notes"), SemanticUiId::root());
         p.heading(ui, "heading", "Inbox");
         // One line, so the label elides at this width; its excerpt does not.
@@ -365,4 +429,103 @@ fn text_scrolled_out_of_view_is_not_observed() {
     );
     let json = published_json(&harness);
     assert!(!json.contains("below the fold"), "{json}");
+    // Nor is the bounded heading or label below the fold observed, so its
+    // empty clip raises no audit finding.
+    let snapshot = host(&harness).ui_snapshot();
+    let far = ["far-heading", "far-label"].map(|key| {
+        PresentationScope::new("notes")
+            .instance(key)
+            .text_instance()
+    });
+    assert!(
+        snapshot
+            .text
+            .iter()
+            .all(|text| !far.contains(&text.component_id.instance)),
+        "{:?}",
+        snapshot.text
+    );
+    assert!(
+        !snapshot
+            .text_audit
+            .iter()
+            .any(|finding| matches!(finding, crate::TextAuditFinding::InvalidUsefulBounds { .. })),
+        "{:?}",
+        snapshot.text_audit
+    );
+}
+
+/// The observations of the text at the fold, by key.
+fn at_fold(snapshot: &UiSnapshot, key: &str) -> Option<crate::TextLayoutObservation> {
+    let instance = PresentationScope::new("notes")
+        .instance(key)
+        .text_instance();
+    snapshot
+        .text
+        .iter()
+        .find(|text| text.component_id.instance == instance)
+        .cloned()
+}
+
+#[test]
+fn partly_visible_headings_and_labels_in_a_visible_only_region_publish_their_content() {
+    let harness = harness(Notes {
+        fold: Some(Fold::VisibleOnly),
+        ..Notes::default()
+    });
+    let snapshot = host(&harness).ui_snapshot();
+    let content: Vec<&str> = snapshot.content_text().collect();
+    assert!(content.contains(&FOLD_HEADING), "{content:?}");
+    assert!(content.contains(&FOLD_LABEL), "{content:?}");
+    assert!(!content.contains(&BELOW_FOLD), "{content:?}");
+    assert!(at_fold(snapshot, "below-fold").is_none());
+    // Each keeps the clip it was drawn within: the scroll area's edge cuts it.
+    let crossing = ["fold-heading", "fold-label"].map(|key| {
+        let text = at_fold(snapshot, key).unwrap_or_else(|| panic!("{key} is observed"));
+        assert!(
+            text.clip_rect.max_y < text.allocated_rect.max_y - 1.0
+                && text.clip_rect.max_y > text.allocated_rect.min_y,
+            "{key} crosses the fold: {text:?}"
+        );
+        text.component_id
+    });
+    // The region's edge is scrolling, not a layout defect: the host audits
+    // the rest of their layout and finds nothing, though the bare audit of
+    // the published clips reports the cut.
+    assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
+    for component_id in crossing {
+        assert!(
+            crate::audit_text_layouts(&snapshot.text)
+                .contains(&crate::TextAuditFinding::TextOutsideClip { component_id })
+        );
+    }
+    // Coverage counts what is published.
+    let coverage = snapshot.text_audit_coverage.clone().unwrap();
+    let published: std::collections::BTreeSet<_> =
+        snapshot.text.iter().map(|text| text.component_id).collect();
+    assert_eq!(coverage.measured_components, published.len());
+    assert!(coverage.attempted_components > coverage.measured_components);
+}
+
+#[test]
+fn partly_visible_text_outside_a_visible_only_region_is_audited_as_presented() {
+    let harness = harness(Notes {
+        fold: Some(Fold::AsPresented),
+        ..Notes::default()
+    });
+    let snapshot = host(&harness).ui_snapshot();
+    let content: Vec<&str> = snapshot.content_text().collect();
+    assert!(content.contains(&FOLD_HEADING), "{content:?}");
+    assert!(content.contains(&FOLD_LABEL), "{content:?}");
+    assert!(at_fold(snapshot, "below-fold").is_none());
+    for key in ["fold-heading", "fold-label"] {
+        let component_id = at_fold(snapshot, key).unwrap().component_id;
+        assert!(
+            snapshot
+                .text_audit
+                .contains(&crate::TextAuditFinding::TextOutsideClip { component_id }),
+            "{key}: {:?}",
+            snapshot.text_audit
+        );
+    }
 }

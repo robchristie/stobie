@@ -9,8 +9,11 @@
     <!-- The installable application. `stobie build-web` writes
          manifest.webmanifest and sw.js from these tags: the title names the
          application, apple-mobile-web-app-title gives its short name,
-         theme-color its colour and the icon links its icons. -->
+         theme-color its colour and the icon links its icons. The
+         application follows the system's light or dark appearance, and so
+         do the page's colours. -->
     <meta name="apple-mobile-web-app-title" content="{{title}}" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f5f6" />
     <meta name="theme-color" content="#0b0f12" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -21,15 +24,20 @@
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <style>
       :root {
-        color-scheme: dark; background: #0b0f12; font-family: system-ui, sans-serif;
+        color-scheme: light dark; font-family: system-ui, sans-serif;
+        --stobie-page: #0b0f12; --stobie-page-text: #9eb0b8;
+        background: var(--stobie-page);
         /* The startup loader keeps these at the visual viewport's size, so the
            shell stays above an on-screen keyboard. */
         --stobie-viewport-height: 100dvh; --stobie-viewport-top: 0px;
         --stobie-bottom-inset: env(safe-area-inset-bottom, 0px);
       }
+      @media (prefers-color-scheme: light) {
+        :root { --stobie-page: #f3f5f6; --stobie-page-text: #53616a; }
+      }
       html, body {
         position: fixed; inset: 0; margin: 0; overflow: hidden; overscroll-behavior: none;
-        background: #0b0f12; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+        background: var(--stobie-page); -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
       }
       #app-shell {
         position: fixed;
@@ -38,7 +46,7 @@
         height: calc(var(--stobie-viewport-height) - env(safe-area-inset-top, 0px) - var(--stobie-bottom-inset));
       }
       #app-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
-      #loading { position: fixed; inset: 0; display: grid; place-items: center; color: #9eb0b8; background: #0b0f12; }
+      #loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--stobie-page-text); background: var(--stobie-page); }
       body.ready #loading { display: none; }
     </style>
   </head>

@@ -26,8 +26,8 @@ pub(crate) enum Visibility {
     /// Publish as presented, so the audits report clipping and overflow.
     AsPresented,
     /// Scrolling content: clip a node to the bounds it was drawn within, omit
-    /// it when scrolled out of view, and audit successful text only when it is
-    /// fully visible.
+    /// it when scrolled out of view, and audit successful bounded text that the
+    /// region's edge cuts as scrolled rather than clipped.
     VisibleWithin(Rect),
 }
 
@@ -74,7 +74,8 @@ pub(crate) struct ObservedNode {
 #[derive(Clone, Debug)]
 pub(crate) struct ObservedText {
     pub text: TextLayoutObservation,
-    /// Whether only its fully visible successes are audited.
+    /// Whether it was presented in a visible-only region, where a successful
+    /// bounded text cut by the region's edge is audited as scrolled.
     pub visible_only: bool,
     /// Whether it was presented inside a modal dialog.
     pub in_dialog: bool,
@@ -149,10 +150,12 @@ pub(crate) fn visibility(ui: &Ui) -> Visibility {
 
 /// Publish only the visible part of what `add_contents` presents, for content
 /// that scrolls: each node is clipped to the region it was drawn in and
-/// omitted once scrolled out of view, and measured text is audited only when
-/// fully visible or failed. Everything else is published as presented, so the
-/// audits report clipping and overflow. The host already applies this to each
-/// dock pane; presentation contexts take the policy in force when created.
+/// omitted once scrolled out of view. Measured text in view is published with
+/// the clip it was drawn within; the host's audit treats the region's edge
+/// cutting successful bounded text as scrolling, not clipping, and checks the
+/// rest of its layout as usual. Everything else is published as presented, so
+/// the audits report clipping and overflow. The host already applies this to
+/// each dock pane; presentation contexts take the policy in force when created.
 pub fn observe_visible_only<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> R {
     struct Region(Context, Id);
     impl Drop for Region {

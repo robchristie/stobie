@@ -43,8 +43,8 @@
       "rect": {
         "min_x": 534,
         "min_y": 280,
-        "max_x": 566,
-        "max_y": 312
+        "max_x": 578,
+        "max_y": 324
       },
       "enabled": true,
       "focused": false,
@@ -58,9 +58,9 @@
       "name": "Link kopieren",
       "rect": {
         "min_x": 534,
-        "min_y": 352,
+        "min_y": 364,
         "max_x": 712.25,
-        "max_y": 384
+        "max_y": 396
       },
       "enabled": true,
       "focused": false,
@@ -90,9 +90,9 @@
       "name": "Copy code",
       "rect": {
         "min_x": 534,
-        "min_y": 424,
+        "min_y": 436,
         "max_x": 649.40625,
-        "max_y": 456
+        "max_y": 468
       },
       "enabled": false,
       "focused": false,

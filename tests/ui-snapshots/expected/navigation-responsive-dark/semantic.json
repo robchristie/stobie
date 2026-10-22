@@ -42,10 +42,10 @@
       "name": "Details",
       "description": "Show or hide this conversation's details",
       "rect": {
-        "min_x": 1031,
+        "min_x": 1019,
         "min_y": 125,
         "max_x": 1063,
-        "max_y": 157
+        "max_y": 169
       },
       "enabled": true,
       "focused": false,
@@ -70,9 +70,9 @@
       "description": "Shortest route found; 12 Oct; Open the conversation with this ID",
       "rect": {
         "min_x": 294,
-        "min_y": 275,
+        "min_y": 287,
         "max_x": 614,
-        "max_y": 325
+        "max_y": 337
       },
       "enabled": true,
       "focused": false,
@@ -90,9 +90,9 @@
       "description": "Trajectory checked by hand; 1 Sep; Open the conversation with this ID",
       "rect": {
         "min_x": 294,
-        "min_y": 330,
+        "min_y": 342,
         "max_x": 614,
-        "max_y": 380
+        "max_y": 392
       },
       "enabled": true,
       "focused": false,
@@ -133,9 +133,9 @@
       "description": "1 unread message; The hall is booked for Friday; Mon; Open the conversation with this ID",
       "rect": {
         "min_x": 294,
-        "min_y": 220,
+        "min_y": 232,
         "max_x": 614,
-        "max_y": 270
+        "max_y": 282
       },
       "enabled": true,
       "focused": false,
@@ -153,9 +153,9 @@
       "description": "The notes on the engine are ready; 09:41; Open the conversation with this ID",
       "rect": {
         "min_x": 294,
-        "min_y": 165,
+        "min_y": 177,
         "max_x": 614,
-        "max_y": 215
+        "max_y": 227
       },
       "enabled": true,
       "focused": false,
@@ -171,10 +171,10 @@
       "role": "section",
       "name": "Ada Lovelace",
       "rect": {
-        "min_x": 626,
-        "min_y": 217,
-        "max_x": 833,
-        "max_y": 249
+        "min_x": 621,
+        "min_y": 229,
+        "max_x": 828,
+        "max_y": 261
       },
       "enabled": true,
       "focused": false,
@@ -194,10 +194,10 @@
       "role": "section",
       "name": "You",
       "rect": {
-        "min_x": 977,
-        "min_y": 173,
-        "max_x": 1058,
-        "max_y": 205
+        "min_x": 982,
+        "min_y": 185,
+        "max_x": 1063,
+        "max_y": 217
       },
       "enabled": true,
       "focused": false,

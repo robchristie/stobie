@@ -202,7 +202,16 @@ impl Application for Counter {
         }
         let mut p = frame.presentation(ui, PresentationScope::new("counter"), SemanticUiId::root());
         if self.theme.is_none() {
-            assert_eq!(frame.tokens(), tokens());
+            // The default preferences follow the system, which is dark when
+            // the harness gives none.
+            let variant = match ui.ctx().theme() {
+                egui::Theme::Light => ThemeVariant::Light,
+                egui::Theme::Dark => ThemeVariant::Dark,
+            };
+            assert_eq!(
+                frame.tokens(),
+                DesignTokens::resolve(variant, DensityVariant::Comfortable)
+            );
         }
         view.tokens = Some(frame.tokens());
         for action in [Act::Increment, Act::Reset, Act::Explode] {
@@ -536,6 +545,31 @@ fn every_host_opens_new_tabs_without_an_opener() {
 }
 
 #[test]
+fn an_application_that_does_not_choose_follows_the_system_appearance() {
+    // Counter leaves `Application::preferences` at its default.
+    assert_eq!(
+        Counter::default().preferences(),
+        crate::UiPreferences::system()
+    );
+    let mut harness = harness(Counter::default());
+    assert_eq!(
+        harness.ctx.options(|options| options.theme_preference),
+        egui::ThemePreference::System
+    );
+    for (system, dark) in [(egui::Theme::Light, false), (egui::Theme::Dark, true)] {
+        harness.input_mut().system_theme = Some(system);
+        harness.run();
+        assert_eq!(harness.ctx.theme(), system);
+        assert_eq!(harness.ctx.global_style().visuals.dark_mode, dark);
+    }
+    // Without a system theme, as in a headless run, it stays dark.
+    harness.input_mut().system_theme = None;
+    harness.run();
+    assert_eq!(harness.ctx.theme(), egui::Theme::Dark);
+    assert_eq!(host(&harness).ui_state().tokens, Some(tokens()));
+}
+
+#[test]
 fn enabled_inspection_reports_the_renderer_the_host_started_on() {
     let mut harness = harness(Counter::default());
     let renderer = crate::RendererIdentity {
@@ -636,24 +670,24 @@ fn observations_outside_a_visible_only_region_are_published_as_presented() {
             .any(|row| !viewport.contains_rect(Rect::from(row.rect))),
         "rows keep their presented bounds"
     );
-    // The audit sees the rows the short viewport clips.
-    let clipped = snapshot
-        .text_audit
-        .iter()
-        .filter(|finding| {
-            matches!(
-                finding,
-                crate::TextAuditFinding::TextOutsideClip { .. }
-                    | crate::TextAuditFinding::InvalidUsefulBounds { .. }
-            )
-        })
-        .count();
-    assert!(clipped > 0 && clipped < 30, "{:?}", snapshot.text_audit);
-    let row_text = snapshot
+    // Text is audited as presented, but a row's text wholly scrolled out of
+    // view is not observed, so it raises no finding for its empty clip.
+    let row_text: Vec<_> = snapshot
         .text
         .iter()
-        .filter(|text| text.component_id.kind == crate::TextComponentKind::ContentLabel);
-    assert_eq!(row_text.count(), 30, "every row's text is audited");
+        .filter(|text| text.component_id.kind == crate::TextComponentKind::ContentLabel)
+        .collect();
+    let in_view = rows
+        .iter()
+        .filter(|row| viewport.intersects(Rect::from(row.rect)))
+        .count();
+    assert!(in_view > 0 && in_view < 30);
+    assert_eq!(
+        row_text.len(),
+        in_view,
+        "only rows in view observe their text"
+    );
+    assert!(snapshot.text_audit.is_empty(), "{:?}", snapshot.text_audit);
 }
 
 #[test]

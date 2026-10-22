@@ -6,6 +6,9 @@ use crate::{
     UiNode, UiRole, icon_size, measure_text, paint_icon, paint_measured_text,
 };
 
+/// The opacity a disabled action's fill keeps, over whatever is behind it.
+const DISABLED_FILL: f32 = 0.55;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ActionEmphasis {
     Quiet,
@@ -13,6 +16,11 @@ pub enum ActionEmphasis {
     QuietBorderless,
     Normal,
     Primary,
+    /// Normal chrome with the label, artwork and border in the error colour,
+    /// for an action that loses something, such as "Delete for good". A
+    /// press keeps the hover fill (the error colour is validated on it) and
+    /// adds the inset outline in the error colour.
+    Destructive,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -155,7 +163,7 @@ pub fn action_button_with_identity_and_content<A: ActionKey>(
         spec,
         identity,
         content,
-        None,
+        ControlLabels::default(),
         tokens,
         font_scale,
         observations,
@@ -200,9 +208,10 @@ pub(crate) fn action_button_size(
     } else {
         0.0
     };
-    let hit_height = action_hit_height(tokens, font_scale);
+    let mut hit_height = action_hit_height(tokens, font_scale);
     let (intrinsic, minimum_width) = if matches!(content, ActionButtonContent::IconOnly(_)) {
-        let side = hit_height.max(artwork_size);
+        let side = icon_action_side(tokens, font_scale);
+        hit_height = side;
         (side, side)
     } else {
         let text_width = |label| {
@@ -236,6 +245,18 @@ pub(crate) fn action_button_size(
     }
 }
 
+/// The side of an icon-only action's square hit target: the touch target
+/// size in both densities, and never less than the labelled actions' hit
+/// height or the artwork. Its visual chrome stays the control height,
+/// centred, so only the room it takes grows.
+pub(crate) fn icon_action_side(tokens: &DesignTokens, font_scale: f32) -> f32 {
+    tokens
+        .touch_target_size()
+        .0
+        .max(action_hit_height(tokens, font_scale))
+        .max(icon_size(tokens, font_scale))
+}
+
 /// An action button's hit height: the control height at the font scale, and
 /// never less than the minimum hit size.
 pub(crate) fn action_hit_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
@@ -246,16 +267,26 @@ pub(crate) fn action_hit_height(tokens: &DesignTokens, font_scale: f32) -> f32 {
         .max(tokens.geometry.control_height.0 * font_scale.clamp(1.0, 1.5))
 }
 
-/// The action button, named `name` for assistive technology and its tooltip
-/// when given, such as "Open Ada" for one row's Open; the visible label stays
-/// the action's.
+/// A bound control's own name and label, in place of its action's.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ControlLabels<'a> {
+    /// The accessible name and the tooltip's first line, such as "Open Ada"
+    /// for one row's Open.
+    pub name: Option<&'a str>,
+    /// The visible label, such as "Tue" for one option of a weekday choice.
+    pub visible: Option<&'a str>,
+}
+
+/// The action button, named and labelled by `labels` where they are given,
+/// and otherwise by its action. A visible label that differs from the name
+/// shows the name in a tooltip.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn present_action_button<A: ActionKey>(
     ui: &mut egui::Ui,
     spec: ActionButtonSpec<A>,
     identity: &ActionButtonIdentity,
     content: ActionButtonContent,
-    name: Option<&str>,
+    labels: ControlLabels<'_>,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<crate::TextLayoutObservation>,
@@ -265,13 +296,15 @@ pub(crate) fn present_action_button<A: ActionKey>(
         return ui.interact(Rect::NOTHING, identity.widget_id, Sense::hover());
     }
     let action = spec.target.action.specification();
+    let name = labels.name.unwrap_or(action.label);
+    let visible_label = labels.visible.unwrap_or(if spec.compact {
+        action.compact_label.unwrap_or(action.label)
+    } else {
+        action.label
+    });
     let face = ButtonFace {
-        name: name.unwrap_or(action.label),
-        visible_label: if spec.compact {
-            action.compact_label.unwrap_or(action.label)
-        } else {
-            action.label
-        },
+        name,
+        visible_label,
         description: Some(action.description),
         shortcut: action.shortcut.map(|shortcut| shortcut.aria_keyshortcuts()),
         availability: &spec.availability,
@@ -279,7 +312,8 @@ pub(crate) fn present_action_button<A: ActionKey>(
         emphasis: spec.emphasis,
         content,
         also_fits: &[],
-        tooltip: spec.compact,
+        tooltip: spec.compact || labels.visible.is_some_and(|visible| visible != name),
+        tab_stop: true,
     };
     present_button(ui, &face, identity, tokens, font_scale, observations)
 }
@@ -302,6 +336,10 @@ pub(crate) struct ButtonFace<'a> {
     pub also_fits: &'a [&'a str],
     /// Show the tooltip even when the whole label shows.
     pub tooltip: bool,
+    /// Whether Tab stops on the enabled button. A roving group, such as a
+    /// single choice, keeps one option a Tab stop and moves between the
+    /// others with arrow keys; the rest still take clicks.
+    pub tab_stop: bool,
 }
 
 /// Present a visible button's face: allocate it, sense clicks when enabled,
@@ -341,10 +379,10 @@ pub(crate) fn present_button(
     let response = ui.interact(
         hit_rect,
         identity.widget_id,
-        if enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
+        match (enabled, face.tab_stop) {
+            (true, true) => Sense::click(),
+            (true, false) => Sense::CLICK,
+            (false, _) => Sense::hover(),
         },
     );
     if response.clicked() {
@@ -402,25 +440,34 @@ pub(crate) fn present_button(
         width
     };
     let visual = Rect::from_center_size(hit_rect.center(), egui::vec2(visual_width, visual_height));
+    let quiet = matches!(
+        face.emphasis,
+        ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
+    );
+    let destructive = face.emphasis == ActionEmphasis::Destructive;
     let fill = if !enabled {
-        Color32::from(tokens.colours.surface_raised).linear_multiply(0.55)
+        // Disabled keeps its resting or on treatment in a muted form: a
+        // toggled-on action still looks on, and a quiet one gains no fill.
+        if face.state.pressed() {
+            Color32::from(tokens.colours.selection_background).linear_multiply(DISABLED_FILL)
+        } else if quiet {
+            Color32::TRANSPARENT
+        } else {
+            Color32::from(tokens.colours.surface_raised).linear_multiply(DISABLED_FILL)
+        }
     } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_background.into()
+    } else if destructive && (face.state.pressed() || response.is_pointer_button_down_on()) {
+        tokens.colours.surface_hover.into()
     } else if face.state.pressed() || response.is_pointer_button_down_on() {
         tokens.colours.selection_background.into()
     } else if response.hovered() {
-        if matches!(
-            face.emphasis,
-            ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
-        ) {
+        if quiet {
             tokens.colours.action_quiet_hover.into()
         } else {
             tokens.colours.surface_hover.into()
         }
-    } else if matches!(
-        face.emphasis,
-        ActionEmphasis::Quiet | ActionEmphasis::QuietBorderless
-    ) {
+    } else if quiet {
         Color32::TRANSPARENT
     } else {
         tokens.colours.surface_raised.into()
@@ -433,22 +480,31 @@ pub(crate) fn present_button(
             Stroke::NONE
         } else if enabled && face.emphasis == ActionEmphasis::Primary && response.hovered() {
             Stroke::new(1.0, tokens.colours.action_primary_foreground)
+        } else if enabled && destructive {
+            Stroke::new(1.0, tokens.colours.status_error)
         } else {
             Stroke::new(1.0, tokens.colours.border_control)
         },
         egui::StrokeKind::Inside,
     );
-    if enabled && (face.state.pressed() || response.is_pointer_button_down_on()) {
-        // The reference theme aliases hover and selection fills. Keep active
-        // feedback explicit, with geometry distinct from the outer focus ring.
+    let active = face.state.pressed() || (enabled && response.is_pointer_button_down_on());
+    if active {
+        // Pressed and toggled-on states add an inset outline, so they are
+        // never told from rest or hover by fill colour alone. Its geometry
+        // stays distinct from the outer focus ring; a disabled toggle keeps
+        // it in muted text.
         let inset = tokens.spacing.unit.0 * 0.5;
         ui.painter().rect_stroke(
             visual.shrink(inset),
             (tokens.geometry.control_radius.0 - inset).max(0.0),
             Stroke::new(
                 1.0,
-                if face.emphasis == ActionEmphasis::Primary {
+                if !enabled {
+                    tokens.colours.text_muted
+                } else if face.emphasis == ActionEmphasis::Primary {
                     tokens.colours.action_primary_foreground
+                } else if destructive {
+                    tokens.colours.status_error
                 } else {
                     tokens.colours.selection_indicator
                 },
@@ -470,6 +526,8 @@ pub(crate) fn present_button(
         tokens.colours.text_muted
     } else if face.emphasis == ActionEmphasis::Primary {
         tokens.colours.action_primary_foreground
+    } else if destructive {
+        tokens.colours.status_error
     } else {
         tokens.colours.text_primary
     };
@@ -592,7 +650,7 @@ mod tests {
     };
 
     #[test]
-    fn emitted_action_label_vertices_use_primary_pressed_and_disabled_foregrounds() {
+    fn emitted_action_label_vertices_use_primary_destructive_pressed_and_disabled_foregrounds() {
         for (theme, (emphasis, disabled, pointer_down)) in [
             ThemeVariant::Light,
             ThemeVariant::Dark,
@@ -606,6 +664,9 @@ mod tests {
                 (ActionEmphasis::Primary, false, true),
                 (ActionEmphasis::Normal, false, true),
                 (ActionEmphasis::Primary, true, false),
+                (ActionEmphasis::Destructive, false, false),
+                (ActionEmphasis::Destructive, false, true),
+                (ActionEmphasis::Destructive, true, false),
             ]
             .map(|state| (theme, state))
         }) {
@@ -684,6 +745,8 @@ mod tests {
                 tokens.colours.text_muted
             } else if emphasis == ActionEmphasis::Primary {
                 tokens.colours.action_primary_foreground
+            } else if emphasis == ActionEmphasis::Destructive {
+                tokens.colours.status_error
             } else {
                 tokens.colours.text_primary
             }

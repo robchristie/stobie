@@ -54,6 +54,12 @@ and redo. `stobie new --imaging` also adds the image layer: `stobie-imaging`,
 `stobie-runtime`, `stobie-render-wgpu` and the UI crate's `image-rendering`
 feature, described in [Compose an image application](image-application-composition.md).
 
+The application follows the system's light or dark appearance and, in the
+browser, its text size, because it leaves `Application::preferences` at its
+default, `UiPreferences::system()`; the page's own colours in
+`web/index.html` follow the same setting. Override `preferences` to offer a
+choice, as the [composition guide](application-composition.md) describes.
+
 ### A browser-only application
 
 `stobie new my-app --browser-only` writes an application that runs only in

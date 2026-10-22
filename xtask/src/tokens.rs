@@ -655,6 +655,12 @@ impl DesignTokens {{
         ICON_SIZE
     }}
 
+    /// Square hit target of an icon-only action, in both densities, generated
+    /// without changing public token struct literals.
+    pub const fn touch_target_size(&self) -> Points {{
+        Points({touch_target_size})
+    }}
+
     /// Avatar diameters at reference font scale, by where the avatar sits.
     pub const fn avatar_header_size(&self) -> Points {{
         Points({avatar_header_size})
@@ -755,6 +761,7 @@ const MOTION: MotionTokens = MotionTokens {{
         chip_radius = number_literal(required_number(&common, "statusChip.radius")?),
         chip_max_width = number_literal(required_number(&common, "statusChip.maxWidth")?),
         icon_size = number_literal(required_number(&common, "icon.size")?),
+        touch_target_size = number_literal(required_number(&common, "icon.touchTargetSize")?),
         avatar_header_size = number_literal(required_number(&common, "avatar.headerSize")?),
         avatar_list_size = number_literal(required_number(&common, "avatar.listSize")?),
         avatar_strip_size = number_literal(required_number(&common, "avatar.stripSize")?),
@@ -1191,12 +1198,23 @@ mod tests {
             for (foreground, background) in [
                 ("colour.text.primary", "colour.surface.canvas"),
                 ("colour.text.primary", "colour.surface.panel"),
+                ("colour.text.muted", "colour.surface.canvas"),
                 ("colour.text.muted", "colour.surface.panel"),
+                ("colour.text.primary", "colour.surface.raised"),
+                ("colour.text.muted", "colour.surface.raised"),
                 ("colour.accent.onAccent", "colour.accent.primary"),
                 ("colour.text.primary", "colour.selection.background"),
+                ("colour.text.muted", "colour.selection.background"),
+                ("colour.text.primary", "colour.surface.hover"),
+                ("colour.text.muted", "colour.surface.hover"),
+                ("colour.text.primary", "colour.action.quiet.hover"),
+                ("colour.text.muted", "colour.action.quiet.hover"),
                 ("colour.status.success", "colour.surface.panel"),
                 ("colour.status.warning", "colour.surface.panel"),
                 ("colour.status.error", "colour.surface.panel"),
+                // A destructive action's label at rest, hovered and pressed.
+                ("colour.status.error", "colour.surface.raised"),
+                ("colour.status.error", "colour.surface.hover"),
             ] {
                 let ratio = contrast(
                     required_colour(&values, foreground).unwrap(),
@@ -1207,6 +1225,29 @@ mod tests {
                     "{theme} {foreground} on {background} contrast {ratio:.2} is below {target:.1}:1"
                 );
             }
+            for background in [
+                "colour.surface.canvas",
+                "colour.surface.panel",
+                "colour.surface.raised",
+                "colour.selection.background",
+            ] {
+                let ratio = contrast(
+                    required_colour(&values, "colour.focus.ring").unwrap(),
+                    required_colour(&values, background).unwrap(),
+                );
+                assert!(
+                    ratio >= 3.0,
+                    "{theme} focus ring on {background} contrast {ratio:.2} is below 3:1"
+                );
+            }
+            let marker_ratio = contrast(
+                required_colour(&values, "colour.selection.indicator").unwrap(),
+                required_colour(&values, "colour.selection.background").unwrap(),
+            );
+            assert!(
+                marker_ratio >= 3.0,
+                "{theme} selection marker contrast {marker_ratio:.2} is below 3:1"
+            );
             let focus_ratio = contrast(
                 required_colour(&values, "colour.focus.ring").unwrap(),
                 required_colour(&values, "colour.surface.panel").unwrap(),
@@ -1215,6 +1256,38 @@ mod tests {
                 focus_ratio >= 3.0,
                 "{theme} focus ring on panel contrast {focus_ratio:.2} is below 3:1"
             );
+        }
+    }
+
+    #[test]
+    fn hover_fills_differ_from_selection_and_resting_surfaces_in_every_theme() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let source = fs::read_to_string(root.join(SOURCE_PATH)).unwrap();
+        let document = parse_source(&source).unwrap();
+        for theme in THEMES {
+            let values = resolve_variant(&document, theme, "comfortable").unwrap();
+            let colour = |path| required_colour(&values, path).unwrap();
+            let selection = colour("colour.selection.background");
+            // A hovered row or quiet action must never look selected or
+            // toggled on, and a hovered resting control must visibly change.
+            for hover in ["colour.surface.hover", "colour.action.quiet.hover"] {
+                for resting in [
+                    "colour.selection.background",
+                    "colour.surface.canvas",
+                    "colour.surface.panel",
+                    "colour.surface.raised",
+                ] {
+                    assert_ne!(
+                        colour(hover),
+                        colour(resting),
+                        "{theme} {hover} is {resting}"
+                    );
+                }
+                assert!(
+                    contrast(colour(hover), selection) >= 1.05,
+                    "{theme} {hover} is too close to the selection fill"
+                );
+            }
         }
     }
 }

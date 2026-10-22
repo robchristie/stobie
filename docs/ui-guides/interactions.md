@@ -44,7 +44,9 @@ it by hand or call `trigger_with` from a row's click.
   each row's control has its own stable semantic ID wherever the row moves.
   Use the row's domain ID, never its position, label or a counter.
 - **Names.** A button's accessible name is the action's label followed by the
-  subject ("Open Ada Lovelace"); its visible label stays the action's. A list
+  subject ("Open Ada Lovelace"); its visible label stays the action's unless
+  the control gives its own with `with_label`, which then names it ("Edit
+  Morning news"), or a shorter one to show with `with_short_label`. A list
   row is named by its title. Each row's control therefore has a distinct name
   in AccessKit, the snapshot and the browser ARIA layer. A conversation row is
   named by its title and a switch by its label in the same way.
@@ -69,11 +71,29 @@ refused by `availability_with` when it hides the row's argument. A discovered
 target whose row has gone no longer matches (`no_match`); one admitted before
 the row went is refused when it runs (`unavailable` when `availability_with`
 hides its argument, otherwise `stale_target`). A target whose control now
-carries another argument is `stale_target`. Invoking the action's own binding
-with a removed row's ID is refused by `availability_with` when it hides that
-ID. A custom row that paints itself can carry the same contract: set its
+carries another argument is `stale_target`. A control whose argument its
+contract refuses is discovered disabled with that argument and the reason,
+beside the action's own binding, and invoking it is `unavailable`. Invoking
+the action's own binding with a removed row's ID is refused by
+`availability_with` when it hides that ID. A custom row that paints itself can carry the same contract: set its
 node's `actions` and `argument` and trigger the bound action with
 `Frame::trigger`.
+
+## Segmented choices
+
+A segmented choice presents each option as a control bound to one action with
+that option's argument, so everything above applies to each option.
+
+- **Keyboard.** A single choice is one Tab stop: the chosen option, or the
+  first enabled one when none is chosen. Left and Up move to the previous
+  enabled option, Right and Down to the next, wrapping, and Home and End to
+  the first and last; each move chooses the option it reaches, as in the
+  WAI-ARIA radio group pattern. Space, Enter and a click choose the focused
+  option. Each option of a multiple choice is its own Tab stop, toggled by
+  Space, Enter or a click; arrows do nothing there.
+- **Agents.** Each option is its own capability carrying its argument, as
+  each row's control is. Invoking it performs the action with that argument;
+  a disabled or hidden option is refused as its control is.
 
 ## Composing and sending
 

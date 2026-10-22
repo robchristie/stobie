@@ -136,6 +136,18 @@ struct Layout<'a> {
     /// The top of the first text laid out since the marker of the current
     /// list item was reserved.
     first_text_top: Option<f32>,
+    /// The height of the strip above each code block's text that holds its
+    /// copy control, when the caller presents one.
+    code_header: Option<f32>,
+    /// Each code block laid out, in document order.
+    code_blocks: Vec<CodeBlock>,
+}
+
+/// A code block as laid out: its text exactly as parsed and the strip above
+/// that text where its copy control goes.
+pub(crate) struct CodeBlock {
+    pub(crate) text: String,
+    pub(crate) header: Rect,
 }
 
 impl Layout<'_> {
@@ -320,7 +332,20 @@ impl Layout<'_> {
                 let top = self.y;
                 let fill = self.pieces.len();
                 self.pieces.push(Piece::Fill(Rect::NOTHING));
-                self.y += pad.y;
+                match self.code_header {
+                    // The strip takes the place of the top padding.
+                    Some(height) => {
+                        self.code_blocks.push(CodeBlock {
+                            text: code.clone(),
+                            header: Rect::from_min_size(
+                                egui::pos2(x, top),
+                                egui::vec2(width, height),
+                            ),
+                        });
+                        self.y += height;
+                    }
+                    None => self.y += pad.y,
+                }
                 let style = self.style(TextRole::MonospaceTechnical);
                 let job = LayoutJob::single_section(
                     code.clone(),
@@ -556,6 +581,34 @@ pub fn markdown(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> MarkdownResponse {
+    present_markdown(
+        ui,
+        identity,
+        source,
+        spec,
+        None,
+        parent,
+        tokens,
+        font_scale,
+        observations,
+    )
+    .0
+}
+
+/// [`markdown`], reserving a strip `code_header` high above each code
+/// block's text, and returning each code block as laid out.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn present_markdown(
+    ui: &mut egui::Ui,
+    identity: PresentationId,
+    source: &str,
+    spec: MarkdownSpec<'_>,
+    code_header: Option<f32>,
+    parent: SemanticUiId,
+    tokens: &DesignTokens,
+    font_scale: f32,
+    observations: &mut Vec<TextLayoutObservation>,
+) -> (MarkdownResponse, Vec<CodeBlock>) {
     let Document { blocks, links } = parse::parse(source);
     let width = ui.available_width().max(1.0);
     let enabled = ui.is_enabled();
@@ -572,14 +625,20 @@ pub fn markdown(
         y: 0.0,
         list_depth: 0,
         first_text_top: None,
+        code_header,
+        code_blocks: Vec::new(),
     };
     layout.blocks(&blocks, &mut Vec::new(), 0.0, width, false, false);
     let height = layout.y.max(1.0);
     let mut pieces = layout.pieces;
+    let mut code_blocks = layout.code_blocks;
     let (_, rect) = ui.allocate_space(egui::vec2(width, height));
     let response = ui.interact(rect, identity.egui_id(), Sense::hover());
     for piece in &mut pieces {
         piece.translate(rect.min.to_vec2());
+    }
+    for block in &mut code_blocks {
+        block.header = block.header.translate(rect.min.to_vec2());
     }
 
     let mut link_nodes = Vec::new();
@@ -643,10 +702,13 @@ pub fn markdown(
             ),
         }
     }
-    MarkdownResponse {
-        response,
-        link_nodes,
-    }
+    (
+        MarkdownResponse {
+            response,
+            link_nodes,
+        },
+        code_blocks,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]

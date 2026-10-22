@@ -28,6 +28,7 @@ pub fn report(fixtures: &str) -> Result<String, String> {
         let locale = parse_locale(locale.ok_or("case without a locale")?)?;
         let now = timestamp(case.get("now").unwrap_or(&Value::Null))?;
         let local = LocalTime::new(zone, locale, Clock::Fixed(now));
+        case.insert("until_next_day_ms".into(), until_next_day_ms(&local));
         let instants = case.get_mut("instants").and_then(Value::as_array_mut);
         for instant in instants.ok_or("case without instants")? {
             let instant = instant
@@ -55,6 +56,7 @@ pub fn viewer_report(at: i64, now: i64) -> Result<String, String> {
         "zone": local.zone().name(),
         "locale": locale_name(local.locale()),
         "formats": formats(&local, at),
+        "until_next_day_ms": until_next_day_ms(&local),
     })
     .to_string())
 }
@@ -66,9 +68,18 @@ fn formats(local: &LocalTime, at: Timestamp) -> Value {
         "long_date": local.long_date(at),
         "relative_day": local.relative_day(at),
         "relative_day_and_time": local.relative_day_and_time(at),
+        "relative_day_in_sentence": local.relative_day_in_sentence(at),
+        "relative_day_and_time_in_sentence": local.relative_day_and_time_in_sentence(at),
         "compact": local.compact(at),
         "utc_offset": local.utc_offset(at),
     })
+}
+
+/// Milliseconds until the day changes, from the clock's time.
+fn until_next_day_ms(local: &LocalTime) -> Value {
+    u64::try_from(local.until_next_day().as_millis())
+        .unwrap_or(u64::MAX)
+        .into()
 }
 
 fn timestamp(value: &Value) -> Result<Timestamp, String> {

@@ -82,6 +82,8 @@ pub fn expected_aria_role(role: UiRole) -> Option<&'static str> {
         | UiRole::ScrollArea
         | UiRole::StatusChip
         | UiRole::Section => return None,
+        // A role this version does not know has no ARIA counterpart yet.
+        _ => return None,
     })
 }
 
