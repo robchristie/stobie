@@ -114,7 +114,13 @@ stobie invoke record-desk.apply
 `observe` returns the latest completed, non-discarded UI pass: its instance and
 application/build identity, monotonically
 increasing observation identity, `UiSnapshot`, bounded primitive application
-facts and collection metadata. Reading an idle host may repeatedly return the
+facts and collection metadata. A hosted application's facts also carry the
+framework's: `stobie.theme`, `light` or `dark`, and `stobie.contrast`,
+`standard` or `high`, name the theme the pass was drawn in, the
+application's appearance preference resolved against the system's
+(`THEME_FACT` and `CONTRAST_FACT`). They replace an application fact of the
+same name, so `stobie wait fact --key stobie.theme --value dark` waits for
+the page to be drawn dark. Reading an idle host may repeatedly return the
 same observation. Reads never request repaint or enumerate off-screen domain
 data. Collection metadata describes what was retained, whether it is
 virtualised and whether its observed collection is complete. A missing total

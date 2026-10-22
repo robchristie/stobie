@@ -190,7 +190,11 @@ presents it while its state says it is open.
   opened it: the one clicked, or focused, as it opened. A dialog that opened
   with no such control, as one an agent or the application opened, returns
   focus nowhere. A dialog that takes another's place, such as a confirm
-  after a form, returns focus to the first one's opener.
+  after a form, returns focus to the first one's opener. An opener that has
+  gone by then, such as a row's Delete whose confirmation removed the row,
+  or one something else removed while the dialog was open, hands focus to
+  the control nearest where it was (see
+  [focus whose control has gone](#focus-whose-control-has-gone)).
 - **Pointer.** Controls behind the scrim take no pointer input; a press on
   the scrim dismisses only a dialog that asks for it.
 - **Agents and shortcuts.** The host observes and binds only the dialog and
@@ -205,6 +209,35 @@ presents it while its state says it is open.
   AccessKit tree, and requests aimed at it are dropped; in the browser the
   ARIA layer holds only the dialog, a `dialog` or `alertdialog` with
   `aria-modal`.
+
+## Focus whose control has gone
+
+Back in the [navigation recipe](components.md#responsive-navigation) and a closing
+dialog return focus to the control that opened them. By then that control
+may have gone: a row hidden while its item was open, a row the dialog's own
+confirmation deleted, or one a sync removed. The host never focuses a widget
+the current pass did not present. Focus goes to:
+
+- **The opener**, while it is presented as an enabled control.
+- **The nearest control**, when it has gone: the enabled control, on the
+  opener's layer, whose centre is nearest where the opener's was, and for
+  Back within the pane of the level it returns to. In a list that is the
+  row that took the removed row's place, or the row before when the removed
+  row was the last; a row's own control hands focus to the same control on
+  that row.
+- **Nowhere**, when nothing there takes focus, such as after deleting the
+  only row.
+
+Back returns focus in this way when focus was on Back, nowhere, or on a
+control of the level that closed, such as an Archive that removed its item
+and went back. Applications need not close a confirm before its opener goes
+or keep a removed row presented: confirm and remove in one step.
+
+As a last guard, AccessKit's focus is always a node of the published tree: a
+focus request for a widget the pass did not present publishes the root as
+focused for that pass, and egui drops the request on the next. The browser's
+ARIA layer follows the same focus, so its active descendant names the
+fallback control.
 
 ## Keyboard and pointer behaviour
 

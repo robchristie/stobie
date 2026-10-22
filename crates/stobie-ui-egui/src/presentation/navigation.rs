@@ -15,7 +15,9 @@ use crate::{
     ActionArgument, ActionButtonContent, ActionButtonSpec, ActionButtonState, ActionEmphasis,
     ActionKey, ActionTarget, Availability, AvatarSpec, DomainReference, IconId, IntoActionTarget,
     SemanticUiId, TextInteraction, TextOverflow, TextRole, TextRoleStyles, UiNode, UiRole,
-    components::action_button_size, components::icon_action_side,
+    components::action_button_size,
+    components::icon_action_side,
+    focus_return::{self, FocusReturn},
 };
 
 /// How a navigation recipe arranges its panes at the width it is given.
@@ -476,7 +478,7 @@ fn plan<'a, A>(
 struct FocusTrail {
     depth: Option<usize>,
     /// The focus each shallower level had when the reader went deeper.
-    saved: Vec<Option<egui::Id>>,
+    saved: Vec<Option<FocusReturn>>,
     /// Back as last presented.
     back: Option<egui::Id>,
 }
@@ -492,12 +494,15 @@ fn depth(level: NavigationPane) -> usize {
 /// Keep keyboard focus with the reader as levels open and close: opening a
 /// level that shows Back moves focus that was somewhere to Back, because
 /// what had it may be covered; going back returns focus to what had it at
-/// that level, such as the row that opened the item, when focus was on Back
-/// or nowhere.
+/// that level, such as the row that opened the item, when focus was on
+/// Back, nowhere, or on a control of the level that closed. When that
+/// control has gone, as a row that left the list has, focus moves to the
+/// control of the level's pane nearest where it was.
 fn follow_focus<A: ActionKey>(
     ui: &Ui,
     scope: &PresentationScope,
     level: NavigationPane,
+    rect: Rect,
     response: &NavigationResponse<A>,
 ) {
     let key = scope.instance("focus").egui_id();
@@ -505,12 +510,14 @@ fn follow_focus<A: ActionKey>(
         .data(|data| data.get_temp::<FocusTrail>(key))
         .unwrap_or_default();
     let now = depth(level);
+    let context = ui.ctx();
     let focused = ui.memory(|memory| memory.focused());
     let back = response.back.as_ref().map(|back| back.response.id);
     match trail.depth {
         Some(previous) if now > previous => {
             trail.saved.truncate(previous);
-            trail.saved.resize(now, focused);
+            let saved = focused.and_then(|focused| FocusReturn::remember(context, focused));
+            trail.saved.resize(now, saved);
             if let (Some(_), Some(back)) = (focused, back) {
                 ui.memory_mut(|memory| memory.request_focus(back));
             }
@@ -518,10 +525,26 @@ fn follow_focus<A: ActionKey>(
         Some(previous) if now < previous => {
             let restore = trail.saved.get(now).copied().flatten();
             trail.saved.truncate(now);
+            // A control of the level that closed, such as one that hid its
+            // item and went back, has gone with it.
+            let closed = focused.is_some_and(|focused| {
+                !focus_return::presented(context, focused)
+                    && context
+                        .read_response(focused)
+                        .is_some_and(|previous| rect.contains(previous.rect.center()))
+            });
             if let Some(restore) = restore
-                && (focused.is_none() || focused == trail.back)
+                && (focused.is_none() || focused == trail.back || closed)
             {
-                ui.memory_mut(|memory| memory.request_focus(restore));
+                let pane = response
+                    .panes
+                    .iter()
+                    .find(|pane| pane.pane != NavigationPane::Empty && depth(pane.pane) == now)
+                    .map_or(rect, |pane| pane.rect);
+                // Nothing in the pane taking focus leaves it nowhere.
+                if let Some(target) = restore.target(context, pane) {
+                    ui.memory_mut(|memory| memory.request_focus(target));
+                }
             }
         }
         _ => {}
@@ -555,7 +578,9 @@ impl PresentationContext {
     ///   egui identity across layouts, so its scroll position survives too.
     /// - Keyboard focus follows the reader: opening a level that shows
     ///   Back moves focus to Back, and Back returns focus to what had it at
-    ///   the level it returns to, such as the row that opened the item.
+    ///   the level it returns to, such as the row that opened the item, or,
+    ///   when that has gone, to the control of the level's pane nearest
+    ///   where it was.
     /// - The recipe pushes no browser history: the in-app Back is the way
     ///   back, and the browser's own Back and the platform's back gesture
     ///   leave the application as they do for any page.
@@ -738,7 +763,7 @@ impl PresentationContext {
                 observations,
             });
         }
-        follow_focus(ui, &scope, spec.level(), &response);
+        follow_focus(ui, &scope, spec.level(), rect, &response);
         ui.advance_cursor_after_rect(rect);
         (response, controls)
     }

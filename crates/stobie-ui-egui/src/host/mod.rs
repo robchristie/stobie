@@ -168,7 +168,11 @@ pub trait Application: 'static {
     fn order_intents(&self, _intents: &mut [Self::Intent]) {}
 
     /// Publish bounded application facts and collection metadata with each
-    /// completed observation.
+    /// completed observation. The host adds its own facts after these: the
+    /// theme the pass was drawn in, as [`THEME_FACT`](crate::THEME_FACT)
+    /// and [`CONTRAST_FACT`](crate::CONTRAST_FACT), which replace an
+    /// application fact of the same name and do not count towards the 256
+    /// an application may publish.
     fn observe(&self, _observation: &mut Observation<'_>) {}
 
     /// Appearance preferences. The host applies the design system for them at
@@ -854,7 +858,8 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// observes and binds only it and what it presents, refuses every other
     /// action an agent or a shortcut asks for, and hides everything else
     /// from assistive technology. When it closes, focus returns to the
-    /// control that opened it.
+    /// control that opened it, or, when that has gone, as a row its own
+    /// confirmation deleted has, to the control nearest where it was.
     pub fn dialog<R>(
         &mut self,
         ui: &mut Ui,
@@ -2517,6 +2522,19 @@ impl<A: Application> AppHost<A> {
             collections: Vec::new(),
         };
         self.app.observe(&mut observation);
+        // The theme this pass was drawn in, after the application's facts so
+        // that none of them stands in for it.
+        let (theme, contrast) = match self
+            .preferences
+            .theme_variant(context.theme() == egui::Theme::Dark)
+        {
+            crate::ThemeVariant::Light => ("light", "standard"),
+            crate::ThemeVariant::Dark => ("dark", "standard"),
+            crate::ThemeVariant::LightHighContrast => ("light", "high"),
+            crate::ThemeVariant::DarkHighContrast => ("dark", "high"),
+        };
+        observation.fact(crate::THEME_FACT, theme);
+        observation.fact(crate::CONTRAST_FACT, contrast);
         let metadata = CollectionMetadata {
             collections: observation.collections,
             ..Default::default()
@@ -2734,6 +2752,8 @@ mod dialog_navigation_tests;
 #[cfg(test)]
 mod dialog_tests;
 #[cfg(test)]
+mod focus_return_tests;
+#[cfg(test)]
 mod heading_tests;
 #[cfg(test)]
 mod link_tests;
@@ -2751,3 +2771,5 @@ mod tests;
 mod text_field_tests;
 #[cfg(test)]
 mod text_tests;
+#[cfg(test)]
+mod theme_fact_tests;
