@@ -186,9 +186,19 @@ async function browser() {
     const hidden = await observe(client);
     assert.equal(hidden.facts.last_sequence, 7, 'a hidden page presents nothing');
     await setHidden(false);
-    const shown = await waitFacts(client, { last_sequence: 8, latest: 'Event 8' }, 5000);
+    // The host told the application the page was hidden before it applied
+    // the event, so the application counts it as arriving while away.
+    const shown = await waitFacts(client, { last_sequence: 8, latest: 'Event 8', arrived_while_hidden: 1 }, 5000);
     await idle(client, 'idle after showing');
     report.steps.push({ name: 'event while hidden, presented on show', facts: shown });
+    // Hiding alone, with no event and nothing focused, reaches the
+    // application: it starts a new count, which showing presents.
+    await setHidden(true);
+    await wait(300);
+    await setHidden(false);
+    const away = await waitFacts(client, { last_sequence: 8, arrived_while_hidden: 0 }, 5000);
+    await idle(client, 'idle after hiding and showing');
+    report.steps.push({ name: 'hidden and shown with no event', facts: away });
     assert.deepEqual(errors, [], 'no page errors');
   } finally {
     await browser.close();

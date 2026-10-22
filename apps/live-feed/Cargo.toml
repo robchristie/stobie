@@ -24,4 +24,4 @@ wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["CloseEvent", "Location", "MessageEvent", "Url", "UrlSearchParams", "WebSocket", "Window"] }
 
 [dev-dependencies]
-egui_kittest.workspace = true
+stobie-ui-egui = { path = "../../crates/stobie-ui-egui", features = ["test-support"] }

@@ -10,7 +10,9 @@ describes the route.
   is `{"seq": 4, "text": "..."}`; sequence numbers start at 1.
 - `src/lib.rs`: the application. `Application::started` gives its
   `IntentSender` to the transport, and each event applies as an ordinary
-  intent at the start of the next pass.
+  intent at the start of the next pass. `Application::visibility_changed`
+  counts the events that arrive while the page or window is hidden and shows
+  that count once it is visible again, until it is next hidden.
 - `src/socket.rs`: the browser transport, a WebSocket client. It connects to
   `<feed URL>?after=<seq>` with the highest sequence number it has received,
   forwards only newer events, and reconnects after 250 ms, doubling to 8 s.
@@ -29,6 +31,11 @@ page connects to `feed` beside it, or to the WebSocket URL given as
 link can therefore point the page at any WebSocket server; an application
 built from this should fix its feed URL or allow only its own servers.
 `tools/live-feed-smoke.sh browser` runs it in Chromium against a mock server
-that drops the connection, and checks the catch-up; `tools/live-feed-smoke.sh
+that drops the connection, and checks the catch-up and an event that arrives
+while the page is hidden; `tools/live-feed-smoke.sh
 native` drives the native build through standard input. Both check that the
 application paints nothing while idle and repaints when an event arrives.
+`src/tests.rs` drives the application through
+`stobie_ui_egui::testing::host_harness`, as the
+[composition guide](../../docs/application-composition.md#test-it-on-the-host)
+describes.
