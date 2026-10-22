@@ -435,7 +435,11 @@ is one `heading_row(ui, key, text, controls, availability)` call
 (`Frame::heading_row` in a hosted application, which also triggers each
 clicked control with its argument). Each `HeaderControl` is an action, an
 `ActionTarget` or a `BoundAction`, icon-only unless built with other
-content, and may be a toggle whose pressed state the application owns. The
+content, and may be a toggle whose pressed state the application owns. A
+bound action's own label (`with_label`) and subject name the control, and a
+text control shows its short label (`with_short_label`) where it has one,
+with the full name in its tooltip, as `Frame::action` does; the navigation
+header's controls follow the same rule. The
 controls keep their whole size at the row's end in the order given, and the
 heading elides in the room they leave, keeping its full text for assistive
 technology. When the controls would leave the heading less than its least

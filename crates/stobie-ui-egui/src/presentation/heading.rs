@@ -20,7 +20,10 @@ use crate::{
 ///
 /// Pass the action, an [`ActionTarget`] or a [`BoundAction`] carrying the
 /// argument the control acts on, such as the open conversation's ID. Each
-/// control's action, with its argument, appears once in a row.
+/// control's action, with its argument, appears once in a row. A bound
+/// action's own label ([`BoundAction::with_label`]) and subject name the
+/// control, and its short label ([`BoundAction::with_short_label`]) is what a
+/// text control shows, as for [`Frame::action`](crate::Frame::action).
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeaderControl<A: ActionKey> {
     action: BoundAction<A>,
@@ -30,7 +33,8 @@ pub struct HeaderControl<A: ActionKey> {
 }
 
 impl<A: ActionKey> HeaderControl<A> {
-    /// An icon-only control named by its action's label.
+    /// An icon-only control named by its action's label, or by the bound
+    /// action's own label and subject.
     pub fn icon(action: impl Into<BoundAction<A>>, icon: IconId) -> Self {
         Self::new(action, ActionButtonContent::IconOnly(icon))
     }
@@ -360,7 +364,9 @@ impl PresentationContext {
                 if !availability.visible() {
                     return None;
                 }
-                let label = bound.action().specification().label;
+                // Measured by what it shows: its short label, its own label or
+                // its action's.
+                let label = bound.visible_label();
                 let size =
                     action_button_size(ui, label, control.content, &self.tokens, self.font_scale);
                 let width = size.intrinsic.max(size.minimum_width);
@@ -399,7 +405,15 @@ impl PresentationContext {
                 .action_identity(),
             None => scope.instance(action).action_identity(),
         };
-        let name = bound.subject().map(|_| bound.accessible_name());
+        // Named and labelled as `Frame::action` names a bound control: by its
+        // own label and subject, showing its short label where it has one.
+        let name =
+            (bound.subject().is_some() || bound.label().is_some()).then(|| bound.accessible_name());
+        let labelled = bound.label().is_some() || bound.short_label().is_some();
+        let labels = crate::components::ControlLabels {
+            name: name.as_deref(),
+            visible: labelled.then(|| bound.visible_label()),
+        };
         let spec = ActionButtonSpec {
             target,
             availability: control.availability.clone(),
@@ -410,7 +424,7 @@ impl PresentationContext {
         let rect = control_place(rect, control.content, &self.tokens, self.font_scale);
         let response = ui
             .scope_builder(UiBuilder::new().max_rect(rect), |ui| {
-                self.present_action(ui, &identity, spec, control.content, name.as_deref(), value)
+                self.present_labelled_action(ui, &identity, spec, control.content, labels, value)
             })
             .inner;
         HeaderControlResponse {
