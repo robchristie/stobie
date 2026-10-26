@@ -1027,3 +1027,31 @@ fn a_native_field_scales_clips_and_never_zooms_the_page() {
         native.style
     );
 }
+
+#[test]
+fn a_tapped_field_awaiting_egui_ime_output_gets_its_rectangle_and_purpose() {
+    let mut name = node(Role::TextInput, &[]);
+    bounds(&mut name, 10.0, 20.0, 110.0, 44.0);
+    let mut password = node(Role::PasswordInput, &[]);
+    bounds(&mut password, 10.0, 60.0, 110.0, 84.0);
+    let nodes = || {
+        vec![
+            (1, node(Role::Window, &[2, 3])),
+            (2, name.clone()),
+            (3, password.clone()),
+        ]
+    };
+    let ime = tapped_field_ime(&update(nodes(), 2), NodeId(2)).unwrap();
+    assert_eq!(ime.purpose, egui::IMEPurpose::Normal);
+    assert_eq!(
+        ime.rect,
+        egui::Rect::from_min_max(egui::pos2(10.0, 20.0), egui::pos2(110.0, 44.0))
+    );
+    assert_eq!(ime.cursor_rect, ime.rect);
+    // A password field's typed text must be handled as a password's, or
+    // eframe repeats what was typed before egui's own output arrives.
+    let ime = tapped_field_ime(&update(nodes(), 3), NodeId(3)).unwrap();
+    assert_eq!(ime.purpose, egui::IMEPurpose::Password);
+    // Only while egui's focus is on the tapped field.
+    assert_eq!(tapped_field_ime(&update(nodes(), 2), NodeId(3)), None);
+}

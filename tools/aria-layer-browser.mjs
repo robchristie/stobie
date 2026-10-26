@@ -559,6 +559,17 @@ async function checkTouchFields({ story, agent, native }, check) {
         if (this.type.startsWith('touch') && this.target?.hasAttribute?.('data-stobie-native-active')) probe.claimed.push(this.type);
         return preventDefault.call(this);
       };
+      // Typed keys and the input they make, to say where typing went.
+      probe.typing = [];
+      for (const type of ['keydown', 'beforeinput', 'input']) {
+        document.addEventListener(type, event => probe.typing.push({
+          type,
+          key: event.key ?? event.data,
+          tag: event.target.tagName,
+          name: event.target.getAttribute?.('aria-label') ?? null,
+          inLayer: Boolean(event.target.closest?.('[id^="stobie-a11y:layer"]')),
+        }), true);
+      }
       document.addEventListener('focusin', event => probe.focus.push({
         tag: event.target.tagName,
         name: event.target.getAttribute('aria-label'),
@@ -644,10 +655,23 @@ async function checkTouchFields({ story, agent, native }, check) {
     if (agent.type) {
       const selector = `${LAYER} input[aria-label="${agent.name}"]`;
       const length = (await tablet.locator(selector).inputValue()).length;
+      const typingFrom = await tablet.evaluate(() => window.__touchProbe.typing.length);
       await tablet.keyboard.press('End');
       await tablet.keyboard.type(agent.type);
-      await tablet.waitForFunction(([selector, length]) => document.querySelector(selector)?.value.length === length,
-        [selector, length + agent.type.length], { timeout: 5000 });
+      const expected = length + agent.type.length;
+      try {
+        await tablet.waitForFunction(([selector, length]) => document.querySelector(selector)?.value.length === length,
+          [selector, expected], { timeout: 5000 });
+      } catch (error) {
+        // Say where the keys went and what each side holds.
+        const page = await tablet.evaluate(([selector, from]) => ({
+          layer: document.querySelector(selector)?.value.length,
+          active: { tag: document.activeElement?.tagName, name: document.activeElement?.getAttribute('aria-label'), length: document.activeElement?.value?.length },
+          typing: window.__touchProbe.typing.slice(from),
+        }), [selector, typingFrom]);
+        const { node } = await observed(agent.name);
+        throw new Error(`typing ${JSON.stringify(agent.type)} into ${agent.name} did not reach length ${expected} (from ${length}): ${JSON.stringify({ ...page, egui: { value: node?.value?.length, focused: node?.focused } })}`, { cause: error });
+      }
       assert(await textAgentFocused() === agentIsTextAgent, `${agent.name} keeps its focus while typing`);
       check('typing reaches the field through the text agent', { target: agent.name, typed: agent.type.length });
     }

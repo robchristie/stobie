@@ -149,6 +149,38 @@ pub fn text_field_at(tree: &AriaTree, (x, y): (f64, f64)) -> Option<&str> {
         .map(|target| target.id.as_str())
 }
 
+/// The IME output to give eframe for a tapped text field, `node`, while
+/// egui's focus is on it but its text edit has not emitted IME output yet:
+/// its rectangle, and the purpose its role says, so that eframe handles text
+/// typed meanwhile as the field will. `None` when egui's focus is elsewhere
+/// or the field has no bounds.
+pub fn tapped_field_ime(
+    update: &egui::accesskit::TreeUpdate,
+    node: egui::accesskit::NodeId,
+) -> Option<egui::output::IMEOutput> {
+    if update.focus != node {
+        return None;
+    }
+    let (_, field) = update.nodes.iter().find(|(id, _)| *id == node)?;
+    let bounds = field.bounds()?;
+    let rect = egui::Rect::from_min_max(
+        egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+        egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+    );
+    Some(egui::output::IMEOutput {
+        // eframe sends a password field's typed text whole and other
+        // fields' text as it grows, so a wrong purpose repeats text.
+        purpose: if field.role() == egui::accesskit::Role::PasswordInput {
+            egui::IMEPurpose::Password
+        } else {
+            egui::IMEPurpose::Normal
+        },
+        rect,
+        cursor_rect: rect,
+        should_interrupt_composition: false,
+    })
+}
+
 /// Whether a touch from `start` to `end`, in points, lasting `seconds`, is a
 /// tap that egui will take as a click: it stays within egui's click distance
 /// and time.
