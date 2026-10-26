@@ -7,8 +7,9 @@ use stobie_protocol::{
     BuildIdentity, CapabilityDescription, CollectionMetadata, CompletedObservation,
     INSPECTION_VERSION, InspectionError, InspectionErrorCode, InspectionLimits,
     InspectionOperation, InspectionReply, InspectionRequest, InspectionResult, InspectionSelector,
-    InvocationReceipt, ObservationValue, REVEAL_CAPABILITY, ReceiptState, ResolvedTarget,
-    SET_TEXT_CAPABILITY, SemanticUiId, TextLayoutObservation, UiNode, UiRect, UiRole, UiSnapshot,
+    InvocationReceipt, ObservationValue, PUBLICATION_FACT, REVEAL_CAPABILITY, ReceiptState,
+    ResolvedTarget, SET_TEXT_CAPABILITY, SemanticUiId, TextLayoutObservation, UiNode, UiRect,
+    UiRole, UiSnapshot,
 };
 
 use crate::{Client, ClientError, Condition, ErrorClass, InvokeOptions, Transport};
@@ -456,6 +457,20 @@ fn waits_return_the_observation_that_satisfies_them_or_keep_the_last_on_timeout(
     let error = client.wait(&condition).unwrap_err();
     assert_eq!(error.code, "timeout");
     assert!(error.observation.is_some(), "a timeout keeps what it saw");
+
+    // A pass the application could not publish says why.
+    fake.0.borrow_mut().facts = vec![(
+        PUBLICATION_FACT.into(),
+        ObservationValue::Text("too_large: 5000 nodes, over the limit of 4096".into()),
+    )];
+    let error = client.wait(&condition).unwrap_err();
+    assert!(
+        error.message.ends_with(
+            "; the application could not publish its latest pass (too_large: 5000 nodes, over the limit of 4096)"
+        ),
+        "{}",
+        error.message
+    );
 
     fake.0.borrow_mut().facts = vec![("undo_entries".into(), ObservationValue::UnsignedInteger(1))];
     let waited = client.wait(&condition).unwrap();

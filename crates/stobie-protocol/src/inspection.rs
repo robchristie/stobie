@@ -287,6 +287,14 @@ pub const THEME_FACT: &str = "stobie.theme";
 /// application's latest observed pass was drawn in: `standard` or `high`.
 pub const CONTRAST_FACT: &str = "stobie.contrast";
 
+/// The framework fact a hosted application publishes when inspection
+/// refused its latest pass: why, such as `too_large: 5000 nodes, over the
+/// limit of 4096` or `invalid: snapshot node IDs must be unique`. The
+/// observation carrying it presents only the root node and the framework's
+/// facts, and offers no application capabilities; the fact is absent once
+/// a pass publishes again.
+pub const PUBLICATION_FACT: &str = "stobie.publication";
+
 /// The value a capability takes, published by discovery. An action takes at
 /// most one argument, sent as `"arguments": {"value": …}`. `None` serialises
 /// as `"none"`; the others as objects tagged by `kind`.

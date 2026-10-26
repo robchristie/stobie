@@ -394,6 +394,10 @@ struct InspectionState {
     publication: Option<Publication>,
     observation: u64,
     ledger: BTreeMap<String, LedgerEntry>,
+    /// Ledger request IDs, oldest admission first.
+    admitted: VecDeque<String>,
+    /// Whether the ledger has evicted a settled receipt.
+    evicted: bool,
     pending: VecDeque<String>,
     waker: Option<Arc<dyn Fn() + Send + Sync>>,
     staged: Option<StagedPublication>,
@@ -401,8 +405,9 @@ struct InspectionState {
     reveal: bool,
 }
 
-/// A clone shares retained observations and a bounded, non-evicting mutation
-/// ledger. No worker thread owns or inspects application model memory.
+/// A clone shares retained observations and a mutation ledger that keeps the
+/// most recent [`INSPECTION_HISTORY_LIMIT`] receipts. No worker thread owns or
+/// inspects application model memory.
 #[derive(Clone)]
 pub struct Inspection {
     state: Arc<Mutex<InspectionState>>,
@@ -465,6 +470,8 @@ impl Inspection {
                 publication: None,
                 observation: 0,
                 ledger: BTreeMap::new(),
+                admitted: VecDeque::new(),
+                evicted: false,
                 pending: VecDeque::new(),
                 waker: None,
                 staged: None,
@@ -642,7 +649,9 @@ impl Inspection {
     }
 
     /// Service reads from retained state, or admit a mutation to the bounded
-    /// queue. A request ID is never evicted or silently reused within an instance.
+    /// queue. A request ID is never silently reused while its receipt is
+    /// retained; admitting a mutation to a full ledger evicts the oldest
+    /// settled receipt.
     pub fn handle(&self, request: InspectionRequest) -> InspectionReply {
         let mut state = self.state.lock().expect("inspection mutex poisoned");
         let pending_before = state.pending.len();
@@ -743,6 +752,15 @@ impl Inspection {
             .lock()
             .expect("inspection mutex poisoned")
             .reply(request_id, Err(error))
+    }
+
+    /// Whether `receipt` promises an observation that has not been published
+    /// yet, so a host must run another pass to keep the promise.
+    pub fn owes_observation(&self, receipt: &InvocationReceipt) -> bool {
+        let state = self.state.lock().expect("inspection mutex poisoned");
+        receipt
+            .after_observation
+            .is_some_and(|after| after > state.observation)
     }
 
     pub fn has_pending(&self) -> bool {
@@ -1184,10 +1202,10 @@ impl InspectionState {
                 expected,
                 arguments,
             } => {
-                if self.ledger.len() >= INSPECTION_HISTORY_LIMIT {
+                if self.ledger.len() >= INSPECTION_HISTORY_LIMIT && !self.evict_settled() {
                     return Err(InspectionError::new(
                         Code::HistoryFull,
-                        "mutation history is full; restart explicitly to establish a new instance",
+                        "every retained mutation is still queued or running",
                     ));
                 }
                 let validation = selector
@@ -1222,6 +1240,7 @@ impl InspectionState {
                 if receipt.state == ReceiptState::Queued {
                     self.pending.push_back(request.request_id.clone());
                 }
+                self.admitted.push_back(request.request_id.clone());
                 self.ledger.insert(
                     request.request_id.clone(),
                     LedgerEntry {
@@ -1242,7 +1261,15 @@ impl InspectionState {
                         before_observation: None,
                         after_observation: None,
                         target: None,
-                        error: None,
+                        // Only after an eviction may the ID have been used.
+                        error: self.evicted.then(|| {
+                            InspectionError::new(
+                                Code::UnknownRequest,
+                                format!(
+                                    "no retained receipt has this request_id; only the {INSPECTION_HISTORY_LIMIT} most recent mutations are retained, so an older one's receipt was evicted"
+                                ),
+                            )
+                        }),
                     },
                     |entry| entry.receipt.clone(),
                 );
@@ -1268,6 +1295,22 @@ impl InspectionState {
                 })
             }
         }
+    }
+
+    /// Forget the oldest receipt that is neither queued nor running, and so
+    /// its duplicate protection. Returns whether there was one.
+    fn evict_settled(&mut self) -> bool {
+        let Some(index) = self.admitted.iter().position(|request_id| {
+            self.ledger.get(request_id).is_some_and(|entry| {
+                !entry.executing && entry.receipt.state != ReceiptState::Queued
+            })
+        }) else {
+            return false;
+        };
+        let request_id = self.admitted.remove(index).expect("admitted index");
+        self.ledger.remove(&request_id);
+        self.evicted = true;
+        true
     }
 
     fn publication(&self) -> Result<&Publication, InspectionError> {
@@ -1421,24 +1464,32 @@ fn prepare_publication<A: ActionKey>(
     use InspectionErrorCode as Code;
     // The host's own facts, such as the theme, leave the application its
     // 256.
-    let framework_facts = [THEME_FACT, CONTRAST_FACT]
+    let framework_facts = [THEME_FACT, CONTRAST_FACT, PUBLICATION_FACT]
         .into_iter()
         .filter(|key| facts.contains_key(*key))
         .count();
-    if snapshot.nodes.len() > INSPECTION_NODE_LIMIT
-        || snapshot.text.len() > INSPECTION_TEXT_LIMIT
-        || bindings.len()
-            + framework.text_fields.len()
-            + framework.links.len()
-            + framework.copies.len()
-            + usize::from(reveal)
-            > INSPECTION_NODE_LIMIT
-        || metadata.collections.len() > 256
-        || facts.len() - framework_facts > 256
-    {
+    let capabilities = bindings.len()
+        + framework.text_fields.len()
+        + framework.links.len()
+        + framework.copies.len()
+        + usize::from(reveal);
+    let over = [
+        (snapshot.nodes.len(), INSPECTION_NODE_LIMIT, "nodes"),
+        (
+            snapshot.text.len(),
+            INSPECTION_TEXT_LIMIT,
+            "text observations",
+        ),
+        (capabilities, INSPECTION_NODE_LIMIT, "capabilities"),
+        (metadata.collections.len(), 256, "collections"),
+        (facts.len() - framework_facts, 256, "application facts"),
+    ]
+    .into_iter()
+    .find(|(count, limit, _)| count > limit);
+    if let Some((count, limit, what)) = over {
         return Err(InspectionError::new(
             Code::PublicationLimit,
-            "completed observation exceeds collection limits",
+            format!("{count} {what}, over the limit of {limit}"),
         ));
     }
     let mut ids = BTreeSet::new();
@@ -1545,10 +1596,11 @@ fn prepare_publication<A: ActionKey>(
         })?
         .len();
     // Reserve space for committed instance/build identity and reply framing.
-    if observation_size + capability_size + 4096 > INSPECTION_PUBLICATION_BYTES {
+    let size = observation_size + capability_size + 4096;
+    if size > INSPECTION_PUBLICATION_BYTES {
         return Err(InspectionError::new(
             Code::PublicationLimit,
-            "completed observation exceeds byte limit",
+            format!("{size} bytes, over the limit of {INSPECTION_PUBLICATION_BYTES}"),
         ));
     }
     Ok(publication)
