@@ -230,7 +230,7 @@ is its text and a combo box's is its selected option's label. Capabilities witho
 - `receipt ID` reads a mutation's receipt; `cancel ID` cancels a queued one.
   The application keeps the receipts of its 256 most recent invocations; an
   older one is `unknown` with an `unknown_request` error saying it was
-  evicted, and its request ID no longer guards against a repeat, so read a
+  evicted, `cancel` of it fails with that error, and its request ID no longer guards against a repeat, so read a
   receipt promptly. An `unknown` receipt exits with status 1.
 - `capabilities` prints the command registry as JSON without connecting.
 

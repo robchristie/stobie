@@ -1,7 +1,8 @@
 #![cfg(test)]
 //! The theme a hosted application's pass was drawn in, published with its
 //! observation as the framework's `stobie.theme` and `stobie.contrast`
-//! facts, whatever facts the application publishes itself.
+//! facts, whatever facts the application publishes itself, and the
+//! framework's `stobie.publication`, which only a refused pass carries.
 
 use egui::Vec2;
 use egui_kittest::Harness;
@@ -10,7 +11,7 @@ use serde::Serialize;
 use super::*;
 use crate::{
     Action, AppearancePreference, CONTRAST_FACT, ContrastPreference, InspectionOperation,
-    InspectionResult, PresentationScope, ReadingTextSpec, THEME_FACT,
+    InspectionResult, PUBLICATION_FACT, PresentationScope, ReadingTextSpec, THEME_FACT,
 };
 
 #[derive(Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -47,6 +48,8 @@ impl Application for Notes {
         // An application fact of the same name does not stand in for the
         // framework's.
         observation.fact(THEME_FACT, "sepia");
+        // Nor does one claiming that the pass was refused.
+        observation.fact(PUBLICATION_FACT, "invalid: the application says so");
         for index in 1..self.facts {
             observation.fact(format!("fact.{index}"), index);
         }
@@ -94,8 +97,8 @@ fn harness(preferences: UiPreferences, facts: usize) -> Harness<'static, Probe> 
     harness
 }
 
-/// The drawn theme's facts in the latest observation.
-fn theme(harness: &Harness<'_, Probe>) -> (ObservationValue, ObservationValue) {
+/// The facts of the latest observation.
+fn facts(harness: &Harness<'_, Probe>) -> BTreeMap<String, ObservationValue> {
     let inspection = harness.state().host.as_ref().unwrap().inspection().unwrap();
     let reply = inspection.handle(InspectionRequest {
         version: 1,
@@ -106,10 +109,13 @@ fn theme(harness: &Harness<'_, Probe>) -> (ObservationValue, ObservationValue) {
     let Some(InspectionResult::Observe { observation }) = reply.result else {
         panic!("observe failed: {:?}", reply.error);
     };
-    (
-        observation.facts[THEME_FACT].clone(),
-        observation.facts[CONTRAST_FACT].clone(),
-    )
+    observation.facts
+}
+
+/// The drawn theme's facts in the latest observation.
+fn theme(harness: &Harness<'_, Probe>) -> (ObservationValue, ObservationValue) {
+    let facts = facts(harness);
+    (facts[THEME_FACT].clone(), facts[CONTRAST_FACT].clone())
 }
 
 fn preferences(appearance: AppearancePreference, contrast: ContrastPreference) -> UiPreferences {
@@ -174,4 +180,17 @@ fn the_theme_facts_leave_the_application_its_own_fact_limit() {
     // The application publishes the most facts the limit allows.
     let harness = harness(UiPreferences::default(), 256);
     assert_eq!(theme(&harness), ("dark".into(), "standard".into()));
+}
+
+#[test]
+fn a_published_pass_carries_no_publication_fact_the_application_set() {
+    let harness = harness(UiPreferences::default(), 1);
+    let facts = facts(&harness);
+    assert!(!facts.contains_key(PUBLICATION_FACT), "{facts:?}");
+    // The application's own fact is not published either, so it takes
+    // none of the framework's allowance.
+    assert_eq!(
+        facts.keys().map(String::as_str).collect::<Vec<_>>(),
+        [CONTRAST_FACT, THEME_FACT]
+    );
 }

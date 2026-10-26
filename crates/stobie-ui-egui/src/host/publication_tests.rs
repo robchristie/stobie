@@ -235,6 +235,24 @@ fn a_dispatched_invocation_that_changes_nothing_still_publishes_its_observation(
     );
     assert!(harness.ctx.has_requested_repaint());
 
+    // Before that pass, a lookup or a replay of the receipt reads it and
+    // asks for nothing more.
+    let host = host_mut(&mut harness);
+    let lookup = request(
+        host,
+        "lookup",
+        InspectionOperation::Receipt {
+            request_id: "refresh".into(),
+        },
+    );
+    assert_eq!(receipt(host.dispatch(lookup).unwrap()), completed);
+    assert_eq!(receipt(host.dispatch(invoke.clone()).unwrap()), completed);
+    assert_eq!(host.app().refreshed, 1);
+    assert_eq!(
+        host.repaint_reasons(),
+        [HostRepaint::Application("invocation receipt")]
+    );
+
     harness.run();
     assert!(observe(&harness).id >= after);
 

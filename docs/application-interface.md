@@ -127,7 +127,8 @@ that presents only the root node, the two theme facts and
 followed by what was over its limit, such as `too_large: 5000 nodes, over
 the limit of 4096`, or `invalid:` followed by the reason. It offers none of
 the application's capabilities, so an agent reads the failure rather than
-the previous pass, and the fact is gone once a pass publishes again. The
+the previous pass, and the fact is gone once a pass publishes again. Only
+the host publishes it: it drops an application fact of that name. The
 host also reports the first failing pass through `Application::report_error`.
 Reading an idle host may repeatedly return the
 same observation. Reads never request repaint or enumerate off-screen domain
@@ -283,7 +284,7 @@ answered with its receipt or `request_id_conflict` and never runs again, while
 one whose receipt was evicted is admitted as a new invocation. Once any
 receipt has been evicted, an `unknown` receipt carries an `unknown_request`
 error saying that older receipts were evicted, because the ID may have been
-one of them. Read a receipt soon after an uncertain outcome rather than after
+one of them, and cancelling an unknown ID fails with the same error. Read a receipt soon after an uncertain outcome rather than after
 hundreds of further invocations. Only when all 256 retained invocations are
 still queued or running is a new one refused with `history_full`. A restart
 creates a new instance, so old receipts cannot be looked up in the new
