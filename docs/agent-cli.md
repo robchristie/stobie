@@ -81,7 +81,9 @@ stobie stop desk
 built program given after `--`. It creates a fresh private socket directory,
 starts the program under a detached supervisor with
 `STOBIE_AUTOMATION_SOCKET` set, and returns once the application answers and
-has published its first observation. The supervisor removes the directory and
+has published its first observation. An application that exits first fails
+the launch as soon as it exits (`launch_failed`, status 3), with the last
+lines of its log, rather than at `--timeout`. The supervisor removes the directory and
 the session when the application exits. It holds a lock in the session
 directory, which the application inherits; `stop`, `sessions` and `launch`
 treat a session as running only while that lock is held, so a session left

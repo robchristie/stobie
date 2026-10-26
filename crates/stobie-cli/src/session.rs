@@ -368,7 +368,7 @@ pub fn launch(
         use std::os::unix::process::CommandExt;
         supervisor.process_group(0);
     }
-    supervisor.spawn().map_err(|error| {
+    let mut supervisor = supervisor.spawn().map_err(|error| {
         ClientError::new(
             "launch_failed",
             format!("cannot start the supervisor: {error}"),
@@ -386,6 +386,12 @@ pub fn launch(
             if !alive(pid) {
                 break;
             }
+        }
+        // The supervisor exits only once the application has, after removing
+        // the session it recorded, so an application that exits at once can
+        // leave no session to load; its exit is the signal.
+        if matches!(supervisor.try_wait(), Ok(Some(_))) {
+            break;
         }
         if started.elapsed() > timeout {
             let _ = stop(name, Duration::from_secs(5));
