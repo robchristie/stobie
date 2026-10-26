@@ -9,8 +9,9 @@ use stobie_protocol::{
     ApplicationIdentity, CapabilityDescription, CompletedObservation, INSPECTION_VERSION,
     InspectionCursor, InspectionErrorCode, InspectionLimits, InspectionOperation,
     InspectionOperationKind, InspectionReply, InspectionRequest, InspectionResult,
-    InspectionSelector, InvocationReceipt, ObservedNode, REVEAL_CAPABILITY, ReceiptState,
-    RendererIdentity, ResolvedTarget, SET_TEXT_CAPABILITY, SemanticUiId, UiNode,
+    InspectionSelector, InvocationReceipt, ObservationValue, ObservedNode, PUBLICATION_FACT,
+    REVEAL_CAPABILITY, ReceiptState, RendererIdentity, ResolvedTarget, SET_TEXT_CAPABILITY,
+    SemanticUiId, UiNode,
 };
 
 use crate::condition::{one_node, selected_ids};
@@ -800,11 +801,24 @@ impl<T: Transport> Client<T> {
                 let latest = last
                     .as_ref()
                     .and_then(|observation| latest_state(condition, observation));
+                // A pass the application could not publish presents nothing
+                // the condition could match.
+                let unpublished = last.as_ref().and_then(|observation| {
+                    match observation.facts.get(PUBLICATION_FACT)? {
+                        ObservationValue::Text(reason) => Some(reason.clone()),
+                        _ => None,
+                    }
+                });
                 let mut error = ClientError::timeout(format!(
-                    "the condition did not hold within {} ms{}{}",
+                    "the condition did not hold within {} ms{}{}{}",
                     self.timeout.as_millis(),
                     latest
                         .map(|latest| format!("; {latest}"))
+                        .unwrap_or_default(),
+                    unpublished
+                        .map(|reason| format!(
+                            "; the application could not publish its latest pass ({reason})"
+                        ))
                         .unwrap_or_default(),
                     last_error
                         .map(|error| format!("; last error: {error}"))

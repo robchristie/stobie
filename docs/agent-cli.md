@@ -155,7 +155,11 @@ Roles are snake case, such as `button`, `text_input`, `combo_box`, `tab`,
 
 - `observe` outlines the latest observation: facts, including the
   framework's `stobie.theme` (`light` or `dark`) and `stobie.contrast`
-  (`standard` or `high`) for the theme the page is drawn in, collections,
+  (`standard` or `high`) for the theme the page is drawn in, and
+  `stobie.publication` when the application could not publish its latest
+  pass, such as `too_large: 5000 nodes, over the limit of 4096`, in which
+  case only the root node is outlined (see
+  [observations](application-interface.md#read-discover-and-invoke)), collections,
   audits, then one line per node with its role, name, state, value, the
   argument it carries, stable `#ID` and `[capabilities]`, indented by
   containment. A text field's value
@@ -183,7 +187,8 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   value chooses the row's control that carries it, or else the action's own
   binding; a row's control needs no value. Controls that perform the same
   thing, such as one row's Open in two lists, are one choice, and the one
-  with the least ID runs. `--request-id` makes a retry safe; `--no-wait` returns once the
+  with the least ID runs. `--request-id` makes a retry safe while its receipt is
+  retained (see `receipt`); `--no-wait` returns once the
   invocation is admitted.
 - `set-text ID TEXT` replaces a text field's text through the same edit route
   as typing (`-` reads standard input; `--text-file PATH` reads a file). A
@@ -214,11 +219,17 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   `value`, `status`, `selection_changed`, `fact` (`--key K --value V`),
   `audits_clear` or `content` (`--value TEXT`: a published content excerpt
   contains the text; withheld text never matches), with selector flags; `--condition JSON` gives the whole
-  condition. Unknown condition fields are rejected.
+  condition. Unknown condition fields are rejected. A wait that times out
+  while the application cannot publish its pass says so, with the
+  `stobie.publication` reason.
 - `capture --output PNG` writes a screenshot between two observations: the
   browser canvas through DevTools, or a launched native window through X11
   (`xdotool` and ImageMagick's `import`).
 - `receipt ID` reads a mutation's receipt; `cancel ID` cancels a queued one.
+  The application keeps the receipts of its 256 most recent invocations; an
+  older one is `unknown` with an `unknown_request` error saying it was
+  evicted, and its request ID no longer guards against a repeat, so read a
+  receipt promptly. An `unknown` receipt exits with status 1.
 - `capabilities` prints the command registry as JSON without connecting.
 
 `--timeout MS` (default 15000) bounds each command, including its waits.
