@@ -89,30 +89,11 @@ pub fn audit_accesskit(
         }
     }
     let mut findings = Vec::new();
-    for semantic in snapshot.nodes.iter().filter(|node| {
-        matches!(
-            node.role,
-            UiRole::Button
-                | UiRole::NavigationItem
-                | UiRole::RadioButton
-                | UiRole::ComboBox
-                | UiRole::TextInput
-                | UiRole::MultilineTextInput
-                | UiRole::Slider
-                | UiRole::Tab
-                | UiRole::Splitter
-                | UiRole::Viewport
-                | UiRole::ResultRow
-                | UiRole::ThumbnailCell
-                | UiRole::StatusChip
-                | UiRole::Status
-                | UiRole::Pane
-                | UiRole::Link
-                | UiRole::Switch
-                | UiRole::Dialog
-                | UiRole::AlertDialog
-        )
-    }) {
+    for (semantic, expected_role) in snapshot
+        .nodes
+        .iter()
+        .filter_map(|node| Some((node, accesskit_role(node.role)?)))
+    {
         let Some(candidates) = by_author.get(semantic.id.0.as_str()) else {
             findings.push(AccessKitMismatch::MissingNode {
                 id: semantic.id.clone(),
@@ -141,26 +122,6 @@ pub fn audit_accesskit(
                 });
             }
         }
-        let expected_role = match semantic.role {
-            UiRole::Button | UiRole::NavigationItem => egui::accesskit::Role::Button,
-            UiRole::RadioButton => egui::accesskit::Role::RadioButton,
-            UiRole::ComboBox => egui::accesskit::Role::ComboBox,
-            UiRole::TextInput => egui::accesskit::Role::TextInput,
-            UiRole::MultilineTextInput => egui::accesskit::Role::MultilineTextInput,
-            UiRole::Slider => egui::accesskit::Role::Slider,
-            UiRole::Tab => egui::accesskit::Role::Tab,
-            UiRole::Splitter => egui::accesskit::Role::Splitter,
-            UiRole::Viewport => egui::accesskit::Role::Canvas,
-            UiRole::ResultRow | UiRole::ThumbnailCell => egui::accesskit::Role::ListBoxOption,
-            UiRole::StatusChip => egui::accesskit::Role::Label,
-            UiRole::Status => egui::accesskit::Role::Status,
-            UiRole::Pane => egui::accesskit::Role::Region,
-            UiRole::Link => egui::accesskit::Role::Link,
-            UiRole::Switch => egui::accesskit::Role::Switch,
-            UiRole::Dialog => egui::accesskit::Role::Dialog,
-            UiRole::AlertDialog => egui::accesskit::Role::AlertDialog,
-            _ => unreachable!(),
-        };
         // A masked text input is AccessKit's password input.
         let password = semantic.role == UiRole::TextInput
             && node.role() == egui::accesskit::Role::PasswordInput;
@@ -266,6 +227,7 @@ pub fn audit_accesskit(
                     | UiRole::ThumbnailCell
                     | UiRole::Link
                     | UiRole::Switch
+                    | UiRole::Checkbox
             );
         let supports_click = node.supports_action(egui::accesskit::Action::Click);
         if (semantic.role == UiRole::StatusChip && supports_click)
@@ -337,6 +299,44 @@ pub fn audit_accesskit(
         }
     }
     findings
+}
+
+/// The AccessKit role a semantic role presents as, or `None` for layout
+/// roles that assistive technology does not see as controls.
+pub(crate) fn accesskit_role(role: UiRole) -> Option<egui::accesskit::Role> {
+    use egui::accesskit::Role;
+    Some(match role {
+        UiRole::Button | UiRole::NavigationItem => Role::Button,
+        UiRole::RadioButton => Role::RadioButton,
+        UiRole::ComboBox => Role::ComboBox,
+        UiRole::TextInput => Role::TextInput,
+        UiRole::MultilineTextInput => Role::MultilineTextInput,
+        UiRole::Slider => Role::Slider,
+        UiRole::Tab => Role::Tab,
+        UiRole::Splitter => Role::Splitter,
+        UiRole::Viewport => Role::Canvas,
+        UiRole::ResultRow | UiRole::ThumbnailCell => Role::ListBoxOption,
+        UiRole::StatusChip => Role::Label,
+        UiRole::Status => Role::Status,
+        UiRole::Pane => Role::Region,
+        UiRole::Link => Role::Link,
+        UiRole::Switch => Role::Switch,
+        UiRole::Dialog => Role::Dialog,
+        UiRole::AlertDialog => Role::AlertDialog,
+        UiRole::Checkbox => Role::CheckBox,
+        UiRole::Table => Role::Table,
+        UiRole::Tree => Role::Tree,
+        UiRole::Menu => Role::Menu,
+        UiRole::Progress => Role::ProgressIndicator,
+        UiRole::Image => Role::Image,
+        UiRole::Application
+        | UiRole::ApplicationBar
+        | UiRole::Toolbar
+        | UiRole::ScrollArea
+        | UiRole::Section => return None,
+        // A role this version does not know has no AccessKit counterpart yet.
+        _ => return None,
+    })
 }
 
 /// The text of the labels under `node`, in tree order.

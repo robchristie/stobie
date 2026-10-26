@@ -155,6 +155,18 @@ pub enum UiRole {
     /// named by its title and described by its message. It is modal as
     /// [`Self::Dialog`] is.
     AlertDialog,
+    /// A checkbox, named by its label, whose state is `checked`.
+    Checkbox,
+    /// A table of rows and columns, named by its caption.
+    Table,
+    /// A tree of items that expand and collapse, named by its heading.
+    Tree,
+    /// A menu of commands, named by what opens it.
+    Menu,
+    /// A progress indicator, named by what is in progress.
+    Progress,
+    /// An image, named by its text alternative.
+    Image,
 }
 
 /// The domain identity a semantic node presents, published to agents as

@@ -12,8 +12,8 @@ use serde::Serialize;
 use stobie_core::{PaneId, Workspace, WorkspaceChange};
 use stobie_ui_egui::{
     Action, ActionEmphasis, ActionTarget, Application, ApplicationIdentity, Availability,
-    ContentTextSpec, Frame, NativeTextControlKind, Observation, Panes, PresentationScope,
-    SemanticUiId, TextInteraction, TextOverflow, TextRole, UiNode, UiRole, application_identity,
+    ContentTextSpec, Frame, Observation, Panes, PresentationScope, TextFieldSpec, TextInteraction,
+    TextOverflow, TextRole, application_identity,
 };
 
 const NOTES_PANE: PaneId = PaneId(1);
@@ -195,27 +195,19 @@ impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
     ) {
         let mut p = frame.pane_presentation(ui, PresentationScope::new("notes"), pane);
         p.heading(ui, "title", "Notes");
-        // Edit a copy and emit it; the state changes only in `apply`.
-        let mut draft = self.draft.to_owned();
-        let (field, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-            (
-                ui.add(egui::TextEdit::singleline(&mut draft).hint_text("New note")),
-                (),
-            )
-        });
-        // Observed as a text input, the field accepts `stobie set-text {{name}}.draft TEXT`.
-        let mut node = UiNode::container(
-            SemanticUiId::new(DRAFT_ID),
-            Some(SemanticUiId::pane(pane)),
-            UiRole::TextInput,
-            field.rect.into(),
+        // The field edits a copy and emits it, so the state changes only in
+        // `apply`. Observed as a text input, it accepts
+        // `stobie set-text {{name}}.draft TEXT`.
+        frame.text_field(
+            ui,
+            &mut p,
+            "draft",
+            &TextFieldSpec::new("New note")
+                .hint("What to remember")
+                .id(DRAFT_ID),
+            self.draft,
+            NoteIntent::EditDraft,
         );
-        node.name = "New note".into();
-        node.focused = field.has_focus();
-        p.observe_node(ui, node);
-        if draft != self.draft {
-            frame.emit(NoteIntent::EditDraft(draft));
-        }
         ui.horizontal(|ui| {
             frame.action(ui, &mut p, NoteAction::Add, ActionEmphasis::Primary);
             frame.action(ui, &mut p, NoteAction::Clear, ActionEmphasis::Normal);

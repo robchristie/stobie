@@ -12,6 +12,7 @@ mod copy;
 mod dialog;
 mod heading;
 mod navigation;
+mod observed;
 mod scroll;
 mod text_field;
 

@@ -230,6 +230,10 @@ snapshot, is the source.
 | `Link` | `Link` with its URL | `link`, a hit target while enabled |
 | `Dialog` | `Dialog`, modal, named by its title | `dialog` with `aria-modal="true"`; while it is presented, the layer holds only it |
 | `AlertDialog` | `AlertDialog`, modal, named by its title and described by its message | `alertdialog` with `aria-modal="true"` and its message in `aria-description` |
+| `Checkbox` | `CheckBox` with toggled state | `checkbox` with `aria-checked` |
+| `Table`, `Tree`, `Menu` | `Table`, `Tree`, `Menu`, named by their label | `table`, `tree`, `menu` |
+| `Progress` | `ProgressIndicator` with its value | `progressbar` |
+| `Image` | `Image`, named by its text alternative | `img` |
 | `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender, and a segmented choice a `RadioGroup` (single) or `Group` (multiple) named by the choice | `radiogroup` or `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |

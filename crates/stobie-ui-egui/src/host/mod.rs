@@ -2510,6 +2510,9 @@ impl<A: Application> AppHost<A> {
         );
         root_node.name = self.identity.name.clone();
         let mut nodes = vec![root_node];
+        // Each published node's rectangle before clipping, which is what a
+        // text edit it presents reports, however far it is scrolled.
+        let mut presented = vec![root_rect];
         let mut published = BTreeMap::from([(SemanticUiId::root(), (0, Origin::Application))]);
         let mut duplicates = Vec::new();
         let mut non_finite = Vec::new();
@@ -2542,6 +2545,7 @@ impl<A: Application> AppHost<A> {
                 None => {
                     published.insert(node.id.clone(), (nodes.len(), origin));
                     nodes.push(node);
+                    presented.push(rect);
                 }
                 // An application's observation of the same control refines the
                 // recipe's own node; anything else sharing the ID is a duplicate.
@@ -2550,13 +2554,14 @@ impl<A: Application> AppHost<A> {
                 {
                     published.insert(node.id.clone(), (index, origin));
                     nodes[index] = node;
+                    presented[index] = rect;
                 }
                 Some((index, Origin::Application))
                     if origin == Origin::Recipe && nodes[index].role == node.role => {}
                 Some(_) => duplicates.push(node.id),
             }
         }
-        let text_fields = pair_text_fields(context, &mut nodes);
+        let text_fields = pair_text_fields(context, &mut nodes, &presented);
         let copies = copy_bindings(
             &nodes,
             observed.copies.into_iter().map(|(copy, _)| copy).collect(),
@@ -2799,10 +2804,13 @@ fn copy_bindings(
 /// value and offer AccessKit `SetValue` on it. A field pairs by its AccessKit
 /// `author_id`, which Stobie recipes set to the semantic ID, or else by
 /// presenting exactly one text input node's rectangle; the host then sets the
-/// `author_id`. Without AccessKit, no field pairs.
+/// `author_id`. `presented` holds each node's rectangle before a scroll area
+/// clipped it, so a field partly scrolled out of view still pairs. Without
+/// AccessKit, no field pairs.
 fn pair_text_fields(
     context: &egui::Context,
     nodes: &mut [UiNode],
+    presented: &[Rect],
 ) -> Vec<(TextFieldBinding, String)> {
     use egui::accesskit::Action;
     let is_text =
@@ -2832,12 +2840,16 @@ fn pair_text_fields(
                 .iter()
                 .position(|node| is_text(node) && node.id.0 == *author),
             None => {
-                let mut matching = nodes.iter().enumerate().filter(|(_, node)| {
-                    let presented = Rect::from(node.rect);
-                    is_text(node)
-                        && (presented.min - rect.min).length() < 0.5
-                        && (presented.max - rect.max).length() < 0.5
-                });
+                let mut matching =
+                    nodes
+                        .iter()
+                        .zip(presented)
+                        .enumerate()
+                        .filter(|(_, (node, presented))| {
+                            is_text(node)
+                                && (presented.min - rect.min).length() < 0.5
+                                && (presented.max - rect.max).length() < 0.5
+                        });
                 match (matching.next(), matching.next()) {
                     (Some((index, _)), None) => Some(index),
                     _ => None,
@@ -2913,6 +2925,8 @@ mod heading_tests;
 mod link_tests;
 #[cfg(test)]
 mod navigation_tests;
+#[cfg(test)]
+mod observed_tests;
 #[cfg(test)]
 mod publication_tests;
 #[cfg(test)]

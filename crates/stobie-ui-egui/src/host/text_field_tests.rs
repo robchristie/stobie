@@ -473,3 +473,201 @@ fn a_disabled_ui_disables_the_fields() {
     harness.run();
     assert_eq!(host(&harness).app().edits, 0);
 }
+
+/// A custom field, observed by hand with no AccessKit author, in a scroll
+/// area inside an `observe_visible_only` region, as a field in a dock pane
+/// is.
+mod scrolled {
+    use super::*;
+    use crate::{NativeTextControlKind, observe_visible_only};
+
+    /// The height of the scrolled view.
+    const VIEW: f32 = 200.0;
+    /// The space above the field in the scrolled content.
+    const ABOVE: f32 = 300.0;
+    /// How much of the field's top is scrolled out of view.
+    const HIDDEN: f32 = 6.0;
+    const ID: &str = "scrolled.draft";
+
+    #[derive(Default)]
+    struct Draft {
+        text: String,
+        /// Scroll the field's top out of view.
+        scrolled: bool,
+    }
+
+    impl Application for Draft {
+        type Action = Act;
+        type Intent = String;
+        type UiState = Option<egui::Response>;
+
+        fn identity(&self) -> ApplicationIdentity {
+            crate::application_identity!("Draft")
+        }
+
+        fn availability(&self, _: ActionTarget<Act>) -> Availability {
+            Availability::Enabled
+        }
+
+        fn report_error(&mut self, message: String) {
+            panic!("{message}");
+        }
+
+        fn ui(
+            &self,
+            ui: &mut Ui,
+            view: &mut Option<egui::Response>,
+            frame: &mut Frame<'_, Act, String>,
+        ) {
+            let offset = if self.scrolled { ABOVE + HIDDEN } else { 0.0 };
+            observe_visible_only(ui, |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(VIEW)
+                    .min_scrolled_height(VIEW)
+                    .auto_shrink(false)
+                    .vertical_scroll_offset(offset)
+                    .show(ui, |ui| {
+                        let mut p = frame.presentation(
+                            ui,
+                            PresentationScope::new("scrolled"),
+                            SemanticUiId::root(),
+                        );
+                        ui.add_space(ABOVE);
+                        let mut text = self.text.clone();
+                        let (field, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
+                            (ui.add(egui::TextEdit::singleline(&mut text)), ())
+                        });
+                        let mut node = UiNode::container(
+                            SemanticUiId::new(ID),
+                            Some(SemanticUiId::root()),
+                            UiRole::TextInput,
+                            field.rect.into(),
+                        );
+                        node.name = "Draft".into();
+                        node.focused = field.has_focus();
+                        p.observe_node(ui, node);
+                        if text != self.text {
+                            frame.emit(text);
+                        }
+                        ui.add_space(2.0 * VIEW);
+                        p.finish(ui);
+                        *view = Some(field);
+                    });
+            });
+        }
+
+        fn apply(&mut self, text: String, _: &mut Option<egui::Response>) -> Result<bool, String> {
+            self.text = text;
+            Ok(true)
+        }
+
+        fn perform(
+            &mut self,
+            _: ActionTarget<Act>,
+            _: &mut Option<egui::Response>,
+        ) -> Result<bool, String> {
+            Ok(true)
+        }
+    }
+
+    #[derive(Default)]
+    struct Probe {
+        host: Option<AppHost<Draft>>,
+    }
+
+    fn harness(draft: Draft) -> Harness<'static, Probe> {
+        let mut harness = Harness::builder()
+            .with_size(Vec2::new(480.0, 600.0))
+            .build_ui_state(
+                |ui, probe: &mut Probe| {
+                    if let Some(host) = &mut probe.host {
+                        host.present(ui);
+                    }
+                },
+                Probe::default(),
+            );
+        crate::install_typography_fonts(&harness.ctx);
+        let context = harness.ctx.clone();
+        let mut host = AppHost::new(&context, draft);
+        host.enable_inspection(Inspection::new("scrolled-test"));
+        harness.state_mut().host = Some(host);
+        harness.run();
+        harness
+    }
+
+    fn host<'a>(harness: &'a Harness<'_, Probe>) -> &'a AppHost<Draft> {
+        harness.state().host.as_ref().unwrap()
+    }
+
+    fn request(
+        harness: &Harness<'_, Probe>,
+        id: &str,
+        operation: InspectionOperation,
+    ) -> InspectionReply {
+        let inspection = host(harness).inspection().unwrap();
+        inspection.handle(InspectionRequest {
+            version: 1,
+            request_id: id.into(),
+            instance: Some(inspection.instance()),
+            operation,
+        })
+    }
+
+    #[test]
+    fn a_custom_field_partly_scrolled_out_of_view_keeps_set_text() {
+        let mut harness = harness(Draft {
+            scrolled: true,
+            ..Draft::default()
+        });
+        // The field is partly in view: its node is clipped to the part shown.
+        let field = host(&harness).ui_state().clone().unwrap();
+        let snapshot = host(&harness).ui_snapshot();
+        let node = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.id.0 == ID)
+            .expect("the field is published while partly in view");
+        let shown = Rect::from(node.rect);
+        assert!(
+            shown.height() < field.rect.height() - HIDDEN / 2.0,
+            "{shown:?} is clipped from {:?}",
+            field.rect
+        );
+        assert!((shown.max.y - field.rect.max.y).abs() < 0.5);
+
+        // It still pairs with its text edit, so agents can set its text.
+        let id = SemanticUiId::new(ID);
+        let reply = request(
+            &harness,
+            "discover",
+            InspectionOperation::Discover {
+                selector: by_id(&id),
+                limit: 8,
+                cursor: None,
+            },
+        );
+        let Some(InspectionResult::Discover {
+            mut capabilities, ..
+        }) = reply.result
+        else {
+            panic!("discovery: {:?}", reply.error);
+        };
+        assert_eq!(capabilities.len(), 1, "{capabilities:?}");
+        let expected = capabilities.remove(0).target;
+        let admitted = receipt(request(
+            &harness,
+            "set",
+            InspectionOperation::Invoke {
+                selector: by_id(&id),
+                expected,
+                arguments: serde_json::json!({ "value": "Partly in view" }),
+            },
+        ));
+        assert_eq!(admitted.state, ReceiptState::Queued, "{admitted:?}");
+        harness.run();
+        assert_eq!(host(&harness).app().text, "Partly in view");
+        let snapshot = host(&harness).ui_snapshot();
+        let node = snapshot.nodes.iter().find(|node| node.id.0 == ID).unwrap();
+        assert_eq!(node.value.as_deref(), Some("Partly in view"));
+    }
+}

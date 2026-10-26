@@ -10,7 +10,10 @@ built on **egui**, **eframe** and **wgpu**.
 
 Agents can operate every Stobie application with no inspection code in the
 application. The `stobie` command launches or attaches to it, natively or in
-a browser, then reads its UI compactly and invokes its declared actions. In the
+a browser, then reads its UI compactly and invokes its declared actions.
+Stobie's recipes, such as actions, text fields and choices, publish what they
+present; a plain egui widget is observed in one call, and only a custom widget
+describes its own semantics. In the
 browser, a hidden ARIA layer mirrors the accessibility tree, so
 accessibility-tree browser agents can read and operate it too. The layer is
 built for screen readers as well, but no browser and screen-reader combination
@@ -54,6 +57,15 @@ pub enum NoteAction {
     #[action(label = "Add note", description = "Add the draft as a note", shortcut = "Cmd+Enter")]
     Add,
 }
+```
+
+A pane presents the action and the draft it adds through recipes, which give
+agents the action and `stobie set-text my-app.draft TEXT`:
+
+```text
+frame.text_field(ui, &mut p, "draft", &TextFieldSpec::new("New note").id("my-app.draft"),
+    self.draft, NoteIntent::EditDraft);
+frame.action(ui, &mut p, NoteAction::Add, ActionEmphasis::Primary);
 ```
 
 An action can also take a value that its control or an agent supplies. In
