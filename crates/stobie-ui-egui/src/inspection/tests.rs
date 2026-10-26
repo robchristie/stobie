@@ -749,6 +749,22 @@ fn ledger_keeps_the_most_recent_receipts_and_reports_evicted_ones() {
     let expected = target(&inspection);
     let first = invocation(&inspection, "mutation-0", expected.clone());
     assert_eq!(lookup(&inspection, "never").error, None);
+    let cancel = |id: &str| {
+        let reply = inspection.handle(request(
+            &inspection,
+            "cancel",
+            InspectionOperation::Cancel {
+                request_id: id.into(),
+            },
+        ));
+        let error = reply.error.expect("an unknown cancel is refused");
+        assert_eq!(error.code, InspectionErrorCode::UnknownRequest);
+        error.message
+    };
+    assert_eq!(
+        cancel("never"),
+        "no mutation was admitted with this request_id"
+    );
     let mut executions = 0;
     for index in 0..INSPECTION_HISTORY_LIMIT + 2 {
         let admitted = receipt(inspection.handle(invocation(
@@ -774,6 +790,8 @@ fn ledger_keeps_the_most_recent_receipts_and_reports_evicted_ones() {
         let error = receipt.error.expect("an evicted lookup explains itself");
         assert_eq!(error.code, InspectionErrorCode::UnknownRequest);
         assert!(error.message.contains("evicted"), "{}", error.message);
+        // Cancelling it says the same.
+        assert_eq!(cancel(evicted), error.message);
     }
     // Within the window a replay never reruns; a changed body conflicts.
     let retained = invocation(&inspection, "mutation-2", expected.clone());

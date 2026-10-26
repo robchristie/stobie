@@ -1263,12 +1263,7 @@ impl InspectionState {
                         target: None,
                         // Only after an eviction may the ID have been used.
                         error: self.evicted.then(|| {
-                            InspectionError::new(
-                                Code::UnknownRequest,
-                                format!(
-                                    "no retained receipt has this request_id; only the {INSPECTION_HISTORY_LIMIT} most recent mutations are retained, so an older one's receipt was evicted"
-                                ),
-                            )
+                            InspectionError::new(Code::UnknownRequest, evicted_receipts())
                         }),
                     },
                     |entry| entry.receipt.clone(),
@@ -1276,10 +1271,15 @@ impl InspectionState {
                 Ok(InspectionResult::Receipt { receipt })
             }
             InspectionOperation::Cancel { request_id } => {
+                let evicted = self.evicted;
                 let entry = self.ledger.get_mut(request_id).ok_or_else(|| {
                     InspectionError::new(
                         Code::UnknownRequest,
-                        "no mutation was admitted with this request_id",
+                        if evicted {
+                            evicted_receipts()
+                        } else {
+                            "no mutation was admitted with this request_id".into()
+                        },
                     )
                 })?;
                 if entry.executing || entry.receipt.state != ReceiptState::Queued {
@@ -1451,6 +1451,14 @@ enum Current<'a, A: ActionKey> {
     Link(&'a LinkBinding),
     Copy(&'a CopyBinding),
     Reveal,
+}
+
+/// Why a request ID is unknown once the ledger has evicted a receipt: the
+/// ID may have been one of them.
+fn evicted_receipts() -> String {
+    format!(
+        "no retained receipt has this request_id; only the {INSPECTION_HISTORY_LIMIT} most recent mutations are retained, so an older one's receipt was evicted"
+    )
 }
 
 fn prepare_publication<A: ActionKey>(

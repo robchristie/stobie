@@ -174,7 +174,9 @@ pub trait Application: 'static {
     /// theme the pass was drawn in, as [`THEME_FACT`](crate::THEME_FACT)
     /// and [`CONTRAST_FACT`](crate::CONTRAST_FACT), which replace an
     /// application fact of the same name and do not count towards the 256
-    /// an application may publish.
+    /// an application may publish. It drops an application fact named
+    /// [`PUBLICATION_FACT`](crate::PUBLICATION_FACT), which only a pass
+    /// inspection refused carries.
     fn observe(&self, _observation: &mut Observation<'_>) {}
 
     /// Appearance preferences. The host applies the design system for them at
@@ -1704,13 +1706,19 @@ impl<A: Application> AppHost<A> {
             self.settle(outcome);
         }
         // The edit's intents have now applied, so the next published pass
-        // presents the application's own effect.
+        // presents the application's own effect. Its receipt promises that
+        // pass even when applying the edit changed nothing.
         if let (Some(completing), Some(inspection)) = (self.completing.take(), &self.inspection) {
             let outcome = match completing.refused {
                 None => Ok(()),
                 Some(reason) => Err(InspectionError::validation(reason)),
             };
+            let completed = outcome.is_ok();
             inspection.complete(&completing.request, outcome);
+            if completed && !self.repaint.iter().any(|reason| reason.is_immediate()) {
+                self.repaint
+                    .push(HostRepaint::Application("invocation receipt"));
+            }
         }
         request_passes(&context, &self.repaint);
     }
@@ -1724,6 +1732,7 @@ impl<A: Application> AppHost<A> {
         let fields = self.text_field_bindings();
         let links = self.link_bindings();
         let copies = self.copies.clone();
+        let mut ran = false;
         let reply = inspection.dispatch_invocation_with_framework(
             request,
             &bindings,
@@ -1732,12 +1741,18 @@ impl<A: Application> AppHost<A> {
                 links: &links,
                 copies: &copies,
             },
-            |invocation| self.run_invocation(invocation),
+            |invocation| {
+                ran = true;
+                self.run_invocation(invocation)
+            },
         );
-        // A completed receipt promises an observation, which only a pass
-        // publishes, even when the action changed nothing.
-        let owed = matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
-            if inspection.owes_observation(receipt));
+        // A receipt completed by this dispatch promises an observation,
+        // which only a pass publishes, even when the action changed nothing.
+        // A lookup or replay of an earlier receipt finds its pass already
+        // asked for.
+        let owed = ran
+            && matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
+                if inspection.owes_observation(receipt));
         if owed && self.repaint.len() == reasons {
             self.repaint
                 .push(HostRepaint::Application("invocation receipt"));
@@ -2002,19 +2017,21 @@ impl<A: Application> AppHost<A> {
         let value = presented
             .then(|| {
                 context.accesskit_node_builder(completing.widget, |node| {
-                    node.value().unwrap_or_default().to_owned()
+                    let multiline = node.role() == egui::accesskit::Role::MultilineTextInput;
+                    (node.value().unwrap_or_default().to_owned(), multiline)
                 })
             })
             .flatten();
         completing.refused = match value {
             None => Some(format!("{} is no longer presented", completing.field.0)),
             // A single-line field turns line breaks into spaces, as egui
-            // does when text is pasted into one, so a field already holding
-            // the converted text took it.
-            Some(value)
+            // does when text is pasted into one, so a single-line field
+            // already holding the converted text took it. A multiline field
+            // keeps line breaks, so only the text itself shows it took it.
+            Some((value, multiline))
                 if value == completing.before
                     && value != completing.text
-                    && value != completing.text.replace(['\r', '\n'], " ") =>
+                    && (multiline || value != completing.text.replace(['\r', '\n'], " ")) =>
             {
                 Some(format!("{} did not take the text", completing.field.0))
             }
@@ -2638,6 +2655,8 @@ impl<A: Application> AppHost<A> {
             collections: Vec::new(),
         };
         self.app.observe(&mut observation);
+        // Only a refused pass says why, and the framework says it.
+        observation.facts.remove(crate::PUBLICATION_FACT);
         // The theme this pass was drawn in, after the application's facts so
         // that none of them stands in for it.
         let (theme, contrast) = match self
@@ -2805,8 +2824,9 @@ fn copy_bindings(
 /// `author_id`, which Stobie recipes set to the semantic ID, or else by
 /// presenting exactly one text input node's rectangle; the host then sets the
 /// `author_id`. `presented` holds each node's rectangle before a scroll area
-/// clipped it, so a field partly scrolled out of view still pairs. Without
-/// AccessKit, no field pairs.
+/// clipped it, so a field partly scrolled out of view still pairs; its
+/// AccessKit bounds become its node's, the part shown. Without AccessKit, no
+/// field pairs.
 fn pair_text_fields(
     context: &egui::Context,
     nodes: &mut [UiNode],
@@ -2872,6 +2892,14 @@ fn pair_text_fields(
             if author.is_none() {
                 builder.set_author_id(node.id.0.clone());
             }
+            // egui bounds the field by its whole rectangle; its node, by the
+            // part a scroll area shows.
+            builder.set_bounds(egui::accesskit::Rect {
+                x0: f64::from(node.rect.min_x),
+                y0: f64::from(node.rect.min_y),
+                x1: f64::from(node.rect.max_x),
+                y1: f64::from(node.rect.max_y),
+            });
             if editable {
                 builder.add_action(Action::SetValue);
             }

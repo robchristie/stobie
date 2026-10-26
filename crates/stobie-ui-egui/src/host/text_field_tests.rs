@@ -179,7 +179,7 @@ fn node(harness: &Harness<'_, Probe>, name: &str) -> UiNode {
     found.remove(0).clone()
 }
 
-fn accesskit_update(harness: &Harness<'_, Probe>) -> egui::accesskit::TreeUpdate {
+fn accesskit_update<S>(harness: &Harness<'_, S>) -> egui::accesskit::TreeUpdate {
     fn collect(
         node: egui_kittest::kittest::AccessKitNode<'_>,
         update: &mut egui::accesskit::TreeUpdate,
@@ -534,8 +534,12 @@ mod scrolled {
                         );
                         ui.add_space(ABOVE);
                         let mut text = self.text.clone();
+                        // A hand-built field: labelled, with no author ID.
                         let (field, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-                            (ui.add(egui::TextEdit::singleline(&mut text)), ())
+                            let field = ui.add(egui::TextEdit::singleline(&mut text));
+                            ui.ctx()
+                                .accesskit_node_builder(field.id, |node| node.set_label("Draft"));
+                            (field, ())
                         });
                         let mut node = UiNode::container(
                             SemanticUiId::new(ID),
@@ -634,6 +638,10 @@ mod scrolled {
             field.rect
         );
         assert!((shown.max.y - field.rect.max.y).abs() < 0.5);
+        // The host paired the field, which sets no author ID, and its
+        // AccessKit node presents the same part.
+        let mismatches = crate::audit_accesskit(snapshot, &accesskit_update(&harness));
+        assert!(mismatches.is_empty(), "{mismatches:?}");
 
         // It still pairs with its text edit, so agents can set its text.
         let id = SemanticUiId::new(ID);
@@ -669,5 +677,7 @@ mod scrolled {
         let snapshot = host(&harness).ui_snapshot();
         let node = snapshot.nodes.iter().find(|node| node.id.0 == ID).unwrap();
         assert_eq!(node.value.as_deref(), Some("Partly in view"));
+        let mismatches = crate::audit_accesskit(snapshot, &accesskit_update(&harness));
+        assert!(mismatches.is_empty(), "{mismatches:?}");
     }
 }

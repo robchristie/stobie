@@ -59,6 +59,11 @@ struct Desk {
     locked: bool,
     /// The title is a password field.
     secret: bool,
+    /// The notes field is presented but takes no input.
+    frozen: bool,
+    /// The application keeps its notes whatever the field takes, so
+    /// applying a notes edit changes nothing.
+    keeps_notes: bool,
     /// The notes widget presents this semantic ID; pinning changes it, as an
     /// application that reuses one editor for each selection would.
     notes_id: Option<&'static str>,
@@ -127,7 +132,11 @@ impl Application for Desk {
         // The notes field sets no author ID; the host pairs it by geometry.
         let mut notes = self.notes.clone();
         let (response, ()) = p.native(ui, NativeTextControlKind::TextEdit, |ui| {
-            let response = ui.add(egui::TextEdit::multiline(&mut notes).id(egui::Id::new("notes")));
+            let response = ui.add(
+                egui::TextEdit::multiline(&mut notes)
+                    .interactive(!self.frozen)
+                    .id(egui::Id::new("notes")),
+            );
             ui.ctx()
                 .accesskit_node_builder(response.id, |node| node.set_label("Notes"));
             (response, ())
@@ -150,6 +159,7 @@ impl Application for Desk {
         self.edits += 1;
         match intent {
             Intent::Title(title) => self.title = title,
+            Intent::Notes(_) if self.keeps_notes => return Ok(false),
             Intent::Notes(notes) => self.notes = notes,
         }
         Ok(true)
@@ -450,6 +460,79 @@ fn multiline_keeps_newlines_and_single_line_flattens_them_as_paste_does() {
     let app = host(&harness).app();
     assert_eq!(app.notes, "First\nSecond");
     assert_eq!(app.title, "One Two");
+}
+
+#[test]
+fn a_multiline_field_that_takes_nothing_refuses_its_text_with_spaces_for_line_breaks() {
+    let mut harness = harness(Desk {
+        notes: "a b".into(),
+        frozen: true,
+        ..desk()
+    });
+    // The field already holds the text with its line break as a space,
+    // which a single-line field would have taken, but a multiline field
+    // keeps line breaks.
+    let receipt = set_text(&mut harness, "desk.notes", "a\nb");
+    assert_eq!(receipt.state, ReceiptState::Rejected, "{receipt:?}");
+    assert_eq!(
+        receipt.error.unwrap().message,
+        "desk.notes did not take the text"
+    );
+    assert_eq!(host(&harness).app().notes, "a b");
+}
+
+#[test]
+fn a_set_text_whose_edit_changes_nothing_still_publishes_its_observation() {
+    let mut harness = harness(Desk {
+        keeps_notes: true,
+        ..desk()
+    });
+    let expected = discover(host(&harness), by_id("desk.notes")).target;
+    let current = host_mut(&mut harness);
+    let invoke = request(
+        current,
+        "notes",
+        InspectionOperation::Invoke {
+            selector: by_id("desk.notes"),
+            expected,
+            arguments: serde_json::json!({ "value": "Kept" }),
+        },
+    );
+    // The edit is deferred to a pass, which the dispatch asks for.
+    let admitted = receipt(current.dispatch(invoke).unwrap());
+    assert_eq!(admitted.state, ReceiptState::Queued);
+    assert!(harness.ctx.has_requested_repaint());
+    harness.step();
+    let current = host(&harness);
+    let completed = receipt(current.inspection().unwrap().handle(request(
+        current,
+        "lookup",
+        InspectionOperation::Receipt {
+            request_id: "notes".into(),
+        },
+    )));
+    assert_eq!(completed.state, ReceiptState::Completed, "{completed:?}");
+    assert_eq!(current.app().notes, "");
+    // Applying the edit changed nothing, yet its receipt promises a later
+    // observation, so the host asks for the pass that publishes it rather
+    // than relying on egui's own repaints.
+    let after = completed.after_observation.unwrap();
+    assert_eq!(
+        current.repaint_reasons(),
+        [HostRepaint::Application("invocation receipt")]
+    );
+    assert!(harness.ctx.has_requested_repaint());
+    harness.step();
+    let current = host(&harness);
+    let reply = current.inspection().unwrap().handle(request(
+        current,
+        "observe",
+        InspectionOperation::Observe,
+    ));
+    let Some(InspectionResult::Observe { observation }) = reply.result else {
+        panic!("observe failed: {:?}", reply.error);
+    };
+    assert!(observation.id >= after, "{} < {after}", observation.id);
 }
 
 #[test]
