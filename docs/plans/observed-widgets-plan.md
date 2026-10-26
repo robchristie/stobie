@@ -1,7 +1,7 @@
 # Observed widgets and recipe-first examples
 
 Status: complete
-Delivery: [PR #PENDING](https://github.com/robchristie/stobie/pulls)
+Delivery: [PR #135](https://github.com/robchristie/stobie/pull/135)
 
 ## Outcome and boundaries
 
