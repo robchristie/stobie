@@ -425,7 +425,7 @@ pub fn launch(
 pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[String]) -> i32 {
     let socket = directory.join("app.sock");
     // Held for this process's life, and inherited by the application.
-    let Some(_lock) = hold_lock(&directory.join(LOCK_FILE)) else {
+    let Some(lock) = hold_lock(&directory.join(LOCK_FILE)) else {
         return 1;
     };
     let log = log_path(name)
@@ -436,6 +436,7 @@ pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[Stri
         .args(arguments)
         .env("STOBIE_AUTOMATION_SOCKET", &socket)
         .stdin(Stdio::null());
+    inherit_lock(&mut command, &lock);
     if let Some(log) = log {
         let copy = log.try_clone().ok();
         command.stdout(log);
@@ -469,22 +470,36 @@ pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[Stri
     status.ok().and_then(|status| status.code()).unwrap_or(0)
 }
 
-/// Lock `path` exclusively and keep the lock across `exec`, so a child
-/// holds it too. `None` if it cannot be taken.
+/// Lock `path` exclusively. The lock closes on `exec`, so only a child
+/// given it with [`inherit_lock`] holds it too. `None` if it cannot be
+/// taken.
 fn hold_lock(path: &Path) -> Option<std::fs::File> {
     use std::os::fd::AsRawFd;
     let file = std::fs::File::create(path).ok()?;
-    let fd = file.as_raw_fd();
-    unsafe {
-        if libc::flock(fd, libc::LOCK_EX | libc::LOCK_NB) != 0 {
-            return None;
-        }
-        let flags = libc::fcntl(fd, libc::F_GETFD);
-        if flags < 0 || libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
-            return None;
-        }
+    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        return None;
     }
     Some(file)
+}
+
+/// Keep `lock` open across `exec` in `command`'s process alone, so it holds
+/// the lock after its parent lets go. Any other child, spawned meanwhile by
+/// another thread, does not.
+fn inherit_lock(command: &mut std::process::Command, lock: &std::fs::File) {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::process::CommandExt;
+    let fd = lock.as_raw_fd();
+    // SAFETY: the hook only calls `fcntl`, which is async-signal-safe, on a
+    // descriptor the child's copy of the table holds.
+    unsafe {
+        command.pre_exec(move || {
+            let flags = libc::fcntl(fd, libc::F_GETFD);
+            if flags < 0 || libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
 }
 
 /// Stop session `name`'s application and wait for its supervisor to clean up.
@@ -540,15 +555,26 @@ mod tests {
             hold_lock(&path).is_none(),
             "a held lock cannot be taken again"
         );
-        // A child inherits the lock and keeps it after the holder lets go.
-        let mut child = std::process::Command::new("sleep")
+        // A child given the lock keeps it after the holder lets go, and
+        // another child, such as one a concurrent test spawned, does not.
+        let mut application = std::process::Command::new("sleep");
+        application.arg("30");
+        inherit_lock(&mut application, &lock);
+        let mut application = application.spawn().unwrap();
+        let mut other = std::process::Command::new("sleep")
             .arg("30")
             .spawn()
             .unwrap();
         drop(lock);
         assert!(lock_held(&path), "the application keeps the lock");
-        child.kill().unwrap();
-        child.wait().unwrap();
+        application.kill().unwrap();
+        application.wait().unwrap();
+        assert!(
+            !lock_held(&path),
+            "a child not given the lock does not hold it"
+        );
+        other.kill().unwrap();
+        other.wait().unwrap();
         assert!(
             !lock_held(&path),
             "nobody holds the lock once both have gone"

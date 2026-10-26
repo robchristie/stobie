@@ -155,7 +155,9 @@ snapshot, is the source.
   In the pass
   in which egui takes focus from the tap, its text edit emits no IME output
   yet, so the layer supplies the field's rectangle and eframe keeps the agent
-  focused. Where a popup that egui draws over a field comes earlier in the
+  focused. It also supplies the field's purpose, password or not, because
+  eframe hands egui a password field's typed text differently and would
+  repeat text typed meanwhile under the wrong one. Where a popup that egui draws over a field comes earlier in the
   tree, the layer still takes the field for the tap's target, egui gives the
   popup the click, and the keyboard opens and closes again.
 - **Native fields.** A field shown with `NativeTextEdit` carries

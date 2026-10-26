@@ -1155,8 +1155,8 @@ impl Layer {
     /// In the pass in which egui takes focus from a tap, its text edit emits
     /// no IME output yet, and eframe would blur the text agent the tap just
     /// focused, which closes the keyboard on iOS. While egui's focus is on
-    /// the tapped field, give eframe that field's rectangle instead, for at
-    /// most two shown passes.
+    /// the tapped field, give eframe that field's rectangle and purpose
+    /// instead, for at most two shown passes.
     fn cover_agent_tap(
         &mut self,
         update: &egui::accesskit::TreeUpdate,
@@ -1168,23 +1168,8 @@ impl Layer {
         if ime.is_some() {
             return;
         }
-        if update.focus == node
-            && let Some(bounds) = update
-                .nodes
-                .iter()
-                .find(|(id, _)| *id == node)
-                .and_then(|(_, node)| node.bounds())
-        {
-            let rect = egui::Rect::from_min_max(
-                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
-                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
-            );
-            *ime = Some(egui::output::IMEOutput {
-                purpose: egui::IMEPurpose::Normal,
-                rect,
-                cursor_rect: rect,
-                should_interrupt_composition: false,
-            });
+        if let Some(covering) = aria::tapped_field_ime(update, node) {
+            *ime = Some(covering);
         }
         if passes > 1 {
             self.agent_tap = Some((node, passes - 1));
