@@ -644,6 +644,37 @@ fn the_outline_shows_state_values_ids_and_capabilities_compactly() {
 }
 
 #[test]
+fn the_outline_names_generic_roles_and_selectors_accept_them() {
+    let mut wrap = node("desk.wrap", Some("root"), UiRole::Checkbox, "Wrap lines");
+    wrap.checked = Some(false);
+    let observed = observation(
+        vec![
+            node("root", None, UiRole::Application, ""),
+            wrap,
+            node("desk.records", Some("root"), UiRole::Table, "Records"),
+            node("desk.folders", Some("root"), UiRole::Tree, "Folders"),
+            node("desk.menu", Some("root"), UiRole::Menu, "File"),
+            node("desk.upload", Some("root"), UiRole::Progress, "Upload"),
+            node("desk.logo", Some("root"), UiRole::Image, "Logo"),
+        ],
+        &[],
+    );
+    let text = output::outline(&observed, &[], 0, 64);
+    for line in [
+        r#"- checkbox "Wrap lines" unchecked #desk.wrap"#,
+        r#"- table "Records" #desk.records"#,
+        r#"- tree "Folders" #desk.folders"#,
+        r#"- menu "File" #desk.menu"#,
+        r#"- progress "Upload" #desk.upload"#,
+        r#"- image "Logo" #desk.logo"#,
+    ] {
+        assert!(text.lines().any(|shown| shown == line), "{line} in {text}");
+    }
+    let role = parse("query", &["--role", "checkbox"]).unwrap();
+    assert_eq!(role.selector(None).unwrap().role, Some(UiRole::Checkbox));
+}
+
+#[test]
 fn changed_facts_report_additions_removals_and_changes() {
     let before = observation(
         Vec::new(),

@@ -69,8 +69,11 @@ view, and the host's dock presents them inside a panel:
 ```
 
 A pane reads its view, emits data intents and presents actions. `Frame::action`
-resolves availability and triggers the action when clicked; `status` publishes
-a status line that agents can wait for.
+resolves availability and triggers the action when clicked; `Frame::text_field`
+presents a labelled field and emits each edit as an intent; `status` publishes
+a status line that agents can wait for. Each recipe publishes its own semantics,
+so agents can fill the draft with `stobie set-text notes.draft TEXT` and press
+Add.
 
 ```text
 impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
@@ -78,9 +81,8 @@ impl Panes<NoteAction, NoteIntent> for NotePanes<'_> {
     fn pane_ui(&mut self, ui: &mut egui::Ui, pane: PaneId, frame: &mut Frame<'_, NoteAction, NoteIntent>) {
         let mut p = frame.pane_presentation(ui, PresentationScope::new("notes"), pane);
         p.heading(ui, "title", "Notes");
-        let mut draft = self.draft.to_owned();
-        // ... a TextEdit for `draft`, observed as a text input (see the example)
-        if draft != self.draft { frame.emit(NoteIntent::EditDraft(draft)); }
+        let draft = TextFieldSpec::new("New note").id("notes.draft");
+        frame.text_field(ui, &mut p, "draft", &draft, self.draft, NoteIntent::EditDraft);
         frame.action(ui, &mut p, NoteAction::Add, ActionEmphasis::Primary);
         p.status(ui, "status", self.status, false);
     }
@@ -169,11 +171,23 @@ publishes only what is visible: nodes are clipped to the region they were drawn
 in or omitted, and partly visible text is not audited, except reading text and
 links, which declare that a scroll area clips them. Wrap other scrolling
 content in `observe_visible_only`.
-For a custom widget, call `PresentationContext::observe_node` and
-`observe_text`, or the free `observe_node`, with the pane's semantic node as
-parent. Record native egui text fields with
-`PresentationContext::native(NativeTextControlKind::TextEdit, ...)` and observe
-them as `UiRole::TextInput`. Observe a selectable list row as
+Prefer a recipe: actions, text fields, composers, choices, switches, links and
+dialogs observe themselves. Present a plain egui widget, such as a checkbox, a
+progress bar, an image or a table, through
+`PresentationContext::observed(ui, id, role, name, |ui| widget)`: it builds the
+node from the widget's response (its rectangle, enabled, focused and, for a
+toggle, checked state) and gives the widget's AccessKit node the same ID, name
+and role. A plain `TextEdit` observed as `UiRole::TextInput` this way also
+accepts `stobie set-text`.
+
+Hand-build semantics only for a custom widget whose node needs more than its
+response says. Call `PresentationContext::observe_node` and `observe_text`, or
+the free `observe_node`, with the pane's semantic node as parent. A hand-built
+text field records its egui text edit with
+`PresentationContext::native(NativeTextControlKind::TextEdit, ...)` and is
+observed as `UiRole::TextInput`; the host pairs it with that text edit by its
+AccessKit `author_id` or its unclipped rectangle, so it accepts `set-text` while
+partly scrolled out of view. Observe a selectable list row as
 `UiRole::ResultRow` with `selected` and, for a done or checked state,
 `checked`. Present the rows inside `list_box(ui, name, ...)`, and give each one
 `set_position_semantics(&response, position, Some(total))`, so a virtualised

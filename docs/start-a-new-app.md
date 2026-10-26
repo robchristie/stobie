@@ -153,7 +153,9 @@ stobie stop app
 ```
 
 Every action you declare is discoverable and invocable this way, natively and
-in the browser, without inspection code. In the browser, open the page with
+in the browser, without inspection code. The template presents its draft with
+the text field recipe, `Frame::text_field` with `TextFieldSpec::id`, which
+gives it the ID `my-app.draft` and the `set-text` capability. In the browser, open the page with
 `?automation=1` in a Chromium that exposes DevTools, then `stobie attach`.
 [The `stobie` command](agent-cli.md) describes both.
 

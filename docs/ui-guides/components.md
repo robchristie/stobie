@@ -503,6 +503,56 @@ domain reference. It does not manufacture text measurements or replace the
 AccessKit owner. Keep native readers and row interactions in the application;
 annotate their exceptional paint with `raw` and record native controls where used.
 
+## Plain egui widgets
+
+Where no recipe fits, present a plain egui widget through
+`PresentationContext::observed` rather than building its semantic node by
+hand:
+
+```text
+let mut wrap = self.wrap;
+p.observed(ui, SemanticUiId::new("editor.wrap"), UiRole::Checkbox, "Wrap lines", |ui| {
+    ui.checkbox(&mut wrap, "Wrap lines")
+});
+if wrap != self.wrap { frame.emit(Intent::Wrap(wrap)); }
+p.observed(ui, SemanticUiId::new("editor.upload"), UiRole::Progress, "Upload", |ui| {
+    ui.add(egui::ProgressBar::new(self.uploaded))
+});
+p.observed(ui, SemanticUiId::new("editor.records"), UiRole::Table, "Records", |ui| {
+    ui.scope(|ui| { /* an egui Grid or table */ }).response
+});
+```
+
+The closure presents the widget and returns its `Response`; a container such
+as a table, tree or menu returns the response of the `ui.scope` around it.
+
+- **Node.** The context builds the node from the response: its rectangle,
+  whether it is enabled and focused, and, for a toggle such as a checkbox,
+  whether it is checked, read from the state egui gives its AccessKit node.
+  Its parent, pane and domain reference are the context's, and visible-only
+  regions clip it as they clip any node.
+- **AccessKit.** The widget's AccessKit node takes the same semantic ID as
+  its `author_id`, the name as its label, the role's AccessKit role and the
+  bounds shown, so `audit_accesskit` and the browser's ARIA layer agree with
+  the snapshot.
+- **Native text.** A `Button`, `RadioButton`, `ComboBox`, `Slider` or text
+  input is recorded as a native text control, as `native` records it. A
+  `TextEdit` observed as `TextInput` or `MultilineTextInput` pairs with its
+  node, so agents fill it with `set-text`.
+- **Roles.** Beyond the controls the recipes present, `UiRole` has generic
+  roles for plain widgets: `Checkbox`, `Table`, `Tree`, `Menu`, `Progress` and
+  `Image`, presented to assistive technology as `checkbox`, `table`, `tree`,
+  `menu`, `progressbar` and `img`; see
+  [accessibility](accessibility.md#browser-aria-layer).
+- **IDs.** Derive the ID from stable pane and domain IDs. Name the widget by
+  its visible words, so speech and agents call it what users see.
+
+A plain widget has no action: an agent clicks it physically, or the
+application offers the same change as a declared action. Use a recipe where one
+exists, since recipes also measure text and follow the design tokens. Build
+the `UiNode` and pass it to `observe_node` only for a custom widget whose node
+needs more than its response says.
+
 ## Typed icons and action presentations
 
 Select artwork with `IconId`; never pass a glyph, emoji or runtime icon name.

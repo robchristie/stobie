@@ -721,6 +721,7 @@ fn aria_role(node: &Node) -> (Option<&'static str>, Naming) {
         Role::MenuItemCheckBox => (Some("menuitemcheckbox"), Naming::Label),
         Role::MenuItemRadio => (Some("menuitemradio"), Naming::Label),
         Role::Toolbar => (Some("toolbar"), Naming::Label),
+        Role::Table => (Some("table"), Naming::Label),
         Role::Grid => (Some("grid"), Naming::Label),
         Role::Row => (Some("row"), Naming::Label),
         Role::Cell | Role::GridCell => (Some("gridcell"), Naming::Label),
