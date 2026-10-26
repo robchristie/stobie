@@ -743,30 +743,129 @@ fn drain_is_one_mutation_so_host_can_recompute_between_actions() {
 }
 
 #[test]
-fn ledger_never_evicts_and_history_full_does_not_admit_mutation() {
+fn ledger_keeps_the_most_recent_receipts_and_reports_evicted_ones() {
     let (inspection, snapshot, bindings) = fixture();
     publish(&inspection, &snapshot, &bindings);
     let expected = target(&inspection);
     let first = invocation(&inspection, "mutation-0", expected.clone());
-    for index in 0..INSPECTION_HISTORY_LIMIT {
-        inspection.handle(invocation(
+    assert_eq!(lookup(&inspection, "never").error, None);
+    let mut executions = 0;
+    for index in 0..INSPECTION_HISTORY_LIMIT + 2 {
+        let admitted = receipt(inspection.handle(invocation(
             &inspection,
             &format!("mutation-{index}"),
             expected.clone(),
-        ));
-        inspection.drain(&bindings, |_| Ok(()));
+        )));
+        assert_eq!(admitted.state, ReceiptState::Queued, "mutation-{index}");
+        inspection.drain(&bindings, |_| {
+            executions += 1;
+            Ok(())
+        });
     }
+    assert_eq!(executions, INSPECTION_HISTORY_LIMIT + 2);
     assert_eq!(
-        receipt(inspection.handle(first)).state,
+        inspection.state.lock().unwrap().ledger.len(),
+        INSPECTION_HISTORY_LIMIT
+    );
+    // The two oldest were evicted, and say so.
+    for evicted in ["mutation-0", "mutation-1"] {
+        let receipt = lookup(&inspection, evicted);
+        assert_eq!(receipt.state, ReceiptState::Unknown);
+        let error = receipt.error.expect("an evicted lookup explains itself");
+        assert_eq!(error.code, InspectionErrorCode::UnknownRequest);
+        assert!(error.message.contains("evicted"), "{}", error.message);
+    }
+    // Within the window a replay never reruns; a changed body conflicts.
+    let retained = invocation(&inspection, "mutation-2", expected.clone());
+    assert_eq!(
+        receipt(inspection.handle(retained)).state,
         ReceiptState::Completed
     );
-    let overflow = inspection.handle(invocation(&inspection, "overflow", expected));
+    assert!(!inspection.has_pending());
+    let mut changed = invocation(&inspection, "mutation-2", expected);
+    changed.operation = InspectionOperation::Observe;
+    assert_eq!(
+        inspection.handle(changed).error.unwrap().code,
+        InspectionErrorCode::RequestIdConflict
+    );
+    // Beyond it, duplicate protection is gone: the ID is admitted afresh.
+    assert_eq!(
+        receipt(inspection.handle(first)).state,
+        ReceiptState::Queued
+    );
+}
+
+#[test]
+fn ledger_never_evicts_an_unsettled_receipt() {
+    let (inspection, snapshot, bindings) = fixture();
+    publish(&inspection, &snapshot, &bindings);
+    let expected = target(&inspection);
+    // A deferred invocation runs until the host completes it.
+    let deferred = |inspection: &Inspection| {
+        inspection.drain_invocation(&bindings, &[], |_| Ok(Execution::Deferred))
+    };
+    inspection.handle(invocation(&inspection, "running", expected.clone()));
+    assert!(deferred(&inspection));
+    inspection.handle(invocation(&inspection, "queued", expected.clone()));
+    for index in 0..INSPECTION_HISTORY_LIMIT {
+        inspection.handle(invocation(
+            &inspection,
+            &format!("settled-{index}"),
+            expected.clone(),
+        ));
+        // Drain the newest, leaving "queued" first in line.
+        let mut state = inspection.state.lock().unwrap();
+        let newest = state.pending.pop_back().unwrap();
+        state.pending.push_front(newest);
+        drop(state);
+        inspection.drain(&bindings, |_| Ok(()));
+    }
+    assert_eq!(lookup(&inspection, "running").error, None);
+    assert_eq!(lookup(&inspection, "queued").state, ReceiptState::Queued);
+    assert_eq!(
+        lookup(&inspection, "settled-0").error.unwrap().code,
+        InspectionErrorCode::UnknownRequest
+    );
+    inspection.complete("running", Ok(()));
+    assert_eq!(
+        lookup(&inspection, "running").state,
+        ReceiptState::Completed
+    );
+    assert!(inspection.drain(&bindings, |_| Ok(())));
+    assert_eq!(lookup(&inspection, "queued").state, ReceiptState::Completed);
+}
+
+#[test]
+fn history_full_only_when_every_retained_mutation_is_unsettled() {
+    let (inspection, snapshot, bindings) = fixture();
+    publish(&inspection, &snapshot, &bindings);
+    let expected = target(&inspection);
+    for index in 0..INSPECTION_HISTORY_LIMIT {
+        inspection.handle(invocation(
+            &inspection,
+            &format!("running-{index}"),
+            expected.clone(),
+        ));
+        inspection.drain_invocation(&bindings, &[], |_| Ok(Execution::Deferred));
+    }
+    let overflow = inspection.handle(invocation(&inspection, "overflow", expected.clone()));
     assert_eq!(
         overflow.error.unwrap().code,
         InspectionErrorCode::HistoryFull
     );
-    assert_eq!(lookup(&inspection, "overflow").state, ReceiptState::Unknown);
+    assert_eq!(lookup(&inspection, "overflow").error, None);
     assert!(!inspection.has_pending());
+    // Once one settles, the next mutation evicts it and is admitted.
+    inspection.complete("running-7", Ok(()));
+    assert_eq!(
+        receipt(inspection.handle(invocation(&inspection, "overflow", expected))).state,
+        ReceiptState::Queued
+    );
+    assert_eq!(
+        lookup(&inspection, "running-7").error.unwrap().code,
+        InspectionErrorCode::UnknownRequest
+    );
+    assert_eq!(lookup(&inspection, "running-0").state, ReceiptState::Queued);
 }
 
 #[test]

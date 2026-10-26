@@ -120,7 +120,16 @@ framework's: `stobie.theme`, `light` or `dark`, and `stobie.contrast`,
 application's appearance preference resolved against the system's
 (`THEME_FACT` and `CONTRAST_FACT`). They replace an application fact of the
 same name, so `stobie wait fact --key stobie.theme --value dark` waits for
-the page to be drawn dark. Reading an idle host may repeatedly return the
+the page to be drawn dark. When a pass exceeds the publication bounds below,
+or its snapshot is invalid, the host publishes an observation in its place
+that presents only the root node, the two theme facts and
+`stobie.publication` (`PUBLICATION_FACT`), which says why: `too_large:`
+followed by what was over its limit, such as `too_large: 5000 nodes, over
+the limit of 4096`, or `invalid:` followed by the reason. It offers none of
+the application's capabilities, so an agent reads the failure rather than
+the previous pass, and the fact is gone once a pass publishes again. The
+host also reports the first failing pass through `Application::report_error`.
+Reading an idle host may repeatedly return the
 same observation. Reads never request repaint or enumerate off-screen domain
 data. Collection metadata describes what was retained, whether it is
 virtualised and whether its observed collection is complete. A missing total
@@ -244,7 +253,8 @@ bounded query when that occurs.
 the same thing, sends its current resolved identity and
 meaning once, then reads the correlated receipt while it is queued. A
 completed receipt carries `after_observation`, the first observation that
-includes its effect. Wait for an observation at least that new before reading
+includes its effect; the host runs the pass that publishes it even when the
+action changed nothing. Wait for an observation at least that new before reading
 the outcome or discovering a target whose meaning the action changed. An explicit
 `expected` target may be supplied to exercise a previously discovered target.
 The application rechecks identity, meaning, current availability and arguments
@@ -263,10 +273,21 @@ Explicit cancellation can cancel a queued invocation. `too_late` means the
 action has begun or finished; it does not undo it. Local `AbortSignal`
 cancellation stops a client wait and cannot establish that an already sent
 mutation was cancelled. Receipt lookup is read-only. Unknown requests are
-reported explicitly. Host mutation history retains up to 256 IDs without
-eviction; reaching the limit fails closed rather than forgetting duplicate
-protection. A restart creates a new instance, so old receipts cannot be looked
-up in the new instance.
+reported explicitly, as an `unknown` receipt.
+
+The host keeps the receipts of the 256 most recent invocations, rejected ones
+included. Admitting another evicts the oldest receipt that is neither queued
+nor running, so a long session never runs out of invocations. Duplicate
+protection holds within that window: a request whose ID is still retained is
+answered with its receipt or `request_id_conflict` and never runs again, while
+one whose receipt was evicted is admitted as a new invocation. Once any
+receipt has been evicted, an `unknown` receipt carries an `unknown_request`
+error saying that older receipts were evicted, because the ID may have been
+one of them. Read a receipt soon after an uncertain outcome rather than after
+hundreds of further invocations. Only when all 256 retained invocations are
+still queued or running is a new one refused with `history_full`. A restart
+creates a new instance, so old receipts cannot be looked up in the new
+instance.
 
 ## Reach controls out of view
 
@@ -500,7 +521,7 @@ process ID, wall clock or resettable counter, which can repeat after reload.
 The bounds are 4,096 retained nodes, 512 measured text observations, 256
 characters of each content excerpt, 2 MiB
 publication JSON, a 256 KiB request, 256 entries per query/discovery, 16 queued
-invocations and 256 non-evicting mutation IDs per instance. Native request
+invocations and the receipts of the 256 most recent invocations per instance. Native request
 reading has a two-second deadline. These are engineering limits, not evidence
 that a whole domain collection was inspected. Unknown versions, stale
 instances/cursors/targets, unsupported arguments and unavailable actions fail

@@ -41,7 +41,7 @@ use crate::{
     Availability, CollectionMetadata, CollectionObservation, CopyBinding, DesignTokens,
     DockBehaviour, DockTextContext, DomainReference, Execution, FrameworkBindings, IconId,
     Inspection, InspectionBinding, InspectionError, InspectionReply, InspectionRequest,
-    IntoActionTarget, Invocation, LinkBinding, ObservationValue, PanePresenter,
+    InspectionResult, IntoActionTarget, Invocation, LinkBinding, ObservationValue, PanePresenter,
     PresentationContext, PresentationScope, SemanticAuditFinding, SemanticUiId, ShortcutKey,
     TextFieldBinding, TextLayoutObservation, TypographyProfile, UiNode, UiPreferences, UiRole,
     UiSnapshot, apply_design_system_with_theme, audit_text_layouts, text_audit_coverage,
@@ -1268,6 +1268,8 @@ pub struct AppHost<A: Application> {
     /// Whether state changed since the latest pass paired text fields, so a
     /// widget may now present something other than its paired field.
     fields_stale: bool,
+    /// Whether inspection refused the latest pass's publication.
+    publication_failed: bool,
     /// URLs that open-link invocations asked for, opened in the next pass.
     links_to_open: Vec<String>,
     /// The latest pass's presented copy controls.
@@ -1378,6 +1380,7 @@ impl<A: Application> AppHost<A> {
             text_edits: VecDeque::new(),
             edit_focus: None,
             completing: None,
+            publication_failed: false,
             reveals: VecDeque::new(),
             reveal_outcome: None,
             fields_stale: false,
@@ -1731,7 +1734,16 @@ impl<A: Application> AppHost<A> {
             },
             |invocation| self.run_invocation(invocation),
         );
-        // Only a state change repaints; reads never do.
+        // A completed receipt promises an observation, which only a pass
+        // publishes, even when the action changed nothing.
+        let owed = matches!(&reply.result, Some(InspectionResult::Receipt { receipt })
+            if inspection.owes_observation(receipt));
+        if owed && self.repaint.len() == reasons {
+            self.repaint
+                .push(HostRepaint::Application("invocation receipt"));
+        }
+        // Only a state change or a promised observation repaints; reads
+        // never do.
         if self.repaint.len() > reasons {
             self.context.request_repaint();
         }
@@ -2609,8 +2621,12 @@ impl<A: Application> AppHost<A> {
         (snapshot, text_fields, copies, dialogs, dialog_actions)
     }
 
-    fn publish(&self, context: &egui::Context) {
-        let Some(inspection) = &self.inspection else {
+    /// Stage this pass's observation. When inspection refuses it, stage a
+    /// root-only observation whose [`PUBLICATION_FACT`](crate::PUBLICATION_FACT)
+    /// says why, so a client never keeps reading the previous pass, and
+    /// report the first failure through [`Application::report_error`].
+    fn publish(&mut self, context: &egui::Context) {
+        let Some(inspection) = self.inspection.clone() else {
             return;
         };
         if context.will_discard() {
@@ -2639,7 +2655,7 @@ impl<A: Application> AppHost<A> {
             collections: observation.collections,
             ..Default::default()
         };
-        if let Err(error) = inspection.stage_completed_with_framework(
+        let Err(error) = inspection.stage_completed_with_framework(
             context,
             self.snapshot.clone(),
             &self.bindings(),
@@ -2650,8 +2666,51 @@ impl<A: Application> AppHost<A> {
             },
             metadata,
             observation.facts,
+        ) else {
+            self.publication_failed = false;
+            return;
+        };
+        let kind = match error.code {
+            crate::InspectionErrorCode::PublicationLimit => "too_large",
+            _ => "invalid",
+        };
+        let reason = format!("{kind}: {}", error.message);
+        let snapshot = UiSnapshot {
+            frame: self.snapshot.frame,
+            pixels_per_point: self.snapshot.pixels_per_point,
+            root: self.snapshot.root.clone(),
+            nodes: self
+                .snapshot
+                .node(&self.snapshot.root)
+                .cloned()
+                .into_iter()
+                .collect(),
+            text: Vec::new(),
+            text_audit: Vec::new(),
+            text_audit_coverage: None,
+            semantic_audit: Vec::new(),
+        };
+        let facts = BTreeMap::from([
+            (crate::THEME_FACT.to_owned(), theme.into()),
+            (crate::CONTRAST_FACT.to_owned(), contrast.into()),
+            (crate::PUBLICATION_FACT.to_owned(), reason.clone().into()),
+        ]);
+        if let Err(error) = inspection.stage_completed_with_framework(
+            context,
+            snapshot,
+            &[] as &[InspectionBinding<A::Action>],
+            FrameworkBindings::default(),
+            CollectionMetadata::default(),
+            facts,
         ) {
-            eprintln!("Automation publication failed: {error:?}");
+            eprintln!("Automation publication failed: {reason}; and its fallback: {error:?}");
+        }
+        // Report a failure once, not again on the pass that shows it.
+        if !self.publication_failed {
+            self.publication_failed = true;
+            self.app
+                .report_error(format!("Automation could not publish this pass: {reason}"));
+            self.repaint.push(HostRepaint::Rejected);
         }
     }
 }
@@ -2868,6 +2927,8 @@ mod link_tests;
 mod navigation_tests;
 #[cfg(test)]
 mod observed_tests;
+#[cfg(test)]
+mod publication_tests;
 #[cfg(test)]
 mod reveal_tests;
 #[cfg(test)]

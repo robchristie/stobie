@@ -76,10 +76,12 @@ impl ClientError {
             InspectionErrorCode::StaleCursor => "start the query again without a cursor",
             InspectionErrorCode::QueueFull => "wait for queued invocations to finish",
             InspectionErrorCode::HistoryFull => {
-                "this instance admits no more mutations; restart the application"
+                "every retained mutation is still queued or running; wait for one to finish"
             }
             InspectionErrorCode::TooLate => "the action already started or finished",
-            InspectionErrorCode::UnknownRequest => "no mutation used this request ID",
+            InspectionErrorCode::UnknownRequest => {
+                "no retained mutation used this request ID; the application keeps only the most recent receipts"
+            }
             InspectionErrorCode::ValidationFailed => "the application refused it; see the message",
             InspectionErrorCode::RequestIdConflict => {
                 "this request ID was already used: read `stobie receipt ID` and do not repeat the action"

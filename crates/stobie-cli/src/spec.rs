@@ -422,7 +422,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--request-id",
                 Some("ID"),
-                "The mutation's ID; retrying with it never runs the action twice",
+                "The mutation's ID; retrying with it never runs the action twice while its receipt is retained",
             ),
             flag("--no-wait", None, "Return once the invocation is admitted"),
         ],
@@ -438,7 +438,7 @@ pub const COMMANDS: &[Command] = &[
             flag(
                 "--request-id",
                 Some("ID"),
-                "The mutation's ID; retrying with it never runs the edit twice",
+                "The mutation's ID; retrying with it never runs the edit twice while its receipt is retained",
             ),
         ],
         output_schema_version: SCHEMA_VERSION,
@@ -451,7 +451,7 @@ pub const COMMANDS: &[Command] = &[
         flags: &[flag(
             "--request-id",
             Some("ID"),
-            "The mutation's ID; retrying with it never runs the reveal twice",
+            "The mutation's ID; retrying with it never runs the reveal twice while its receipt is retained",
         )],
         output_schema_version: SCHEMA_VERSION,
     },
