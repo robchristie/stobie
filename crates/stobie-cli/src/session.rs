@@ -526,7 +526,12 @@ pub fn find_program(
     } else {
         program.to_path_buf()
     };
-    std::fs::canonicalize(&found)
+    std::fs::metadata(&found)
+        .map_err(|error| ClientError::usage(format!("cannot find {}: {error}", found.display())))?;
+    // Absolute, as the supervisor may run elsewhere, but not resolved: a
+    // multi-call program, such as rustup's `cargo`, acts on the name it was
+    // run by.
+    std::path::absolute(&found)
         .map_err(|error| ClientError::usage(format!("cannot find {}: {error}", found.display())))
 }
 
@@ -661,12 +666,18 @@ mod tests {
         let path = std::env::join_paths([&first, &second]).unwrap();
         assert_eq!(
             find_program(Path::new("tool"), Some(&path)).unwrap(),
-            std::fs::canonicalize(second.join("tool")).unwrap()
+            second.join("tool")
         );
         file(&first.join("tool"), 0o755);
         assert_eq!(
             find_program(Path::new("tool"), Some(&path)).unwrap(),
-            std::fs::canonicalize(first.join("tool")).unwrap()
+            first.join("tool")
+        );
+        // A link is run by its own name, as a multi-call program needs.
+        std::os::unix::fs::symlink(second.join("tool"), first.join("alias")).unwrap();
+        assert_eq!(
+            find_program(Path::new("alias"), Some(&path)).unwrap(),
+            first.join("alias")
         );
         for missing in ["plain", "absent"] {
             assert_eq!(
@@ -687,7 +698,7 @@ mod tests {
         );
         assert_eq!(
             find_program(&second.join("plain"), Some(&path)).unwrap(),
-            std::fs::canonicalize(second.join("plain")).unwrap()
+            second.join("plain")
         );
         let _ = std::fs::remove_dir_all(&root);
     }
