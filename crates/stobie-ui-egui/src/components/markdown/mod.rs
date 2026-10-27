@@ -347,8 +347,9 @@ impl Layout<'_> {
                     None => self.y += pad.y,
                 }
                 let style = self.style(TextRole::MonospaceTechnical);
+                // Laid out with tabs as four spaces; copied as written.
                 let job = LayoutJob::single_section(
-                    code.clone(),
+                    code.replace('\t', "    "),
                     TextFormat {
                         line_height: Some(style.line_height),
                         ..TextFormat::simple(style.font_id, style.colour)

@@ -68,7 +68,8 @@ impl PresentationContext {
     /// block, at the trailing end of a strip across the block's top, inside
     /// its surface. Each control copies exactly the block's text as the
     /// Markdown parses it: without its fences, its language or its final
-    /// line break, with tabs as four spaces. Its name is
+    /// line break, and with its tabs, which the block shows as four spaces,
+    /// so a copied Makefile still works. Its name is
     /// [`CodeCopySpec::name`]: "Copy code" for the first block and "Copy
     /// code 2" for the second. Controls are keyed by the block's position
     /// among the code blocks, so a reply still arriving keeps each control,
