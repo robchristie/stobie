@@ -15,11 +15,11 @@ SPEC.loader.exec_module(DOCS)
 
 class ApiDocsTests(unittest.TestCase):
     def fixture(self, root):
+        # One example in each selected consumer.
         for consumer in DOCS.SOURCE_CONSUMERS:
             path = root / consumer
             path.parent.mkdir(parents=True, exist_ok=True)
-            examples = {"presentation.rs": 5, "dock.rs": 2, "history.rs": 1, "local_time.rs": 1, "actions.rs": 1, "avatar.rs": 1, "chat.rs": 1, "copy.rs": 1, "navigation.rs": 2, "dialog.rs": 1, "scroll.rs": 1, "text_field.rs": 1, "code_copy.rs": 1, "heading.rs": 1, "choice.rs": 1, "lib.rs": 2 if "stobie-ui-egui" in consumer else 1}
-            path.write_text("//! ```\n//! assert!(true);\n//! ```\n" * examples.get(path.name, 0))
+            path.write_text("//! ```\n//! assert!(true);\n//! ```\n")
         for consumer in DOCS.MARKDOWN_CONSUMERS:
             path = root / consumer
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -39,17 +39,41 @@ class ApiDocsTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "broken local anchor"):
                 DOCS.local_links(root, ("README.md",))
 
-    def test_zero_and_ignored_source_examples_are_rejected(self):
+    def test_the_repository_accounts_for_every_example(self):
+        # The real sources, so a new example fails here, in the fast unit
+        # tests, rather than at the full documentation check.
+        counts = DOCS.coverage(DOCS.ROOT)
+        self.assertEqual(set(counts), set(DOCS.CRATES))
+        self.assertTrue(all(count > 0 for count in counts.values()), counts)
+
+    def test_counts_are_derived_from_the_examples(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            self.assertEqual(sum(DOCS.coverage(root).values()), 26)
+            counts = DOCS.coverage(root)
+            self.assertEqual(sum(counts.values()), len(DOCS.SOURCE_CONSUMERS))
             source = root / DOCS.SOURCE_CONSUMERS[0]
-            source.write_text("")
-            with self.assertRaisesRegex(ValueError, "explicitly accounted"):
+            crate = Path(DOCS.SOURCE_CONSUMERS[0]).parts[1]
+            # A second example counts, and other languages' fences do not.
+            with source.open("a") as stream:
+                stream.write("/// ```rust\n/// assert!(true);\n/// ```\n/// ```text\n/// output\n/// ```\n")
+            self.assertEqual(DOCS.coverage(root)[crate], counts[crate] + 1)
+
+    def test_zero_ignored_and_unselected_source_examples_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root)
+            source = root / DOCS.SOURCE_CONSUMERS[0]
+            source.write_text("/// ```text\n/// not rust\n/// ```\n")
+            with self.assertRaisesRegex(ValueError, "without a runnable example"):
                 DOCS.coverage(root)
             source.write_text("//! ```ignore\n//! impossible();\n//! ```")
             with self.assertRaisesRegex(ValueError, "selected examples must run"):
+                DOCS.coverage(root)
+            source.write_text("//! ```\n//! assert!(true);\n//! ```\n")
+            unselected = root / "crates/stobie-core/src/new.rs"
+            unselected.write_text("/// ```\n/// assert!(true);\n/// ```\n")
+            with self.assertRaisesRegex(ValueError, "unaccounted rustdoc examples in crates/stobie-core/src/new.rs"):
                 DOCS.coverage(root)
 
     def test_new_markdown_rust_example_needs_a_consumer(self):
