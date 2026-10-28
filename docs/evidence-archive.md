@@ -100,6 +100,7 @@ commits and append to the same manifest:
 | Archived path | Files | Commit | Interpreting report |
 | --- | ---: | --- | --- |
 | `ios-pwa-spike-evidence/` | 19 | [`f78d18b`](https://github.com/robchristie/stobie-evidence/tree/f78d18bda40b4c18c25ad68c14dd66afada0ea96/docs/ios-pwa-spike-evidence) | [iOS PWA spike](ios-pwa-spike-report.md) |
+| `markdown-evidence/document-markdown/` | 39 | [`7fc8cf9`](https://github.com/robchristie/stobie-evidence/tree/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown) | [Markdown evidence](markdown-evidence.md#document-markdown) |
 
 To fetch and check the complete archive, including later additions:
 

@@ -1,7 +1,7 @@
 # Document Markdown
 
-Status: active
-Next action: Deliver increment 7: the evidence record and closeout.
+Status: complete
+Delivery: [PR #151](https://github.com/robchristie/stobie/pull/151)
 
 ## Outcome and boundaries
 
@@ -27,7 +27,7 @@ maths.
 | 4. Task lists, footnotes and maths presented as more than source text | Complete | Read-only task boxes, numbered footnote references and definitions (`MarkdownSpec::footnote_ids`, `MarkdownSourceMap::footnotes`) and maths as source; 4 new parser regressions and 1 rewritten (structure under every extension, a definition's label whatever opens it, numbering by first appearance without regard to case, a marker outside its paragraph, display maths with CRLF), 5 new recipe regressions (each presentation with node and AccessKit parity and clean audits at phone and desktop widths, 150% text and high contrast; default options unchanged; a reference scrolling its definition into view by pointer and keyboard; a named heading opening a narrow item named by its own text; a followed link reaching the root through scoped, bubble, dialog and code-copy contexts), 1 host regression (an agent follows a reference to a definition below the fold), Gallery `markdown/document` with 1 regression, 2 inspected baselines and the extended browser journey (heading IDs and task states in the ARIA layer, a reference revealing its definition); `cargo xtask verify` |
 | 5. Tables presented as structure | Complete | A grid with a header row, column alignment and wrapping cells that stacks as records when too narrow, with AccessKit table, row, column header and cell nodes and ARIA counts and indices; 2 new parser regressions and 1 extended (alignments, header, padded and truncated rows, inline cells, a table in a list item and one with no body rows), 6 new recipe regressions and 1 extended (grid or stacked at phone and desktop widths, 150% text and high contrast with clean audits; a cell wrapping in its column; tables in a quote and a list item and one with no body rows; the AccessKit table; default options unchanged; drag-copying a table's cells), 1 ARIA regression, Gallery `markdown/document` with a wide table, its extended regression, 2 re-inspected baselines and the extended browser journey (the table as a grid and stacked in the ARIA layer); `cargo xtask verify` |
 | 6. Polish carried from reviews | Complete | Each item carried from the increment 4 and 5 reviews fixed or decided (see Increment 6); 2 new parser regressions (footnote labels match under pulldown-cmark's Unicode case folding; display maths as a link's text keeps the link), 5 new recipe regressions and 2 extended (a stacked table counts only its records and presents a linked header row once, by AccessKit and ARIA, at phone and desktop widths and 150% text; its opening rule sits a section below a heading; a quoted table's header row shows its raised surface; an open task box keeps 3:1 against every surface in every theme; a table copies stacked, wrapped and at 150%; a narrow item's heading labelled by its own text; task names without footnote numbers), the Gallery regression, browser journey and 2 baselines updated for the new task name, outline and spacing; `cargo xtask verify` |
-| 7. Evidence record and closeout | Pending | |
+| 7. Evidence record and closeout | Complete | The document Markdown section of `docs/markdown-evidence.md`: 16 captures of the Gallery's `markdown/document` at phone and desktop widths, 100% and 150% text and both high-contrast themes (the seven-column table as a grid and stacked, footnote definitions revealed by a click in the phone column), the open task box's outline measured from captured pixels in all four themes, and the Markdown smoke's output, archived in stobie-evidence `7fc8cf9`; two decisions amended and the components guide's Markdown bullets reflowed (see Increment 7); `cargo xtask verify` |
 
 ## Decisions
 
@@ -101,12 +101,17 @@ maths.
   none) is stacked as a record of full-width lines, each led by its column's
   header in strong text and ": ", as phone layouts commonly present tables;
   empty cells and records are left out. A horizontally scrolling table
-  would hide columns a reader cannot tell are there.
+  would hide columns a reader cannot tell are there. Amended in increment
+  6: the header row is also a record of its own, first, where it holds a
+  link or footnote reference (see below).
 - A cell aligns its whole galley within the column, so a wrapped cell's
   lines share one edge; the cell's selectable area is the galley's extent.
 - The grid's vertical padding is the spacing unit so that egui copies a
   table's rows as lines whose cells are separated by spaces, with no blank
-  line between rows.
+  line between rows. Amended in increment 6: egui separates copied text by
+  its distance from the text before it, so a row whose last cell is shorter
+  than another of its cells is followed by a blank line, as the components
+  guide records.
 - Table, row, column header and cell nodes come from nested child `Ui`s,
   whose AccessKit nodes take the table roles, counts and zero-based indices
   (ARIA's are one-based). A table publishes no `UiNode`: agents read it
@@ -366,3 +371,42 @@ Each item the increment 4 and 5 reviews carried, and its resolution:
 The Gallery's `markdown/document` baselines were re-rendered and inspected
 for the open task's outline, the task's name without "[2]" and, in the
 narrow fixture, the stacked table's space under its heading.
+
+## Increment 7
+
+The evidence record is the "Document Markdown" section of
+[`docs/markdown-evidence.md`](../markdown-evidence.md), with its raw
+captures in stobie-evidence
+[`7fc8cf9`](https://github.com/robchristie/stobie-evidence/tree/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown)
+and its row in the [evidence archive](../evidence-archive.md). The items the
+increment 6 review carried:
+
+- Two decisions predated increment 6 and are amended in place: a stacked
+  table also presents a header row holding a link as a record, and a copied
+  grid row whose last cell is shorter than another is followed by a blank
+  line.
+- The components guide's Footnotes and Tables bullets are reflowed: an
+  overlong line and an unindented continuation.
+- The stacked table's opening rule, measured in the phone-width captures,
+  sits 16 pixels below the heading's glyphs and 9 above the first record's
+  at 100%, and 18 and 10 at 150%: it reads as the table's rule, not the
+  heading's underline.
+- The open task box's outline, measured from captured pixels at device
+  scale 1 and 2, is 7.51:1 against the panel in the dark theme and at least
+  6.39:1 in every theme, the muted text and panel tokens exactly.
+- Footnote definitions in the phone column are captured after a click on a
+  reference at 100% and at 150% in both high-contrast themes.
+
+## Closeout
+
+Increments 1 to 6 landed as PRs
+[#143](https://github.com/robchristie/stobie/pull/143),
+[#144](https://github.com/robchristie/stobie/pull/144),
+[#145](https://github.com/robchristie/stobie/pull/145),
+[#147](https://github.com/robchristie/stobie/pull/147),
+[#148](https://github.com/robchristie/stobie/pull/148) and
+[#149](https://github.com/robchristie/stobie/pull/149); increment 7 is this
+plan's delivery. Later work stays outside this plan, as its boundaries
+excluded it: mapping or highlighting a source span within presented text,
+laying out only what is near view in very long documents, and typesetting
+maths.
