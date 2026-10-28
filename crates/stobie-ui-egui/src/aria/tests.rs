@@ -1055,3 +1055,65 @@ fn a_tapped_field_awaiting_egui_ime_output_gets_its_rectangle_and_purpose() {
     // Only while egui's focus is on the tapped field.
     assert_eq!(tapped_field_ime(&update(nodes(), 2), NodeId(3)), None);
 }
+
+#[test]
+fn a_table_projects_its_rows_cells_counts_and_one_based_indices() {
+    let mut table = node(Role::Table, &[3, 4]);
+    table.set_author_id("table");
+    table.set_row_count(2);
+    table.set_column_count(2);
+    bounds(&mut table, 0.0, 0.0, 200.0, 60.0);
+    let mut head = node(Role::Row, &[5, 6]);
+    head.set_row_index(0);
+    bounds(&mut head, 0.0, 0.0, 200.0, 30.0);
+    let mut body = node(Role::Row, &[7]);
+    body.set_row_index(1);
+    bounds(&mut body, 0.0, 30.0, 200.0, 60.0);
+    let mut cells = Vec::new();
+    for (id, role, row, column) in [
+        (5, Role::ColumnHeader, 0, 0),
+        (6, Role::ColumnHeader, 0, 1),
+        (7, Role::Cell, 1, 1),
+    ] {
+        let mut cell = node(role, &[]);
+        cell.set_author_id(format!("cell.{id}"));
+        cell.set_row_index(row);
+        cell.set_column_index(column);
+        let x0 = 100.0 * column as f64;
+        let y0 = 30.0 * row as f64;
+        bounds(&mut cell, x0, y0, x0 + 100.0, y0 + 30.0);
+        cells.push((id, cell));
+    }
+    let mut nodes = vec![
+        (1, node(Role::Window, &[2])),
+        (2, table),
+        (3, head),
+        (4, body),
+    ];
+    nodes.extend(cells);
+    let tree = project(&update(nodes, 1), 1.0);
+    let table = &tree.elements["stobie-a11y:table"];
+    assert_eq!(table.attributes["role"], "table");
+    assert_eq!(table.attributes["aria-rowcount"], "2");
+    assert_eq!(table.attributes["aria-colcount"], "2");
+    assert_eq!(table.children.len(), 2);
+    let rows: Vec<_> = table
+        .children
+        .iter()
+        .map(|id| &tree.elements[id.as_str()])
+        .collect();
+    assert_eq!(rows[0].attributes["role"], "row");
+    assert_eq!(rows[0].attributes["aria-rowindex"], "1");
+    assert_eq!(rows[1].attributes["aria-rowindex"], "2");
+    assert!(!rows[0].attributes.contains_key("aria-colindex"));
+    let header = &tree.elements["stobie-a11y:cell.6"];
+    assert_eq!(header.attributes["role"], "columnheader");
+    assert_eq!(header.attributes["aria-rowindex"], "1");
+    assert_eq!(header.attributes["aria-colindex"], "2");
+    let cell = &tree.elements["stobie-a11y:cell.7"];
+    assert_eq!(cell.attributes["role"], "cell");
+    assert_eq!(cell.attributes["aria-rowindex"], "2");
+    assert_eq!(cell.attributes["aria-colindex"], "2");
+    assert!(!cell.attributes.contains_key("aria-selected"));
+    assert!(!cell.attributes.contains_key("aria-rowcount"));
+}

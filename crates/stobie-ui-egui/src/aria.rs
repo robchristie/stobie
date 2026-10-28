@@ -756,7 +756,10 @@ fn aria_role(node: &Node) -> (Option<&'static str>, Naming) {
         Role::Table => (Some("table"), Naming::Label),
         Role::Grid => (Some("grid"), Naming::Label),
         Role::Row => (Some("row"), Naming::Label),
-        Role::Cell | Role::GridCell => (Some("gridcell"), Naming::Label),
+        Role::Cell => (Some("cell"), Naming::Label),
+        Role::GridCell => (Some("gridcell"), Naming::Label),
+        Role::ColumnHeader => (Some("columnheader"), Naming::Label),
+        Role::RowHeader => (Some("rowheader"), Naming::Label),
         Role::Tree => (Some("tree"), Naming::Label),
         Role::TreeItem => (Some("treeitem"), Naming::Label),
         Role::Dialog => (Some("dialog"), Naming::Label),
@@ -904,6 +907,30 @@ fn presentation(
         && matches!(role, Some("heading" | "treeitem"))
     {
         attributes.insert("aria-level", level.to_string());
+    }
+    // AccessKit counts and indexes a table's rows and columns from 0; ARIA
+    // from 1.
+    if matches!(role, Some("table" | "grid" | "treegrid")) {
+        if let Some(rows) = node.row_count() {
+            attributes.insert("aria-rowcount", rows.to_string());
+        }
+        if let Some(columns) = node.column_count() {
+            attributes.insert("aria-colcount", columns.to_string());
+        }
+    }
+    if matches!(
+        role,
+        Some("row" | "cell" | "gridcell" | "columnheader" | "rowheader")
+    ) && let Some(index) = node.row_index()
+    {
+        attributes.insert("aria-rowindex", (index + 1).to_string());
+    }
+    if matches!(
+        role,
+        Some("cell" | "gridcell" | "columnheader" | "rowheader")
+    ) && let Some(index) = node.column_index()
+    {
+        attributes.insert("aria-colindex", (index + 1).to_string());
     }
     if role.is_some() {
         if let Some(position) = node.position_in_set() {

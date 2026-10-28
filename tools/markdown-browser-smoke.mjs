@@ -185,7 +185,9 @@ try {
   }
 
   // A document: headings carry the application's IDs into the ARIA layer,
-  // tasks are read-only checkboxes, and maths keeps its source.
+  // tasks are read-only checkboxes, the table is an ARIA table (a grid with
+  // column headers at desktop width, stacked records in the narrow column),
+  // and maths keeps its source.
   for (const [config, name] of [
     [configuration(), 'document-dark'],
     [configuration({ appearance: 'light', contrast: 'high', font_scale: 1.5, width: 'narrow' }), 'document-light-high-contrast-150'],
@@ -204,8 +206,25 @@ try {
       assert.equal(await box.getAttribute('aria-checked'), checked, `${name}: ${task} is ${checked === 'true' ? 'done' : 'open'}`);
       assert.equal(await box.getAttribute('aria-disabled'), 'true', `${name}: ${task} is read-only`);
     }
-    const maths = document.text.filter(t => t.role === 'monospace_technical');
-    assert(maths.length >= 1, `${name}: maths in the technical face`);
+    const grid = name === 'document-dark';
+    const table = page.getByRole('table');
+    assert.equal(await table.count(), 1, `${name}: one ARIA table`);
+    assert.equal(await table.getAttribute('aria-colcount'), '7', `${name}: seven columns`);
+    assert.equal(await table.getAttribute('aria-rowcount'), grid ? '5' : '4', `${name}: its rows`);
+    assert.equal(await table.getByRole('columnheader').count(), grid ? 7 : 0, `${name}: its column headers`);
+    const header = table.getByRole('row').first();
+    assert.equal(await header.getAttribute('aria-rowindex'), '1', `${name}: rows count from 1`);
+    assert(await table.getByRole('cell').count() >= (grid ? 28 : 1), `${name}: its cells`);
+    const lines = document.text.map(t => t.content?.text);
+    for (const line of grid ? ['Anemones', 'Too deep to grid; two counts only'] : ['Pool: A', 'Tide: Second']) {
+      assert(lines.includes(line), `${name}: ${line}`);
+    }
+    // In the narrow column the stacked table pushes the maths below the
+    // fold; it is checked there after scrolling.
+    if (grid) {
+      const maths = document.text.filter(t => t.role === 'monospace_technical');
+      assert(maths.length >= 1, `${name}: maths in the technical face`);
+    }
   }
   // In the narrow column the definitions are below the fold; a reference
   // scrolls its definition into view and opens nothing.
@@ -215,6 +234,19 @@ try {
   await page.waitForFunction(id => window.__STOBIE_GALLERY_HANDLE.snapshot().ui_snapshot.nodes.some(n => n.id === id), FIRST_NOTE, { timeout: 5_000 });
   const noted = await record('document-footnote-revealed');
   assert.equal(noted.ui_snapshot.nodes.find(n => n.id === FIRST_NOTE).role, 'section', 'the definition is a section');
+  // Scrolling back up from the definitions reaches the display maths.
+  const surface = await page.locator('canvas').boundingBox();
+  const whole = t => t.component_id.kind === 'reading_text' && t.allocated_rect.min_y >= t.clip_rect.min_y && t.allocated_rect.max_y <= t.clip_rect.max_y;
+  const over = centre(noted, noted.text.find(whole).allocated_rect, surface);
+  let upward = noted;
+  for (let turn = 0; turn < 12 && !upward.text.some(t => t.role === 'monospace_technical'); turn += 1) {
+    await page.mouse.move(over.x, over.y); await page.mouse.wheel(0, -300);
+    await page.waitForFunction(frame => window.__STOBIE_GALLERY_HANDLE.snapshot().frame > frame, upward.frame);
+    await page.waitForTimeout(300);
+    upward = await snapshot();
+  }
+  assert(upward.text.some(t => t.role === 'monospace_technical'), 'document-light-high-contrast-150: maths in the technical face');
+  await record('document-narrow-maths');
 
   // Narrow, enlarged high contrast: unsafe links stay text, open nothing and
   // say why; long code and identifiers wrap; scrolling reaches the partial tail.
@@ -258,7 +290,7 @@ try {
   assert.deepEqual(errors, []);
   const report = { source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '', wasm_sha256: createHash('sha256').update(await readFile(join(root, 'pkg/stobie_gallery_bg.wasm'))).digest('hex'), url, browser: browser.version(), steps, targets, opened, idle, input_route: 'Physical Playwright mouse and keyboard, and focus through the ARIA layer; hooks only choose stories and appearance and read observations', errors };
   await writeFile(join(evidence, 'browser-workflow.json'), `${JSON.stringify(report, null, 2)}\n`);
-  console.log('Markdown browser workflow passed: item copy across a link, new-tab links by pointer and keyboard, heading IDs and read-only tasks in the ARIA layer, a footnote reference revealing its definition, unsafe links, narrow wrapping, partial input, scrolling and idle');
+  console.log('Markdown browser workflow passed: item copy across a link, new-tab links by pointer and keyboard, heading IDs, read-only tasks and a table as a grid and stacked in the ARIA layer, a footnote reference revealing its definition, unsafe links, narrow wrapping, partial input, scrolling and idle');
 } catch (error) {
   await writeFile(join(evidence, 'browser-failure.json'), JSON.stringify({ error: String(error), state: await snapshot().catch(() => null), steps, targets, opened }, null, 2));
   await page?.screenshot({ path: join(evidence, 'browser-failure.png') }).catch(() => {});

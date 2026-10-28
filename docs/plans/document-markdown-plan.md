@@ -1,8 +1,8 @@
 # Document Markdown
 
 Status: active
-Next action: Deliver increment 5: tables presented as structure when the
-options enable them, then the evidence update and closeout.
+Next action: Deliver increment 6: polish carried from reviews, the
+evidence update and closeout.
 
 ## Outcome and boundaries
 
@@ -26,7 +26,8 @@ maths.
 | 2. Heading anchors with application-supplied IDs reached by `reveal` | Complete | `MarkdownSpec::heading_ids`, `UiRole::Heading` nodes and `Frame::reveal`; 2 recipe regressions (heading nodes, names, AccessKit parity and identities at phone and desktop widths and 150% text; identities unchanged where a narrow item flattens) and 3 host regressions (an agent and the application reveal a heading below the fold at phone and desktop widths); `cargo xtask verify` |
 | 3. Application-resolved links: external, in-application or unavailable | Complete | `MarkdownSpec::link_kinds`, `MarkdownSourceMap::links` and `PresentationContext::followed_link`; 1 parser regression (link destinations and ranges equal pulldown-cmark's, with CRLF, multibyte text and a base), 1 recipe regression (each kind by pointer, keyboard and AccessKit, with node and AccessKit properties and clean audits at phone and desktop widths; unsafe URLs stay blocked whatever the application says), 4 host regressions (each kind by agent, pointer and keyboard; a follow lapses when its link is not presented) and the `library` example with 2 tests (a relative link opens another document at the heading it names); `cargo xtask verify` |
 | 4. Task lists, footnotes and maths presented as more than source text | Complete | Read-only task boxes, numbered footnote references and definitions (`MarkdownSpec::footnote_ids`, `MarkdownSourceMap::footnotes`) and maths as source; 4 new parser regressions and 1 rewritten (structure under every extension, a definition's label whatever opens it, numbering by first appearance without regard to case, a marker outside its paragraph, display maths with CRLF), 5 new recipe regressions (each presentation with node and AccessKit parity and clean audits at phone and desktop widths, 150% text and high contrast; default options unchanged; a reference scrolling its definition into view by pointer and keyboard; a named heading opening a narrow item named by its own text; a followed link reaching the root through scoped, bubble, dialog and code-copy contexts), 1 host regression (an agent follows a reference to a definition below the fold), Gallery `markdown/document` with 1 regression, 2 inspected baselines and the extended browser journey (heading IDs and task states in the ARIA layer, a reference revealing its definition); `cargo xtask verify` |
-| 5. Tables presented as structure; evidence update and closeout | Pending | |
+| 5. Tables presented as structure | Complete | A grid with a header row, column alignment and wrapping cells that stacks as records when too narrow, with AccessKit table, row, column header and cell nodes and ARIA counts and indices; 2 new parser regressions and 1 extended (alignments, header, padded and truncated rows, inline cells, a table in a list item and one with no body rows), 6 new recipe regressions and 1 extended (grid or stacked at phone and desktop widths, 150% text and high contrast with clean audits; a cell wrapping in its column; tables in a quote and a list item and one with no body rows; the AccessKit table; default options unchanged; drag-copying a table's cells), 1 ARIA regression, Gallery `markdown/document` with a wide table, its extended regression, 2 re-inspected baselines and the extended browser journey (the table as a grid and stacked in the ARIA layer); `cargo xtask verify` |
+| 6. Polish carried from reviews, evidence update and closeout | Pending | |
 
 ## Decisions
 
@@ -41,9 +42,9 @@ maths.
 - A block's range is pulldown-cmark's start-tag range, so an application can
   compare it with its own parse directly. The caller's base shifts every
   range; Stobie does not look for a byte order mark or frontmatter.
-- Until increments 4 and 5 present them, enabled extensions keep their
+- Enabled extensions that Stobie does not present as structure keep their
   source form rather than losing their markers. With the default options
-  they still do.
+  tables, task lists, footnotes and maths still do.
 - The application gives heading IDs as a list in source-map order
   (`MarkdownSpec::heading_ids`) rather than through a callback: the source
   map already gives each heading's index, text and range, and a list keeps
@@ -89,6 +90,30 @@ maths.
   where it starts and ends, in the italic monospace face: monospace says
   "source", and italics tell it apart from inline code. Typesetting stays
   out of scope.
+- Tables use Stobie's own `Alignment` (start, centre, end) rather than
+  pulldown-cmark's, which has no `Eq` and names left and right rather than
+  start and end; a column with no marker starts its cells.
+- A table is a grid while every column fits its least width: its longest
+  word, capped at twice the minimum content width so one unbroken token
+  cannot force the whole table into records, plus the cell padding. Spare
+  width is shared in proportion to how much more each column would take
+  unwrapped. Otherwise each body row (or the header row of a table with
+  none) is stacked as a record of full-width lines, each led by its column's
+  header in strong text and ": ", as phone layouts commonly present tables;
+  empty cells and records are left out. A horizontally scrolling table
+  would hide columns a reader cannot tell are there.
+- A cell aligns its whole galley within the column, so a wrapped cell's
+  lines share one edge; the cell's selectable area is the galley's extent.
+- The grid's vertical padding is the spacing unit so that egui copies a
+  table's rows as lines whose cells are separated by spaces, with no blank
+  line between rows.
+- Table, row, column header and cell nodes come from nested child `Ui`s,
+  whose AccessKit nodes take the table roles, counts and zero-based indices
+  (ARIA's are one-based). A table publishes no `UiNode`: agents read it
+  through its cells' text, and no new role is needed until one acts on a
+  table. A cell's identity is keyed by its source row and column, so it is
+  the same in the grid and the stack.
+- The source map keeps a table as one block; spans within it are gap S5's.
 
 ## Increment 1
 
@@ -212,3 +237,51 @@ change was needed.
 Design decision: accepted. Remaining trade-offs: a definition has no link
 back to its references; a lone task marker's box has no text of its own;
 display maths wraps mid-token in a narrow column, as code does.
+
+## Increment 5
+
+Design contract. Task: read a knowledge document's tables, compare values
+down a column and along a row, and copy them, at phone and desktop widths,
+at 150% text and in high contrast, including a table wider than a phone.
+Hierarchy: headings lead; the header row reads as the table's labels
+without competing with headings; values align so a column scans; rules
+separate rows without boxing every cell. Reference: GitHub's table
+rendering and the existing `markdown/document` recipe (raised surface for
+quoted and code blocks, decorative border for rules). States: ordinary
+(dark comfortable, the table as a grid), narrow light high contrast at 150%
+(the same table stacked), a quoted table, a table in a list item, a table
+with no body rows, a cell wrapping in its column, an empty cell and a link
+in a cell. Excluded: sorting, resizing or scrolling columns, cell selection
+as a unit, and per-cell source spans (gap S5).
+
+The parser now models a table as a block of column alignments, a header
+row and body rows of inline cells (styles, links and escaped pipes kept),
+padding short rows and dropping cells past the header's count. The recipe
+presents it as a grid or, when its columns cannot fit, as stacked records,
+as the decisions describe. Text in cells selects and copies as other
+Markdown text does: dragging across the grid copies one line for each row.
+AccessKit and the ARIA projection carry the table, its rows, column headers
+and cells with counts and indices; the ARIA projection gained the cell and
+header roles. With the default options a table is still a paragraph of its
+rows' source, and no signature changed.
+
+Task and reference: the contract above; Gallery `markdown/document`, whose
+document gained a seven-column counts table, in dark comfortable mode and in
+narrow light high contrast at 150%. Behavioural checks: passed (parser,
+recipe, ARIA and Gallery regressions; the browser journey). Presentation
+checks: passed. First critique, before reading the rationale: the headings
+are noticed first, then the raised header row; numbers align on their right
+edge and the centred tide column reads as a column; the empty tide in row D
+is a visible gap rather than a missing cell; rules are light and the table
+does not look like a control. In the narrow column each record reads as
+"Pool: A" with strong labels that are body size and so do not compete with
+headings. What competes: nothing in the grid. What became harder: in the
+stack a reader can no longer compare one column down the rows, and the
+records are long enough to push the formula below the fold. Reading the
+rationale answered both: a grid that does not fit would hide columns or
+break every word, and the records keep each value beside its label. No
+presentation change was needed.
+
+Design decision: accepted. Remaining trade-offs: a stacked table loses
+comparison down a column; a wrapped cell's lines share one alignment edge
+rather than aligning each line; the source map does not locate cells.

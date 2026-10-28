@@ -4,43 +4,6 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 1897516023101900
-      },
-      "role": "body",
-      "horizontal_alignment": "start",
-      "vertical_alignment": "top",
-      "allocated_rect": {
-        "min_x": 694,
-        "min_y": 651.9749755859375,
-        "max_x": 990,
-        "max_y": 729.9749755859375
-      },
-      "painted_rect": {
-        "min_x": 694,
-        "min_y": 651.9749755859375,
-        "max_x": 944.90625,
-        "max_y": 729.9749755859375
-      },
-      "clip_rect": {
-        "min_x": 694,
-        "min_y": 651.9749755859375,
-        "max_x": 990,
-        "max_y": 729.9749755859375
-      },
-      "overflow": "wrap_unbounded",
-      "interaction": "selectable",
-      "declared_max_lines": 0,
-      "line_count": 3,
-      "truncated": false,
-      "content": {
-        "kind": "excerpt",
-        "text": "Density is d = n / A for n animals in an area A, so pool C holds:",
-        "truncated": false
-      }
-    },
-    {
-      "component_id": {
-        "kind": "reading_text",
         "instance": 221139222978172
       },
       "role": "application_title",
@@ -48,21 +11,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 236,
+        "min_y": 262,
         "max_x": 990,
-        "max_y": 270
+        "max_y": 296
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 236,
+        "min_y": 262,
         "max_x": 893.03125,
-        "max_y": 270
+        "max_y": 296
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 236,
+        "min_y": 262,
         "max_x": 990,
-        "max_y": 270
+        "max_y": 296
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -78,6 +41,43 @@
     {
       "component_id": {
         "kind": "reading_text",
+        "instance": 2310136142311067
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 709.9749755859375,
+        "max_x": 800.03125,
+        "max_y": 735.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 709.9749755859375,
+        "max_x": 800.03125,
+        "max_y": 735.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 709.9749755859375,
+        "max_x": 800.03125,
+        "max_y": 735.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Tide: Second",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
         "instance": 327635350035988
       },
       "role": "body",
@@ -85,21 +85,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 715.5625,
-        "min_y": 457.32501220703125,
+        "min_y": 483.32501220703125,
         "max_x": 990,
-        "max_y": 483.32501220703125
+        "max_y": 509.32501220703125
       },
       "painted_rect": {
         "min_x": 715.5625,
-        "min_y": 457.32501220703125,
+        "min_y": 483.32501220703125,
         "max_x": 976.5625,
-        "max_y": 483.32501220703125
+        "max_y": 509.32501220703125
       },
       "clip_rect": {
         "min_x": 715.5625,
-        "min_y": 457.32501220703125,
+        "min_y": 483.32501220703125,
         "max_x": 990,
-        "max_y": 483.32501220703125
+        "max_y": 509.32501220703125
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -122,21 +122,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 391,
+        "min_y": 417,
         "max_x": 990,
-        "max_y": 421
+        "max_y": 447
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 391,
+        "min_y": 417,
         "max_x": 807.875,
-        "max_y": 421
+        "max_y": 447
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 391,
+        "min_y": 417,
         "max_x": 990,
-        "max_y": 421
+        "max_y": 447
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -152,37 +152,74 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 3967364626016586
+        "instance": 4666801039940385
       },
-      "role": "monospace_technical",
+      "role": "pane_title",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 706,
-        "min_y": 741.9749755859375,
+        "min_x": 694,
+        "min_y": 642.9749755859375,
         "max_x": 990,
-        "max_y": 845.9749755859375
+        "max_y": 672.9749755859375
       },
       "painted_rect": {
-        "min_x": 706,
-        "min_y": 741.9749755859375,
-        "max_x": 975.75,
-        "max_y": 845.9749755859375
+        "min_x": 694,
+        "min_y": 642.9749755859375,
+        "max_x": 766.5625,
+        "max_y": 672.9749755859375
       },
       "clip_rect": {
-        "min_x": 706,
-        "min_y": 741.9749755859375,
+        "min_x": 694,
+        "min_y": 642.9749755859375,
         "max_x": 990,
+        "max_y": 672.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Counts",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5050607083268021
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 761.9749755859375,
+        "max_x": 810.1875,
+        "max_y": 787.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 761.9749755859375,
+        "max_x": 810.1875,
+        "max_y": 787.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 761.9749755859375,
+        "max_x": 810.1875,
         "max_y": 781
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
       "declared_max_lines": 0,
-      "line_count": 4,
+      "line_count": 1,
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "d_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}",
+        "text": "Anemones: 31",
         "truncated": false
       }
     },
@@ -196,21 +233,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 275,
+        "min_y": 301,
         "max_x": 990,
-        "max_y": 379
+        "max_y": 405
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 275,
+        "min_y": 301,
         "max_x": 967.90625,
-        "max_y": 379
+        "max_y": 405
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 275,
+        "min_y": 301,
         "max_x": 990,
-        "max_y": 379
+        "max_y": 405
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -233,21 +270,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 715.5625,
-        "min_y": 426,
+        "min_y": 452,
         "max_x": 990,
-        "max_y": 452
+        "max_y": 478
       },
       "painted_rect": {
         "min_x": 715.5625,
-        "min_y": 426,
+        "min_y": 452,
         "max_x": 967.6875,
-        "max_y": 452
+        "max_y": 478
       },
       "clip_rect": {
         "min_x": 715.5625,
-        "min_y": 426,
+        "min_y": 452,
         "max_x": 990,
-        "max_y": 452
+        "max_y": 478
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -263,28 +300,28 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 7395648576333103
+        "instance": 5869783098020306
       },
-      "role": "pane_title",
+      "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 616.9749755859375,
-        "max_x": 990,
-        "max_y": 646.9749755859375
+        "min_y": 683.9749755859375,
+        "max_x": 750.96875,
+        "max_y": 709.9749755859375
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 616.9749755859375,
-        "max_x": 771.78125,
-        "max_y": 646.9749755859375
+        "min_y": 683.9749755859375,
+        "max_x": 750.96875,
+        "max_y": 709.9749755859375
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 616.9749755859375,
-        "max_x": 990,
-        "max_y": 646.9749755859375
+        "min_y": 683.9749755859375,
+        "max_x": 750.96875,
+        "max_y": 709.9749755859375
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -293,7 +330,7 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Density",
+        "text": "Pool: A",
         "truncated": false
       }
     },
@@ -307,21 +344,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 694,
-        "min_y": 526.9749755859375,
+        "min_y": 552.9749755859375,
         "max_x": 990,
-        "max_y": 604.9749755859375
+        "max_y": 630.9749755859375
       },
       "painted_rect": {
         "min_x": 694,
-        "min_y": 526.9749755859375,
+        "min_y": 552.9749755859375,
         "max_x": 938.90625,
-        "max_y": 604.9749755859375
+        "max_y": 630.9749755859375
       },
       "clip_rect": {
         "min_x": 694,
-        "min_y": 526.9749755859375,
+        "min_y": 552.9749755859375,
         "max_x": 990,
-        "max_y": 604.9749755859375
+        "max_y": 630.9749755859375
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -333,13 +370,50 @@
         "text": "Compare the counts with last season's survey, which used a coarser grid.",
         "truncated": false
       }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 934452314457095
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 735.9749755859375,
+        "max_x": 804.90625,
+        "max_y": 761.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 735.9749755859375,
+        "max_x": 804.90625,
+        "max_y": 761.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 735.9749755859375,
+        "max_x": 804.90625,
+        "max_y": 761.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Area (m²): 6.0",
+        "truncated": false
+      }
     }
   ],
   "audit": [],
   "coverage": {
-    "measured_components": 9,
-    "attempted_components": 17,
-    "successful_components": 17,
+    "measured_components": 11,
+    "attempted_components": 45,
+    "successful_components": 45,
     "failed_components": 0,
     "native_text_controls": 17,
     "observed_native_controls": 0,

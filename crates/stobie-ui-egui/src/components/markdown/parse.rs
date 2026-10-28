@@ -2,11 +2,10 @@
 //!
 //! The model keeps only what the recipe presents: paragraphs, headings,
 //! lists (with task-list items' states), block quotes, code blocks, display
-//! maths, footnote definitions and rules, with inline emphasis, strong,
-//! strikethrough, code, maths, links and footnote references. Everything
-//! else keeps its text: raw HTML is shown as written and never interpreted,
-//! an image shows its alternative text, and tables stay paragraphs of their
-//! source (see [`parse`]).
+//! maths, footnote definitions, tables and rules, with inline emphasis,
+//! strong, strikethrough, code, maths, links and footnote references.
+//! Everything else keeps its text: raw HTML is shown as written and never
+//! interpreted, and an image shows its alternative text (see [`parse`]).
 //!
 //! The parse also maps each presented block to its source: its kind, its
 //! nesting depth and its byte range as pulldown-cmark reports it.
@@ -205,6 +204,38 @@ impl Inline {
         }
     }
 
+    /// The same inline led by `lead`, strong and without its links, and
+    /// `separator` in plain text, as a table cell is led by its column's
+    /// header where its table stacks.
+    pub fn led_by(&self, lead: &Self, separator: &str) -> Self {
+        let mut inline = Self::default();
+        for run in &lead.runs {
+            let style = InlineStyle {
+                strong: true,
+                ..run.style
+            };
+            inline.push(&lead.text[run.bytes.clone()], style, None);
+        }
+        inline.push(separator, InlineStyle::default(), None);
+        for run in &self.runs {
+            inline.push(&self.text[run.bytes.clone()], run.style, run.link);
+        }
+        inline
+    }
+
+    /// The same inline, strong throughout, as a table's header cell is.
+    pub fn strong(&self) -> Self {
+        let mut inline = Self::default();
+        for run in &self.runs {
+            let style = InlineStyle {
+                strong: true,
+                ..run.style
+            };
+            inline.push(&self.text[run.bytes.clone()], style, run.link);
+        }
+        inline
+    }
+
     /// The same inline after `prefix` in plain text.
     pub fn with_prefix(&self, prefix: &str) -> Self {
         let mut inline = Self::default();
@@ -263,7 +294,35 @@ pub(super) enum Block {
         number: usize,
         blocks: Vec<Block>,
     },
+    /// A table, with `ENABLE_TABLES`: each column's alignment, the header
+    /// row's cells and each body row's cells, every row as many cells as
+    /// there are columns.
+    Table {
+        alignments: Vec<Alignment>,
+        head: Vec<Inline>,
+        rows: Vec<Vec<Inline>>,
+    },
     Rule,
+}
+
+/// How a table column's cells are aligned.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum Alignment {
+    /// Unaligned or left-aligned in the source: at the start.
+    Start,
+    Centre,
+    /// Right-aligned in the source: at the end.
+    End,
+}
+
+impl From<pulldown_cmark::Alignment> for Alignment {
+    fn from(alignment: pulldown_cmark::Alignment) -> Self {
+        match alignment {
+            pulldown_cmark::Alignment::None | pulldown_cmark::Alignment::Left => Self::Start,
+            pulldown_cmark::Alignment::Center => Self::Centre,
+            pulldown_cmark::Alignment::Right => Self::End,
+        }
+    }
 }
 
 /// Where a link in the text leads.
@@ -313,6 +372,15 @@ enum Leaf {
     Math(String, bool),
 }
 
+/// A table being built.
+struct TableBuilder {
+    alignments: Vec<Alignment>,
+    head: Vec<Inline>,
+    rows: Vec<Vec<Inline>>,
+    /// Whether cells arriving belong to the header row.
+    in_head: bool,
+}
+
 /// The source of the open leaf.
 struct LeafSource {
     kind: MarkdownBlockKind,
@@ -340,6 +408,8 @@ struct Builder {
     emphasis: u32,
     strikethrough: u32,
     link: Option<usize>,
+    /// The table whose rows are arriving.
+    table: Option<TableBuilder>,
 }
 
 impl Builder {
@@ -499,7 +569,8 @@ impl Builder {
         self.inline().push(text, style, link);
     }
 
-    /// Plain text outside any style or link, such as a table's separators.
+    /// Plain text outside any style or link, such as a footnote label too
+    /// deeply nested to keep as a container.
     fn literal(&mut self, text: &str) {
         self.inline().push(text, InlineStyle::default(), None);
     }
@@ -579,6 +650,73 @@ impl Builder {
         }
         self.inline_event();
         self.text(if done { "[x] " } else { "[ ] " }, false);
+    }
+
+    /// Open a table aligned as `alignments`, its source the current
+    /// event's.
+    fn open_table(&mut self, alignments: Vec<Alignment>) {
+        self.close_leaf();
+        self.close_table();
+        self.map.blocks.push(MarkdownBlock {
+            kind: MarkdownBlockKind::Table,
+            depth: self.depth(),
+            source: self.current.clone(),
+        });
+        self.table = Some(TableBuilder {
+            alignments,
+            head: Vec::new(),
+            rows: Vec::new(),
+            in_head: false,
+        });
+    }
+
+    /// A cell's text arrives: hold it in a paragraph of its own, outside
+    /// the source map.
+    fn open_cell(&mut self) {
+        self.close_leaf();
+        self.leaf = Some(Leaf::Paragraph(Inline::default()));
+    }
+
+    /// A cell's text has arrived: add it to its row.
+    fn close_cell(&mut self) {
+        // A cell holds only inline text: display maths in it is inline.
+        let inline = match self.leaf.take() {
+            Some(Leaf::Paragraph(inline)) => inline,
+            _ => Inline::default(),
+        };
+        self.leaf_source = None;
+        let Some(table) = self.table.as_mut() else {
+            return;
+        };
+        if table.in_head {
+            table.head.push(inline);
+        } else if let Some(row) = table.rows.last_mut() {
+            row.push(inline);
+        }
+    }
+
+    /// Close the open table, every row as many cells as it has columns.
+    fn close_table(&mut self) {
+        self.close_leaf();
+        let Some(table) = self.table.take() else {
+            return;
+        };
+        let TableBuilder {
+            alignments,
+            mut head,
+            mut rows,
+            ..
+        } = table;
+        let columns = alignments.len();
+        head.resize_with(columns, Inline::default);
+        for row in &mut rows {
+            row.resize_with(columns, Inline::default);
+        }
+        self.blocks().push(Block::Table {
+            alignments,
+            head,
+            rows,
+        });
     }
 
     fn open(&mut self, container: Container) {
@@ -678,18 +816,21 @@ impl Builder {
                 Leaf::Paragraph(Inline::default()),
                 MarkdownBlockKind::MetadataBlock,
             ),
-            // A table keeps its cells' text, a row to a line between `|`
-            // separators.
-            Tag::Table(_) => {
-                self.open_leaf(Leaf::Paragraph(Inline::default()), MarkdownBlockKind::Table)
+            Tag::Table(alignments) => {
+                self.open_table(alignments.into_iter().map(Alignment::from).collect());
             }
-            Tag::TableHead | Tag::TableRow => {
-                if !self.inline().text.is_empty() {
-                    self.literal("\n");
+            Tag::TableHead => {
+                if let Some(table) = self.table.as_mut() {
+                    table.in_head = true;
                 }
-                self.literal("|");
             }
-            Tag::TableCell => self.literal(" "),
+            Tag::TableRow => {
+                if let Some(table) = self.table.as_mut() {
+                    table.in_head = false;
+                    table.rows.push(Vec::new());
+                }
+            }
+            Tag::TableCell => self.open_cell(),
             Tag::FootnoteDefinition(label) => {
                 let number = self.footnote(&label);
                 self.open(Container::Footnote {
@@ -758,8 +899,7 @@ impl Builder {
             | TagEnd::Heading(_)
             | TagEnd::CodeBlock
             | TagEnd::HtmlBlock
-            | TagEnd::MetadataBlock(_)
-            | TagEnd::Table => {
+            | TagEnd::MetadataBlock(_) => {
                 if let Some(Leaf::Paragraph(inline)) = self.leaf.as_mut()
                     && matches!(tag, TagEnd::HtmlBlock | TagEnd::MetadataBlock(_))
                 {
@@ -778,7 +918,13 @@ impl Builder {
             TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::Item | TagEnd::FootnoteDefinition => {
                 self.close();
             }
-            TagEnd::TableCell => self.literal(" |"),
+            TagEnd::TableCell => self.close_cell(),
+            TagEnd::TableHead => {
+                if let Some(table) = self.table.as_mut() {
+                    table.in_head = false;
+                }
+            }
+            TagEnd::Table => self.close_table(),
             TagEnd::DefinitionList
             | TagEnd::DefinitionListTitle
             | TagEnd::DefinitionListDefinition => self.close_leaf(),
@@ -846,8 +992,10 @@ fn normalise_lines(text: &str) -> String {
 /// display maths alone in a paragraph is a block of its own, its line
 /// endings normalised to LF. A task-list marker no item can hold (one nested
 /// deeper than the model keeps) keeps its source form, `[ ] ` or `[x] `. A
-/// table's cells stay text, a row to a line between `|` separators. A
-/// metadata block shows its text, as an HTML block does.
+/// table keeps each column's alignment and each cell's inline text, every
+/// row as many cells as the table has columns, and the source map holds the
+/// table as one block. A metadata block shows its text, as an HTML block
+/// does.
 pub(super) fn parse(source: &str, options: Options) -> Document {
     let mut builder = Builder {
         containers: vec![Container::Root(Vec::new())],
@@ -863,11 +1011,12 @@ pub(super) fn parse(source: &str, options: Options) -> Document {
         emphasis: 0,
         strikethrough: 0,
         link: None,
+        table: None,
     };
     for (event, range) in Parser::new_ext(source, options).into_offset_iter() {
         builder.event(event, range);
     }
-    builder.close_leaf();
+    builder.close_table();
     while builder.containers.len() > 1 {
         builder.kept.push(true);
         builder.close();
@@ -1123,6 +1272,11 @@ mod tests {
                     items.iter().flat_map(|item| texts(&item.blocks)).collect()
                 }
                 Block::Rule => vec!["---".to_owned()],
+                Block::Table { head, rows, .. } => std::iter::once(head)
+                    .chain(rows)
+                    .flatten()
+                    .map(|cell| cell.text.clone())
+                    .collect(),
             })
             .collect()
     }
@@ -1150,7 +1304,10 @@ mod tests {
                 "open",
                 "Note[1].",
                 "The note.",
-                "| a | b |\n| 1 | 2 |",
+                "a",
+                "b",
+                "1",
+                "2",
             ]
         );
         let Block::Paragraph(maths) = &document.blocks[0] else {
@@ -1191,6 +1348,96 @@ mod tests {
                 "Note[^1].",
                 "[^1]: The note.",
                 "| a | b | | - | - | | 1 | 2 |",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_table_keeps_its_alignments_header_rows_and_inline_cells() {
+        let source = "| Pool | Tide | Count | Notes |\n\
+                      | :--- | :---: | ---: | --- |\n\
+                      | A | *low* | **12** | see [map](#map) and `x\\|y` |\n\
+                      | B | high |\n\
+                      | C | ebb | 3 | four | extra |\n";
+        let document = parse(source, DOCUMENT);
+        let [
+            Block::Table {
+                alignments,
+                head,
+                rows,
+            },
+        ] = document.blocks.as_slice()
+        else {
+            panic!("one table: {:?}", document.blocks);
+        };
+        assert_eq!(
+            alignments,
+            &[
+                Alignment::Start,
+                Alignment::Centre,
+                Alignment::End,
+                Alignment::Start
+            ]
+        );
+        let text = |cells: &[Inline]| -> Vec<String> {
+            cells.iter().map(|cell| cell.text.clone()).collect()
+        };
+        assert_eq!(text(head), ["Pool", "Tide", "Count", "Notes"]);
+        // Every row has a cell for each column, missing cells empty and
+        // extra cells dropped, as GitHub Flavored Markdown says.
+        assert_eq!(
+            rows.iter().map(|row| text(row)).collect::<Vec<_>>(),
+            [
+                vec!["A", "low", "12", "see map and x|y"],
+                vec!["B", "high", "", ""],
+                vec!["C", "ebb", "3", "four"],
+            ]
+        );
+        assert_eq!(styled(&rows[0][1], |run| run.style.emphasis), ["low"]);
+        assert_eq!(styled(&rows[0][2], |run| run.style.strong), ["12"]);
+        assert_eq!(styled(&rows[0][3], |run| run.style.code), ["x|y"]);
+        assert_eq!(rows[0][3].link_bytes(), [(0, 4..7)]);
+        assert_eq!(urls(&document), ["#map"]);
+        // The table is one block of the source map, its cells none.
+        assert_eq!(
+            document.map.blocks,
+            [MarkdownBlock {
+                kind: MarkdownBlockKind::Table,
+                depth: 0,
+                source: 0..source.len(),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_table_nests_in_a_list_item_and_may_have_no_body_rows() {
+        let source = "- item\n\n  | a | b |\n  | - | - |\n\nAfter.";
+        let document = parse(source, DOCUMENT);
+        let [Block::List { items, .. }, Block::Paragraph(after)] = document.blocks.as_slice()
+        else {
+            panic!("a list and a paragraph: {:?}", document.blocks);
+        };
+        assert_eq!(after.text, "After.");
+        let [Block::Paragraph(_), Block::Table { head, rows, .. }] = items[0].blocks.as_slice()
+        else {
+            panic!("a paragraph and a table: {:?}", items[0].blocks);
+        };
+        assert_eq!(head.len(), 2);
+        assert!(rows.is_empty());
+        let kinds: Vec<_> = document
+            .map
+            .blocks
+            .iter()
+            .map(|block| (block.kind, block.depth))
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                (MarkdownBlockKind::List, 0),
+                (MarkdownBlockKind::ListItem, 1),
+                (MarkdownBlockKind::Paragraph, 2),
+                (MarkdownBlockKind::Table, 2),
+                (MarkdownBlockKind::Paragraph, 0),
             ]
         );
     }

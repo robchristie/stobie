@@ -209,7 +209,7 @@ raised surface; a code block wraps at the available width rather than
 scrolling sideways. Raw HTML is shown as written and never interpreted; an
 image shows its alternative text and loads nothing. With the default options,
 tables, footnotes, task lists and maths are not recognised and keep their
-source text.
+source text: a table is a paragraph of its rows' source.
 Bare URLs are not linked; `<https://…>` and `<name@example.org>` autolinks
 are.
 
@@ -246,8 +246,29 @@ as follows when enabled.
   face within its text; display maths alone in a paragraph is a block of its
   own in the italic `MonospaceTechnical` role, indented, with its line breaks
   kept and CRLF read as one break.
-- **Tables** (`ENABLE_TABLES`) keep their source form: a table's cells a row
-  to a line between `|` separators.
+- **Tables** (`ENABLE_TABLES`): a table is a grid of its header row and
+  body rows. The header row's text is semibold on the raised surface, a
+  decorative rule runs below each row, and there are no vertical rules. Each
+  cell is a reading surface of its own, top-aligned, its text wrapping within
+  its column and placed at the start, centre or end as the delimiter row
+  aligns the column (`:---`, `:---:`, `---:`; unaligned columns start). Cells
+  keep their inline styles, links and footnote references. Columns take
+  their natural widths, and the table only the width it needs, when they fit;
+  otherwise each column keeps room for its longest word, up to twice the
+  narrowest content a nested block may leave (128 points at 100%), and shares
+  the rest in proportion to how much more it would take. Where even those
+  widths do not fit, the table **stacks**: each body row is a record between
+  rules, each of its cells a line of the full width led by its column's
+  header in semibold and `: `, such as "Area (m²): 6.0"; an empty cell is
+  left out, and a table without body rows lists its headers. A cell keeps its
+  identity in either layout. Selecting across a grid copies a row to a line
+  with its cells separated by spaces. For assistive technology the table is
+  an AccessKit `Table` with its row and column counts, holding a `Row` for
+  each presented row with its index, holding a `ColumnHeader` (the grid's
+  header row) or `Cell` for each cell with its row and column indices, each
+  bounded by the part of it in view; the text is inside its cell. Rows and
+  cells count from 0 in the grid, its header row first, and the stacked
+  table counts only its records. The table publishes no `UiNode`.
 
 `markdown_source_map(source, options, base)` reports, without presenting,
 every block the recipe presents for that source and those options, in
@@ -385,8 +406,8 @@ font_scale, observations)` and publish the returned `link_nodes`,
 controls. `MarkdownResponse` and `MarkdownLinkKind` are `#[non_exhaustive]`.
 Gallery `markdown/digest` and `markdown/long-narrow` use the production
 recipe, `markdown/code-copy` a reply with a copy control on each of its code
-blocks, and `markdown/document` a document with every extension but tables,
-heading and footnote IDs; the [evidence record](../markdown-evidence.md)
+blocks, and `markdown/document` a document with every extension, a wide
+table among them, and heading and footnote IDs; the [evidence record](../markdown-evidence.md)
 retains the review.
 
 ## Links

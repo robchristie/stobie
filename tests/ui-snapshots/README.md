@@ -145,6 +145,17 @@ state, in the ARIA layer at both configurations, and clicks a reference in
 the narrow column to scroll its definition into view. Adding the catalogue
 entry changed no earlier fixture.
 
+With tables enabled the document gained a counts table of seven columns
+(start, centred and end aligned, one cell empty). In dark comfortable mode
+it is a grid with a raised header row and a rule under each row; in the
+narrow column at 150% it is too wide to grid, so each body row is stacked as
+a record of "Header: value" lines, and the formula moved below the fold.
+The catalogue description now names the table. The browser journey finds
+the table in the ARIA layer at both configurations with its row and column
+counts, its column headers in the grid and its one-based row index, reads
+its cells (a header in the grid, "Pool: A" in the stack) and, in the narrow
+column, scrolls back up to the formula.
+
 Composer fixtures add chat composers in dark comfortable mode: an empty draft
 whose send is hidden, leaving the microphone alone, a one-line draft ready to
 send and a draft grown to three lines. A narrow light high-contrast column at
