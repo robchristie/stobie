@@ -15,10 +15,11 @@ use egui_kittest::{
 };
 
 use crate::{
-    CodeCopySpec, DensityVariant, DesignTokens, MarkdownSpec, PresentationContext,
-    PresentationScope, SemanticUiId, TextAuditFinding, TextComponentId, TextComponentKind,
-    TextInteraction, TextLayoutObservation, TextOverflow, TextRole, ThemeVariant, UiNode, UiRole,
-    UiSnapshot, audit_accesskit, audit_text_layouts,
+    CodeCopySpec, DEFAULT_MARKDOWN_OPTIONS, DensityVariant, DesignTokens, MarkdownBlockKind,
+    MarkdownOptions, MarkdownSpec, PresentationContext, PresentationScope, SemanticUiId,
+    TextAuditFinding, TextComponentId, TextComponentKind, TextInteraction, TextLayoutObservation,
+    TextOverflow, TextRole, ThemeVariant, UiNode, UiRole, UiSnapshot, audit_accesskit,
+    audit_text_layouts,
 };
 
 const PHONE: f32 = 343.0;
@@ -126,6 +127,28 @@ fn present_copying(
     tokens: DesignTokens,
     copy: Option<&CodeCopySpec<'_>>,
 ) -> Presented {
+    present_spec(
+        context,
+        source,
+        width,
+        scale,
+        tokens,
+        copy,
+        MarkdownSpec::default(),
+    )
+}
+
+/// Present `source` under `spec`, with a copy control on each code block
+/// when `copy` is given.
+fn present_spec(
+    context: &egui::Context,
+    source: &str,
+    width: f32,
+    scale: f32,
+    tokens: DesignTokens,
+    copy: Option<&CodeCopySpec<'_>>,
+    spec: MarkdownSpec<'_>,
+) -> Presented {
     let mut published = None;
     let mut rect = Rect::NOTHING;
     let mut output = context.run_ui(screen(width, 20_000.0), |ui| {
@@ -137,10 +160,8 @@ fn present_copying(
             SemanticUiId::root(),
         );
         rect = match copy {
-            Some(copy) => {
-                p.markdown_with_code_copy(ui, "body", source, MarkdownSpec::default(), copy)
-            }
-            None => p.markdown(ui, "body", source, MarkdownSpec::default()),
+            Some(copy) => p.markdown_with_code_copy(ui, "body", source, spec, copy),
+            None => p.markdown(ui, "body", source, spec),
         }
         .rect;
         published = Some(p.finish(ui));
@@ -1056,5 +1077,92 @@ fn a_code_block_shows_a_tab_as_four_spaces() {
     assert_eq!(
         code("```\nfor x in xs:\n\tprint(x)\n```"),
         code("```\nfor x in xs:\n    print(x)\n```")
+    );
+}
+
+/// A long document using every extension a knowledge repository enables,
+/// with CRLF line endings and multibyte text.
+const EXTENDED: &str = "# Café 漢字\r\n\r\n\
+A paragraph with ~~struck~~ text, $x^2$ maths and a note[^n] 🙂.\r\n\r\n\
+- [x] done ✓\r\n- [ ] öffen\r\n\r\n\
+| Name | Wert |\r\n| :--- | ---: |\r\n| α | **1** |\r\n\r\n\
+$$\r\nE = mc^2\r\n$$\r\n\r\n\
+> Quoted 🙂\r\n\r\n\
+```text\r\ncode ü\r\n```\r\n\r\n\
+<div>raw ü</div>\r\n\r\n\
+***\r\n\r\n\
+[^n]: The note, ünïcode.\r\n";
+
+const DOCUMENT: MarkdownOptions = MarkdownOptions::ENABLE_TABLES
+    .union(MarkdownOptions::ENABLE_FOOTNOTES)
+    .union(MarkdownOptions::ENABLE_STRIKETHROUGH)
+    .union(MarkdownOptions::ENABLE_TASKLISTS)
+    .union(MarkdownOptions::ENABLE_MATH);
+
+#[test]
+fn the_default_options_are_strikethrough_only() {
+    assert_eq!(
+        DEFAULT_MARKDOWN_OPTIONS,
+        MarkdownOptions::ENABLE_STRIKETHROUGH
+    );
+    assert_eq!(MarkdownSpec::default().options, DEFAULT_MARKDOWN_OPTIONS);
+}
+
+#[test]
+fn the_source_map_names_each_presented_text_block() {
+    let spec = MarkdownSpec {
+        options: DOCUMENT,
+        ..MarkdownSpec::default()
+    };
+    let map = crate::markdown_source_map(EXTENDED, DOCUMENT, 0);
+    let texts: Vec<_> = map
+        .blocks
+        .iter()
+        .filter(|block| {
+            matches!(
+                block.kind,
+                MarkdownBlockKind::Paragraph
+                    | MarkdownBlockKind::Heading
+                    | MarkdownBlockKind::CodeBlock
+                    | MarkdownBlockKind::HtmlBlock
+                    | MarkdownBlockKind::Table
+                    | MarkdownBlockKind::MetadataBlock
+            )
+        })
+        .collect();
+    for width in [PHONE, DESKTOP] {
+        for scale in [1.0, 1.5] {
+            let label = format!("{width} at {scale}");
+            let presented = present_spec(&context(), EXTENDED, width, scale, tokens(), None, spec);
+            assert_clean(&presented, &label);
+            let reading = presented.kind(TextComponentKind::ReadingText);
+            assert_eq!(reading.len(), texts.len(), "{label}: {texts:#?}");
+            let lines: Vec<&str> = reading
+                .iter()
+                .map(|text| text.content_text().unwrap_or_default())
+                .collect();
+            assert!(
+                lines.contains(&"| Name | Wert |\n| α | 1 |"),
+                "{label}: {lines:#?}"
+            );
+            assert!(lines.contains(&"[^n]: The note, ünïcode."), "{label}");
+        }
+    }
+    // The default options present the same source without the extensions.
+    let presented = present(EXTENDED, DESKTOP, 1.0);
+    assert_clean(&presented, "default");
+    assert_eq!(
+        presented.kind(TextComponentKind::ReadingText).len(),
+        crate::markdown_source_map(EXTENDED, DEFAULT_MARKDOWN_OPTIONS, 0)
+            .blocks
+            .iter()
+            .filter(|block| !matches!(
+                block.kind,
+                MarkdownBlockKind::List
+                    | MarkdownBlockKind::ListItem
+                    | MarkdownBlockKind::BlockQuote
+                    | MarkdownBlockKind::Rule
+            ))
+            .count()
     );
 }
