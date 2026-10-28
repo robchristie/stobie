@@ -97,7 +97,7 @@ pub fn list_row<A: ActionKey>(
             node.clear_selected();
             node.set_description(availability.disabled_reason().map_or_else(
                 || description.clone(),
-                |reason| format!("{description}; unavailable: {reason}"),
+                |reason| crate::semantics::unavailable_description(Some(&description), reason),
             ));
             if enabled {
                 node.add_action(Action::Click);

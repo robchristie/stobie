@@ -202,7 +202,7 @@ pub fn navigation_item<A: ActionKey>(
                 spec.availability
                     .disabled_reason()
                     .map_or(description.clone(), |reason| {
-                        format!("{description}; unavailable: {reason}")
+                        crate::semantics::unavailable_description(Some(&description), reason)
                     }),
             );
             if !enabled {

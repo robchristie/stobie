@@ -144,7 +144,7 @@ fn conversation(
         ..MarkdownSpec::default()
     };
     egui::ScrollArea::vertical()
-        .id_salt("markdown-scroll")
+        .id_salt(("markdown-scroll", story.as_str()))
         .auto_shrink([false, false])
         .show(ui, |ui| {
             if story == StoryId::MarkdownDocument {

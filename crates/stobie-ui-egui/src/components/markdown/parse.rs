@@ -11,6 +11,7 @@
 //! The parse also maps each presented block to its source: its kind, its
 //! nesting depth and its byte range as pulldown-cmark reports it.
 
+use std::collections::HashMap;
 use std::ops::Range;
 
 use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
@@ -331,8 +332,8 @@ struct Builder {
     current: Range<usize>,
     map: MarkdownSourceMap,
     links: Vec<LinkTarget>,
-    /// Each footnote label, folded to lower case, by number less one.
-    footnotes: Vec<String>,
+    /// Each footnote's number, by its label folded to lower case.
+    footnotes: HashMap<String, usize>,
     /// How many footnote references have been seen.
     references: usize,
     strong: u32,
@@ -356,15 +357,8 @@ impl Builder {
     /// The number of the footnote labelled `label`, numbering it if it is
     /// new.
     fn footnote(&mut self, label: &str) -> usize {
-        let folded = label.to_lowercase();
-        let index = match self.footnotes.iter().position(|seen| *seen == folded) {
-            Some(index) => index,
-            None => {
-                self.footnotes.push(folded);
-                self.footnotes.len() - 1
-            }
-        };
-        index + 1
+        let next = self.footnotes.len() + 1;
+        *self.footnotes.entry(label.to_lowercase()).or_insert(next)
     }
 
     fn blocks(&mut self) -> &mut Vec<Block> {
@@ -863,7 +857,7 @@ pub(super) fn parse(source: &str, options: Options) -> Document {
         current: 0..0,
         map: MarkdownSourceMap::default(),
         links: Vec::new(),
-        footnotes: Vec::new(),
+        footnotes: HashMap::new(),
         references: 0,
         strong: 0,
         emphasis: 0,

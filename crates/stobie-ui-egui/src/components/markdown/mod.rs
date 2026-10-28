@@ -3,6 +3,7 @@
 
 mod parse;
 
+use std::collections::HashSet;
 use std::ops::Range;
 
 use egui::{
@@ -190,7 +191,11 @@ struct ResolvedLink<'a> {
 impl<'a> ResolvedLink<'a> {
     /// `target` as the application classifies it (`kinds`), a footnote
     /// reference available when its definition is presented (`presented`).
-    fn new(target: &LinkTarget, kinds: &[MarkdownLinkKind<'a>], presented: &[usize]) -> Self {
+    fn new(
+        target: &LinkTarget,
+        kinds: &[MarkdownLinkKind<'a>],
+        presented: &HashSet<usize>,
+    ) -> Self {
         let (destination, index, kind) = match target {
             LinkTarget::Url { url, index } => (
                 url.as_str(),
@@ -1152,7 +1157,7 @@ pub(crate) fn present_markdown(
     observations: &mut Vec<TextLayoutObservation>,
 ) -> (MarkdownResponse, Vec<CodeBlock>) {
     let Document { blocks, links, map } = parse::parse(source, spec.options);
-    let presented: Vec<usize> = map.footnotes.iter().map(|note| note.number).collect();
+    let presented: HashSet<usize> = map.footnotes.iter().map(|note| note.number).collect();
     let links: Vec<_> = links
         .iter()
         .map(|target| ResolvedLink::new(target, spec.link_kinds, &presented))
