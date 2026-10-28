@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
+use unicase::UniCase;
 
 /// The kind of source a presented Markdown block comes from.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -400,8 +401,10 @@ struct Builder {
     current: Range<usize>,
     map: MarkdownSourceMap,
     links: Vec<LinkTarget>,
-    /// Each footnote's number, by its label folded to lower case.
-    footnotes: HashMap<String, usize>,
+    /// Each footnote's number, by its label compared without regard to
+    /// case as pulldown-cmark compares labels (Unicode case folding, so
+    /// "ß" matches "SS").
+    footnotes: HashMap<UniCase<String>, usize>,
     /// How many footnote references have been seen.
     references: usize,
     strong: u32,
@@ -428,7 +431,10 @@ impl Builder {
     /// new.
     fn footnote(&mut self, label: &str) -> usize {
         let next = self.footnotes.len() + 1;
-        *self.footnotes.entry(label.to_lowercase()).or_insert(next)
+        *self
+            .footnotes
+            .entry(UniCase::new(label.to_owned()))
+            .or_insert(next)
     }
 
     fn blocks(&mut self) -> &mut Vec<Block> {
@@ -583,17 +589,19 @@ impl Builder {
             return;
         }
         // Display maths opening a paragraph, or following display maths in
-        // it, stands alone until other text arrives.
+        // it, stands alone until other text arrives. Display maths in a link
+        // is the link's text, so it stays inline and keeps the link.
         let fresh = matches!(
             (&self.leaf, &self.leaf_source),
             (Some(Leaf::Paragraph(inline)), Some(source))
                 if inline.text.is_empty() && source.kind == MarkdownBlockKind::Paragraph
         );
-        if display && fresh {
+        let alone = display && self.link.is_none();
+        if alone && fresh {
             self.leaf = Some(Leaf::Math(text.trim().to_owned(), false));
             return;
         }
-        if display && let Some(Leaf::Math(math, gap)) = self.leaf.as_mut() {
+        if alone && let Some(Leaf::Math(math, gap)) = self.leaf.as_mut() {
             math.push('\n');
             math.push_str(text.trim());
             *gap = false;
@@ -1803,6 +1811,76 @@ mod tests {
                 .collect::<Vec<_>>(),
             [("a", 2), ("b", 1)]
         );
+    }
+
+    #[test]
+    fn footnote_labels_match_as_pulldown_cmarks_do_under_unicode_case_folding() {
+        // Full case folding matches "ß" with "SS" and "ss", and the long s
+        // with "s"; lower-casing matches neither.
+        let source = "Street[^Straße], again[^STRASSE], long[^\u{17F}trasse] and other[^Other].\n\n\
+            [^strasse]: S.\n\n[^OTHER]: O.\n";
+        let document = parse(source, DOCUMENT);
+        let references: Vec<_> = document
+            .links
+            .iter()
+            .filter_map(|link| match link {
+                LinkTarget::Footnote { number, label, .. } => Some((*number, label.as_str())),
+                LinkTarget::Url { .. } => None,
+            })
+            .collect();
+        // pulldown-cmark reports a reference only where a definition matches.
+        let expected: Vec<_> = Parser::new_ext(source, DOCUMENT)
+            .filter_map(|event| match event {
+                Event::FootnoteReference(label) => Some(label.into_string()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            references
+                .iter()
+                .map(|(_, label)| *label)
+                .collect::<Vec<_>>(),
+            expected
+        );
+        assert_eq!(
+            references,
+            [
+                (1, "Straße"),
+                (1, "STRASSE"),
+                (1, "\u{17F}trasse"),
+                (2, "Other")
+            ]
+        );
+        assert_eq!(
+            document
+                .map
+                .footnotes
+                .iter()
+                .map(|note| (note.label.as_str(), note.number))
+                .collect::<Vec<_>>(),
+            [("strasse", 1), ("OTHER", 2)]
+        );
+    }
+
+    #[test]
+    fn display_maths_as_a_links_text_keeps_the_link() {
+        for (source, maths) in [
+            ("[$$x^2$$](https://example.org/x)", "x^2"),
+            ("$$a$$ [$$b$$](https://example.org/x)", "b"),
+        ] {
+            let document = parse(source, DOCUMENT);
+            let [Block::Paragraph(inline)] = document.blocks.as_slice() else {
+                panic!("{source}: one paragraph: {:?}", document.blocks);
+            };
+            let linked: Vec<_> = inline
+                .runs
+                .iter()
+                .filter(|run| run.link.is_some())
+                .map(|run| (&inline.text[run.bytes.clone()], run.style.math))
+                .collect();
+            assert_eq!(linked, [(maths, true)], "{source}");
+            assert_eq!(urls(&document), ["https://example.org/x"], "{source}");
+        }
     }
 
     #[test]

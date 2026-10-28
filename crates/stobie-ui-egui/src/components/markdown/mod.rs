@@ -537,6 +537,8 @@ struct Layout<'a> {
     footnotes: Vec<FootnoteArea>,
     /// How many bytes lead the next text laid out without being its own.
     lead: usize,
+    /// Whether the block being laid out directly follows a heading.
+    after_heading: bool,
 }
 
 /// A footnote definition as laid out.
@@ -767,6 +769,7 @@ impl Layout<'_> {
                 self.y += 1.0 + self.tokens.spacing.block.0;
             }
             path.push(u32::try_from(index).unwrap_or(u32::MAX));
+            self.after_heading = matches!(previous, Some(Block::Heading { .. }));
             self.block(block, path, x, width, quoted);
             path.pop();
             previous = Some(block);
@@ -997,6 +1000,13 @@ impl Layout<'_> {
             }
         }
         let identity = self.identity.child(("table", path.as_slice()));
+        let stack = least.iter().sum::<f32>() > width;
+        // A stacked table opens with a rule, which directly under a heading
+        // would read as the heading's underline: it is set as far below a
+        // heading as below a paragraph.
+        if stack && self.after_heading {
+            self.y += (self.tokens.spacing.section.0 - self.tokens.spacing.block.0).max(0.0);
+        }
         let top = self.y;
         let mut table = TablePiece {
             identity,
@@ -1007,7 +1017,7 @@ impl Layout<'_> {
             fills: Vec::new(),
             lines: Vec::new(),
         };
-        if least.iter().sum::<f32>() > width {
+        if stack {
             self.stacked(&mut table, path, x, width, &head, rows, quoted);
         } else {
             let widths = shared_widths(&natural, &least, width);
@@ -1105,8 +1115,11 @@ impl Layout<'_> {
     }
 
     /// A table too narrow for its columns: each body row a record set apart
-    /// by rules, each of its cells a line led by its column's header. A
-    /// table without body rows lists its headers. An empty cell is left out.
+    /// by rules, each of its cells a line led by its column's header. The
+    /// header row is a record of its own first where it holds a link, which
+    /// the leads, as plain text, do not repeat, or where the table has no
+    /// body rows. An empty cell is left out, and a record with no cells left
+    /// is not presented or counted.
     #[allow(clippy::too_many_arguments)]
     fn stacked(
         &mut self,
@@ -1119,21 +1132,24 @@ impl Layout<'_> {
         quoted: bool,
     ) {
         let pad = self.tokens.spacing.block.0;
-        let records: Vec<(usize, &[Inline])> = if rows.is_empty() {
-            vec![(0, head)]
-        } else {
+        let linked_head = head
+            .iter()
+            .any(|cell| cell.runs.iter().any(|run| run.link.is_some()));
+        let mut records: Vec<(usize, &[Inline])> = Vec::new();
+        if rows.is_empty() || linked_head {
+            records.push((0, head));
+        }
+        records.extend(
             rows.iter()
                 .enumerate()
-                .map(|(index, row)| (index + 1, row.as_slice()))
-                .collect()
-        };
-        table.row_count = records.len();
+                .map(|(index, row)| (index + 1, row.as_slice())),
+        );
         table.lines.push(Rect::from_min_size(
             egui::pos2(x, self.y),
             egui::vec2(width, 1.0),
         ));
         self.y += 1.0;
-        for (index, (source, cells)) in records.into_iter().enumerate() {
+        for (source, cells) in records {
             let top = self.y;
             self.y += pad;
             let mut pieces = Vec::new();
@@ -1178,7 +1194,7 @@ impl Layout<'_> {
                 .collect();
             table.rows.push(RowPiece {
                 source,
-                index,
+                index: table.rows.len(),
                 rect,
                 header: source == 0,
                 cells,
@@ -1189,6 +1205,7 @@ impl Layout<'_> {
             ));
             self.y += 1.0;
         }
+        table.row_count = table.rows.len();
     }
 
     /// A footnote definition: its number in a column of its own, or above
@@ -1261,13 +1278,24 @@ impl Layout<'_> {
     /// A task-list item's box, its top-left corner at `min`.
     fn task(&mut self, path: &[u32], min: Pos2, done: bool, item: &Item, quoted: bool) {
         let side = self.task_side();
-        let name = match item.blocks.first() {
-            Some(Block::Paragraph(inline) | Block::Heading { inline, .. })
-                if !inline.text.trim().is_empty() =>
-            {
-                inline.text.trim().to_owned()
-            }
-            _ => UNNAMED_TASK.to_owned(),
+        // Named by its words: a footnote reference's number is a link of
+        // its own, which would read as part of the task's name.
+        let words = match item.blocks.first() {
+            Some(Block::Paragraph(inline) | Block::Heading { inline, .. }) => inline
+                .runs
+                .iter()
+                .filter(|run| !run.style.superscript)
+                .map(|run| &inline.text[run.bytes.clone()])
+                .collect::<String>()
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" "),
+            _ => String::new(),
+        };
+        let name = if words.is_empty() {
+            UNNAMED_TASK.to_owned()
+        } else {
+            words
         };
         self.pieces.push(Piece::Task {
             identity: self.identity.child(("task", path)),
@@ -1585,6 +1613,7 @@ pub(crate) fn present_markdown(
         footnote_ids: spec.footnote_ids,
         footnotes: Vec::new(),
         lead: 0,
+        after_heading: false,
     };
     layout.blocks(&blocks, &mut Vec::new(), 0.0, width, false, false);
     let height = layout.y.max(1.0);
@@ -1859,11 +1888,9 @@ fn present_task(
             Stroke::new((rect.width() * 0.14).max(1.5), mark),
         ));
     } else {
-        let edge: Color32 = if muted {
-            colours.text_muted.into()
-        } else {
-            colours.border_control.into()
-        };
+        // The muted text colour keeps 3:1 against every surface in every
+        // theme, as a state indicator needs; the control border does not.
+        let edge: Color32 = colours.text_muted.into();
         painter.rect_stroke(
             rect,
             radius,
@@ -1987,7 +2014,10 @@ fn present_text(
             if let Some(level) = text.heading {
                 node.set_role(egui::accesskit::Role::Heading);
                 node.set_level(usize::from(level));
+                // A heading is named by its own words, as where its item's
+                // marker is painted beside it rather than leading it.
                 if text.lead > 0 {
+                    node.set_label(own);
                     node.set_value(own);
                 }
             }

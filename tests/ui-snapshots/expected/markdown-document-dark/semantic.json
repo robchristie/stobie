@@ -202,7 +202,7 @@
       "id": "presentation.c9152aa272649bcc",
       "parent": "gallery.story",
       "role": "checkbox",
-      "name": "Count the anemones in pool C[2]",
+      "name": "Count the anemones in pool C",
       "rect": {
         "min_x": 534,
         "min_y": 247.27499389648438,

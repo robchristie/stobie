@@ -3057,6 +3057,7 @@ dependencies = [
  "stobie-core",
  "stobie-protocol",
  "stobie-ui-egui-derive",
+ "unicase",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

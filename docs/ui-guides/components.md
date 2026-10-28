@@ -223,17 +223,20 @@ as follows when enabled.
 
 - **Task lists** (`ENABLE_TASKLISTS`): a task-list item shows a read-only
   box in place of its bullet or number, filled in the accent colour with a
-  check mark when the task is done and outlined when it is not; in a column
+  check mark when the task is done and outlined in the muted text colour,
+  which keeps 3:1 against every surface, when it is not; in a column
   too narrow to indent, the box takes the line the marker would. Each box is
-  a disabled AccessKit check box, toggled as the task is, named by its
-  item's first paragraph or heading ("Task" when the item has none), and a
+  a disabled AccessKit check box, toggled as the task is, named by the words
+  of its item's first paragraph or heading without its footnote references'
+  numbers ("Task" when the item has none), and a
   `UiRole::Checkbox` node, not enabled, with `checked` set; nothing toggles
   it. A marker pulldown-cmark reports outside an item's first line, such as
   `- [ ]` followed by a blank line, still makes its item a task, and a marker
   no item holds keeps its source text.
 - **Footnotes** (`ENABLE_FOOTNOTES`): footnotes are numbered from 1 in the
   order their labels first appear, as a reference or a definition, matching
-  labels without regard to case. A reference shows its number as a raised
+  labels without regard to case as pulldown-cmark does (Unicode case
+  folding, so `[^Straße]` and `[^STRASSE]` are one footnote). A reference shows its number as a raised
   `[n]` and is a link, named `[n]`, with its label as `#label` for its value:
   activating it by any link route, or an agent's `stobie.open-link`, scrolls
   its definition into view and reports nothing to the application. A
@@ -245,7 +248,8 @@ as follows when enabled.
   delimiters and is never typeset. Inline maths uses the italic monospace
   face within its text; display maths alone in a paragraph is a block of its
   own in the italic `MonospaceTechnical` role, indented, with its line breaks
-  kept and CRLF read as one break.
+  kept and CRLF read as one break. Display maths that is a link's text stays
+  inline, in the link.
 - **Tables** (`ENABLE_TABLES`): a table is a grid of its header row and
   body rows. The header row's text is semibold on the raised surface, a
   decorative rule runs below each row, and there are no vertical rules. Each
@@ -260,9 +264,17 @@ as follows when enabled.
   widths do not fit, the table **stacks**: each body row is a record between
   rules, each of its cells a line of the full width led by its column's
   header in semibold and `: `, such as "Area (m²): 6.0"; an empty cell is
-  left out, and a table without body rows lists its headers. A cell keeps its
+  left out, and a record with no cells left is neither presented nor
+  counted. The header row is a record of its own, first, where it holds a
+  link or footnote reference (the leads repeat its text, not its links) or
+  where the table has no body rows. Directly under a heading, a stacked
+  table's opening rule is set as far below it as below a paragraph, so that
+  it does not read as the heading's underline. A cell keeps its
   identity in either layout. Selecting across a grid copies a row to a line
-  with its cells separated by spaces. For assistive technology the table is
+  with its cells separated by spaces, a wrapped cell's text unbroken; egui
+separates copied text by its distance from the text copied before, so a
+row whose last cell is shorter than another of its cells is followed by a
+blank line, as each stacked record is. For assistive technology the table is
   an AccessKit `Table` with its row and column counts, holding a `Row` for
   each presented row with its index, holding a `ColumnHeader` (the grid's
   header row) or `Cell` for each cell with its row and column indices, each
@@ -305,7 +317,10 @@ by default there are none. A heading with an ID is published as a
 `UiRole::Heading` node with that ID, named by its presented text, and its
 AccessKit heading carries the ID as its author ID. An agent's
 `stobie reveal ID` or the application's `Frame::reveal(id)` scrolls it into
-view, even from wholly out of view, where it publishes no node. The ID
+view, even from wholly out of view, where it publishes no node. A heading
+whose item's marker leads its text in a column too narrow to indent is
+named by its own words alone: its AccessKit label and value omit the
+marker its text runs keep. The ID
 belongs to the heading rather than its place: its node, text observation and
 AccessKit identity are the same at every width and text size, including
 where a narrow item's marker takes a line of its own. IDs must be unique
