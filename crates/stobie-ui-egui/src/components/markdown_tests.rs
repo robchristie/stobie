@@ -81,6 +81,7 @@ struct Presented {
     snapshot: UiSnapshot,
     update: egui::accesskit::TreeUpdate,
     rect: Rect,
+    shapes: Vec<egui::epaint::ClippedShape>,
 }
 
 impl Presented {
@@ -181,6 +182,7 @@ fn present_spec(
         snapshot,
         update: output.platform_output.accesskit_update.take().unwrap(),
         rect,
+        shapes: output.shapes,
     }
 }
 
@@ -1662,7 +1664,7 @@ fn task_lists_footnotes_and_maths_present_at_every_width_size_and_contrast() {
                         .collect::<Vec<_>>(),
                     [
                         ("Read the survey chapter", Some(true), false),
-                        ("Draft the summary[1]", Some(false), false),
+                        ("Draft the summary", Some(false), false),
                         ("Numbered and done", Some(true), false),
                         ("Task", Some(false), false),
                         ("Quoted and done", Some(true), false),
@@ -1869,16 +1871,30 @@ fn a_named_heading_opening_a_narrow_item_is_named_by_its_own_text() {
         let headings = nodes_of(&presented, UiRole::Heading);
         assert_eq!(headings.len(), 1);
         assert_eq!(headings[0].name, "Deep heading", "{width}");
+        // Its AccessKit label and value too are its own text, without the
+        // marker.
         let heading = accessible(&presented, &ids[0]);
-        assert_eq!(
-            heading.value().or(heading.label()),
-            Some("Deep heading"),
-            "{width}"
+        assert_eq!(heading.value(), Some("Deep heading"), "{width}");
+        assert!(
+            heading.label().is_none_or(|label| label == "Deep heading"),
+            "{width}: {:?}",
+            heading.label()
         );
     }
     // At 200 points the item is too narrow to indent: its marker leads the
     // heading's text but not its name.
     let narrow = present_spec(&context(), &source, 200.0, 1.5, tokens(), None, spec);
+    // Its text runs hold the marker, from which assistive technology would
+    // name a heading without a label; its label names it by its own text.
+    let heading = accessible(&narrow, &ids[0]);
+    assert_eq!(heading.label(), Some("Deep heading"));
+    let runs: String = heading
+        .children()
+        .iter()
+        .filter_map(|child| narrow.update.nodes.iter().find(|(id, _)| id == child))
+        .filter_map(|(_, node)| node.value())
+        .collect();
+    assert!(runs.starts_with("• Deep"), "{runs:?}");
     assert!(
         narrow
             .kind(TextComponentKind::ReadingText)
@@ -2273,6 +2289,130 @@ fn a_table_presents_in_a_quote_in_a_list_item_and_with_no_body_rows() {
     }
 }
 
+/// A wide table whose header holds a link and a footnote reference, with a
+/// body row whose cells are all empty.
+const LINKED_HEADER: &str = "## Counts\n\n\
+| Pool | Tide [table](https://example.org/tides) | Area (m²) | Depth (m) | Temperature (°C) | Species | Notes[^n] |\n\
+| --- | --- | --- | --- | --- | --- | --- |\n\
+| North shelf | Low | 12.5 | 0.4 | 14 | Limpets | Sheltered |\n\
+| | | | | | | |\n\
+| South gully | High | 3 | 1.2 | 15 | Anemones | Surge |\n\n\
+[^n]: Notes from the second tide.\n";
+
+#[test]
+fn a_stacked_table_counts_only_its_records_and_keeps_its_header_links() {
+    use egui::accesskit::Role::{Cell, ColumnHeader};
+    let ids = [SemanticUiId::new("counts.note")];
+    for scale in [1.0, 1.5] {
+        for width in [DESKTOP, PHONE] {
+            let label = format!("{width} at {scale}");
+            let presented = present_spec(
+                &context(),
+                LINKED_HEADER,
+                width,
+                scale,
+                tokens(),
+                None,
+                notes_spec(&ids),
+            );
+            assert_clean(&presented, &label);
+            // The header's link and reference are presented once and work,
+            // whatever the layout.
+            let links: Vec<_> = presented
+                .links()
+                .into_iter()
+                .map(|node| (node.name.as_str(), node.enabled))
+                .collect();
+            assert_eq!(links, [("table", true), ("[1]", true)], "{label}");
+            let tables = accessible_tables(&presented);
+            assert_eq!(tables.len(), 1, "{label}");
+            let rows: Vec<_> = tables[0]
+                .cells
+                .iter()
+                .map(|(row, cells)| (*row, cells.first().map(|cell| (cell.0, cell.1))))
+                .collect();
+            if width == DESKTOP {
+                // The grid keeps the empty row as a row of empty cells.
+                assert_eq!(tables[0].rows, Some(4), "{label}");
+                assert_eq!(rows.len(), 4, "{label}");
+            } else {
+                // Stacked: the linked header row is a record of its own,
+                // and the empty row is neither presented nor counted.
+                assert_eq!(tables[0].rows, Some(3), "{label}");
+                assert_eq!(
+                    rows,
+                    [
+                        (Some(0), Some((ColumnHeader, Some(0)))),
+                        (Some(1), Some((Cell, Some(1)))),
+                        (Some(2), Some((Cell, Some(2)))),
+                    ],
+                    "{label}"
+                );
+                let lines: Vec<&str> = presented
+                    .kind(TextComponentKind::ReadingText)
+                    .into_iter()
+                    .filter_map(|text| text.content_text())
+                    .collect();
+                // The leads repeat the header's text, without its links.
+                for line in [
+                    "Tide table",
+                    "Notes[1]",
+                    "Tide table: Low",
+                    "Notes[1]: Surge",
+                ] {
+                    assert!(lines.contains(&line), "{label}: {lines:#?}");
+                }
+                // ARIA counts the records alone, one-based.
+                let tree = crate::aria::project(&presented.update, 1.0);
+                let table = tree
+                    .elements
+                    .values()
+                    .find(|element| {
+                        element.attributes.get("role").map(String::as_str) == Some("table")
+                    })
+                    .expect("an ARIA table");
+                assert_eq!(table.attributes["aria-rowcount"], "3", "{label}");
+                let mut indices: Vec<_> = tree
+                    .elements
+                    .values()
+                    .filter(|element| {
+                        element.attributes.get("role").map(String::as_str) == Some("row")
+                    })
+                    .map(|row| row.attributes["aria-rowindex"].clone())
+                    .collect();
+                indices.sort();
+                assert_eq!(indices, ["1", "2", "3"], "{label}");
+            }
+        }
+    }
+}
+
+#[test]
+fn a_stacked_tables_opening_rule_is_set_apart_from_a_heading() {
+    let tokens = tokens();
+    for (width, gap) in [
+        (PHONE, tokens.spacing.section.0),
+        (DESKTOP, tokens.spacing.block.0),
+    ] {
+        let presented = present_spec(
+            &context(),
+            LINKED_HEADER,
+            width,
+            1.0,
+            tokens,
+            None,
+            tables_spec(),
+        );
+        let heading = reading_text(&presented, "Counts").allocated_rect;
+        let table = accessible_tables(&presented)[0].top as f32;
+        assert!(
+            (table - heading.max_y - gap).abs() < 0.5,
+            "{width}: {} under the heading",
+            table - heading.max_y
+        );
+    }
+}
+
 #[test]
 fn a_table_projects_as_an_aria_table() {
     let presented = present_spec(
@@ -2324,6 +2464,180 @@ fn the_default_options_keep_a_table_as_its_source() {
     assert!(
         lines[1].starts_with("| Name | Count | | --- | ---: |"),
         "{lines:#?}"
+    );
+}
+
+/// The rectangles painted with `fill`, in paint order.
+fn filled(presented: &Presented, fill: egui::Color32) -> Vec<(usize, Rect)> {
+    presented
+        .shapes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, clipped)| match &clipped.shape {
+            egui::Shape::Rect(rect) if rect.fill == fill => Some((index, rect.rect)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn a_quoted_tables_header_row_shows_its_raised_surface() {
+    for theme in [ThemeVariant::Dark, ThemeVariant::LightHighContrast] {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        let presented = present_spec(
+            &context(),
+            NESTED_TABLES,
+            DESKTOP,
+            1.0,
+            tokens,
+            None,
+            tables_spec(),
+        );
+        let header = text_rect(reading_text(&presented, "Quoted").allocated_rect);
+        let quoted = text_rect(reading_text(&presented, "q1").allocated_rect);
+        // The raised surface lies behind the header row, inside the quote,
+        // and nothing painted later covers it.
+        let raised: egui::Color32 = tokens.colours.surface_raised.into();
+        let fills: Vec<_> = filled(&presented, raised)
+            .into_iter()
+            .filter(|(_, rect)| rect.contains_rect(header))
+            .collect();
+        assert_eq!(fills.len(), 1, "{theme:?}: {fills:?}");
+        let (painted, fill) = fills[0];
+        assert!(
+            !fill.contains_rect(quoted),
+            "{theme:?}: the body row is not raised"
+        );
+        assert!(fill.min.x > 0.0, "{theme:?}: indented with the quote");
+        let covered = presented.shapes[painted + 1..].iter().any(|clipped| {
+            matches!(&clipped.shape, egui::Shape::Rect(rect)
+                if rect.fill != egui::Color32::TRANSPARENT && rect.rect.intersects(header))
+        });
+        assert!(!covered, "{theme:?}");
+        // The quote paints no surface of its own for the fill to vanish into.
+        let canvas: egui::Color32 = tokens.colours.surface_canvas.into();
+        assert!(crate::components::reading::contrast_ratio(raised, canvas) > 1.05);
+    }
+}
+
+#[test]
+fn an_open_task_box_keeps_three_to_one_against_every_surface() {
+    for theme in [
+        ThemeVariant::Dark,
+        ThemeVariant::Light,
+        ThemeVariant::DarkHighContrast,
+        ThemeVariant::LightHighContrast,
+    ] {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        let presented = present_spec(
+            &context(),
+            NOTES,
+            DESKTOP,
+            1.0,
+            tokens,
+            None,
+            notes_spec(&[]),
+        );
+        let open = nodes_of(&presented, UiRole::Checkbox)
+            .into_iter()
+            .find(|node| node.name == "Draft the summary")
+            .expect("the open task");
+        let open = Rect::from_min_max(
+            egui::pos2(open.rect.min_x, open.rect.min_y),
+            egui::pos2(open.rect.max_x, open.rect.max_y),
+        );
+        let edges: Vec<egui::Color32> = presented
+            .shapes
+            .iter()
+            .filter_map(|clipped| match &clipped.shape {
+                egui::Shape::Rect(rect) if rect.rect == open => Some(rect.stroke.color),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(edges.len(), 1, "{theme:?}");
+        // A state indicator keeps 3:1 (WCAG 1.4.11) against each surface
+        // a document sits on.
+        for surface in [
+            tokens.colours.surface_canvas,
+            tokens.colours.surface_panel,
+            tokens.colours.surface_raised,
+        ] {
+            let ratio = crate::components::reading::contrast_ratio(edges[0], surface.into());
+            assert!(ratio >= 3.0, "{theme:?}: {ratio:.2}");
+        }
+    }
+}
+
+/// Drag from the start of `first`'s text to the end of `last`'s in
+/// `source` presented `width` wide at `scale`, copy, and return the text.
+fn copy_across(source: &'static str, width: f32, scale: f32, first: &str, last: &str) -> String {
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(width, 1_000.0))
+        .build_ui(move |ui| {
+            crate::install_typography_fonts(ui.ctx());
+            let mut p = PresentationContext::new(
+                ui,
+                tokens(),
+                scale,
+                PresentationScope::new("reply"),
+                SemanticUiId::root(),
+            );
+            let _ = p.markdown(ui, "body", source, tables_spec());
+            let _ = p.finish(ui);
+        });
+    harness.run();
+    let start = harness.get_by_label(first).rect();
+    let end = harness.get_by_label(last).rect();
+    let (start, end) = (
+        start.left_top() + egui::vec2(1.0, start.height() * 0.5),
+        end.right_bottom() - egui::vec2(1.0, end.height() * 0.25),
+    );
+    harness.hover_at(start);
+    harness.drag_at(start);
+    harness.hover_at(end);
+    harness.drop_at(end);
+    harness.step();
+    harness.event(egui::Event::Copy);
+    harness.step();
+    let commands = &harness.output().platform_output.commands;
+    commands
+        .iter()
+        .find_map(|command| match command {
+            egui::OutputCommand::CopyText(text) => Some(text.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{commands:?}"))
+}
+
+#[test]
+fn a_table_copies_stacked_wrapped_and_at_150_percent() {
+    const SMALL: &str = "| Name | Count |\n| --- | ---: |\n| Crab | 4 |\n| Whelk | 12 |";
+    for scale in [1.0, 1.5] {
+        assert_eq!(
+            copy_across(SMALL, DESKTOP, scale, "Name", "12"),
+            "Name Count\nCrab 4\nWhelk 12",
+            "a grid at {scale}"
+        );
+    }
+    let stacked = copy_across(SMALL, 100.0, 1.0, "Name: Crab", "Count: 12");
+    // Each record's lines, a blank line between records.
+    assert_eq!(
+        stacked, "Name: Crab\nCount: 4\n\nName: Whelk\nCount: 12",
+        "stacked"
+    );
+    let wrapped = copy_across(
+        "| Note | Count |\n| --- | ---: |\n| A long note that wraps across lines | 4 |\n| Short | 12 |",
+        200.0,
+        1.0,
+        "Note",
+        "12",
+    );
+    // A row to a line, its wrapped cell's text unbroken. egui spaces text
+    // copied by its distance from the last text copied, here the short
+    // cell ending the tall row, so a blank line follows that row.
+    assert_eq!(
+        wrapped, "Note Count\nA long note that wraps across lines 4\n\nShort 12",
+        "wrapped"
     );
 }
 

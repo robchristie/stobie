@@ -27,7 +27,7 @@ const HEADINGS = [
 ];
 const TASKS = [
   ['Photograph the northern pools', 'true'],
-  ['Count the anemones in pool C[2]', 'false'],
+  ['Count the anemones in pool C', 'false'],
   ['Task', 'false'],
 ];
 const FIRST_NOTE = 'gallery.document.footnote-tides';

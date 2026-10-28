@@ -3493,6 +3493,7 @@ dependencies = [
  "stobie-render-wgpu",
  "stobie-ui-egui-derive",
  "trybuild",
+ "unicase",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

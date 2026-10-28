@@ -298,7 +298,7 @@ mod tests {
                 tasks,
                 [
                     ("Photograph the northern pools", Some(true), false),
-                    ("Count the anemones in pool C[2]", Some(false), false),
+                    ("Count the anemones in pool C", Some(false), false),
                     // pulldown-cmark ends this item at the blank line, so
                     // its text is a paragraph after the list.
                     ("Task", Some(false), false),

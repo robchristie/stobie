@@ -29,6 +29,9 @@ serde.workspace = true
 serde_json.workspace = true
 # CommonMark parsing for the Markdown recipe (MIT); no HTML renderer or command-line tool.
 pulldown-cmark = { version = "0.13.4", default-features = false }
+# Footnote labels match as pulldown-cmark matches them (MIT OR Apache-2.0),
+# already in the tree as its dependency.
+unicase = "2.6"
 # The `test-support` harness (MIT OR Apache-2.0), already the crate's test harness.
 egui_kittest = { workspace = true, optional = true }
 # Applications choose further eframe features; Linux windowing needs a winit backend to build.

@@ -1,8 +1,7 @@
 # Document Markdown
 
 Status: active
-Next action: Deliver increment 6: polish carried from reviews, the
-evidence update and closeout.
+Next action: Deliver increment 7: the evidence record and closeout.
 
 ## Outcome and boundaries
 
@@ -27,7 +26,8 @@ maths.
 | 3. Application-resolved links: external, in-application or unavailable | Complete | `MarkdownSpec::link_kinds`, `MarkdownSourceMap::links` and `PresentationContext::followed_link`; 1 parser regression (link destinations and ranges equal pulldown-cmark's, with CRLF, multibyte text and a base), 1 recipe regression (each kind by pointer, keyboard and AccessKit, with node and AccessKit properties and clean audits at phone and desktop widths; unsafe URLs stay blocked whatever the application says), 4 host regressions (each kind by agent, pointer and keyboard; a follow lapses when its link is not presented) and the `library` example with 2 tests (a relative link opens another document at the heading it names); `cargo xtask verify` |
 | 4. Task lists, footnotes and maths presented as more than source text | Complete | Read-only task boxes, numbered footnote references and definitions (`MarkdownSpec::footnote_ids`, `MarkdownSourceMap::footnotes`) and maths as source; 4 new parser regressions and 1 rewritten (structure under every extension, a definition's label whatever opens it, numbering by first appearance without regard to case, a marker outside its paragraph, display maths with CRLF), 5 new recipe regressions (each presentation with node and AccessKit parity and clean audits at phone and desktop widths, 150% text and high contrast; default options unchanged; a reference scrolling its definition into view by pointer and keyboard; a named heading opening a narrow item named by its own text; a followed link reaching the root through scoped, bubble, dialog and code-copy contexts), 1 host regression (an agent follows a reference to a definition below the fold), Gallery `markdown/document` with 1 regression, 2 inspected baselines and the extended browser journey (heading IDs and task states in the ARIA layer, a reference revealing its definition); `cargo xtask verify` |
 | 5. Tables presented as structure | Complete | A grid with a header row, column alignment and wrapping cells that stacks as records when too narrow, with AccessKit table, row, column header and cell nodes and ARIA counts and indices; 2 new parser regressions and 1 extended (alignments, header, padded and truncated rows, inline cells, a table in a list item and one with no body rows), 6 new recipe regressions and 1 extended (grid or stacked at phone and desktop widths, 150% text and high contrast with clean audits; a cell wrapping in its column; tables in a quote and a list item and one with no body rows; the AccessKit table; default options unchanged; drag-copying a table's cells), 1 ARIA regression, Gallery `markdown/document` with a wide table, its extended regression, 2 re-inspected baselines and the extended browser journey (the table as a grid and stacked in the ARIA layer); `cargo xtask verify` |
-| 6. Polish carried from reviews, evidence update and closeout | Pending | |
+| 6. Polish carried from reviews | Complete | Each item carried from the increment 4 and 5 reviews fixed or decided (see Increment 6); 2 new parser regressions (footnote labels match under pulldown-cmark's Unicode case folding; display maths as a link's text keeps the link), 5 new recipe regressions and 2 extended (a stacked table counts only its records and presents a linked header row once, by AccessKit and ARIA, at phone and desktop widths and 150% text; its opening rule sits a section below a heading; a quoted table's header row shows its raised surface; an open task box keeps 3:1 against every surface in every theme; a table copies stacked, wrapped and at 150%; a narrow item's heading labelled by its own text; task names without footnote numbers), the Gallery regression, browser journey and 2 baselines updated for the new task name, outline and spacing; `cargo xtask verify` |
+| 7. Evidence record and closeout | Pending | |
 
 ## Decisions
 
@@ -114,6 +114,28 @@ maths.
   table. A cell's identity is keyed by its source row and column, so it is
   the same in the grid and the stack.
 - The source map keeps a table as one block; spans within it are gap S5's.
+- Footnote labels match as pulldown-cmark matches them, through the same
+  `unicase` comparison (Unicode case folding), already in the tree as its
+  dependency and now a direct one: lower-casing alone numbered `[^Straße]`
+  and `[^STRASSE]` apart where pulldown-cmark joins them.
+- A stacked table presents its header row as a record of its own, first,
+  where a header cell holds a link or footnote reference. The leads repeat
+  the header's text as plain text; repeating its links in every record would
+  publish one link many times under one identity. A header without links
+  stays out of the stack, as before.
+- A task's name is the words of its first paragraph or heading without
+  footnote references' numbers: each reference is a link of its own, and
+  "[2]" read as part of a task's name is noise.
+- An open task box is outlined in the muted text colour, as the switch's
+  off outline is: the control border is below 3:1 against the document
+  surfaces in the dark and light themes, and a box's outline is the only
+  sign of its state.
+- A wrapped cell's lines keep one alignment edge (accepted trade-off, as
+  increment 5 recorded). egui aligns a galley's rows about its anchor rather
+  than within an allocated rectangle, and the reading-text measurement, text
+  audit, selection and link areas all place a galley by its left edge;
+  aligning each line would give cells an anchor of their own throughout.
+  End alignment serves numeric columns, which rarely wrap.
 
 ## Increment 1
 
@@ -285,3 +307,62 @@ presentation change was needed.
 Design decision: accepted. Remaining trade-offs: a stacked table loses
 comparison down a column; a wrapped cell's lines share one alignment edge
 rather than aligning each line; the source map does not locate cells.
+
+## Increment 6
+
+Each item the increment 4 and 5 reviews carried, and its resolution:
+
+- Footnote labels folded with `to_lowercase` where pulldown-cmark uses
+  Unicode case folding: fixed, with `unicase` (see Decisions); a parser
+  regression compares the references pulldown-cmark reports with Stobie's
+  numbering for "ß", "SS" and the long s.
+- The narrow baseline does not show the footnote definitions: decided. The
+  baseline keeps the document's opening, its tasks, heading anchors and
+  stacked table, which change with the width; the definitions at phone width,
+  150% text and high contrast are covered by the recipe regression, a
+  reference revealing its definition by the host regression and the browser
+  journey, and increment 7's evidence record captures a revealed definition.
+- A named heading opening a list item too narrow to indent kept the marker
+  in its AccessKit name: its text runs hold "• ", from which assistive
+  technology names a heading without a label. Fixed: its label and value
+  are its own words; the recipe regression checks both and the runs.
+- A task's name included a footnote reference's "[2]": stripped (see
+  Decisions); the recipe, Gallery and browser regressions name tasks
+  without it.
+- Display maths that is a link's whole text dropped the link: fixed, it
+  stays inline in the link; a parser regression covers it alone and after
+  display maths.
+- The open task box's outline contrast was unmeasured: measured from the
+  tokens, the control border it used was 2.43:1 against the canvas, 2.25:1
+  against the panel and 2.03:1 against the raised surface in the dark theme
+  (2.77, 3.03 and 2.55 in the light theme), below WCAG 1.4.11's 3:1. It is
+  now the muted text colour, 8.10, 7.51 and 6.76 in the dark theme and at
+  least 5.37 in every theme; a recipe regression checks the painted outline
+  at 3:1 against each surface in all four themes.
+- A stacked table with an all-empty body row counted the record it left
+  out: fixed, a stacked table's row count and indices count only the records
+  presented, by AccessKit and in the ARIA projection.
+- A link or footnote reference in a header cell could not be reached in a
+  stacked table: fixed, the header row is then a record of its own (see
+  Decisions), its links presented once and operable.
+- The header row's raised surface might not show inside a quote: checked,
+  no change. A quote paints only its bar, and a message bubble swaps its
+  surfaces so that the raised surface still differs from its ground; a
+  recipe regression finds the header fill behind a quoted table's header
+  row, inside the quote, not covered.
+- A stacked table's opening rule directly under a heading read as the
+  heading's underline: fixed, a stacked table under a heading is set a
+  section below it, as under a paragraph; a grid keeps the block spacing.
+- Copying was proved only for the grid at 100%: a regression copies a grid
+  at 100% and 150%, a stacked table (each record's lines, a blank line
+  between records) and a grid with a wrapped cell (its text unbroken). egui
+  separates copied text by its distance from the text copied before, so a
+  row whose last cell is shorter than another of its cells is followed by a
+  blank line; recorded in the components guide rather than reordering
+  cells, which would change their order for assistive technology.
+- A wrapped cell's lines share one alignment edge: kept as a trade-off (see
+  Decisions).
+
+The Gallery's `markdown/document` baselines were re-rendered and inspected
+for the open task's outline, the task's name without "[2]" and, in the
+narrow fixture, the stacked table's space under its heading.
