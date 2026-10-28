@@ -113,3 +113,110 @@ recipe's `OpenUrl` route, which the reading-text native smoke already proves
 reaches the platform's default browser. This adds no screen-reader
 qualification: headings, links and AccessKit parity are semantic and keyboard
 evidence only.
+
+## Document Markdown
+
+The [document Markdown plan](plans/document-markdown-plan.md) extended the
+recipe for long knowledge documents: caller-chosen parser options and a
+source map, heading anchors, application-resolved links, task lists,
+footnotes, maths and tables. This section is its evidence record; the plan
+lists each increment's regressions and decisions.
+
+### Experience and design decision
+
+Task and reference: read a knowledge document's open tasks, follow a
+footnote to its note, read a formula as written, and read, compare and copy
+a table, at phone and desktop widths, at 150% text and in high contrast,
+including a table wider than a phone. References: the `markdown/digest`
+recipe above and GitHub's rendering of task lists, footnotes and tables.
+The Gallery story `markdown/document` holds a synthetic survey document
+with every extension and a seven-column table.
+
+Behavioural checks: passed. Parser regressions compare source ranges, link
+destinations and footnote numbering with pulldown-cmark's own reports
+(CRLF, multibyte text, a caller's base after frontmatter); recipe
+regressions present every extension at phone and desktop widths, 150% text
+and high contrast with clean text and AccessKit audits; host regressions
+reveal headings below the fold by agent and by application request, follow
+a footnote reference to its definition below the fold by agent, and follow
+links of each kind by agent, pointer and keyboard; the `library` example
+resolves a relative link to another document's heading. With the default
+options every earlier Markdown regression passes unchanged.
+
+Presentation checks: passed. The first critiques, before reading the
+rationale, and their resolutions are recorded in the plan's increments 4
+and 5: headings lead, then the done task's filled box and the table's
+raised header row; references are small raised links; definitions sit
+apart, muted, after a short rule; maths is source in the italic monospace
+face; numbers align on their end edge and the stacked records keep each
+value beside its label. Increment 6 resolved the twelve items carried from
+those reviews.
+
+Design decision: accepted. Remaining trade-offs: a definition has no link
+back to its references; a lone task marker's box has no text of its own;
+display maths wraps mid-token in a narrow column; a stacked table loses
+comparison down a column; a wrapped cell's lines share one alignment edge;
+the source map does not locate cells or spans within a block (gap S5).
+
+### Rendered and physical evidence
+
+Reviewed baselines, re-inspected in increment 6:
+
+- [Document, dark comfortable](../tests/ui-snapshots/expected/markdown-document-dark/visual.png).
+- [Narrow light high contrast at 150%](../tests/ui-snapshots/expected/markdown-document-narrow-high-contrast-150/visual.png).
+
+Captures archived in stobie-evidence
+[`7fc8cf9`, `docs/markdown-evidence/document-markdown/`](https://github.com/robchristie/stobie-evidence/tree/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown),
+from Stobie `51c521b` (the tree increment 7 changes only in documentation)
+in Chromium 151 on WebGPU, with each image's observations in
+[`capture.json`](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/capture.json):
+
+- Tables at desktop width (960 points): a grid at
+  [100%, dark](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-wide-dark-opening.png),
+  [150%, light high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-wide-light-high-contrast-150-table.png)
+  and [150%, dark high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-wide-dark-high-contrast-150-table.png),
+  the seven columns at their natural widths, numbers on their end edge and
+  the empty cell a visible gap.
+- Tables at phone width (320 points): stacked as records at
+  [100%, dark](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-dark-table.png) and at 150% in
+  [light high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-light-high-contrast-150-table.png)
+  ([end](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-light-high-contrast-150-table-end.png))
+  and [dark high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-dark-high-contrast-150-table.png).
+  Measured from the pixels, the opening rule sits 16 pixels below the Counts
+  heading's glyphs and 9 above the first record's at 100% (dark), and 18
+  and 10 at 150% (light high contrast): it groups with the records it
+  opens rather than underlining the heading.
+- Footnote definitions in the phone column after a physical click on
+  reference `[1]`: [100%, dark](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-dark-footnote-revealed.png),
+  [150%, light high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-light-high-contrast-150-footnote-revealed.png)
+  and [150%, dark high contrast](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/document-narrow-dark-high-contrast-150-footnote-revealed.png),
+  each definition muted with its number in the gutter and the second's list
+  inside it.
+- The open task box's outline measured from captured pixels against the
+  panel surface inside it, at device scale 1 and 2 with the same result
+  ([dark, 1x](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/capture/task-box-dark-standard-1x.png)):
+  7.51:1 in the dark theme (`#9daab3` on `#13181d`), 14.19:1 in dark high
+  contrast, 6.39:1 in the light theme and 11.48:1 in light high contrast,
+  each the theme's muted text and panel tokens exactly, above WCAG 1.4.11's
+  3:1. The recipe regression checks the same outline against the canvas,
+  panel and raised surfaces.
+
+`tools/markdown-browser-smoke.sh` presents the document in canonical
+verification on WebGPU and again on WebGL2: at 640 points dark and in the
+narrow light high-contrast column at 150%, it finds each heading in the ARIA
+layer with its level and the application's ID, each task as a read-only
+checkbox with its state, and the table as an ARIA table (seven column
+headers and five rows as a grid; four records, without column headers,
+stacked); it checks maths in the technical face, and a physical click on
+reference `[1]` reveals the definition and opens nothing. Its output at
+`51c521b` is archived beside the captures
+([workflow](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/smoke/browser-workflow.json),
+[revealed definition](https://github.com/robchristie/stobie-evidence/blob/7fc8cf97b32a510e69451be25c09e8cde4c2036d/docs/markdown-evidence/document-markdown/smoke/browser-document-footnote-revealed.png)).
+
+### Size and platform limits
+
+No lockfile gained a package: `unicase`, already locked as pulldown-cmark's
+dependency, became a direct one. Browser proof uses Chromium with
+WebGPU/SwiftShader and WebGL2. This adds no screen-reader qualification:
+headings, tasks, tables and footnotes are semantic, ARIA and keyboard
+evidence only. Maths is never typeset.

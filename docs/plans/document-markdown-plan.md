@@ -101,12 +101,17 @@ maths.
   none) is stacked as a record of full-width lines, each led by its column's
   header in strong text and ": ", as phone layouts commonly present tables;
   empty cells and records are left out. A horizontally scrolling table
-  would hide columns a reader cannot tell are there.
+  would hide columns a reader cannot tell are there. Amended in increment
+  6: the header row is also a record of its own, first, where it holds a
+  link or footnote reference (see below).
 - A cell aligns its whole galley within the column, so a wrapped cell's
   lines share one edge; the cell's selectable area is the galley's extent.
 - The grid's vertical padding is the spacing unit so that egui copies a
   table's rows as lines whose cells are separated by spaces, with no blank
-  line between rows.
+  line between rows. Amended in increment 6: egui separates copied text by
+  its distance from the text before it, so a row whose last cell is shorter
+  than another of its cells is followed by a blank line, as the components
+  guide records.
 - Table, row, column header and cell nodes come from nested child `Ui`s,
   whose AccessKit nodes take the table roles, counts and zero-based indices
   (ARIA's are one-based). A table publishes no `UiNode`: agents read it

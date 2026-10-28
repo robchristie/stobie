@@ -236,14 +236,14 @@ as follows when enabled.
 - **Footnotes** (`ENABLE_FOOTNOTES`): footnotes are numbered from 1 in the
   order their labels first appear, as a reference or a definition, matching
   labels without regard to case as pulldown-cmark does (Unicode case
-  folding, so `[^Straße]` and `[^STRASSE]` are one footnote). A reference shows its number as a raised
-  `[n]` and is a link, named `[n]`, with its label as `#label` for its value:
-  activating it by any link route, or an agent's `stobie.open-link`, scrolls
-  its definition into view and reports nothing to the application. A
-  reference whose definition is not presented is an unavailable link. The
-  definitions present where the source has them, after a short rule, as
-  muted blocks with their `[n]` number in a gutter (above the text in a
-  narrow column), whatever block opens them.
+  folding, so `[^Straße]` and `[^STRASSE]` are one footnote). A reference
+  shows its number as a raised `[n]` and is a link, named `[n]`, with its
+  label as `#label` for its value: activating it by any link route, or an
+  agent's `stobie.open-link`, scrolls its definition into view and reports
+  nothing to the application. A reference whose definition is not presented
+  is an unavailable link. The definitions present where the source has them,
+  after a short rule, as muted blocks with their `[n]` number in a gutter
+  (above the text in a narrow column), whatever block opens them.
 - **Maths** (`ENABLE_MATH`): maths keeps its TeX source without its `$`
   delimiters and is never typeset. Inline maths uses the italic monospace
   face within its text; display maths alone in a paragraph is a block of its
@@ -269,13 +269,13 @@ as follows when enabled.
   link or footnote reference (the leads repeat its text, not its links) or
   where the table has no body rows. Directly under a heading, a stacked
   table's opening rule is set as far below it as below a paragraph, so that
-  it does not read as the heading's underline. A cell keeps its
-  identity in either layout. Selecting across a grid copies a row to a line
-  with its cells separated by spaces, a wrapped cell's text unbroken; egui
-separates copied text by its distance from the text copied before, so a
-row whose last cell is shorter than another of its cells is followed by a
-blank line, as each stacked record is. For assistive technology the table is
-  an AccessKit `Table` with its row and column counts, holding a `Row` for
+  it does not read as the heading's underline. A cell keeps its identity in
+  either layout. Selecting across a grid copies a row to a line with its
+  cells separated by spaces, a wrapped cell's text unbroken; egui separates
+  copied text by its distance from the text copied before, so a row whose
+  last cell is shorter than another of its cells is followed by a blank
+  line, as each stacked record is. For assistive technology the table is an
+  AccessKit `Table` with its row and column counts, holding a `Row` for
   each presented row with its index, holding a `ColumnHeader` (the grid's
   header row) or `Cell` for each cell with its row and column indices, each
   bounded by the part of it in view; the text is inside its cell. Rows and
