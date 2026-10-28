@@ -59,10 +59,11 @@ pub enum StoryId {
     FormTextFields,
     AvatarsStrip,
     MarkdownCodeCopy,
+    MarkdownDocument,
 }
 
 impl StoryId {
-    pub const ALL: [Self; 54] = [
+    pub const ALL: [Self; 55] = [
         Self::ButtonDefault,
         Self::ButtonDisabled,
         Self::ButtonKeyboardFocus,
@@ -117,6 +118,7 @@ impl StoryId {
         Self::FormTextFields,
         Self::AvatarsStrip,
         Self::MarkdownCodeCopy,
+        Self::MarkdownDocument,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -175,6 +177,7 @@ impl StoryId {
             Self::FormTextFields => "form/text-fields",
             Self::AvatarsStrip => "avatars/strip",
             Self::MarkdownCodeCopy => "markdown/code-copy",
+            Self::MarkdownDocument => "markdown/document",
         }
     }
 }
@@ -357,6 +360,12 @@ const PARTIAL_STATES: &[StoryState] = &[
     StoryState::Selected,
 ];
 const REFERENCE_STATES: &[StoryState] = &[StoryState::Default, StoryState::Selected];
+const DOCUMENT_STATES: &[StoryState] = &[
+    StoryState::Default,
+    StoryState::LongText,
+    StoryState::Narrow,
+    StoryState::HighTextScale,
+];
 const REFERENCE_LONG: &[StoryState] = &[StoryState::LongText, StoryState::Selected];
 const REFERENCE_SCALE: &[StoryState] = &[StoryState::LongText, StoryState::HighTextScale];
 const ICON_ACTION_STATES: &[StoryState] = &[
@@ -504,7 +513,7 @@ const fn story(
     }
 }
 
-pub static STORIES: [StoryDefinition; 54] = [
+pub static STORIES: [StoryDefinition; 55] = [
     story(
         StoryId::ButtonDefault,
         "Default, primary and selected action states.",
@@ -989,6 +998,15 @@ pub static STORIES: [StoryDefinition; 54] = [
         640,
         720,
         CODE_COPY_STATES,
+        SCROLL_KEYBOARD,
+    ),
+    story(
+        StoryId::MarkdownDocument,
+        "A document read with every Markdown extension: heading anchors, read-only task lists, footnotes and maths as source.",
+        StoryGroup::Reading,
+        640,
+        720,
+        DOCUMENT_STATES,
         SCROLL_KEYBOARD,
     ),
 ];

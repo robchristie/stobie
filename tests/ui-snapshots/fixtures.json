@@ -825,6 +825,36 @@
       "data_fixture": "gallery-seed-v1",
       "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
       "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "markdown-document-dark",
+      "story": "markdown/document",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "dark",
+        "contrast": "standard",
+        "density": "comfortable",
+        "font_scale": 1.0,
+        "width": "regular"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
+    },
+    {
+      "id": "markdown-document-narrow-high-contrast-150",
+      "story": "markdown/document",
+      "viewport": { "width": 1440, "height": 900 },
+      "configuration": {
+        "appearance": "light",
+        "contrast": "high",
+        "density": "comfortable",
+        "font_scale": 1.5,
+        "width": "narrow"
+      },
+      "data_fixture": "gallery-seed-v1",
+      "fonts": "source-sans-3-87b37a2-regular-semibold+noto-emoji-3.002-regular+egui-default-fonts-0.36.1",
+      "renderer": "browser-webgpu-eframe-wgpu-swiftshader"
     }
   ]
 }

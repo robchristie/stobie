@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "pixels_per_point": 1,
+  "root": "application",
+  "nodes": [
+    {
+      "id": "application",
+      "role": "application",
+      "name": "Stobie Component Gallery",
+      "rect": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 1440,
+        "max_y": 900
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.document.density",
+      "parent": "gallery.story",
+      "role": "heading",
+      "name": "Density",
+      "rect": {
+        "min_x": 694,
+        "min_y": 616.9749755859375,
+        "max_x": 990,
+        "max_y": 646.9749755859375
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.document.open-tasks",
+      "parent": "gallery.story",
+      "role": "heading",
+      "name": "Open tasks",
+      "rect": {
+        "min_x": 694,
+        "min_y": 391,
+        "max_x": 990,
+        "max_y": 421
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.document.rock-pool-survey",
+      "parent": "gallery.story",
+      "role": "heading",
+      "name": "Rock-pool survey",
+      "rect": {
+        "min_x": 694,
+        "min_y": 236,
+        "max_x": 990,
+        "max_y": 270
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
+      "id": "gallery.story",
+      "parent": "application",
+      "role": "pane",
+      "name": "markdown/document",
+      "rect": {
+        "min_x": 682,
+        "min_y": 73,
+        "max_x": 1002,
+        "max_y": 793
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "text_selectable": true
+    },
+    {
+      "id": "presentation.36703b0a4d270dfc",
+      "parent": "gallery.story",
+      "role": "checkbox",
+      "name": "Task",
+      "rect": {
+        "min_x": 694,
+        "min_y": 493.3125,
+        "max_x": 711,
+        "max_y": 510.3125
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.9cb0f10c5214c64e",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "[1]",
+      "rect": {
+        "min_x": 789,
+        "min_y": 353,
+        "max_x": 805.431396484375,
+        "max_y": 379
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "#tides"
+    },
+    {
+      "id": "presentation.abdc05b23fc699c2",
+      "parent": "gallery.story",
+      "role": "link",
+      "name": "[2]",
+      "rect": {
+        "min_x": 960.5625,
+        "min_y": 457.32501220703125,
+        "max_x": 975.993896484375,
+        "max_y": 483.32501220703125
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": [],
+      "value": "#count"
+    },
+    {
+      "id": "presentation.c9152aa272649bcc",
+      "parent": "gallery.story",
+      "role": "checkbox",
+      "name": "Count the anemones in pool C[2]",
+      "rect": {
+        "min_x": 694,
+        "min_y": 461.98748779296875,
+        "max_x": 711,
+        "max_y": 478.98748779296875
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": false,
+      "actions": []
+    },
+    {
+      "id": "presentation.c986238523e1e37f",
+      "parent": "gallery.story",
+      "role": "checkbox",
+      "name": "Photograph the northern pools",
+      "rect": {
+        "min_x": 694,
+        "min_y": 430.6625061035156,
+        "max_x": 711,
+        "max_y": 447.6625061035156
+      },
+      "enabled": false,
+      "focused": false,
+      "selected": false,
+      "checked": true,
+      "actions": []
+    }
+  ],
+  "semantic_audit": []
+}

@@ -1,11 +1,12 @@
 //! CommonMark source to Stobie's block model, through pulldown-cmark.
 //!
 //! The model keeps only what the recipe presents: paragraphs, headings,
-//! lists, block quotes, code blocks and rules, with inline emphasis, strong,
-//! strikethrough, code and links. Everything else keeps its text: raw HTML is
-//! shown as written and never interpreted, an image shows its alternative
-//! text, tables not enabled stay paragraphs of their source, and the
-//! extensions a caller enables keep their source form (see [`parse`]).
+//! lists (with task-list items' states), block quotes, code blocks, display
+//! maths, footnote definitions and rules, with inline emphasis, strong,
+//! strikethrough, code, maths, links and footnote references. Everything
+//! else keeps its text: raw HTML is shown as written and never interpreted,
+//! an image shows its alternative text, and tables stay paragraphs of their
+//! source (see [`parse`]).
 //!
 //! The parse also maps each presented block to its source: its kind, its
 //! nesting depth and its byte range as pulldown-cmark reports it.
@@ -19,7 +20,7 @@ use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd};
 #[non_exhaustive]
 pub enum MarkdownBlockKind {
     /// A paragraph, including the text of a tight list item, a definition
-    /// list's term or definition, or a footnote definition's text.
+    /// list's term or definition, or display maths alone in a paragraph.
     Paragraph,
     /// An ATX or setext heading.
     Heading,
@@ -40,6 +41,9 @@ pub enum MarkdownBlockKind {
     /// A metadata block, with `ENABLE_YAML_STYLE_METADATA_BLOCKS` or
     /// `ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS`.
     MetadataBlock,
+    /// A footnote definition, with `ENABLE_FOOTNOTES`: a container of the
+    /// blocks after its label.
+    FootnoteDefinition,
 }
 
 /// A presented Markdown block and where its source is.
@@ -48,8 +52,8 @@ pub enum MarkdownBlockKind {
 pub struct MarkdownBlock {
     /// What the block is.
     pub kind: MarkdownBlockKind,
-    /// How many presented quotes, lists and list items enclose it: 0 at the
-    /// top level.
+    /// How many presented quotes, lists, list items and footnote definitions
+    /// enclose it: 0 at the top level.
     pub depth: usize,
     /// The block's source, in bytes, as pulldown-cmark's offset iterator
     /// reports its start tag, plus the caller's base. A paragraph without its
@@ -87,9 +91,26 @@ pub struct MarkdownLink {
     pub source: Range<usize>,
 }
 
+/// A presented footnote definition and where its source is.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub struct MarkdownFootnote {
+    /// Its label as written, without `[^` and `]`.
+    pub label: String,
+    /// The number its references and its definition show, from 1: footnotes
+    /// are numbered in the order their labels first appear, as a reference
+    /// or a definition, matching labels without regard to case.
+    pub number: usize,
+    /// Its source, in bytes, as pulldown-cmark's offset iterator reports its
+    /// start tag (the whole definition), plus the caller's base.
+    pub source: Range<usize>,
+    /// Its index in [`MarkdownSourceMap::blocks`].
+    pub block: usize,
+}
+
 /// Every block a Markdown presentation shows, in document order (each
-/// container before what it contains), every heading among them and every
-/// link.
+/// container before what it contains), every heading and footnote
+/// definition among them and every link.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub struct MarkdownSourceMap {
@@ -103,6 +124,9 @@ pub struct MarkdownSourceMap {
     /// [`super::MarkdownSpec::link_kinds`] follows. A link whose text is
     /// empty is listed although it presents nothing.
     pub links: Vec<MarkdownLink>,
+    /// Every presented footnote definition, in document order: the order
+    /// [`super::MarkdownSpec::footnote_ids`] follows.
+    pub footnotes: Vec<MarkdownFootnote>,
 }
 
 impl MarkdownSourceMap {
@@ -119,11 +143,15 @@ impl MarkdownSourceMap {
         for link in &mut self.links {
             shift(&mut link.source);
         }
+        for footnote in &mut self.footnotes {
+            shift(&mut footnote.source);
+        }
         self
     }
 }
 
-/// The deepest nesting of lists and block quotes the model keeps. Deeper
+/// The deepest nesting of lists, block quotes and footnote definitions the
+/// model keeps. Deeper
 /// containers continue at this depth, so hostile input cannot exhaust the
 /// stack.
 pub(super) const MAX_NESTING: usize = 16;
@@ -134,6 +162,10 @@ pub(super) struct InlineStyle {
     pub emphasis: bool,
     pub strikethrough: bool,
     pub code: bool,
+    /// Maths source, inline or display maths within other text.
+    pub math: bool,
+    /// Raised and smaller, as a footnote reference is.
+    pub superscript: bool,
 }
 
 /// A styled stretch of an inline's text, in bytes. `link` indexes
@@ -200,6 +232,14 @@ impl Inline {
     }
 }
 
+/// One item of a list.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(super) struct Item {
+    /// A task-list item's state: `Some(true)` when done.
+    pub task: Option<bool>,
+    pub blocks: Vec<Block>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Block {
     Paragraph(Inline),
@@ -208,21 +248,43 @@ pub(super) enum Block {
         inline: Inline,
     },
     Code(String),
+    /// Display maths alone in a paragraph: its source, with line endings as
+    /// `\n` and without surrounding blank space.
+    Math(String),
     Quote(Vec<Block>),
     List {
         /// The first number of an ordered list; `None` for bullets.
         start: Option<u64>,
-        items: Vec<Vec<Block>>,
+        items: Vec<Item>,
+    },
+    /// A footnote definition and its number.
+    Footnote {
+        number: usize,
+        blocks: Vec<Block>,
     },
     Rule,
+}
+
+/// Where a link in the text leads.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) enum LinkTarget {
+    /// A URL, with its index in [`MarkdownSourceMap::links`]; an email
+    /// autolink gains `mailto:`.
+    Url { url: String, index: usize },
+    /// A footnote reference: the footnote's number and label, and the
+    /// reference's place among the document's references.
+    Footnote {
+        number: usize,
+        label: String,
+        reference: usize,
+    },
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(super) struct Document {
     pub blocks: Vec<Block>,
-    /// Every link's URL in order of appearance; an email autolink gains
-    /// `mailto:`.
-    pub links: Vec<String>,
+    /// Every link and footnote reference in order of appearance.
+    pub links: Vec<LinkTarget>,
     /// Where each presented block's source is, relative to the parsed text.
     pub map: MarkdownSourceMap,
 }
@@ -232,15 +294,22 @@ enum Container {
     Quote(Vec<Block>),
     List {
         start: Option<u64>,
-        items: Vec<Vec<Block>>,
+        items: Vec<Item>,
     },
-    Item(Vec<Block>),
+    Item(Item),
+    Footnote {
+        number: usize,
+        blocks: Vec<Block>,
+    },
 }
 
 enum Leaf {
     Paragraph(Inline),
     Heading(u8, Inline),
     Code(String),
+    /// A paragraph that so far holds only display maths, and whether blank
+    /// space followed it.
+    Math(String, bool),
 }
 
 /// The source of the open leaf.
@@ -261,10 +330,11 @@ struct Builder {
     /// The source range of the event being built.
     current: Range<usize>,
     map: MarkdownSourceMap,
-    /// Text that leads the next inline text, such as a footnote
-    /// definition's label.
-    prefix: Option<String>,
-    links: Vec<String>,
+    links: Vec<LinkTarget>,
+    /// Each footnote label, folded to lower case, by number less one.
+    footnotes: Vec<String>,
+    /// How many footnote references have been seen.
+    references: usize,
     strong: u32,
     emphasis: u32,
     strikethrough: u32,
@@ -278,19 +348,38 @@ impl Builder {
             emphasis: self.emphasis > 0,
             strikethrough: self.strikethrough > 0,
             code,
+            math: false,
+            superscript: false,
         }
+    }
+
+    /// The number of the footnote labelled `label`, numbering it if it is
+    /// new.
+    fn footnote(&mut self, label: &str) -> usize {
+        let folded = label.to_lowercase();
+        let index = match self.footnotes.iter().position(|seen| *seen == folded) {
+            Some(index) => index,
+            None => {
+                self.footnotes.push(folded);
+                self.footnotes.len() - 1
+            }
+        };
+        index + 1
     }
 
     fn blocks(&mut self) -> &mut Vec<Block> {
         let top = self.containers.last_mut().expect("the root stays open");
         match top {
-            Container::Root(blocks) | Container::Quote(blocks) | Container::Item(blocks) => blocks,
+            Container::Root(blocks)
+            | Container::Quote(blocks)
+            | Container::Item(Item { blocks, .. })
+            | Container::Footnote { blocks, .. } => blocks,
             // Content directly in a list belongs to its last item.
             Container::List { items, .. } => {
                 if items.is_empty() {
-                    items.push(Vec::new());
+                    items.push(Item::default());
                 }
-                items.last_mut().expect("an item exists")
+                &mut items.last_mut().expect("an item exists").blocks
             }
         }
     }
@@ -317,8 +406,10 @@ impl Builder {
             None => return,
             Some(Leaf::Paragraph(inline)) if inline.text.trim().is_empty() => return,
             Some(Leaf::Heading(_, inline)) if inline.text.trim().is_empty() => return,
+            Some(Leaf::Math(text, _)) if text.trim().is_empty() => return,
             Some(Leaf::Paragraph(inline)) => Block::Paragraph(inline),
             Some(Leaf::Heading(level, inline)) => Block::Heading { level, inline },
+            Some(Leaf::Math(text, _)) => Block::Math(text),
             Some(Leaf::Code(mut text)) => {
                 if text.ends_with('\n') {
                     text.pop();
@@ -347,6 +438,22 @@ impl Builder {
     /// The inline text is appended to, opening a paragraph where text
     /// arrives without one, as in a tight list item.
     fn inline(&mut self) -> &mut Inline {
+        // Text after display maths makes its paragraph ordinary text, the
+        // maths within it.
+        if matches!(self.leaf, Some(Leaf::Math(..)))
+            && let Some(Leaf::Math(math, gap)) = self.leaf.take()
+        {
+            let mut inline = Inline::default();
+            let style = InlineStyle {
+                math: true,
+                ..InlineStyle::default()
+            };
+            inline.push(&math.replace('\n', " "), style, None);
+            if gap {
+                inline.push(" ", InlineStyle::default(), None);
+            }
+            self.leaf = Some(Leaf::Paragraph(inline));
+        }
         if !matches!(self.leaf, Some(Leaf::Paragraph(_) | Leaf::Heading(..))) {
             self.open_leaf(
                 Leaf::Paragraph(Inline::default()),
@@ -365,10 +472,15 @@ impl Builder {
     /// An inline event arrived: open a paragraph for it if none is open, and
     /// grow an implicit paragraph's source to include it.
     fn inline_event(&mut self) {
-        if matches!(self.leaf, Some(Leaf::Code(_))) {
-            return;
+        match self.leaf {
+            Some(Leaf::Code(_)) => return,
+            // Display maths stays alone until text other than blank space
+            // arrives.
+            Some(Leaf::Math(..)) => {}
+            _ => {
+                self.inline();
+            }
         }
-        self.inline();
         if let Some(source) = self.leaf_source.as_mut()
             && source.implicit
         {
@@ -381,8 +493,12 @@ impl Builder {
             code_text.push_str(text);
             return;
         }
-        if let Some(prefix) = self.prefix.take() {
-            self.literal(&prefix);
+        // Blank space after display maths keeps it alone in its paragraph.
+        if let Some(Leaf::Math(_, gap)) = self.leaf.as_mut()
+            && text.trim().is_empty()
+        {
+            *gap |= !text.is_empty();
+            return;
         }
         let style = self.style(code);
         let link = self.link;
@@ -392,6 +508,83 @@ impl Builder {
     /// Plain text outside any style or link, such as a table's separators.
     fn literal(&mut self, text: &str) {
         self.inline().push(text, InlineStyle::default(), None);
+    }
+
+    /// Maths source in `text`, inline unless `display`.
+    fn math(&mut self, text: &str, display: bool) {
+        let text = normalise_lines(text);
+        if let Some(Leaf::Code(code)) = self.leaf.as_mut() {
+            code.push_str(&text);
+            return;
+        }
+        // Display maths opening a paragraph, or following display maths in
+        // it, stands alone until other text arrives.
+        let fresh = matches!(
+            (&self.leaf, &self.leaf_source),
+            (Some(Leaf::Paragraph(inline)), Some(source))
+                if inline.text.is_empty() && source.kind == MarkdownBlockKind::Paragraph
+        );
+        if display && fresh {
+            self.leaf = Some(Leaf::Math(text.trim().to_owned(), false));
+            return;
+        }
+        if display && let Some(Leaf::Math(math, gap)) = self.leaf.as_mut() {
+            math.push('\n');
+            math.push_str(text.trim());
+            *gap = false;
+            return;
+        }
+        let style = InlineStyle {
+            math: true,
+            ..self.style(false)
+        };
+        let link = self.link;
+        let text = text.trim().replace('\n', " ");
+        self.inline().push(&text, style, link);
+    }
+
+    /// A reference to the footnote labelled `label`.
+    fn footnote_reference(&mut self, label: &str) {
+        let number = self.footnote(label);
+        if let Some(Leaf::Code(code)) = self.leaf.as_mut() {
+            code.push_str(&format!("[^{label}]"));
+            return;
+        }
+        self.links.push(LinkTarget::Footnote {
+            number,
+            label: label.to_owned(),
+            reference: self.references,
+        });
+        self.references += 1;
+        let style = InlineStyle {
+            superscript: true,
+            ..self.style(false)
+        };
+        let link = Some(self.links.len() - 1);
+        self.inline().push(&format!("[{number}]"), style, link);
+    }
+
+    /// A task-list item's marker: the state of the item it opens, or its
+    /// source form where no item is kept to hold it.
+    fn task(&mut self, done: bool) {
+        // pulldown-cmark gives the marker straight after its item opens, or
+        // after the item's first paragraph opens in a loose list.
+        let opening = match &self.leaf {
+            None => true,
+            Some(Leaf::Paragraph(inline)) => inline.text.is_empty(),
+            Some(_) => false,
+        };
+        if opening
+            && self.kept.last() == Some(&true)
+            && let Some(Container::Item(item)) = self.containers.last_mut()
+            && item.blocks.is_empty()
+            && item.task.is_none()
+        {
+            item.task = Some(done);
+            return;
+        }
+        self.inline_event();
+        self.text(if done { "[x] " } else { "[ ] " }, false);
     }
 
     fn open(&mut self, container: Container) {
@@ -406,6 +599,7 @@ impl Builder {
             let kind = match container {
                 Container::Quote(_) => MarkdownBlockKind::BlockQuote,
                 Container::List { .. } => MarkdownBlockKind::List,
+                Container::Footnote { .. } => MarkdownBlockKind::FootnoteDefinition,
                 Container::Item(_) | Container::Root(_) => MarkdownBlockKind::ListItem,
             };
             self.map.blocks.push(MarkdownBlock {
@@ -429,9 +623,12 @@ impl Builder {
             Container::Root(blocks) => self.containers.push(Container::Root(blocks)),
             Container::Quote(blocks) => self.blocks().push(Block::Quote(blocks)),
             Container::List { start, items } => self.blocks().push(Block::List { start, items }),
-            Container::Item(blocks) => match self.containers.last_mut() {
-                Some(Container::List { items, .. }) => items.push(blocks),
-                _ => self.blocks().extend(blocks),
+            Container::Footnote { number, blocks } => {
+                self.blocks().push(Block::Footnote { number, blocks });
+            }
+            Container::Item(item) => match self.containers.last_mut() {
+                Some(Container::List { items, .. }) => items.push(item),
+                _ => self.blocks().extend(item.blocks),
             },
         }
     }
@@ -459,12 +656,10 @@ impl Builder {
                 });
                 self.blocks().push(Block::Rule);
             }
-            // Extensions the recipe does not present yet keep their source
-            // form.
-            Event::InlineMath(text) => self.text(&format!("${text}$"), false),
-            Event::DisplayMath(text) => self.text(&format!("$${text}$$"), false),
-            Event::FootnoteReference(label) => self.text(&format!("[^{label}]"), false),
-            Event::TaskListMarker(done) => self.text(if done { "[x] " } else { "[ ] " }, false),
+            Event::InlineMath(text) => self.math(&text, false),
+            Event::DisplayMath(text) => self.math(&text, true),
+            Event::FootnoteReference(label) => self.footnote_reference(&label),
+            Event::TaskListMarker(done) => self.task(done),
         }
     }
 
@@ -501,10 +696,29 @@ impl Builder {
                 self.literal("|");
             }
             Tag::TableCell => self.literal(" "),
-            // A footnote definition's text follows its label.
             Tag::FootnoteDefinition(label) => {
-                self.close_leaf();
-                self.prefix = Some(format!("[^{label}]: "));
+                let number = self.footnote(&label);
+                self.open(Container::Footnote {
+                    number,
+                    blocks: Vec::new(),
+                });
+                if self.kept.last() == Some(&true) {
+                    self.map.footnotes.push(MarkdownFootnote {
+                        label: label.into_string(),
+                        number,
+                        source: self.current.clone(),
+                        block: self.map.blocks.len() - 1,
+                    });
+                } else {
+                    // Too deep to keep as a container: its label leads its
+                    // blocks as text.
+                    self.open_leaf(
+                        Leaf::Paragraph(Inline::default()),
+                        MarkdownBlockKind::FootnoteDefinition,
+                    );
+                    self.literal(&format!("[^{label}]:"));
+                    self.close_leaf();
+                }
             }
             // A definition list's terms and definitions are paragraphs.
             Tag::DefinitionList | Tag::DefinitionListTitle | Tag::DefinitionListDefinition => {
@@ -515,7 +729,7 @@ impl Builder {
                 start,
                 items: Vec::new(),
             }),
-            Tag::Item => self.open(Container::Item(Vec::new())),
+            Tag::Item => self.open(Container::Item(Item::default())),
             Tag::Emphasis => self.emphasis += 1,
             Tag::Strong => self.strong += 1,
             Tag::Strikethrough => self.strikethrough += 1,
@@ -533,7 +747,10 @@ impl Builder {
                     destination: url.clone(),
                     source: self.current.clone(),
                 });
-                self.links.push(url);
+                self.links.push(LinkTarget::Url {
+                    url,
+                    index: self.map.links.len() - 1,
+                });
                 self.link = Some(self.links.len() - 1);
             }
             // An image shows its alternative text, which arrives as text.
@@ -564,12 +781,10 @@ impl Builder {
                 }
                 self.close_leaf();
             }
-            TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::Item => self.close(),
-            TagEnd::TableCell => self.literal(" |"),
-            TagEnd::FootnoteDefinition => {
-                self.close_leaf();
-                self.prefix = None;
+            TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::Item | TagEnd::FootnoteDefinition => {
+                self.close();
             }
+            TagEnd::TableCell => self.literal(" |"),
             TagEnd::DefinitionList
             | TagEnd::DefinitionListTitle
             | TagEnd::DefinitionListDefinition => self.close_leaf(),
@@ -615,20 +830,30 @@ fn is_inline(event: &Event<'_>) -> bool {
         | Event::HardBreak
         | Event::InlineMath(_)
         | Event::DisplayMath(_)
-        | Event::FootnoteReference(_)
-        | Event::TaskListMarker(_) => true,
+        | Event::FootnoteReference(_) => true,
+        // A task-list marker belongs to its item, not to the item's text.
+        Event::TaskListMarker(_) => false,
     }
+}
+
+/// `text` with each CRLF or lone CR line ending as LF.
+fn normalise_lines(text: &str) -> String {
+    text.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 /// Parse CommonMark with pulldown-cmark's `options`. Any source, including an
 /// incomplete one still arriving, parses without panicking, and nesting stays
 /// within [`MAX_NESTING`] whatever the options.
 ///
-/// Extensions the recipe does not present yet keep their source form:
-/// inline maths as `$…$`, display maths as `$$…$$`, a footnote reference as
-/// `[^label]`, a footnote definition's text after `[^label]: `, a task-list
-/// item after `[ ] ` or `[x] `, and a table's cells a row to a line between
-/// `|` separators. A metadata block shows its text, as an HTML block does.
+/// With their extensions enabled, a task-list item records its state, a
+/// footnote reference is a link to its footnote's number shown as `[n]`, a
+/// footnote definition is a container numbered as its references are, and
+/// maths keeps its source without its `$` delimiters, styled as maths:
+/// display maths alone in a paragraph is a block of its own, its line
+/// endings normalised to LF. A task-list marker no item can hold (one nested
+/// deeper than the model keeps) keeps its source form, `[ ] ` or `[x] `. A
+/// table's cells stay text, a row to a line between `|` separators. A
+/// metadata block shows its text, as an HTML block does.
 pub(super) fn parse(source: &str, options: Options) -> Document {
     let mut builder = Builder {
         containers: vec![Container::Root(Vec::new())],
@@ -637,8 +862,9 @@ pub(super) fn parse(source: &str, options: Options) -> Document {
         leaf_source: None,
         current: 0..0,
         map: MarkdownSourceMap::default(),
-        prefix: None,
         links: Vec::new(),
+        footnotes: Vec::new(),
+        references: 0,
         strong: 0,
         emphasis: 0,
         strikethrough: 0,
@@ -686,14 +912,34 @@ mod tests {
         blocks
             .iter()
             .map(|block| match block {
-                Block::Quote(blocks) => 1 + depth(blocks),
+                Block::Quote(blocks) | Block::Footnote { blocks, .. } => 1 + depth(blocks),
                 Block::List { items, .. } => {
-                    2 + items.iter().map(|item| depth(item)).max().unwrap_or(0)
+                    2 + items
+                        .iter()
+                        .map(|item| depth(&item.blocks))
+                        .max()
+                        .unwrap_or(0)
                 }
                 _ => 0,
             })
             .max()
             .unwrap_or(0)
+    }
+
+    /// Each URL link's destination, in order.
+    fn urls(document: &Document) -> Vec<&str> {
+        document
+            .links
+            .iter()
+            .filter_map(|link| match link {
+                LinkTarget::Url { url, .. } => Some(url.as_str()),
+                LinkTarget::Footnote { .. } => None,
+            })
+            .collect()
+    }
+
+    fn item(blocks: Vec<Block>) -> Item {
+        Item { task: None, blocks }
     }
 
     #[test]
@@ -731,7 +977,7 @@ mod tests {
         assert!(styled("code").style.code);
         assert_eq!(styled("link").link, Some(0));
         assert_eq!(
-            document.links,
+            urls(&document),
             [
                 "https://example.org/a",
                 "https://example.org/b",
@@ -754,8 +1000,10 @@ mod tests {
             panic!("a bulleted list: {:?}", blocks[4]);
         };
         assert_eq!(items.len(), 2);
-        assert_eq!(items[0], [Block::Paragraph(plain("one"))]);
-        assert!(matches!(&items[1][1], Block::List { start: Some(1), items } if items.len() == 2));
+        assert_eq!(items[0], item(vec![Block::Paragraph(plain("one"))]));
+        assert!(
+            matches!(&items[1].blocks[1], Block::List { start: Some(1), items } if items.len() == 2)
+        );
         assert!(matches!(&blocks[5], Block::List { start: Some(3), items } if items.len() == 2));
         let Block::Quote(quoted) = &blocks[6] else {
             panic!("a quote: {:?}", blocks[6]);
@@ -875,29 +1123,70 @@ mod tests {
                 Block::Paragraph(inline) | Block::Heading { inline, .. } => {
                     vec![inline.text.clone()]
                 }
-                Block::Code(code) => vec![code.clone()],
-                Block::Quote(blocks) => texts(blocks),
-                Block::List { items, .. } => items.iter().flat_map(|item| texts(item)).collect(),
+                Block::Code(code) | Block::Math(code) => vec![code.clone()],
+                Block::Quote(blocks) | Block::Footnote { blocks, .. } => texts(blocks),
+                Block::List { items, .. } => {
+                    items.iter().flat_map(|item| texts(&item.blocks)).collect()
+                }
                 Block::Rule => vec!["---".to_owned()],
             })
             .collect()
     }
 
+    /// The text of each run of `inline` styled as `style` says.
+    fn styled(inline: &Inline, style: impl Fn(&Run) -> bool) -> Vec<&str> {
+        inline
+            .runs
+            .iter()
+            .filter(|run| style(run))
+            .map(|run| &inline.text[run.bytes.clone()])
+            .collect()
+    }
+
     #[test]
-    fn enabled_extensions_keep_their_source_form() {
+    fn enabled_extensions_present_their_structure() {
         let source = "Maths $a+b$ and $$c$$.\n\n- [x] done\n- [ ] open\n\nNote[^1].\n\n\
                       [^1]: The *note*.\n\n| a | b |\n| - | - |\n| 1 | **2** |\n";
+        let document = parse(source, DOCUMENT);
         assert_eq!(
-            texts(&parse(source, DOCUMENT).blocks),
+            texts(&document.blocks),
             [
-                "Maths $a+b$ and $$c$$.",
-                "[x] done",
-                "[ ] open",
-                "Note[^1].",
-                "[^1]: The note.",
+                "Maths a+b and c.",
+                "done",
+                "open",
+                "Note[1].",
+                "The note.",
                 "| a | b |\n| 1 | 2 |",
             ]
         );
+        let Block::Paragraph(maths) = &document.blocks[0] else {
+            panic!("a paragraph: {:?}", document.blocks[0]);
+        };
+        assert_eq!(styled(maths, |run| run.style.math), ["a+b", "c"]);
+        let Block::List { items, .. } = &document.blocks[1] else {
+            panic!("a list: {:?}", document.blocks[1]);
+        };
+        assert_eq!(
+            items.iter().map(|item| item.task).collect::<Vec<_>>(),
+            [Some(true), Some(false)]
+        );
+        let Block::Paragraph(note) = &document.blocks[2] else {
+            panic!("a paragraph: {:?}", document.blocks[2]);
+        };
+        assert_eq!(styled(note, |run| run.style.superscript), ["[1]"]);
+        assert_eq!(note.link_bytes(), [(0, 4..7)]);
+        assert_eq!(
+            document.links,
+            [LinkTarget::Footnote {
+                number: 1,
+                label: "1".to_owned(),
+                reference: 0,
+            }]
+        );
+        assert!(matches!(
+            &document.blocks[3],
+            Block::Footnote { number: 1, .. }
+        ));
         // The default options keep the same source as written.
         assert_eq!(
             texts(&parse(source, Options::ENABLE_STRIKETHROUGH).blocks),
@@ -943,6 +1232,9 @@ mod tests {
                 Event::Start(Tag::Item) => Some(MarkdownBlockKind::ListItem),
                 Event::Start(Tag::Table(_)) => Some(MarkdownBlockKind::Table),
                 Event::Start(Tag::MetadataBlock(_)) => Some(MarkdownBlockKind::MetadataBlock),
+                Event::Start(Tag::FootnoteDefinition(_)) => {
+                    Some(MarkdownBlockKind::FootnoteDefinition)
+                }
                 Event::Rule => Some(MarkdownBlockKind::Rule),
                 _ => None,
             };
@@ -954,8 +1246,15 @@ mod tests {
                 });
             }
             match event {
-                Event::Start(Tag::BlockQuote(_) | Tag::List(_) | Tag::Item) => depth += 1,
-                Event::End(TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::Item) => depth -= 1,
+                Event::Start(
+                    Tag::BlockQuote(_) | Tag::List(_) | Tag::Item | Tag::FootnoteDefinition(_),
+                ) => depth += 1,
+                Event::End(
+                    TagEnd::BlockQuote(_)
+                    | TagEnd::List(_)
+                    | TagEnd::Item
+                    | TagEnd::FootnoteDefinition,
+                ) => depth -= 1,
                 _ => {}
             }
         }
@@ -967,7 +1266,8 @@ mod tests {
         let map = parse(EXTENDED, DOCUMENT).map;
         let tagged = tagged_blocks(EXTENDED, DOCUMENT);
         // Every tagged block is presented, in order; the rest are the tight
-        // task items' text, which has no tag of its own.
+        // task items' text, which has no tag of its own and does not include
+        // the item's marker.
         let (matching, untagged): (Vec<_>, Vec<_>) =
             map.blocks.iter().partition(|block| tagged.contains(block));
         assert_eq!(matching.into_iter().cloned().collect::<Vec<_>>(), tagged);
@@ -977,8 +1277,8 @@ mod tests {
                 .map(|block| (block.kind, block.depth, &EXTENDED[block.source.clone()]))
                 .collect::<Vec<_>>(),
             [
-                (MarkdownBlockKind::Paragraph, 2, "[x] done ✓"),
-                (MarkdownBlockKind::Paragraph, 2, "[ ] öffen"),
+                (MarkdownBlockKind::Paragraph, 2, "done ✓"),
+                (MarkdownBlockKind::Paragraph, 2, "öffen"),
             ]
         );
         let kinds: Vec<_> = map.blocks.iter().map(|block| block.kind).collect();
@@ -992,9 +1292,24 @@ mod tests {
             MarkdownBlockKind::CodeBlock,
             MarkdownBlockKind::HtmlBlock,
             MarkdownBlockKind::Rule,
+            MarkdownBlockKind::FootnoteDefinition,
         ] {
             assert!(kinds.contains(&kind), "{kind:?} in {kinds:?}");
         }
+        assert_eq!(
+            map.footnotes
+                .iter()
+                .map(|note| (
+                    note.label.as_str(),
+                    note.number,
+                    &EXTENDED[note.source.clone()]
+                ))
+                .collect::<Vec<_>>(),
+            [("n", 1, "[^n]: The note, ünïcode.\r\n")]
+        );
+        let definition = &map.blocks[map.footnotes[0].block];
+        assert_eq!(definition.kind, MarkdownBlockKind::FootnoteDefinition);
+        assert_eq!(definition.source, map.footnotes[0].source);
         for block in &map.blocks {
             assert!(EXTENDED.get(block.source.clone()).is_some(), "{block:?}");
         }
@@ -1039,6 +1354,10 @@ mod tests {
             assert_eq!(&file[mapped.source.clone()], &body[relative.source.clone()]);
         }
         assert_eq!(&file[mapped.headings[0].source.clone()], "# Café 漢字\r\n");
+        assert_eq!(
+            &file[mapped.footnotes[0].source.clone()],
+            "[^n]: The note, ünïcode.\r\n"
+        );
         assert_eq!(
             source_map(body, DOCUMENT, usize::MAX).blocks[0].source,
             usize::MAX..usize::MAX
@@ -1090,8 +1409,18 @@ mod tests {
                 .iter()
                 .map(|link| link.destination.as_str())
                 .collect::<Vec<_>>(),
-            document.links
+            urls(&document)
         );
+        // Each URL link knows its place in the map; the footnote reference
+        // is not among them.
+        let mut places = Vec::new();
+        for link in &document.links {
+            if let LinkTarget::Url { index, .. } = link {
+                places.push(*index);
+            }
+        }
+        assert_eq!(places, (0..expected.len()).collect::<Vec<_>>());
+        assert_eq!(document.links.len(), expected.len() + 1);
         assert_eq!(
             expected
                 .iter()
@@ -1148,8 +1477,159 @@ mod tests {
             parse("- a\n-", Options::ENABLE_STRIKETHROUGH).blocks,
             [Block::List {
                 start: None,
-                items: vec![vec![Block::Paragraph(plain("a"))], vec![]],
+                items: vec![item(vec![Block::Paragraph(plain("a"))]), item(vec![])],
             }]
         );
+    }
+
+    #[test]
+    fn a_footnote_definition_keeps_its_label_whatever_opens_it() {
+        let document = parse(
+            "Text[^a] and[^q].\n\n[^a]: - one\n    - two\n\n> [^q]: ## Heading q\n",
+            DOCUMENT,
+        );
+        let [
+            Block::Paragraph(_),
+            Block::Footnote { number: 1, blocks },
+            Block::Quote(quoted),
+        ] = document.blocks.as_slice()
+        else {
+            panic!(
+                "a paragraph, a definition and a quote: {:?}",
+                document.blocks
+            );
+        };
+        assert!(matches!(blocks.as_slice(), [Block::List { items, .. }] if items.len() == 2));
+        assert_eq!(
+            quoted.as_slice(),
+            [Block::Footnote {
+                number: 2,
+                blocks: vec![Block::Heading {
+                    level: 2,
+                    inline: plain("Heading q"),
+                }],
+            }]
+        );
+        assert_eq!(
+            document
+                .map
+                .footnotes
+                .iter()
+                .map(|note| (
+                    note.label.as_str(),
+                    note.number,
+                    document.map.blocks[note.block].depth
+                ))
+                .collect::<Vec<_>>(),
+            [("a", 1, 0), ("q", 2, 1)]
+        );
+        // A definition nested deeper than the model keeps leads its blocks
+        // with its label as text.
+        let deep = format!("{}[^d]: deep\n", "> ".repeat(MAX_NESTING + 4));
+        let texts = texts(&parse(&deep, DOCUMENT).blocks);
+        assert_eq!(texts, ["[^d]:", "deep"]);
+    }
+
+    #[test]
+    fn footnotes_are_numbered_by_first_appearance_without_regard_to_case() {
+        let document = parse(
+            "B[^b], A[^a] and b again[^B].\n\n[^a]: A.\n\n[^b]: B.\n",
+            DOCUMENT,
+        );
+        let numbers: Vec<_> = document
+            .links
+            .iter()
+            .map(|link| match link {
+                LinkTarget::Footnote {
+                    number,
+                    label,
+                    reference,
+                } => (*number, label.as_str(), *reference),
+                LinkTarget::Url { .. } => panic!("no URL links"),
+            })
+            .collect();
+        assert_eq!(numbers, [(1, "b", 0), (2, "a", 1), (1, "B", 2)]);
+        let Block::Paragraph(text) = &document.blocks[0] else {
+            panic!("a paragraph: {:?}", document.blocks[0]);
+        };
+        assert_eq!(text.text, "B[1], A[2] and b again[1].");
+        assert_eq!(
+            document
+                .map
+                .footnotes
+                .iter()
+                .map(|note| (note.label.as_str(), note.number))
+                .collect::<Vec<_>>(),
+            [("a", 2), ("b", 1)]
+        );
+    }
+
+    #[test]
+    fn a_task_marker_belongs_to_its_item() {
+        // pulldown-cmark gives the marker outside a paragraph here: the
+        // item is an empty task, and its text a paragraph after the list.
+        let document = parse("- [ ]\n\n  text\n", DOCUMENT);
+        assert!(
+            !texts(&document.blocks)
+                .iter()
+                .any(|text| text.contains('[')),
+            "{:?}",
+            document.blocks
+        );
+        let Block::List { items, .. } = &document.blocks[0] else {
+            panic!("a list: {:?}", document.blocks);
+        };
+        assert_eq!(items[0].task, Some(false));
+        // Loose items keep their state and their paragraphs.
+        let loose = parse("1. [x] a\n\n2. [ ] b\n\n   more\n", DOCUMENT);
+        let Block::List { items, .. } = &loose.blocks[0] else {
+            panic!("a list: {:?}", loose.blocks);
+        };
+        assert_eq!(
+            items
+                .iter()
+                .map(|item| (item.task, texts(&item.blocks)))
+                .collect::<Vec<_>>(),
+            [
+                (Some(true), vec!["a".to_owned()]),
+                (Some(false), vec!["b".to_owned(), "more".to_owned()]),
+            ]
+        );
+        // A marker no kept item holds keeps its source form.
+        let deep: String = (0..MAX_NESTING)
+            .map(|level| format!("{}- [x] t{level}\n", "  ".repeat(level)))
+            .collect();
+        let texts = texts(&parse(&deep, DOCUMENT).blocks);
+        assert!(texts.contains(&"t0".to_owned()), "{texts:?}");
+        assert!(
+            texts.iter().any(|text| text.starts_with("[x] t")),
+            "{texts:?}"
+        );
+    }
+
+    #[test]
+    fn display_maths_is_a_block_with_lf_line_endings() {
+        let document = parse(
+            "$$\r\nE = mc^2\r\n$$\r\n\r\n$$a\rb$$\r\n$$c$$\r\n\r\nx $$d\r\ne$$ y $f\r\ng$\r\n",
+            DOCUMENT,
+        );
+        assert_eq!(document.blocks[0], Block::Math("E = mc^2".to_owned()));
+        assert_eq!(document.blocks[1], Block::Math("a\nb\nc".to_owned()));
+        let Block::Paragraph(mixed) = &document.blocks[2] else {
+            panic!("a paragraph: {:?}", document.blocks[2]);
+        };
+        assert!(!mixed.text.contains('\r'), "{:?}", mixed.text);
+        assert_eq!(styled(mixed, |run| run.style.math), ["d e", "f g"]);
+        assert_eq!(document.blocks.len(), 3);
+        // Display maths followed by text becomes text with maths in it.
+        let document = parse("$$a$$ then text\n", DOCUMENT);
+        let [Block::Paragraph(inline)] = document.blocks.as_slice() else {
+            panic!("a paragraph: {:?}", document.blocks);
+        };
+        assert_eq!(inline.text, "a then text");
+        assert_eq!(styled(inline, |run| run.style.math), ["a"]);
+        // Each display maths block is a paragraph in the source map.
+        let map = parse("$$\r\nx\r\n$$\r\n", DOCUMENT).map;
+        assert_eq!(map.blocks[0].kind, MarkdownBlockKind::Paragraph);
     }
 }

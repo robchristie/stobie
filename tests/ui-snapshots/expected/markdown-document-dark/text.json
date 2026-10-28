@@ -1,0 +1,649 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "list_marker",
+        "instance": 3965472467208189
+      },
+      "role": "body",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 561.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 579.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 540.46875,
+        "min_y": 561.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 579.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 561.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 579.5499877929688
+      },
+      "overflow": "expand",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "[2]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "list_marker",
+        "instance": 7342423182379358
+      },
+      "role": "body",
+      "horizontal_alignment": "end",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 538.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 556.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 540.46875,
+        "min_y": 538.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 556.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 538.5499877929688,
+        "max_x": 554.8125,
+        "max_y": 556.5499877929688
+      },
+      "overflow": "expand",
+      "interaction": "inert",
+      "declared_max_lines": 1,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "[1]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1288074417725819
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 578.5,
+        "min_y": 561.5499877929688,
+        "max_x": 1150,
+        "max_y": 579.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 578.5,
+        "min_y": 561.5499877929688,
+        "max_x": 841.125,
+        "max_y": 579.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 578.5,
+        "min_y": 561.5499877929688,
+        "max_x": 1150,
+        "max_y": 579.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Anemones closed by the sun were counted once.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1897516023101900
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 351.54998779296875,
+        "max_x": 1150,
+        "max_y": 369.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 351.54998779296875,
+        "max_x": 890.21875,
+        "max_y": 369.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 351.54998779296875,
+        "max_x": 1150,
+        "max_y": 369.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Density is d = n / A for n animals in an area A, so pool C holds:",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 221139222978172
+      },
+      "role": "application_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 1150,
+        "max_y": 161
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 666.6875,
+        "max_y": 161
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 138,
+        "max_x": 1150,
+        "max_y": 161
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Rock-pool survey",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2236873482469722
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 578.5,
+        "min_y": 584.5499877929688,
+        "max_x": 1150,
+        "max_y": 602.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 578.5,
+        "min_y": 584.5499877929688,
+        "max_x": 947.40625,
+        "max_y": 602.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 578.5,
+        "min_y": 584.5499877929688,
+        "max_x": 1150,
+        "max_y": 602.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Animals on the grid line were counted with the square to their north.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2894451907746025
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 484.54998779296875,
+        "max_x": 1150,
+        "max_y": 520.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 484.54998779296875,
+        "max_x": 1095.59375,
+        "max_y": 520.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 484.54998779296875,
+        "max_x": 1150,
+        "max_y": 520.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Each count follows the grid laid at the first tide, read from the seaward corner. The tally sheets are in the appendix, with the photographs filed by pool and tide.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 327635350035988
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 550.6875,
+        "min_y": 244,
+        "max_x": 1150,
+        "max_y": 262
+      },
+      "painted_rect": {
+        "min_x": 550.6875,
+        "min_y": 244,
+        "max_x": 724.6875,
+        "max_y": 262
+      },
+      "clip_rect": {
+        "min_x": 550.6875,
+        "min_y": 244,
+        "max_x": 1150,
+        "max_y": 262
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Count the anemones in pool C[2]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3659097216552874
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 196,
+        "max_x": 1150,
+        "max_y": 216
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 196,
+        "max_x": 609.90625,
+        "max_y": 216
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 196,
+        "max_x": 1150,
+        "max_y": 216
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Open tasks",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3967364626016586
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 546,
+        "min_y": 381.54998779296875,
+        "max_x": 1150,
+        "max_y": 399.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 546,
+        "min_y": 381.54998779296875,
+        "max_x": 1031.25,
+        "max_y": 399.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 546,
+        "min_y": 381.54998779296875,
+        "max_x": 1150,
+        "max_y": 399.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "d_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5353165259261196
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 166,
+        "max_x": 1150,
+        "max_y": 184
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 166,
+        "max_x": 1146.25,
+        "max_y": 184
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 166,
+        "max_x": 1150,
+        "max_y": 184
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Notes from three low tides on the northern platform, with the open tasks and the arithmetic behind each count.[1]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5636275389449328
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 550.6875,
+        "min_y": 221,
+        "max_x": 1150,
+        "max_y": 239
+      },
+      "painted_rect": {
+        "min_x": 550.6875,
+        "min_y": 221,
+        "max_x": 718.78125,
+        "max_y": 239
+      },
+      "clip_rect": {
+        "min_x": 550.6875,
+        "min_y": 221,
+        "max_x": 1150,
+        "max_y": 239
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Photograph the northern pools",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5657212443077994
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 561.8125,
+        "min_y": 538.5499877929688,
+        "max_x": 1150,
+        "max_y": 556.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 561.8125,
+        "min_y": 538.5499877929688,
+        "max_x": 789.6875,
+        "max_y": 556.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 561.8125,
+        "min_y": 538.5499877929688,
+        "max_x": 1150,
+        "max_y": 556.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Each visit began an hour before low water.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5948487870139717
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 459.54998779296875,
+        "max_x": 1150,
+        "max_y": 479.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 459.54998779296875,
+        "max_x": 586.375,
+        "max_y": 479.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 459.54998779296875,
+        "max_x": 1150,
+        "max_y": 479.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Method",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7239597179299055
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 411.54998779296875,
+        "max_x": 1150,
+        "max_y": 447.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 411.54998779296875,
+        "max_x": 1141.59375,
+        "max_y": 447.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 411.54998779296875,
+        "max_x": 1150,
+        "max_y": 447.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Pool A was too deep to grid on the second tide, so its estimate rests on two counts. Pool B dried out at the edges, and the count there includes only the wet area. Pool D is new this season.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7395648576333103
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 1150,
+        "max_y": 346.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 585.84375,
+        "max_y": 346.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 1150,
+        "max_y": 346.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Density",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8333207844079041
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 296.54998779296875,
+        "max_x": 1150,
+        "max_y": 314.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 296.54998779296875,
+        "max_x": 925.25,
+        "max_y": 314.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 296.54998779296875,
+        "max_x": 1150,
+        "max_y": 314.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Compare the counts with last season's survey, which used a coarser grid.",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 17,
+    "attempted_components": 17,
+    "successful_components": 17,
+    "failed_components": 0,
+    "native_text_controls": 24,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

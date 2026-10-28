@@ -10,9 +10,10 @@ use egui::{
     TextFormat, text::LayoutJob,
 };
 
-use self::parse::{Block, Document, Inline};
+use self::parse::{Block, Document, Inline, Item, LinkTarget};
 pub use self::parse::{
-    MarkdownBlock, MarkdownBlockKind, MarkdownHeading, MarkdownLink, MarkdownSourceMap,
+    MarkdownBlock, MarkdownBlockKind, MarkdownFootnote, MarkdownHeading, MarkdownLink,
+    MarkdownSourceMap,
 };
 use crate::{
     DesignTokens, HorizontalTextAlignment, INVALID_LINK_URL, MeasuredText, PresentationId,
@@ -29,6 +30,17 @@ const BULLET_RADIUS: f32 = 0.18;
 const RESERVED_NUMBER: &str = "00.";
 /// The marker column of a bulleted list.
 const RESERVED_BULLET: &str = "0.";
+/// The narrowest marker column of a footnote definition.
+const RESERVED_FOOTNOTE: &str = "[00]";
+/// A task-list item's box's side as a share of its text's font size.
+const TASK_BOX: f32 = 0.85;
+/// The name of a task-list item without text of its own to name it.
+const UNNAMED_TASK: &str = "Task";
+/// A footnote reference's size as a share of its text's.
+const SUPERSCRIPT: f32 = 0.75;
+/// The reason a footnote reference gives when its definition is not
+/// presented, such as one nested deeper than the recipe keeps.
+const UNPRESENTED_FOOTNOTE: &str = "The footnote is not shown";
 
 /// pulldown-cmark's parser options, which choose the CommonMark extensions a
 /// Markdown presentation parses. An application that parses the same source
@@ -55,11 +67,15 @@ pub struct MarkdownSpec<'a> {
     pub link_description: Option<&'a str>,
     /// The extensions to parse with, [`DEFAULT_MARKDOWN_OPTIONS`] by
     /// default. Raw HTML stays text and nesting stays bounded whatever they
-    /// are. Extensions the recipe does not present yet keep their source
-    /// form: inline maths as `$…$`, display maths as `$$…$$`, a footnote
-    /// reference as `[^label]`, a footnote definition's text after
-    /// `[^label]: `, a task-list item after `[ ] ` or `[x] `, and a table's
-    /// cells a row to a line between `|` separators.
+    /// are. With `ENABLE_TASKLISTS`, a task-list item shows a read-only box,
+    /// checked when the task is done, in place of its bullet or number. With
+    /// `ENABLE_FOOTNOTES`, a footnote reference is a link shown as a raised
+    /// `[n]` that scrolls its definition into view, and each definition is a
+    /// muted block numbered `[n]` after a short rule. With `ENABLE_MATH`,
+    /// maths keeps its TeX source, never typeset, in the italic monospace
+    /// face: inline maths within its text, and display maths alone in a
+    /// paragraph as a block of its own. A table's cells keep their source
+    /// text, a row to a line between `|` separators.
     pub options: MarkdownOptions,
     /// The application's ID for each heading, in the order
     /// [`markdown_source_map`] lists them for the same source and options;
@@ -80,6 +96,14 @@ pub struct MarkdownSpec<'a> {
     /// application decides, for example, that a relative path names one of
     /// its own documents.
     pub link_kinds: &'a [MarkdownLinkKind<'a>],
+    /// The application's ID for each footnote definition, in the order
+    /// [`markdown_source_map`] lists them ([`MarkdownSourceMap::footnotes`])
+    /// for the same source and options; none by default. A definition with
+    /// an ID is published as a [`UiRole::Section`] node with that ID, named
+    /// by its number as shown (`[1]`), which an agent or the application
+    /// reveals as it does a heading. Footnote references reach their
+    /// definitions with or without IDs.
+    pub footnote_ids: &'a [SemanticUiId],
 }
 
 impl Default for MarkdownSpec<'_> {
@@ -90,6 +114,7 @@ impl Default for MarkdownSpec<'_> {
             options: DEFAULT_MARKDOWN_OPTIONS,
             heading_ids: &[],
             link_kinds: &[],
+            footnote_ids: &[],
         }
     }
 }
@@ -101,6 +126,7 @@ impl Default for MarkdownSpec<'_> {
 /// and its [`UiRole::Link`] node, which agents operate through
 /// `stobie.open-link`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum MarkdownLinkKind<'a> {
     /// Opens in a new browser tab, or the platform's default browser
     /// natively, under the link recipe's rules: a destination
@@ -142,19 +168,53 @@ enum LinkRoute<'a> {
     Follow,
     /// Opens nothing, for this reason.
     Unavailable(&'a str),
+    /// Scrolls the definition of the footnote of this number into view.
+    Footnote(usize),
 }
 
-/// A document link with its resolved behaviour.
+/// A document link or footnote reference with its resolved behaviour.
 struct ResolvedLink<'a> {
-    destination: &'a str,
+    /// A URL, or `#` and a footnote's label.
+    destination: String,
     route: LinkRoute<'a>,
-    /// Whether the application made it unavailable, rather than the link
-    /// recipe's rules.
+    /// Whether it carries no link description: the application made it
+    /// unavailable, or it is a footnote reference.
     withheld: bool,
+    /// A URL link's index in [`MarkdownSourceMap::links`].
+    index: Option<usize>,
+    /// Its identity's key within the presentation: a URL link's index, or a
+    /// footnote reference's place among the references.
+    key: (&'static str, usize),
 }
 
 impl<'a> ResolvedLink<'a> {
-    fn new(destination: &'a str, kind: MarkdownLinkKind<'a>) -> Self {
+    /// `target` as the application classifies it (`kinds`), a footnote
+    /// reference available when its definition is presented (`presented`).
+    fn new(target: &LinkTarget, kinds: &[MarkdownLinkKind<'a>], presented: &[usize]) -> Self {
+        let (destination, index, kind) = match target {
+            LinkTarget::Url { url, index } => (
+                url.as_str(),
+                *index,
+                kinds.get(*index).copied().unwrap_or_default(),
+            ),
+            LinkTarget::Footnote {
+                number,
+                label,
+                reference,
+            } => {
+                return Self {
+                    destination: format!("#{label}"),
+                    route: if presented.contains(number) {
+                        LinkRoute::Footnote(*number)
+                    } else {
+                        LinkRoute::Unavailable(UNPRESENTED_FOOTNOTE)
+                    },
+                    withheld: true,
+                    index: None,
+                    key: ("footnote-reference", *reference),
+                };
+            }
+        };
         let (route, withheld) = match kind {
             // The application cannot loosen the link recipe's rules.
             MarkdownLinkKind::External if link_url_allowed(destination) => (LinkRoute::Open, false),
@@ -166,9 +226,11 @@ impl<'a> ResolvedLink<'a> {
             MarkdownLinkKind::Unavailable(reason) => (LinkRoute::Unavailable(reason), true),
         };
         Self {
-            destination,
+            destination: destination.to_owned(),
             route,
             withheld,
+            index: Some(index),
+            key: ("link", index),
         }
     }
 
@@ -274,6 +336,7 @@ pub fn markdown_source_map(
 }
 
 /// What [`markdown`] presented.
+#[non_exhaustive]
 pub struct MarkdownResponse {
     /// The whole presentation's allocation, sensing hover only.
     pub response: Response,
@@ -285,6 +348,15 @@ pub struct MarkdownResponse {
     /// [`MarkdownSpec::heading_ids`] at least partly visible, in document
     /// order, published as `link_nodes` are.
     pub heading_nodes: Vec<UiNode>,
+    /// One [`UiRole::Checkbox`] node for each task-list item's box at least
+    /// partly visible, in document order: read-only and so not enabled,
+    /// checked when the task is done, named by the item's first text.
+    /// Published as `link_nodes` are.
+    pub task_nodes: Vec<UiNode>,
+    /// One [`UiRole::Section`] node for each footnote definition with an ID
+    /// from [`MarkdownSpec::footnote_ids`] at least partly visible, in
+    /// document order, published as `link_nodes` are.
+    pub footnote_nodes: Vec<UiNode>,
     /// The first in-application link ([`MarkdownLinkKind::InApplication`])
     /// followed in this pass: the application navigates to it. External
     /// links open in a new tab and are not reported.
@@ -312,6 +384,9 @@ struct TextPiece {
     heading: Option<u8>,
     /// The application's ID for a heading.
     anchor: Option<SemanticUiId>,
+    /// How many bytes of the text lead it without being its own, such as a
+    /// list item's marker where an item is too narrow to indent.
+    lead: usize,
 }
 
 /// A block's styled text before measurement.
@@ -339,6 +414,15 @@ enum Piece {
         depth: usize,
         colour: Color32,
     },
+    /// A task-list item's read-only box.
+    Task {
+        identity: PresentationId,
+        rect: Rect,
+        done: bool,
+        name: String,
+        /// In a quote, painted in the muted text colour.
+        muted: bool,
+    },
     /// A code block's surface, painted before its text.
     Fill(Rect),
     /// A block quote's bar, or a horizontal rule.
@@ -349,7 +433,10 @@ impl Piece {
     fn translate(&mut self, offset: egui::Vec2) {
         match self {
             Self::Text(text) => text.rect = text.rect.translate(offset),
-            Self::Marker { rect, .. } | Self::Fill(rect) | Self::Line(rect) => {
+            Self::Marker { rect, .. }
+            | Self::Task { rect, .. }
+            | Self::Fill(rect)
+            | Self::Line(rect) => {
                 *rect = rect.translate(offset);
             }
             Self::Bullet { centre, .. } => *centre += offset,
@@ -381,6 +468,21 @@ struct Layout<'a> {
     code_header: Option<f32>,
     /// Each code block laid out, in document order.
     code_blocks: Vec<CodeBlock>,
+    /// The application's ID for each footnote definition, in document order.
+    footnote_ids: &'a [SemanticUiId],
+    /// Each footnote definition laid out, in document order.
+    footnotes: Vec<FootnoteArea>,
+    /// How many bytes lead the next text laid out without being its own.
+    lead: usize,
+}
+
+/// A footnote definition as laid out.
+struct FootnoteArea {
+    number: usize,
+    /// The whole definition, its number and its blocks.
+    rect: Rect,
+    /// The application's ID for it.
+    anchor: Option<SemanticUiId>,
 }
 
 /// A code block as laid out: its text exactly as parsed and the strip above
@@ -435,7 +537,7 @@ impl Layout<'_> {
         };
         let mut section_links = Vec::new();
         for run in &inline.runs {
-            let family = if run.style.code {
+            let family = if run.style.code || run.style.math {
                 FontFamily::Monospace
             } else if run.style.strong {
                 FontFamily::Name(crate::SEMIBOLD_FONT_FAMILY.into())
@@ -448,11 +550,21 @@ impl Layout<'_> {
                 Some(_) if valid => self.tokens.colours.text_muted.into(),
                 _ => base,
             };
+            let size = if run.style.superscript {
+                style.font_id.size * SUPERSCRIPT
+            } else {
+                style.font_id.size
+            };
             let mut format = TextFormat {
                 line_height: Some(style.line_height),
-                italics: run.style.emphasis,
-                ..TextFormat::simple(FontId::new(style.font_id.size, family), colour)
+                // Maths is source, not typeset: italic monospace, where code
+                // is upright on a surface.
+                italics: run.style.emphasis || run.style.math,
+                ..TextFormat::simple(FontId::new(size, family), colour)
             };
+            if run.style.superscript {
+                format.valign = egui::Align::TOP;
+            }
             if run.style.code {
                 format.background = self.tokens.colours.surface_raised.into();
             }
@@ -502,6 +614,7 @@ impl Layout<'_> {
             Some(id) => self.identity.child(("heading", id.0.as_str())),
             None => self.identity.child(("block", path)),
         };
+        let lead = std::mem::take(&mut self.lead);
         self.pieces.push(Piece::Text(TextPiece {
             identity,
             rect,
@@ -511,6 +624,7 @@ impl Layout<'_> {
             measured,
             heading,
             anchor,
+            lead,
         }));
         self.y = rect.bottom();
         rect
@@ -560,12 +674,22 @@ impl Layout<'_> {
     ) {
         let mut previous: Option<&Block> = None;
         for (index, block) in blocks.iter().enumerate() {
+            let footnote = matches!(block, Block::Footnote { .. });
+            let run = footnote && matches!(previous, Some(Block::Footnote { .. }));
             if let Some(previous) = previous {
-                self.y += if in_item || matches!(previous, Block::Heading { .. }) {
+                self.y += if in_item || run || matches!(previous, Block::Heading { .. }) {
                     self.tokens.spacing.block.0
                 } else {
                     self.tokens.spacing.section.0
                 };
+            }
+            // A short rule sets a run of footnote definitions apart.
+            if footnote && !run {
+                self.pieces.push(Piece::Line(Rect::from_min_size(
+                    egui::pos2(x, self.y),
+                    egui::vec2((width / 3.0).max(1.0), 1.0),
+                )));
+                self.y += 1.0 + self.tokens.spacing.block.0;
             }
             path.push(u32::try_from(index).unwrap_or(u32::MAX));
             self.block(block, path, x, width, quoted);
@@ -646,8 +770,42 @@ impl Layout<'_> {
                     egui::pos2(x + bar, self.y.max(top + 1.0)),
                 ));
             }
+            Block::Math(math) => {
+                // Display maths is indented where there is room.
+                let indent = self.tokens.spacing.section.0;
+                let (x, width) = if width - indent < self.minimum_content_width() {
+                    (x, width)
+                } else {
+                    (x + indent, width - indent)
+                };
+                let style = self.style(TextRole::MonospaceTechnical);
+                let colour = if quoted {
+                    self.tokens.colours.text_muted.into()
+                } else {
+                    style.colour
+                };
+                let job = LayoutJob::single_section(
+                    math.clone(),
+                    TextFormat {
+                        line_height: Some(style.line_height),
+                        italics: true,
+                        ..TextFormat::simple(style.font_id, colour)
+                    },
+                );
+                let styled = Styled {
+                    job,
+                    section_links: vec![None],
+                    links: Vec::new(),
+                    heading: None,
+                    anchor: None,
+                };
+                self.text(path, x, width, TextRole::MonospaceTechnical, styled);
+            }
             Block::List { start, items } => {
                 self.list(*start, items, path, x, width, quoted);
+            }
+            Block::Footnote { number, blocks } => {
+                self.footnote(*number, blocks, path, x, width);
             }
             Block::Rule => {
                 self.pieces.push(Piece::Line(Rect::from_min_size(
@@ -659,10 +817,101 @@ impl Layout<'_> {
         }
     }
 
+    /// A footnote definition: its number in a column of its own, or above
+    /// its blocks where it is too narrow to indent, and its blocks muted.
+    fn footnote(
+        &mut self,
+        number: usize,
+        blocks: &[Block],
+        path: &mut Vec<u32>,
+        x: f32,
+        width: f32,
+    ) {
+        let index = self.footnotes.len();
+        let anchor = self
+            .footnote_ids
+            .get(index)
+            .filter(|id| !id.0.is_empty())
+            .cloned();
+        let marker = format!("[{number}]");
+        let measured = self.measure(&marker, TextRole::Body, width);
+        let column = self
+            .measure(RESERVED_FOOTNOTE, TextRole::Body, width)
+            .size()
+            .x
+            .max(measured.size().x);
+        let gutter = column + self.tokens.spacing.inline.0;
+        let line_height = self.style(TextRole::Body).line_height;
+        let identity = self.identity.child(("footnote-marker", path.as_slice()));
+        let top = self.y;
+        if width - gutter < self.minimum_content_width() {
+            let rect = Rect::from_min_size(
+                egui::pos2(x, top),
+                egui::vec2(column.min(width), measured.size().y.max(line_height)),
+            );
+            self.pieces.push(Piece::Marker {
+                identity,
+                rect,
+                measured,
+            });
+            self.y = rect.bottom();
+            if !blocks.is_empty() {
+                self.y += self.tokens.spacing.block.0;
+            }
+            self.blocks(blocks, path, x, width, true, true);
+        } else {
+            let outer = self.first_text_top.take();
+            self.blocks(blocks, path, x + gutter, width - gutter, true, true);
+            let line_top = self.first_text_top.unwrap_or(top);
+            self.first_text_top = outer.or(Some(line_top));
+            self.pieces.push(Piece::Marker {
+                identity,
+                rect: Rect::from_min_size(
+                    egui::pos2(x, line_top),
+                    egui::vec2(column, measured.size().y.max(line_height)),
+                ),
+                measured,
+            });
+            self.y = self.y.max(top + line_height);
+        }
+        self.footnotes.push(FootnoteArea {
+            number,
+            rect: Rect::from_min_max(
+                egui::pos2(x, top),
+                egui::pos2(x + width, self.y.max(top + 1.0)),
+            ),
+            anchor,
+        });
+    }
+
+    /// A task-list item's box, its top-left corner at `min`.
+    fn task(&mut self, path: &[u32], min: Pos2, done: bool, item: &Item, quoted: bool) {
+        let side = self.task_side();
+        let name = match item.blocks.first() {
+            Some(Block::Paragraph(inline) | Block::Heading { inline, .. })
+                if !inline.text.trim().is_empty() =>
+            {
+                inline.text.trim().to_owned()
+            }
+            _ => UNNAMED_TASK.to_owned(),
+        };
+        self.pieces.push(Piece::Task {
+            identity: self.identity.child(("task", path)),
+            rect: Rect::from_min_size(min, egui::Vec2::splat(side)),
+            done,
+            name,
+            muted: quoted,
+        });
+    }
+
+    fn task_side(&self) -> f32 {
+        (self.style(TextRole::Body).font_id.size * TASK_BOX).round()
+    }
+
     fn list(
         &mut self,
         start: Option<u64>,
-        items: &[Vec<Block>],
+        items: &[Item],
         path: &mut Vec<u32>,
         x: f32,
         width: f32,
@@ -708,13 +957,26 @@ impl Layout<'_> {
                 self.y += self.tokens.spacing.block.0;
             }
             path.push(u32::try_from(index).unwrap_or(u32::MAX));
-            if flat {
+            let line_height = self.style(TextRole::Body).line_height;
+            if flat && let Some(done) = item.task {
+                // Too narrow to indent: a task's box takes a line of its own,
+                // keyed by the item as it is when indented.
+                let side = self.task_side();
+                let min = egui::pos2(x, self.y + ((line_height - side) * 0.5).max(0.0));
+                self.task(path, min, done, item, quoted);
+                self.y += line_height.max(side);
+                if !item.blocks.is_empty() {
+                    self.y += self.tokens.spacing.block.0;
+                }
+                self.blocks(&item.blocks, path, x, width, quoted, true);
+            } else if flat {
                 // Too narrow to indent: the marker leads the item's text.
                 let prefix = format!("{} ", marker_text(index));
-                let mut blocks = item.clone();
+                let mut blocks = item.blocks.clone();
                 match blocks.first_mut() {
                     Some(Block::Paragraph(inline) | Block::Heading { inline, .. }) => {
                         *inline = inline.with_prefix(&prefix);
+                        self.lead = prefix.len();
                     }
                     // The marker takes a line of its own, keyed apart from
                     // the item's blocks so that theirs do not depend on the
@@ -734,12 +996,19 @@ impl Layout<'_> {
                 let top = self.y;
                 let outer = self.first_text_top.take();
                 self.list_depth += 1;
-                self.blocks(item, path, x + gutter, width - gutter, quoted, true);
+                self.blocks(&item.blocks, path, x + gutter, width - gutter, quoted, true);
                 self.list_depth -= 1;
                 let line_top = self.first_text_top.unwrap_or(top);
                 self.first_text_top = outer.or(Some(line_top));
-                let line_height = self.style(TextRole::Body).line_height;
-                if start.is_some() {
+                if let Some(done) = item.task {
+                    // A task's box takes the place of its bullet or number.
+                    let side = self.task_side();
+                    let min = egui::pos2(
+                        x + ((column - side) * 0.5).max(0.0),
+                        line_top + ((line_height - side) * 0.5).max(0.0),
+                    );
+                    self.task(path, min, done, item, quoted);
+                } else if start.is_some() {
                     let measured = self.measure(&marker_text(index), TextRole::Body, width);
                     self.pieces.push(Piece::Marker {
                         identity: self.identity.child(("marker", path.as_slice())),
@@ -882,16 +1151,11 @@ pub(crate) fn present_markdown(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> (MarkdownResponse, Vec<CodeBlock>) {
-    let Document { blocks, links, .. } = parse::parse(source, spec.options);
+    let Document { blocks, links, map } = parse::parse(source, spec.options);
+    let presented: Vec<usize> = map.footnotes.iter().map(|note| note.number).collect();
     let links: Vec<_> = links
         .iter()
-        .enumerate()
-        .map(|(index, destination)| {
-            ResolvedLink::new(
-                destination,
-                spec.link_kinds.get(index).copied().unwrap_or_default(),
-            )
-        })
+        .map(|target| ResolvedLink::new(target, spec.link_kinds, &presented))
         .collect();
     let width = ui.available_width().max(1.0);
     let enabled = ui.is_enabled();
@@ -912,11 +1176,15 @@ pub(crate) fn present_markdown(
         first_text_top: None,
         code_header,
         code_blocks: Vec::new(),
+        footnote_ids: spec.footnote_ids,
+        footnotes: Vec::new(),
+        lead: 0,
     };
     layout.blocks(&blocks, &mut Vec::new(), 0.0, width, false, false);
     let height = layout.y.max(1.0);
     let mut pieces = layout.pieces;
     let mut code_blocks = layout.code_blocks;
+    let mut footnotes = layout.footnotes;
     let (_, rect) = ui.allocate_space(egui::vec2(width, height));
     let response = ui.interact(rect, identity.egui_id(), Sense::hover());
     for piece in &mut pieces {
@@ -925,9 +1193,11 @@ pub(crate) fn present_markdown(
     for block in &mut code_blocks {
         block.header = block.header.translate(rect.min.to_vec2());
     }
+    for footnote in &mut footnotes {
+        footnote.rect = footnote.rect.translate(rect.min.to_vec2());
+    }
 
-    let mut link_nodes = Vec::new();
-    let mut heading_nodes = Vec::new();
+    let mut nodes = Nodes::default();
     let mut followed = None;
     for piece in pieces {
         match piece {
@@ -975,31 +1245,167 @@ pub(crate) fn present_markdown(
                     observations.push(observation);
                 }
             }
+            Piece::Task {
+                identity,
+                rect,
+                done,
+                name,
+                muted,
+            } => {
+                if let Some(node) = present_task(
+                    ui,
+                    identity,
+                    rect,
+                    done,
+                    &name,
+                    muted,
+                    parent.clone(),
+                    tokens,
+                ) {
+                    nodes.tasks.push(node);
+                }
+            }
             Piece::Text(text) => present_text(
                 ui,
                 identity,
                 &text,
                 &links,
+                &footnotes,
                 spec,
                 parent.clone(),
                 tokens,
                 font_scale,
                 observations,
-                &mut link_nodes,
-                &mut heading_nodes,
+                &mut nodes,
                 &mut followed,
             ),
+        }
+    }
+    for footnote in &footnotes {
+        let Some(anchor) = &footnote.anchor else {
+            continue;
+        };
+        // A definition scrolled wholly out of view publishes no node, but a
+        // reveal of its ID still finds it.
+        crate::observation::reveal_at(ui, anchor, footnote.rect);
+        let visible = ui.clip_rect().intersect(footnote.rect);
+        if visible.is_positive() {
+            let mut node = UiNode::container(
+                anchor.clone(),
+                Some(parent.clone()),
+                UiRole::Section,
+                visible.into(),
+            );
+            node.name = format!("[{}]", footnote.number);
+            node.enabled = enabled;
+            nodes.footnotes.push(node);
         }
     }
     (
         MarkdownResponse {
             response,
-            link_nodes,
-            heading_nodes,
+            link_nodes: nodes.links,
+            heading_nodes: nodes.headings,
+            task_nodes: nodes.tasks,
+            footnote_nodes: nodes.footnotes,
             followed,
         },
         code_blocks,
     )
+}
+
+/// The nodes a presentation publishes, by kind.
+#[derive(Default)]
+struct Nodes {
+    links: Vec<UiNode>,
+    headings: Vec<UiNode>,
+    tasks: Vec<UiNode>,
+    footnotes: Vec<UiNode>,
+}
+
+/// Paint a task-list item's read-only box and describe it to assistive
+/// technology, returning its node when it is at least partly visible.
+#[allow(clippy::too_many_arguments)]
+fn present_task(
+    ui: &mut egui::Ui,
+    identity: PresentationId,
+    rect: Rect,
+    done: bool,
+    name: &str,
+    muted: bool,
+    parent: SemanticUiId,
+    tokens: &DesignTokens,
+) -> Option<UiNode> {
+    let colours = &tokens.colours;
+    let radius = tokens.geometry.control_radius.0.min(rect.width() * 0.25);
+    let painter = ui.painter();
+    if done {
+        let fill: Color32 = if muted {
+            colours.text_muted.into()
+        } else {
+            colours.accent_primary.into()
+        };
+        let mark: Color32 = if muted {
+            colours.surface_canvas.into()
+        } else {
+            colours.accent_on_accent.into()
+        };
+        painter.rect_filled(rect, radius, fill);
+        let points = [(0.22, 0.52), (0.42, 0.72), (0.78, 0.3)]
+            .map(|(x, y)| rect.lerp_inside(egui::vec2(x, y)))
+            .to_vec();
+        painter.add(egui::Shape::line(
+            points,
+            Stroke::new((rect.width() * 0.14).max(1.5), mark),
+        ));
+    } else {
+        let edge: Color32 = if muted {
+            colours.text_muted.into()
+        } else {
+            colours.border_control.into()
+        };
+        painter.rect_stroke(
+            rect,
+            radius,
+            Stroke::new((rect.width() * 0.1).max(1.0), edge),
+            egui::StrokeKind::Inside,
+        );
+    }
+    let response = ui.interact(rect, identity.egui_id(), Sense::hover());
+    let visible = ui.clip_rect().intersect(rect);
+    if !visible.is_positive() || !response.interact_rect.is_positive() {
+        return None;
+    }
+    // Read-only, as a rendered task list's disabled checkbox is.
+    response
+        .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, false, done, name));
+    ui.ctx().accesskit_node_builder(response.id, |node| {
+        use egui::accesskit::{Action, Role, Toggled};
+        node.set_role(Role::CheckBox);
+        node.set_label(name);
+        node.set_author_id(identity.semantic_id().0);
+        node.set_toggled(if done { Toggled::True } else { Toggled::False });
+        node.clear_selected();
+        node.clear_description();
+        node.set_disabled();
+        node.remove_action(Action::Click);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(visible.min.x),
+            y0: f64::from(visible.min.y),
+            x1: f64::from(visible.max.x),
+            y1: f64::from(visible.max.y),
+        });
+    });
+    let mut node = UiNode::container(
+        identity.semantic_id(),
+        Some(parent),
+        UiRole::Checkbox,
+        visible.into(),
+    );
+    node.name = name.to_owned();
+    node.enabled = false;
+    node.checked = Some(done);
+    Some(node)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1008,13 +1414,13 @@ fn present_text(
     document: PresentationId,
     text: &TextPiece,
     links: &[ResolvedLink<'_>],
+    footnotes: &[FootnoteArea],
     spec: MarkdownSpec<'_>,
     parent: SemanticUiId,
     tokens: &DesignTokens,
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
-    link_nodes: &mut Vec<UiNode>,
-    heading_nodes: &mut Vec<UiNode>,
+    nodes: &mut Nodes,
     followed: &mut Option<FollowedMarkdownLink>,
 ) {
     let enabled = ui.is_enabled();
@@ -1073,12 +1479,17 @@ fn present_text(
         .anchor
         .clone()
         .unwrap_or_else(|| text.identity.semantic_id());
+    // A heading's own words, without a list item's marker leading it.
+    let own = text.job.text.get(text.lead..).unwrap_or_default();
     if response.interact_rect.is_positive() {
         ui.ctx().accesskit_node_builder(response.id, |node| {
             node.set_author_id(author.0.clone());
             if let Some(level) = text.heading {
                 node.set_role(egui::accesskit::Role::Heading);
                 node.set_level(usize::from(level));
+                if text.lead > 0 {
+                    node.set_value(own);
+                }
             }
         });
     }
@@ -1094,9 +1505,9 @@ fn present_text(
                 UiRole::Heading,
                 response.rect.into(),
             );
-            node.name = text.job.text.clone();
+            node.name = own.to_owned();
             node.enabled = enabled;
-            heading_nodes.push(node);
+            nodes.headings.push(node);
         }
     }
     if visible || observation.layout_error.is_some() {
@@ -1108,18 +1519,20 @@ fn present_text(
             continue;
         }
         let resolved = &links[*link];
-        let url = resolved.destination;
+        let url = resolved.destination.as_str();
         let valid = resolved.available();
         let active = enabled && valid;
         // The application's own unavailable links do not carry the
-        // description it gives external links, nor do in-application links.
+        // description it gives external links, nor do in-application links
+        // or footnote references.
         let description = match resolved.route {
-            LinkRoute::Follow => None,
+            LinkRoute::Follow | LinkRoute::Footnote(_) => None,
             LinkRoute::Unavailable(_) if resolved.withheld => None,
             _ => spec.link_description,
         };
         let label = text.job.text[bytes.clone()].trim().to_owned();
-        let identity = document.child(("link", *link));
+        let identity = document.child(resolved.key);
+        let follows = matches!(resolved.route, LinkRoute::Follow | LinkRoute::Footnote(_));
         let clip = ui.clip_rect();
         let visible = union(
             rects
@@ -1133,9 +1546,7 @@ fn present_text(
             .unwrap_or(0);
         // An agent's request to follow is a press, taken whatever the
         // pointer does.
-        let mut clicked = resolved.route == LinkRoute::Follow
-            && take_follow(ui.ctx(), identity.egui_id())
-            && active;
+        let mut clicked = follows && take_follow(ui.ctx(), identity.egui_id()) && active;
         let mut hovering = false;
         let mut focused = false;
         let mut primary_response = None;
@@ -1166,20 +1577,31 @@ fn present_text(
                 focused = response.has_focus();
                 primary_response = Some(response.clone());
             }
-            let tip = match resolved.route {
-                LinkRoute::Unavailable(reason) => format!("Unavailable: {reason}"),
-                _ => url.to_owned(),
-            };
-            response.on_hover_text(tip);
+            match resolved.route {
+                LinkRoute::Unavailable(reason) => {
+                    response.on_hover_text(format!("Unavailable: {reason}"));
+                }
+                // A footnote reference's destination is within view of
+                // the reader once followed.
+                LinkRoute::Footnote(_) => {}
+                LinkRoute::Open | LinkRoute::Follow => {
+                    response.on_hover_text(url);
+                }
+            }
         }
         if clicked {
             match resolved.route {
                 LinkRoute::Open => crate::open_new_tab(ui.ctx(), url),
                 LinkRoute::Follow => {
                     followed.get_or_insert_with(|| FollowedMarkdownLink {
-                        index: *link,
+                        index: resolved.index.unwrap_or(*link),
                         destination: url.to_owned(),
                     });
+                }
+                LinkRoute::Footnote(number) => {
+                    if let Some(footnote) = footnotes.iter().find(|note| note.number == number) {
+                        ui.scroll_to_rect(footnote.rect, Some(egui::Align::TOP));
+                    }
                 }
                 LinkRoute::Unavailable(_) => {}
             }
@@ -1214,10 +1636,9 @@ fn present_text(
             node.set_url(url);
             node.set_author_id(identity.semantic_id().0);
             match (description, resolved.route) {
-                (description, LinkRoute::Unavailable(reason)) => node.set_description(format!(
-                    "{}; unavailable: {reason}",
-                    description.unwrap_or_default()
-                )),
+                (description, LinkRoute::Unavailable(reason)) => node.set_description(
+                    crate::semantics::unavailable_description(description, reason),
+                ),
                 (Some(description), _) => node.set_description(description),
                 (None, _) => node.clear_description(),
             }
@@ -1248,9 +1669,9 @@ fn present_text(
         if let LinkRoute::Unavailable(reason) = resolved.route {
             node.disabled_reason = Some(reason.to_owned());
         }
-        if active && resolved.route == LinkRoute::Follow {
+        if active && follows {
             register_followable(ui.ctx(), node.id.clone(), identity.egui_id());
         }
-        link_nodes.push(node);
+        nodes.links.push(node);
     }
 }

@@ -49,8 +49,8 @@ pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
 pub use markdown::{
     DEFAULT_MARKDOWN_OPTIONS, FollowedMarkdownLink, MarkdownBlock, MarkdownBlockKind,
-    MarkdownHeading, MarkdownLink, MarkdownLinkKind, MarkdownOptions, MarkdownResponse,
-    MarkdownSourceMap, MarkdownSpec, markdown, markdown_source_map,
+    MarkdownFootnote, MarkdownHeading, MarkdownLink, MarkdownLinkKind, MarkdownOptions,
+    MarkdownResponse, MarkdownSourceMap, MarkdownSpec, markdown, markdown_source_map,
 };
 pub(crate) use markdown::{cancel_follow, followable_links, present_markdown, request_follow};
 pub use navigation::{

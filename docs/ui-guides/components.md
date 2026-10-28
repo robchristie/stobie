@@ -207,8 +207,9 @@ emphasis, strong, strikethrough, inline code and links. Code uses the
 `MonospaceTechnical` role in egui's bundled monospace face (Hack) on the
 raised surface; a code block wraps at the available width rather than
 scrolling sideways. Raw HTML is shown as written and never interpreted; an
-image shows its alternative text and loads nothing; tables are not
-recognised and keep their source text, as do footnotes, task lists and maths.
+image shows its alternative text and loads nothing. With the default options,
+tables, footnotes, task lists and maths are not recognised and keep their
+source text.
 Bare URLs are not linked; `<https://…>` and `<name@example.org>` autolinks
 are.
 
@@ -217,11 +218,36 @@ are.
 `DEFAULT_MARKDOWN_OPTIONS`, is strikethrough alone. An application that
 parses the same source itself, such as a document reader, passes the options
 it parses with so both parses find the same blocks. Raw HTML stays text and
-nesting stays within 16 levels under every option set. Extensions the recipe
-does not present yet keep their source form: inline maths as `$…$`, display
-maths as `$$…$$`, a footnote reference as `[^label]`, a footnote
-definition's text after `[^label]: `, a task-list item after `[ ] ` or
-`[x] `, and a table's cells a row to a line between `|` separators.
+nesting stays within 16 levels under every option set. The extensions present
+as follows when enabled.
+
+- **Task lists** (`ENABLE_TASKLISTS`): a task-list item shows a read-only
+  box in place of its bullet or number, filled in the accent colour with a
+  check mark when the task is done and outlined when it is not; in a column
+  too narrow to indent, the box takes the line the marker would. Each box is
+  a disabled AccessKit check box, toggled as the task is, named by its
+  item's first paragraph or heading ("Task" when the item has none), and a
+  `UiRole::Checkbox` node, not enabled, with `checked` set; nothing toggles
+  it. A marker pulldown-cmark reports outside an item's first line, such as
+  `- [ ]` followed by a blank line, still makes its item a task, and a marker
+  no item holds keeps its source text.
+- **Footnotes** (`ENABLE_FOOTNOTES`): footnotes are numbered from 1 in the
+  order their labels first appear, as a reference or a definition, matching
+  labels without regard to case. A reference shows its number as a raised
+  `[n]` and is a link, named `[n]`, with its label as `#label` for its value:
+  activating it by any link route, or an agent's `stobie.open-link`, scrolls
+  its definition into view and reports nothing to the application. A
+  reference whose definition is not presented is an unavailable link. The
+  definitions present where the source has them, after a short rule, as
+  muted blocks with their `[n]` number in a gutter (above the text in a
+  narrow column), whatever block opens them.
+- **Maths** (`ENABLE_MATH`): maths keeps its TeX source without its `$`
+  delimiters and is never typeset. Inline maths uses the italic monospace
+  face within its text; display maths alone in a paragraph is a block of its
+  own in the italic `MonospaceTechnical` role, indented, with its line breaks
+  kept and CRLF read as one break.
+- **Tables** (`ENABLE_TABLES`) keep their source form: a table's cells a row
+  to a line between `|` separators.
 
 `markdown_source_map(source, options, base)` reports, without presenting,
 every block the recipe presents for that source and those options, in
@@ -266,6 +292,16 @@ among the application's nodes, for example by naming the document in each;
 a heading past the end of the list, or given an empty ID, publishes no node.
 Stobie derives no IDs: the application chooses them, for example from each
 heading's text or source range in the source map.
+
+`MarkdownSpec::footnote_ids` gives the application's ID for each footnote
+definition, in the order `MarkdownSourceMap::footnotes` lists them; by
+default there are none. The source map's `MarkdownFootnote` carries each
+definition's label, number, source range and block. A definition with an ID
+is published as a `UiRole::Section` node with that ID, named by its number
+(`[1]`), which an agent or the application reveals as it does a heading.
+References reach their definitions with or without IDs. The task box's
+identity, like a heading's, is keyed by the item's place in the document, so
+it is the same at every width and text size.
 
 A link inside the text is underlined in `link_colour`, with a heavier
 underline and a pointing hand on hover, and a focus ring that clears its
@@ -344,10 +380,13 @@ behave as any copy control does, inside a message bubble too: they confirm
 without moving the bubble or each other.
 
 Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
-font_scale, observations)` and publish the returned `link_nodes` and
-`heading_nodes`; it presents no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
-production recipe and `markdown/code-copy` a reply with a copy control on
-each of its code blocks; the [evidence record](../markdown-evidence.md)
+font_scale, observations)` and publish the returned `link_nodes`,
+`heading_nodes`, `task_nodes` and `footnote_nodes`; it presents no copy
+controls. `MarkdownResponse` and `MarkdownLinkKind` are `#[non_exhaustive]`.
+Gallery `markdown/digest` and `markdown/long-narrow` use the production
+recipe, `markdown/code-copy` a reply with a copy control on each of its code
+blocks, and `markdown/document` a document with every extension but tables,
+heading and footnote IDs; the [evidence record](../markdown-evidence.md)
 retains the review.
 
 ## Links

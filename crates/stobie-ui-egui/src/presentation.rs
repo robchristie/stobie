@@ -1059,6 +1059,8 @@ impl PresentationContext {
             .link_nodes
             .into_iter()
             .chain(presented.heading_nodes)
+            .chain(presented.task_nodes)
+            .chain(presented.footnote_nodes)
         {
             node.domain_reference = self.domain_reference.clone();
             self.push_node(ui, node);

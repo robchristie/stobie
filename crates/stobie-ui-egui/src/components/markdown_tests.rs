@@ -682,6 +682,7 @@ const CLASSIFIED_SPEC: MarkdownSpec<'static> = MarkdownSpec {
     options: DEFAULT_MARKDOWN_OPTIONS,
     heading_ids: &[],
     link_kinds: &KINDS,
+    footnote_ids: &[],
 };
 
 #[test]
@@ -778,7 +779,7 @@ fn the_application_classifies_each_link_and_cannot_loosen_the_url_rules() {
         assert!(!lost.supports_action(egui::accesskit::Action::Click));
         assert_eq!(
             lost.description(),
-            Some(format!("; unavailable: {LOST}").as_str())
+            Some(format!("Unavailable: {LOST}").as_str())
         );
     }
 
@@ -1410,7 +1411,7 @@ fn the_source_map_names_each_presented_text_block() {
                 lines.contains(&"| Name | Wert |\n| α | 1 |"),
                 "{label}: {lines:#?}"
             );
-            assert!(lines.contains(&"[^n]: The note, ünïcode."), "{label}");
+            assert!(lines.contains(&"The note, ünïcode."), "{label}");
         }
     }
     // The default options present the same source without the extensions.
@@ -1580,5 +1581,392 @@ fn identities_do_not_depend_on_an_item_flattening_at_narrow_widths() {
         };
         assert_eq!(headings(&wide), heading_ids);
         assert_eq!(headings(&narrow), heading_ids);
+    }
+}
+
+/// Task lists, footnotes and maths, with a task whose text pulldown-cmark
+/// gives outside its item, a definition opening with a list, and display
+/// maths with CRLF line endings.
+const NOTES: &str = "## Reading list\r\n\r\n\
+- [x] Read the *survey* chapter\r\n\
+- [ ] Draft the summary[^draft]\r\n\r\n\
+1. [x] Numbered and done\r\n\
+2. [ ]\r\n\r\n   \
+Its text after a blank line.\r\n\r\n\
+The energy is $E = mc^2$ inline, as noted[^Draft].\r\n\r\n\
+$$\r\n\\int_0^1 x\\,dx = \\frac{1}{2}\r\n$$\r\n\r\n\
+> - [x] Quoted and done\r\n\r\n\
+[^draft]: - A definition opening with a list.\r\n    \
+- Its second item.\r\n";
+
+fn notes_spec(footnote_ids: &[SemanticUiId]) -> MarkdownSpec<'_> {
+    MarkdownSpec {
+        options: DOCUMENT,
+        footnote_ids,
+        ..MarkdownSpec::default()
+    }
+}
+
+fn nodes_of(presented: &Presented, role: UiRole) -> Vec<&UiNode> {
+    presented
+        .snapshot
+        .nodes
+        .iter()
+        .filter(|node| node.role == role)
+        .collect()
+}
+
+fn accessible<'a>(presented: &'a Presented, id: &SemanticUiId) -> &'a egui::accesskit::Node {
+    presented
+        .update
+        .nodes
+        .iter()
+        .map(|(_, node)| node)
+        .find(|node| node.author_id() == Some(id.0.as_str()))
+        .unwrap_or_else(|| panic!("{} in the AccessKit tree", id.0))
+}
+
+#[test]
+fn task_lists_footnotes_and_maths_present_at_every_width_size_and_contrast() {
+    let ids = [SemanticUiId::new("notes.footnote.draft")];
+    let map = crate::markdown_source_map(NOTES, DOCUMENT, 0);
+    assert_eq!(map.footnotes.len(), 1);
+    let mut identities = Vec::new();
+    for theme in [ThemeVariant::Dark, ThemeVariant::LightHighContrast] {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        for width in [PHONE, DESKTOP] {
+            for scale in [1.0, 1.5] {
+                let label = format!("{theme:?} {width} at {scale}");
+                let presented = present_spec(
+                    &context(),
+                    NOTES,
+                    width,
+                    scale,
+                    tokens,
+                    None,
+                    notes_spec(&ids),
+                );
+                assert_clean(&presented, &label);
+                // Each task's read-only box, named by its text, in order.
+                let tasks = nodes_of(&presented, UiRole::Checkbox);
+                assert_eq!(
+                    tasks
+                        .iter()
+                        .map(|node| (node.name.as_str(), node.checked, node.enabled))
+                        .collect::<Vec<_>>(),
+                    [
+                        ("Read the survey chapter", Some(true), false),
+                        ("Draft the summary[1]", Some(false), false),
+                        ("Numbered and done", Some(true), false),
+                        ("Task", Some(false), false),
+                        ("Quoted and done", Some(true), false),
+                    ],
+                    "{label}"
+                );
+                for node in &tasks {
+                    let box_ = accessible(&presented, &node.id);
+                    assert_eq!(box_.role(), egui::accesskit::Role::CheckBox, "{label}");
+                    assert!(box_.is_disabled(), "{label}");
+                    assert!(!box_.supports_action(egui::accesskit::Action::Click));
+                    assert_eq!(box_.description(), None, "{label}");
+                }
+                // No task's marker is left as text.
+                let lines: Vec<&str> = presented
+                    .kind(TextComponentKind::ReadingText)
+                    .into_iter()
+                    .filter_map(|text| text.content_text())
+                    .collect();
+                assert!(
+                    lines
+                        .iter()
+                        .all(|line| !line.contains("[ ]") && !line.contains("[x]")),
+                    "{label}: {lines:#?}"
+                );
+                // Maths keeps its source, without delimiters or CR.
+                assert!(
+                    lines.contains(&"\\int_0^1 x\\,dx = \\frac{1}{2}"),
+                    "{label}: {lines:#?}"
+                );
+                assert!(
+                    lines.contains(&"The energy is E = mc^2 inline, as noted[1]."),
+                    "{label}: {lines:#?}"
+                );
+                assert!(lines.iter().all(|line| !line.contains('\r')), "{label}");
+                // Both references link to the one definition.
+                let references: Vec<_> = presented
+                    .links()
+                    .into_iter()
+                    .filter(|node| node.name == "[1]")
+                    .collect();
+                assert_eq!(references.len(), 2, "{label}");
+                for reference in references {
+                    assert!(reference.enabled, "{label}");
+                    assert_eq!(reference.description, None, "{label}");
+                    let accessible = accessible(&presented, &reference.id);
+                    assert!(accessible.supports_action(egui::accesskit::Action::Click));
+                }
+                // The definition is a section with the application's ID,
+                // below every reference.
+                let sections: Vec<_> = nodes_of(&presented, UiRole::Section)
+                    .into_iter()
+                    .filter(|node| node.id == ids[0])
+                    .collect();
+                assert_eq!(sections.len(), 1, "{label}");
+                assert_eq!(sections[0].name, "[1]");
+                let marker = presented
+                    .kind(TextComponentKind::ListMarker)
+                    .into_iter()
+                    .any(|text| text.content_text() == Some("[1]"));
+                assert!(marker, "{label}: the definition's number is presented");
+                identities.push(presented.rects().into_keys().collect::<Vec<_>>());
+            }
+        }
+    }
+    // Every block keeps its identity at every width, size and contrast.
+    assert!(identities.windows(2).all(|pair| pair[0] == pair[1]));
+    // At desktop width, each box sits in the marker column, left of its
+    // text and within its first line.
+    let presented = present_spec(
+        &context(),
+        NOTES,
+        DESKTOP,
+        1.0,
+        tokens(),
+        None,
+        notes_spec(&ids),
+    );
+    let first = nodes_of(&presented, UiRole::Checkbox)[0].rect;
+    let text = presented
+        .kind(TextComponentKind::ReadingText)
+        .into_iter()
+        .find(|text| text.content_text() == Some("Read the survey chapter"))
+        .expect("the first task's text")
+        .allocated_rect;
+    assert!(first.max_x <= text.min_x, "{first:?} {text:?}");
+    assert!(
+        first.min_y >= text.min_y && first.max_y <= text.max_y,
+        "{first:?} {text:?}"
+    );
+}
+
+#[test]
+fn the_default_options_keep_task_footnote_and_maths_source() {
+    let presented = present(NOTES, DESKTOP, 1.0);
+    assert_clean(&presented, "default");
+    assert!(nodes_of(&presented, UiRole::Checkbox).is_empty());
+    let lines: Vec<&str> = presented
+        .kind(TextComponentKind::ReadingText)
+        .into_iter()
+        .filter_map(|text| text.content_text())
+        .collect();
+    assert!(lines.contains(&"[x] Read the survey chapter"), "{lines:#?}");
+    assert!(
+        lines.contains(&"The energy is $E = mc^2$ inline, as noted[^Draft]."),
+        "{lines:#?}"
+    );
+}
+
+type Published = Rc<RefCell<Vec<UiNode>>>;
+
+/// A harness presenting a reference far above its footnote's definition
+/// in a scroll area 400 points high.
+fn footnote_harness() -> (Harness<'static>, Published, SemanticUiId) {
+    let source: &'static str = Box::leak(
+        format!(
+            "Start with the note[^far].\n\n{}[^far]: The far note.\n",
+            "A paragraph to scroll past.\n\n".repeat(40)
+        )
+        .into_boxed_str(),
+    );
+    let ids: &'static [SemanticUiId] = Box::leak(Box::new([SemanticUiId::new("notes.far")]));
+    let nodes = Published::default();
+    let recorded = nodes.clone();
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(DESKTOP, 400.0))
+        .build_ui(move |ui| {
+            crate::install_typography_fonts(ui.ctx());
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                let mut p = PresentationContext::new(
+                    ui,
+                    tokens(),
+                    1.0,
+                    PresentationScope::new("reply"),
+                    SemanticUiId::root(),
+                );
+                p.markdown(ui, "body", source, notes_spec(ids));
+                assert!(p.followed_link().is_none(), "a footnote is not reported");
+                *recorded.borrow_mut() = p.finish(ui).semantic_nodes;
+            });
+        });
+    harness.run();
+    (harness, nodes, ids[0].clone())
+}
+
+#[test]
+fn a_footnote_reference_scrolls_its_definition_into_view() {
+    let shown =
+        |nodes: &Published, id: &SemanticUiId| nodes.borrow().iter().any(|node| node.id == *id);
+    // By pointer.
+    let (mut harness, nodes, definition) = footnote_harness();
+    assert!(
+        !shown(&nodes, &definition),
+        "the definition starts below the fold"
+    );
+    let reference = nodes
+        .borrow()
+        .iter()
+        .find(|node| node.role == UiRole::Link)
+        .cloned()
+        .expect("the reference");
+    assert_eq!(reference.name, "[1]");
+    assert_eq!(reference.value.as_deref(), Some("#far"));
+    let centre = egui::pos2(
+        (reference.rect.min_x + reference.rect.max_x) * 0.5,
+        (reference.rect.min_y + reference.rect.max_y) * 0.5,
+    );
+    click(&mut harness, centre, egui::PointerButton::Primary);
+    for _ in 0..4 {
+        harness.run();
+    }
+    assert!(shown(&nodes, &definition), "the definition is in view");
+    // By keyboard: Tab to the reference, then Enter.
+    let (mut harness, nodes, definition) = footnote_harness();
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+    assert!(
+        nodes
+            .borrow()
+            .iter()
+            .any(|node| node.name == "[1]" && node.focused)
+    );
+    harness.key_press(egui::Key::Enter);
+    for _ in 0..4 {
+        harness.run();
+    }
+    assert!(shown(&nodes, &definition), "the definition is in view");
+}
+
+#[test]
+fn a_named_heading_opening_a_narrow_item_is_named_by_its_own_text() {
+    let mut source: String = (0..6)
+        .map(|level| format!("{}- level {level}\n", "  ".repeat(level)))
+        .collect();
+    source.push_str(&format!("{}- ### Deep heading\n", "  ".repeat(6)));
+    let ids = [SemanticUiId::new("notes.deep")];
+    let spec = MarkdownSpec {
+        heading_ids: &ids,
+        ..MarkdownSpec::default()
+    };
+    for width in [200.0, DESKTOP] {
+        let presented = present_spec(&context(), &source, width, 1.5, tokens(), None, spec);
+        assert_clean(&presented, &format!("{width}"));
+        let headings = nodes_of(&presented, UiRole::Heading);
+        assert_eq!(headings.len(), 1);
+        assert_eq!(headings[0].name, "Deep heading", "{width}");
+        let heading = accessible(&presented, &ids[0]);
+        assert_eq!(
+            heading.value().or(heading.label()),
+            Some("Deep heading"),
+            "{width}"
+        );
+    }
+    // At 200 points the item is too narrow to indent: its marker leads the
+    // heading's text but not its name.
+    let narrow = present_spec(&context(), &source, 200.0, 1.5, tokens(), None, spec);
+    assert!(
+        narrow
+            .kind(TextComponentKind::ReadingText)
+            .into_iter()
+            .any(|text| text.content_text() == Some("• Deep heading"))
+    );
+}
+
+#[derive(
+    crate::Action, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Serialize,
+)]
+#[action(prefix = "notes")]
+enum Act {
+    #[action(label = "Close", description = "Close the notes")]
+    Close,
+}
+
+#[test]
+fn a_followed_link_reaches_the_root_from_every_nested_context() {
+    const LINKED: &str = "Read [Setting up](guide.md#setting-up) first.";
+    const IN_APPLICATION: [crate::MarkdownLinkKind<'static>; 1] =
+        [crate::MarkdownLinkKind::InApplication];
+    let spec = MarkdownSpec {
+        link_kinds: &IN_APPLICATION,
+        ..MarkdownSpec::default()
+    };
+    for context_kind in ["scoped", "bubble", "dialog", "code copy"] {
+        let rects = Rc::new(RefCell::new(Vec::<Rect>::new()));
+        let followed = Followed::default();
+        let (observed, follows) = (rects.clone(), followed.clone());
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(DESKTOP, 600.0))
+            .build_ui(move |ui| {
+                crate::install_typography_fonts(ui.ctx());
+                let mut p = PresentationContext::new(
+                    ui,
+                    tokens(),
+                    1.0,
+                    PresentationScope::new("reply"),
+                    SemanticUiId::root(),
+                );
+                match context_kind {
+                    "scoped" => p.scoped(ui, "item", |ui, p| {
+                        p.markdown(ui, "body", LINKED, spec);
+                    }),
+                    "bubble" => p.message_bubble(
+                        ui,
+                        ("message", 1),
+                        crate::MessageBubbleSpec {
+                            side: crate::MessageSide::Other,
+                            sender: "Ada",
+                        },
+                        |ui, p| {
+                            p.markdown(ui, "body", LINKED, spec);
+                        },
+                    ),
+                    "dialog" => {
+                        let dialog = crate::DialogSpec::new("Notes", Act::Close);
+                        p.dialog(
+                            ui,
+                            "notes",
+                            &dialog,
+                            |_, _| crate::Availability::Enabled,
+                            |ui, p| {
+                                p.markdown(ui, "body", LINKED, spec);
+                            },
+                        );
+                    }
+                    _ => {
+                        p.markdown_with_code_copy(ui, "body", LINKED, spec, &CODE_COPY);
+                    }
+                }
+                follows.borrow_mut().extend(p.followed_link().cloned());
+                *observed.borrow_mut() = p
+                    .finish(ui)
+                    .semantic_nodes
+                    .iter()
+                    .filter(|node| node.role == UiRole::Link)
+                    .map(|node| {
+                        Rect::from_min_max(
+                            egui::pos2(node.rect.min_x, node.rect.min_y),
+                            egui::pos2(node.rect.max_x, node.rect.max_y),
+                        )
+                    })
+                    .collect();
+            });
+        harness.run();
+        harness.run();
+        let link = rects.borrow().first().copied().expect(context_kind);
+        click(&mut harness, link.center(), egui::PointerButton::Primary);
+        assert_eq!(
+            taken(&followed),
+            [(0, "guide.md#setting-up".to_owned())],
+            "{context_kind}"
+        );
     }
 }

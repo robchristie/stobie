@@ -166,9 +166,9 @@ pub fn audit_accesskit(
         let expected_description = semantic.disabled_reason.as_ref().map_or_else(
             || semantic.description.clone(),
             |reason| {
-                Some(format!(
-                    "{}; unavailable: {reason}",
-                    semantic.description.as_deref().unwrap_or_default()
+                Some(unavailable_description(
+                    semantic.description.as_deref(),
+                    reason,
                 ))
             },
         );
@@ -302,6 +302,15 @@ pub fn audit_accesskit(
         }
     }
     findings
+}
+
+/// The accessible description of something unavailable for `reason`: its
+/// own description, if it has one, then the reason.
+pub(crate) fn unavailable_description(description: Option<&str>, reason: &str) -> String {
+    match description.filter(|description| !description.is_empty()) {
+        Some(description) => format!("{description}; unavailable: {reason}"),
+        None => format!("Unavailable: {reason}"),
+    }
 }
 
 /// The AccessKit role a semantic role presents as, or `None` for layout
