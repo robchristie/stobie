@@ -66,3 +66,40 @@ fn the_application_keeps_its_session_running_after_its_supervisor_goes() {
 
     let _ = std::fs::remove_dir_all(&runtime);
 }
+
+#[test]
+fn a_supervisor_that_cannot_take_the_lock_leaves_no_earlier_log_behind() {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::DirBuilderExt;
+    let runtime = std::env::temp_dir().join(format!("stobie-stale-log-{}", std::process::id()));
+    let sessions = runtime.join("stobie");
+    let directory = sessions.join("taken.d");
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(&directory)
+        .unwrap();
+    // An earlier run's log, and a lock someone else holds.
+    std::fs::write(sessions.join("taken.log"), "an earlier run's last words\n").unwrap();
+    let lock = std::fs::File::create(directory.join("supervisor.lock")).unwrap();
+    assert_eq!(
+        unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
+        0
+    );
+    let status = Command::new(env!("CARGO_BIN_EXE_stobie"))
+        .arg("__supervise")
+        .arg("taken")
+        .arg(&directory)
+        .arg("/bin/true")
+        .env("XDG_RUNTIME_DIR", &runtime)
+        .stdin(Stdio::null())
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(1));
+    assert_eq!(
+        std::fs::read_to_string(sessions.join("taken.log")).unwrap(),
+        "the supervisor could not take the session lock\n"
+    );
+    drop(lock);
+    let _ = std::fs::remove_dir_all(&runtime);
+}

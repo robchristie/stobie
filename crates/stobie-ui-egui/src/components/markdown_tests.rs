@@ -1039,3 +1039,22 @@ fn text_rect(rect: crate::TextRect) -> Rect {
         egui::pos2(rect.max_x, rect.max_y),
     )
 }
+
+#[test]
+fn a_code_block_shows_a_tab_as_four_spaces() {
+    // Copy keeps the tab; the block lays it out as four spaces.
+    let code = |source: &str| {
+        let presented = present(source, PHONE, 1.0);
+        let text = presented
+            .layouts
+            .iter()
+            .find(|text| text.role == TextRole::MonospaceTechnical)
+            .cloned()
+            .expect("a code block");
+        (text.painted_rect, text.line_count)
+    };
+    assert_eq!(
+        code("```\nfor x in xs:\n\tprint(x)\n```"),
+        code("```\nfor x in xs:\n    print(x)\n```")
+    );
+}

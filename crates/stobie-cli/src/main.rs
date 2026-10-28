@@ -1039,9 +1039,7 @@ fn launch(args: &Args, name: &str) -> Result<Output, ClientError> {
             )
         }
     };
-    let program = std::fs::canonicalize(&program).map_err(|error| {
-        ClientError::usage(format!("cannot find {}: {error}", program.display()))
-    })?;
+    let program = session::find_program(&program, std::env::var_os("PATH").as_deref())?;
     let answered = |socket: &std::path::Path| {
         Client::new(SocketTransport::new(socket))
             .with_timeout(Duration::from_secs(2))

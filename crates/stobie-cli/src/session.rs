@@ -403,6 +403,22 @@ pub fn launch(
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+    // The supervisor exits with the application's status once it has
+    // cleaned up, which follows the application's exit closely.
+    let waited = Instant::now();
+    let status = loop {
+        match supervisor.try_wait() {
+            Ok(Some(status)) => break status.code(),
+            Ok(None) if waited.elapsed() < Duration::from_secs(2) => {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            _ => break None,
+        }
+    };
+    let exited = match status {
+        Some(code) => format!("the application exited with status {code} before answering"),
+        None => "the application exited before answering".to_owned(),
+    };
     let tail = std::fs::read_to_string(&log).unwrap_or_default();
     let tail: String = tail
         .lines()
@@ -415,22 +431,31 @@ pub fn launch(
         .join("\n");
     Err(ClientError::new(
         "launch_failed",
-        format!("the application exited before answering. Last log lines:\n{tail}"),
+        format!("{exited}. Last log lines:\n{tail}"),
         "run the program directly to see why it exits",
     ))
 }
 
 /// The supervisor: run the application with its automation socket, record
-/// the session, and clean up when the application exits.
+/// the session, and clean up when the application exits. It exits with the
+/// application's status, or 128 plus the signal that ended it, as a shell
+/// reports one.
 pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[String]) -> i32 {
+    use std::io::Write;
+    use std::os::unix::process::ExitStatusExt;
     let socket = directory.join("app.sock");
-    // Held for this process's life, and inherited by the application.
-    let Some(lock) = hold_lock(&directory.join(LOCK_FILE)) else {
-        return 1;
-    };
-    let log = log_path(name)
+    // This run's log starts before anything can fail, so `launch` never
+    // quotes an earlier run's.
+    let mut log = log_path(name)
         .ok()
         .and_then(|path| std::fs::File::create(path).ok());
+    // Held for this process's life, and inherited by the application.
+    let Some(lock) = hold_lock(&directory.join(LOCK_FILE)) else {
+        if let Some(log) = &mut log {
+            let _ = writeln!(log, "the supervisor could not take the session lock");
+        }
+        return 1;
+    };
     let mut command = std::process::Command::new(program);
     command
         .args(arguments)
@@ -467,7 +492,47 @@ pub fn supervise(name: &str, directory: &Path, program: &Path, arguments: &[Stri
         remove(name);
     }
     let _ = std::fs::remove_dir_all(directory);
-    status.ok().and_then(|status| status.code()).unwrap_or(0)
+    status
+        .ok()
+        .and_then(|status| {
+            status
+                .code()
+                .or_else(|| status.signal().map(|signal| 128 + signal))
+        })
+        .unwrap_or(1)
+}
+
+/// The program `launch -- PROGRAM` runs: `program` itself when it names a
+/// path, or else the first executable file of that name in `path`, the
+/// value of `PATH`, as a shell finds one.
+pub fn find_program(
+    program: &Path,
+    path: Option<&std::ffi::OsStr>,
+) -> Result<PathBuf, ClientError> {
+    use std::os::unix::fs::PermissionsExt;
+    let bare = program.components().count() == 1 && program.parent() == Some(Path::new(""));
+    let found = if bare {
+        path.into_iter()
+            .flat_map(std::env::split_paths)
+            .map(|directory| directory.join(program))
+            .find(|candidate| {
+                std::fs::metadata(candidate).is_ok_and(|metadata| {
+                    metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+                })
+            })
+            .ok_or_else(|| {
+                ClientError::usage(format!("cannot find {} on PATH", program.display()))
+            })?
+    } else {
+        program.to_path_buf()
+    };
+    std::fs::metadata(&found)
+        .map_err(|error| ClientError::usage(format!("cannot find {}: {error}", found.display())))?;
+    // Absolute, as the supervisor may run elsewhere, but not resolved: a
+    // multi-call program, such as rustup's `cargo`, acts on the name it was
+    // run by.
+    std::path::absolute(&found)
+        .map_err(|error| ClientError::usage(format!("cannot find {}: {error}", found.display())))
 }
 
 /// Lock `path` exclusively. The lock closes on `exec`, so only a child
@@ -580,5 +645,61 @@ mod tests {
             "nobody holds the lock once both have gone"
         );
         let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn a_bare_program_name_is_found_on_path_as_a_shell_finds_it() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("stobie-path-{}", std::process::id()));
+        let (first, second) = (root.join("first"), root.join("second"));
+        for directory in [&first, &second] {
+            std::fs::create_dir_all(directory).unwrap();
+        }
+        let file = |path: &Path, mode: u32| {
+            std::fs::write(path, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).unwrap();
+        };
+        // Only an executable file counts, and the first directory wins.
+        file(&first.join("tool"), 0o644);
+        file(&second.join("tool"), 0o755);
+        file(&second.join("plain"), 0o644);
+        let path = std::env::join_paths([&first, &second]).unwrap();
+        assert_eq!(
+            find_program(Path::new("tool"), Some(&path)).unwrap(),
+            second.join("tool")
+        );
+        file(&first.join("tool"), 0o755);
+        assert_eq!(
+            find_program(Path::new("tool"), Some(&path)).unwrap(),
+            first.join("tool")
+        );
+        // A link is run by its own name, as a multi-call program needs.
+        std::os::unix::fs::symlink(second.join("tool"), first.join("alias")).unwrap();
+        assert_eq!(
+            find_program(Path::new("alias"), Some(&path)).unwrap(),
+            first.join("alias")
+        );
+        for missing in ["plain", "absent"] {
+            assert_eq!(
+                find_program(Path::new(missing), Some(&path))
+                    .unwrap_err()
+                    .message,
+                format!("cannot find {missing} on PATH")
+            );
+        }
+        assert!(find_program(Path::new("tool"), None).is_err());
+        // A path is taken as given, not searched for.
+        let relative = Path::new("./tool");
+        assert!(
+            find_program(relative, Some(&path))
+                .unwrap_err()
+                .message
+                .starts_with("cannot find ./tool: ")
+        );
+        assert_eq!(
+            find_program(&second.join("plain"), Some(&path)).unwrap(),
+            second.join("plain")
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

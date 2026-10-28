@@ -175,7 +175,7 @@ impl Builder {
                 if text.ends_with('\n') {
                     text.pop();
                 }
-                Block::Code(text.replace('\t', "    "))
+                Block::Code(text)
             }
         };
         self.blocks().push(block);
@@ -455,7 +455,7 @@ mod tests {
         );
         assert_eq!(
             blocks[7],
-            Block::Code("fn main() {\n    println!();\n}".to_owned())
+            Block::Code("fn main() {\n\tprintln!();\n}".to_owned())
         );
         assert_eq!(blocks[8], Block::Code("indented code".to_owned()));
         assert_eq!(blocks[9], Block::Rule);

@@ -18,23 +18,20 @@ CRATES = (
     "stobie-render-wgpu",
     "stobie-ui-egui",
 )
-EXPECTED_EXAMPLES = {crate: 1 for crate in CRATES}
-EXPECTED_EXAMPLES["stobie-ui-egui"] = 20  # Composition, derived actions, icon toolbar, navigation, status-chip, reading-text, Markdown, local-time, row-action, avatar, message-bubble, copy, responsive-navigation, navigation-options, dialog, anchored-scroll, text-field, code-copy, heading-row and segmented-choice consumers.
-EXPECTED_EXAMPLES["stobie-core"] = 3  # Generic undo history, workspace commands and a small layout.
-EXPECTED_EXAMPLES["stobie-imaging"] = 1  # Image command history.
+# The source files whose rustdoc examples are selected consumers: exactly the
+# crates' files with Rust examples, so a new example's file must be named
+# here. Each crate's example count is derived from these files and must equal
+# what `cargo test --doc` runs.
 SOURCE_CONSUMERS = (
     "crates/stobie-core/src/dock.rs",
     "crates/stobie-core/src/history.rs",
     "crates/stobie-imaging/src/lib.rs",
-    "crates/stobie-imaging/src/data.rs",
-    "crates/stobie-imaging/src/commands.rs",
     "crates/stobie-runtime/src/lib.rs",
     "crates/stobie-render-wgpu/src/lib.rs",
     "crates/stobie-ui-egui/src/lib.rs",
     "crates/stobie-ui-egui/src/actions.rs",
     "crates/stobie-ui-egui/src/presentation.rs",
     "crates/stobie-ui-egui/src/presentation/chat.rs",
-    "crates/stobie-ui-egui/src/components/action_button.rs",
     "crates/stobie-ui-egui/src/local_time.rs",
     "crates/stobie-ui-egui/src/components/avatar.rs",
     "crates/stobie-ui-egui/src/presentation/copy.rs",
@@ -89,20 +86,46 @@ def local_links(root: Path, consumers=MARKDOWN_CONSUMERS) -> int:
     return checked
 
 
+# Rustdoc treats a fence as Rust unless its info string names another
+# language; these are the attributes it reads as Rust.
+RUST_ATTRIBUTES = {"rust", "ignore", "no_run", "should_panic", "compile_fail", "test_harness"}
+
+
+def rust_examples(path: Path, name: str) -> int:
+    """The runnable Rust examples in one source file's doc comments."""
+    fences = re.findall(r"^\s*//[/!]\s*```([^\n]*)", path.read_text(encoding="utf-8"), re.M)
+    if len(fences) % 2:
+        raise ValueError(f"{name}: unclosed rustdoc example")
+    count = 0
+    for opening, closing in zip(fences[::2], fences[1::2]):
+        if closing.strip():
+            raise ValueError(f"{name}: unclosed rustdoc example")
+        attributes = {attribute.strip() for attribute in opening.split(",") if attribute.strip()}
+        if attributes and not attributes & RUST_ATTRIBUTES and not any(a.startswith("edition") for a in attributes):
+            continue  # Another language, such as text or toml.
+        if attributes - {"rust"}:
+            raise ValueError(f"{name}: selected examples must run; unsupported treatment {opening!r}")
+        count += 1
+    return count
+
+
 def coverage(root: Path) -> dict[str, int]:
+    """Each crate's rustdoc example count, derived from its sources."""
     expected = {crate: 0 for crate in CRATES}
-    for consumer in SOURCE_CONSUMERS:
-        text = (root / consumer).read_text(encoding="utf-8")
-        fences = re.findall(r"^\s*//[/!]\s*```([^\n]*)", text, re.M)
-        if len(fences) % 2:
-            raise ValueError(f"{consumer}: unclosed selected rustdoc example")
-        for opening, closing in zip(fences[::2], fences[1::2]):
-            if opening.strip() not in ("", "rust") or closing.strip():
-                raise ValueError(f"{consumer}: selected examples must run; unsupported treatment {opening!r}")
-            crate = Path(consumer).parts[1]
-            expected[crate] += 1
-    if expected != EXPECTED_EXAMPLES:
-        raise ValueError(f"selected crate examples must be explicitly accounted for (declared per crate): {expected}")
+    found = set()
+    for crate in CRATES:
+        for path in sorted((root / "crates" / crate / "src").rglob("*.rs")):
+            name = path.relative_to(root).as_posix()
+            count = rust_examples(path, name)
+            if count:
+                found.add(name)
+                expected[crate] += count
+    if unselected := sorted(found - set(SOURCE_CONSUMERS)):
+        raise ValueError(f"unaccounted rustdoc examples in {', '.join(unselected)}; select them in SOURCE_CONSUMERS")
+    if stale := sorted(set(SOURCE_CONSUMERS) - found):
+        raise ValueError(f"selected consumers without a runnable example: {', '.join(stale)}")
+    if empty := [crate for crate, count in expected.items() if not count]:
+        raise ValueError(f"crates without a selected example: {', '.join(empty)}")
     for consumer in MARKDOWN_CONSUMERS:
         if re.search(r"^```(?:rust|no_run|ignore|compile_fail)\b", (root / consumer).read_text(), re.M):
             raise ValueError(f"{consumer}: unaccounted Markdown Rust example; register an executable consumer")

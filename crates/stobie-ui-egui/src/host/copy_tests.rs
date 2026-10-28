@@ -442,7 +442,7 @@ struct Reply {
 }
 
 const REPLY: &str = "Install it, then check it:\n\n```sh\npip install example\n```\n\n\
-Tabs become spaces and the final line break goes:\n\n```\nfor x in xs:\n\tprint(x)\n\n```\n";
+Tabs stay tabs and the final line break goes:\n\n```\nfor x in xs:\n\tprint(x)\n\n```\n";
 
 impl Application for Reply {
     type Action = Act;
@@ -594,7 +594,7 @@ fn each_code_block_in_a_message_bubble_copies_its_own_text() {
         harness.run();
         assert_eq!(
             std::mem::take(&mut *copied.borrow_mut()),
-            ["for x in xs:\n    print(x)\n"]
+            ["for x in xs:\n\tprint(x)\n"]
         );
         harness.get_by_label("Copy code").click();
         harness.run();
@@ -713,7 +713,7 @@ fn a_growing_reply_keeps_each_controls_key_and_confirmation() {
     };
     assert_eq!(receipt.state, ReceiptState::Queued, "{receipt:?}");
     harness.run();
-    assert_eq!(copied.borrow().as_slice(), ["for x in xs:\n    print(x)\n"]);
+    assert_eq!(copied.borrow().as_slice(), ["for x in xs:\n\tprint(x)\n"]);
 }
 
 /// The AccessKit tree as kittest holds it, for the parity audit.
