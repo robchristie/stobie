@@ -35,8 +35,23 @@ pub struct BrowserTransport {
     websocket: Option<String>,
 }
 
-fn cdp_error(context: &str, error: CdpError) -> ClientError {
+/// Classify a DevTools failure of an operation bounded by `deadline`.
+///
+/// lantern bounds every connect, read and write by the deadline but reports
+/// a deadline that passes while it lists pages, connects to the page or
+/// before it sends a command as a transport failure, as it does a refused
+/// connection. Such a failure once the deadline has passed is a timeout, as
+/// the socket transport and the Node client report it; otherwise the
+/// browser could not be reached.
+fn cdp_error(context: &str, error: CdpError, deadline: Instant) -> ClientError {
     match error {
+        CdpError::Unreachable { source } | CdpError::WebSocketTransport { source, .. }
+            if Instant::now() >= deadline =>
+        {
+            ClientError::timeout(format!(
+                "{context}: the deadline passed before the browser answered: {source}"
+            ))
+        }
         CdpError::Unreachable { source } | CdpError::WebSocketTransport { source, .. } => {
             ClientError::connection(
                 format!("{context}: {source}"),
@@ -84,7 +99,7 @@ impl BrowserTransport {
         let targets = CdpClient::new(endpoint)
             .with_deadline(deadline)
             .targets()
-            .map_err(|error| cdp_error("cannot list the browser's pages", error))?;
+            .map_err(|error| cdp_error("cannot list the browser's pages", error, deadline))?;
         let pages: Vec<&TargetInfo> = targets
             .iter()
             .filter(|target| target.kind == "page")
@@ -119,13 +134,13 @@ impl BrowserTransport {
             )
         })?;
         CdpWebSocket::connect_until(&url, deadline)
-            .map_err(|error| cdp_error("cannot connect to the page", error))
+            .map_err(|error| cdp_error("cannot connect to the page", error, deadline))
     }
 
     /// A PNG of the page's canvas.
     pub fn screenshot(&mut self, deadline: Instant) -> Result<Vec<u8>, ClientError> {
         let mut socket = self.socket(deadline)?;
-        let measure = |error| cdp_error("cannot measure the canvas", error);
+        let measure = |error| cdp_error("cannot measure the canvas", error, deadline);
         let document = socket
             .call("DOM.getDocument", Some(json!({ "depth": 0 })))
             .map_err(measure)?;
@@ -165,7 +180,7 @@ impl BrowserTransport {
                     "clip": { "x": left, "y": top, "width": right - left, "height": bottom - top, "scale": 1 },
                 })),
             )
-            .map_err(|error| cdp_error("the screenshot failed", error))?;
+            .map_err(|error| cdp_error("the screenshot failed", error, deadline))?;
         let data = shot["data"].as_str().ok_or_else(|| {
             ClientError::new(
                 "capture_failed",
@@ -251,7 +266,7 @@ impl Transport for BrowserTransport {
                     "awaitPromise": true,
                 })),
             )
-            .map_err(|error| cdp_error("the request could not reach the page", error))?;
+            .map_err(|error| cdp_error("the request could not reach the page", error, deadline))?;
         if let Some(exception) = reply.get("exceptionDetails") {
             let description = exception["exception"]["description"]
                 .as_str()
@@ -438,6 +453,46 @@ mod tests {
         assert_eq!(transport.target(deadline).unwrap().id, "P");
         let wrong = ClientError::usage("several pages match: P");
         assert!(!no_page_matches(&wrong));
+    }
+
+    /// A transport whose page WebSocket is at `address`, without listing
+    /// pages first.
+    fn page_at(address: std::net::SocketAddr) -> BrowserTransport {
+        let mut transport = BrowserTransport::new(
+            &format!("http://{address}"),
+            PageSelector::Target("P".into()),
+        )
+        .unwrap();
+        transport.websocket = Some(format!("ws://{address}/devtools/page/P"));
+        transport
+    }
+
+    #[test]
+    fn a_deadline_that_passes_before_the_request_reaches_the_page_is_a_timeout() {
+        use std::time::Duration;
+        // A browser that accepts the connection but never completes the
+        // WebSocket handshake: the deadline passes while connecting, as it
+        // can when a wait's last poll starts just before its deadline. The
+        // Node client and the socket transport report that as a timeout.
+        let stalled = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let mut transport = page_at(stalled.local_addr().unwrap());
+        let error = transport
+            .request("{}", Instant::now() + Duration::from_millis(200))
+            .unwrap_err();
+        assert_eq!(error.code, "timeout", "{error:?}");
+        assert_eq!(error.class(), crate::ErrorClass::Deadline);
+        // A deadline that has already passed is a timeout without connecting.
+        let error = transport.request("{}", Instant::now()).unwrap_err();
+        assert_eq!(error.code, "timeout", "{error:?}");
+        drop(stalled);
+        // A browser that is gone, with time to spare, is a connection failure.
+        let gone = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = gone.local_addr().unwrap();
+        drop(gone);
+        let error = page_at(address)
+            .request("{}", Instant::now() + Duration::from_secs(5))
+            .unwrap_err();
+        assert_eq!(error.code, "connection_failed", "{error:?}");
     }
 
     fn classify(state: serde_json::Value) -> String {
