@@ -42,6 +42,7 @@ SOURCE_CONSUMERS = (
     "crates/stobie-ui-egui/src/presentation/code_copy.rs",
     "crates/stobie-ui-egui/src/presentation/heading.rs",
     "crates/stobie-ui-egui/src/presentation/choice.rs",
+    "crates/stobie-ui-egui/src/components/markdown/mod.rs",
 )
 MARKDOWN_CONSUMERS = (
     "README.md",
