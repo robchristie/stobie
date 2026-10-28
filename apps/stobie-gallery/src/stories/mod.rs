@@ -139,7 +139,7 @@ fn present_story(
         StoryId::RowsActions | StoryId::RowsLongNarrow => {
             rows::story(ui, story, tokens, font_scale, &mut state.rows, &mut report)
         }
-        StoryId::MarkdownDigest | StoryId::MarkdownLongNarrow => {
+        StoryId::MarkdownDigest | StoryId::MarkdownLongNarrow | StoryId::MarkdownDocument => {
             markdown::story(ui, story, tokens, font_scale, &mut report)
         }
         StoryId::ComposerChat | StoryId::ComposerLongNarrow => composer::story(

@@ -302,10 +302,9 @@ pub fn link(
             node.set_url(spec.url);
             node.set_author_id(identity.semantic_id().0);
             match (spec.description, valid) {
-                (description, false) => node.set_description(format!(
-                    "{}; unavailable: {INVALID_LINK_URL}",
-                    description.unwrap_or_default()
-                )),
+                (description, false) => node.set_description(
+                    crate::semantics::unavailable_description(description, INVALID_LINK_URL),
+                ),
                 (Some(description), true) => node.set_description(description),
                 (None, true) => node.clear_description(),
             }

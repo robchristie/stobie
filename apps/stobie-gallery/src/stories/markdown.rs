@@ -1,7 +1,8 @@
 use eframe::egui;
 use stobie_ui_egui::{
-    ContentTextSpec, DesignTokens, MarkdownSpec, PresentationContext, PresentationScope,
-    ReadingTextSpec, SemanticUiId, TextInteraction, TextOverflow, TextRole, observe_visible_only,
+    ContentTextSpec, DEFAULT_MARKDOWN_OPTIONS, DesignTokens, MarkdownOptions, MarkdownSpec,
+    PresentationContext, PresentationScope, ReadingTextSpec, SemanticUiId, TextInteraction,
+    TextOverflow, TextRole, markdown_source_map, observe_visible_only,
 };
 
 use super::StoryReport;
@@ -44,6 +45,54 @@ shows its description.\n\n\
 ---\n\n\
 The reply is still arriving: [the survey](https://example.org/papers/survey) \
 and **partial text with an open [link](https://exam";
+
+/// The extensions a knowledge document uses, short of tables.
+const DOCUMENT_OPTIONS: MarkdownOptions = DEFAULT_MARKDOWN_OPTIONS
+    .union(MarkdownOptions::ENABLE_TASKLISTS)
+    .union(MarkdownOptions::ENABLE_FOOTNOTES)
+    .union(MarkdownOptions::ENABLE_MATH);
+
+/// Field notes as a document repository holds them, with CRLF line endings:
+/// tasks (one whose marker stands alone, its text a paragraph after the list,
+/// as pulldown-cmark reads it), footnotes (one opening with a list), and
+/// inline and display maths.
+pub(crate) const DOCUMENT: &str = "# Rock-pool survey\r\n\r\n\
+Notes from three low tides on the northern platform, with the open tasks and \
+the arithmetic behind each count.[^tides]\r\n\r\n\
+## Open tasks\r\n\r\n\
+- [x] Photograph the northern pools\r\n\
+- [ ] Count the anemones in pool C[^count]\r\n\
+- [ ]\r\n\r\n  \
+Compare the counts with last season's survey, which used a coarser grid.\r\n\r\n\
+## Density\r\n\r\n\
+Density is $d = n / A$ for $n$ animals in an area $A$, so pool C holds:\r\n\r\n\
+$$\r\nd_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}\r\n$$\r\n\r\n\
+Pool A was too deep to grid on the second tide, so its estimate rests on two \
+counts. Pool B dried out at the edges, and the count there includes only the \
+wet area. Pool D is new this season.\r\n\r\n\
+## Method\r\n\r\n\
+Each count follows the grid laid at the first tide, read from the seaward \
+corner. The tally sheets are in the appendix, with the photographs filed by \
+pool and tide.\r\n\r\n\
+[^tides]: Each visit began an hour before low water.\r\n\r\n\
+[^count]: - Anemones closed by the sun were counted once.\r\n    \
+- Animals on the grid line were counted with the square to their north.\r\n";
+
+/// A heading's ID as an application might derive it: the document's name and
+/// the heading's text.
+fn heading_id(text: &str) -> SemanticUiId {
+    let slug: String = text
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    SemanticUiId::new(format!("gallery.document.{slug}"))
+}
 
 /// Mail and a link inside a disabled region.
 const DISABLED: &str = "Archived: [the original thread](https://example.org/archive) \
@@ -95,10 +144,25 @@ fn conversation(
         ..MarkdownSpec::default()
     };
     egui::ScrollArea::vertical()
-        .id_salt("markdown-scroll")
+        .id_salt(("markdown-scroll", story.as_str()))
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            if story == StoryId::MarkdownDigest {
+            if story == StoryId::MarkdownDocument {
+                let map = markdown_source_map(DOCUMENT, DOCUMENT_OPTIONS, 0);
+                let headings: Vec<_> = map.headings.iter().map(|h| heading_id(&h.text)).collect();
+                let footnotes: Vec<_> = map
+                    .footnotes
+                    .iter()
+                    .map(|f| SemanticUiId::new(format!("gallery.document.footnote-{}", f.label)))
+                    .collect();
+                let spec = MarkdownSpec {
+                    options: DOCUMENT_OPTIONS,
+                    heading_ids: &headings,
+                    footnote_ids: &footnotes,
+                    ..MarkdownSpec::default()
+                };
+                p.markdown(ui, "document", DOCUMENT, spec);
+            } else if story == StoryId::MarkdownDigest {
                 p.scoped(ui, "request", |ui, p| {
                     byline(ui, p, "You");
                     p.reading_text(ui, "body", REQUEST, ReadingTextSpec::default());
@@ -128,8 +192,8 @@ fn conversation(
 #[cfg(test)]
 mod tests {
     use stobie_ui_egui::{
-        ApplicationTheme, DensityVariant, TextComponentKind, ThemeVariant, UiRole, audit_accesskit,
-        audit_text_layouts,
+        ApplicationTheme, DensityVariant, TextComponentKind, TextContent, ThemeVariant, UiRole,
+        audit_accesskit, audit_text_layouts,
     };
 
     use super::*;
@@ -190,6 +254,91 @@ mod tests {
         let update = output.platform_output.accesskit_update.take().unwrap();
         let findings = audit_accesskit(&snapshot, &update);
         assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// The document story at phone and desktop widths, at 100% and 150%
+    /// text, in dark and light high contrast: its read-only task boxes, its
+    /// headings with the application's IDs, a footnote reference and maths
+    /// in its technical face, with clean text and AccessKit audits.
+    #[test]
+    fn document_presents_tasks_headings_footnotes_and_maths_at_each_width_and_contrast() {
+        let headings = [
+            ("gallery.document.rock-pool-survey", "Rock-pool survey"),
+            ("gallery.document.open-tasks", "Open tasks"),
+        ];
+        for (variant, scale, size) in [
+            (ThemeVariant::Dark, 1.0, egui::vec2(616.0, 1600.0)),
+            (
+                ThemeVariant::LightHighContrast,
+                1.5,
+                egui::vec2(296.0, 3200.0),
+            ),
+        ] {
+            let (snapshot, mut output) = probe(StoryId::MarkdownDocument, variant, scale, size);
+            let label = format!("{variant:?} at {scale}");
+            let findings = audit_text_layouts(&snapshot.text);
+            assert!(findings.is_empty(), "{label}: {findings:#?}");
+            let tasks: Vec<_> = snapshot
+                .nodes
+                .iter()
+                .filter(|node| node.role == UiRole::Checkbox)
+                .map(|node| (node.name.as_str(), node.checked, node.enabled))
+                .collect();
+            assert_eq!(
+                tasks,
+                [
+                    ("Photograph the northern pools", Some(true), false),
+                    ("Count the anemones in pool C[2]", Some(false), false),
+                    // pulldown-cmark ends this item at the blank line, so
+                    // its text is a paragraph after the list.
+                    ("Task", Some(false), false),
+                ],
+                "{label}"
+            );
+            for (id, name) in headings {
+                let node = snapshot
+                    .nodes
+                    .iter()
+                    .find(|node| node.id.0 == id)
+                    .unwrap_or_else(|| panic!("{label}: heading {id}"));
+                assert_eq!(
+                    (node.role, node.name.as_str()),
+                    (UiRole::Heading, name),
+                    "{label}"
+                );
+            }
+            let reference = snapshot
+                .nodes
+                .iter()
+                .find(|node| node.role == UiRole::Link && node.name == "[1]")
+                .unwrap_or_else(|| panic!("{label}: the first footnote reference"));
+            assert!(
+                reference.enabled && reference.disabled_reason.is_none(),
+                "{label}"
+            );
+            for id in [
+                "gallery.document.footnote-tides",
+                "gallery.document.footnote-count",
+            ] {
+                let note = snapshot.nodes.iter().find(|node| node.id.0 == id);
+                assert_eq!(
+                    note.map(|node| node.role),
+                    Some(UiRole::Section),
+                    "{label}: {id}"
+                );
+            }
+            assert!(
+                snapshot.text.iter().any(|text| {
+                    text.role == TextRole::MonospaceTechnical
+                        && matches!(&text.content, Some(TextContent::Excerpt { text, .. })
+                            if text.contains("\\frac{42}") && !text.contains('\r'))
+                }),
+                "{label}: display maths as source, without a carriage return"
+            );
+            let update = output.platform_output.accesskit_update.take().unwrap();
+            let findings = audit_accesskit(&snapshot, &update);
+            assert!(findings.is_empty(), "{label}: {findings:?}");
+        }
     }
 
     #[test]

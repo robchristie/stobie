@@ -408,10 +408,9 @@ pub(crate) fn present_button(
                 });
             }
             match (face.description, face.availability.disabled_reason()) {
-                (description, Some(reason)) => node.set_description(format!(
-                    "{}; unavailable: {reason}",
-                    description.unwrap_or_default()
-                )),
+                (description, Some(reason)) => node.set_description(
+                    crate::semantics::unavailable_description(description, reason),
+                ),
                 (Some(description), None) => node.set_description(description),
                 (None, None) => node.clear_description(),
             }

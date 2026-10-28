@@ -29,8 +29,9 @@ enum Intent {
     Follow(String),
 }
 
-/// Synthetic documents, by name, that link to one another by relative URL.
-const DOCUMENTS: [(&str, &str); 2] = [
+/// Synthetic documents, by name, that link to one another by relative URL;
+/// the notes refer to a footnote far below.
+const DOCUMENTS: [(&str, &str); 3] = [
     (
         "index.md",
         "# Index\n\nStart with [Setting up](guide.md#setting-up), read [the site](https://example.org/site), \
@@ -40,7 +41,19 @@ const DOCUMENTS: [(&str, &str); 2] = [
         "guide.md",
         "# Guide\n\nA short introduction.\n\n## Setting up\n\nBack to [the index](index.md).\n",
     ),
+    (
+        "notes.md",
+        concat!(
+            "# Notes\n\nSee the note[^far].\n\n",
+            "Paragraph 1 of the notes, to scroll past.\n\nParagraph 2 of the notes, to scroll past.\n\nParagraph 3 of the notes, to scroll past.\n\nParagraph 4 of the notes, to scroll past.\n\nParagraph 5 of the notes, to scroll past.\n\nParagraph 6 of the notes, to scroll past.\n\nParagraph 7 of the notes, to scroll past.\n\nParagraph 8 of the notes, to scroll past.\n\nParagraph 9 of the notes, to scroll past.\n\nParagraph 10 of the notes, to scroll past.\n\nParagraph 11 of the notes, to scroll past.\n\nParagraph 12 of the notes, to scroll past.\n\nParagraph 13 of the notes, to scroll past.\n\nParagraph 14 of the notes, to scroll past.\n\nParagraph 15 of the notes, to scroll past.\n\nParagraph 16 of the notes, to scroll past.\n\nParagraph 17 of the notes, to scroll past.\n\nParagraph 18 of the notes, to scroll past.\n\nParagraph 19 of the notes, to scroll past.\n\nParagraph 20 of the notes, to scroll past.\n\nParagraph 21 of the notes, to scroll past.\n\nParagraph 22 of the notes, to scroll past.\n\nParagraph 23 of the notes, to scroll past.\n\nParagraph 24 of the notes, to scroll past.\n\nParagraph 25 of the notes, to scroll past.\n\nParagraph 26 of the notes, to scroll past.\n\nParagraph 27 of the notes, to scroll past.\n\nParagraph 28 of the notes, to scroll past.\n\nParagraph 29 of the notes, to scroll past.\n\nParagraph 30 of the notes, to scroll past.\n\n",
+            "[^far]: The far note.\n"
+        ),
+    ),
 ];
+
+/// The extensions the library parses with.
+const OPTIONS: crate::MarkdownOptions =
+    crate::DEFAULT_MARKDOWN_OPTIONS.union(crate::MarkdownOptions::ENABLE_FOOTNOTES);
 
 /// The application's ID for the heading `text` in `document`.
 fn heading_id(document: &str, text: &str) -> SemanticUiId {
@@ -113,11 +126,22 @@ impl Application for Library {
             return;
         }
         let (name, source) = DOCUMENTS[self.current];
-        let map = markdown_source_map(source, MarkdownSpec::default().options, 0);
+        let map = markdown_source_map(source, OPTIONS, 0);
         let ids: Vec<_> = map
             .headings
             .iter()
             .map(|heading| heading_id(name, &heading.text))
+            .collect();
+        let footnotes: Vec<_> = map
+            .footnotes
+            .iter()
+            .map(|note| {
+                SemanticUiId::new(format!(
+                    "{}.footnote-{}",
+                    name.trim_end_matches(".md"),
+                    note.label
+                ))
+            })
             .collect();
         let reasons: Vec<_> = map
             .links
@@ -130,21 +154,26 @@ impl Application for Library {
             .zip(&reasons)
             .map(|(link, reason)| self.classify(&link.destination, reason))
             .collect();
-        let mut p = frame.presentation(ui, PresentationScope::new("library"), SemanticUiId::root());
-        p.markdown(
-            ui,
-            "document",
-            source,
-            MarkdownSpec {
-                heading_ids: &ids,
-                link_kinds: &kinds,
-                ..MarkdownSpec::default()
-            },
-        );
-        if let Some(link) = p.followed_link() {
-            frame.emit(Intent::Follow(link.destination.clone()));
-        }
-        p.finish(ui);
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            let mut p =
+                frame.presentation(ui, PresentationScope::new("library"), SemanticUiId::root());
+            p.markdown(
+                ui,
+                "document",
+                source,
+                MarkdownSpec {
+                    options: OPTIONS,
+                    heading_ids: &ids,
+                    link_kinds: &kinds,
+                    footnote_ids: &footnotes,
+                    ..MarkdownSpec::default()
+                },
+            );
+            if let Some(link) = p.followed_link() {
+                frame.emit(Intent::Follow(link.destination.clone()));
+            }
+            p.finish(ui);
+        });
     }
 
     fn apply(&mut self, intent: Intent, pending: &mut Pending) -> Result<bool, String> {
@@ -230,8 +259,13 @@ fn request(host: &AppHost<Library>, id: &str, operation: InspectionOperation) ->
 
 /// The selector for the `index`th link of the document shown.
 fn link(index: usize) -> InspectionSelector {
+    open_link(link_id(index))
+}
+
+/// The selector for the open-link capability of the node `id`.
+fn open_link(id: SemanticUiId) -> InspectionSelector {
     InspectionSelector {
-        id: Some(link_id(index)),
+        id: Some(id),
         capability: Some(OPEN_LINK_CAPABILITY.into()),
         ..Default::default()
     }
@@ -246,12 +280,20 @@ fn link_id(index: usize) -> SemanticUiId {
 
 /// The one open-link capability the `index`th link offers.
 fn capability(harness: &Harness<'_, Probe>, index: usize) -> crate::CapabilityDescription {
+    capability_of(harness, link(index))
+}
+
+/// The one capability `selector` finds.
+fn capability_of(
+    harness: &Harness<'_, Probe>,
+    selector: InspectionSelector,
+) -> crate::CapabilityDescription {
     let library = host(harness);
     let reply = library.inspection().unwrap().handle(request(
         library,
         "discover",
         InspectionOperation::Discover {
-            selector: link(index),
+            selector,
             limit: 4,
             cursor: None,
         },
@@ -268,13 +310,22 @@ fn capability(harness: &Harness<'_, Probe>, index: usize) -> crate::CapabilityDe
 /// Submit an open-link invocation of the `index`th link, as `stobie invoke`
 /// does, without running the host.
 fn submit(harness: &Harness<'_, Probe>, id: &str, index: usize) -> Option<crate::InspectionError> {
-    let expected = capability(harness, index).target;
+    submit_to(harness, id, link(index))
+}
+
+/// Submit an invocation of the capability `selector` finds.
+fn submit_to(
+    harness: &Harness<'_, Probe>,
+    id: &str,
+    selector: InspectionSelector,
+) -> Option<crate::InspectionError> {
+    let expected = capability_of(harness, selector.clone()).target;
     let library = host(harness);
     let reply = library.inspection().unwrap().handle(request(
         library,
         id,
         InspectionOperation::Invoke {
-            selector: link(index),
+            selector,
             expected,
             arguments: serde_json::Value::Null,
         },
@@ -476,4 +527,48 @@ fn a_follow_for_a_link_no_longer_presented_lapses() {
     assert!(library(&mut harness).followed.is_empty());
     assert_eq!(library(&mut harness).current, 0);
     assert!(taken(&opened).is_empty());
+}
+
+#[test]
+fn an_agent_follows_a_footnote_reference_to_its_definition() {
+    let (mut harness, opened) = harness();
+    library(&mut harness).current = 2;
+    harness.run();
+    let definition = SemanticUiId::new("notes.footnote-far");
+    assert!(
+        node(&harness, &definition).is_none(),
+        "the definition starts below the fold"
+    );
+    let reference = PresentationScope::new("library")
+        .instance("document")
+        .child(("footnote-reference", 0))
+        .semantic_id();
+    let link = node(&harness, &reference).expect("the reference");
+    assert_eq!(link.role, UiRole::Link);
+    assert_eq!(link.name, "[1]");
+    assert_eq!(link.value.as_deref(), Some("#far"));
+    let capability = capability_of(&harness, open_link(reference.clone()));
+    assert!(capability.availability.enabled());
+    assert!(capability.semantic_invocable);
+
+    if let Some(error) = submit_to(&harness, "far", open_link(reference)) {
+        panic!("far was refused: {error:?}");
+    }
+    for _ in 0..4 {
+        harness.run();
+    }
+    assert_eq!(receipt(&harness, "far").state, ReceiptState::Completed);
+    // The definition scrolled into view; nothing was reported to the
+    // application or opened in the browser.
+    let section = node(&harness, &definition).expect("the definition in view");
+    assert_eq!(section.role, UiRole::Section);
+    assert_eq!(section.name, "[1]");
+    assert!(library(&mut harness).followed.is_empty());
+    assert!(taken(&opened).is_empty());
+    let snapshot = host(&harness).ui_snapshot();
+    assert!(
+        snapshot.semantic_audit.is_empty(),
+        "{:?}",
+        snapshot.semantic_audit
+    );
 }

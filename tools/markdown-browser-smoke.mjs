@@ -19,6 +19,18 @@ const LINKS = [
   ['Probing attention heads for retrieval', 'https://example.org/papers/retrieval-heads'],
   ['discussion', 'https://example.org/discussions/reward-models'],
 ];
+// The Gallery's markdown/document story: its headings with the IDs the
+// story gives them, and its read-only tasks.
+const HEADINGS = [
+  ['Rock-pool survey', 1, 'gallery.document.rock-pool-survey'],
+  ['Open tasks', 2, 'gallery.document.open-tasks'],
+];
+const TASKS = [
+  ['Photograph the northern pools', 'true'],
+  ['Count the anemones in pool C[2]', 'false'],
+  ['Task', 'false'],
+];
+const FIRST_NOTE = 'gallery.document.footnote-tides';
 // The first item's text, link label included, exactly as selection copies it.
 const FIRST_ITEM = `${FIRST.name} — keeps memory use flat as the context grows, and the gains hold on small models.`;
 
@@ -172,6 +184,38 @@ try {
     await opensNewTab(`keyboard-${key}`, SECOND.url, () => page.keyboard.press(key));
   }
 
+  // A document: headings carry the application's IDs into the ARIA layer,
+  // tasks are read-only checkboxes, and maths keeps its source.
+  for (const [config, name] of [
+    [configuration(), 'document-dark'],
+    [configuration({ appearance: 'light', contrast: 'high', font_scale: 1.5, width: 'narrow' }), 'document-light-high-contrast-150'],
+  ]) {
+    await story('markdown/document', config);
+    const document = await record(name);
+    for (const [heading, level, id] of HEADINGS) {
+      const element = page.getByRole('heading', { name: heading, level, exact: true });
+      assert.equal(await element.count(), 1, `${name}: ARIA heading ${heading} at level ${level}`);
+      assert.equal(await element.getAttribute('id'), `stobie-a11y:${id}`, `${name}: ${heading} carries its ID`);
+      assert(document.ui_snapshot.nodes.some(n => n.id === id && n.role === 'heading' && n.name === heading), `${name}: ${heading} node`);
+    }
+    for (const [task, checked] of TASKS) {
+      const box = page.getByRole('checkbox', { name: task, exact: true });
+      assert.equal(await box.count(), 1, `${name}: ARIA checkbox ${task}`);
+      assert.equal(await box.getAttribute('aria-checked'), checked, `${name}: ${task} is ${checked === 'true' ? 'done' : 'open'}`);
+      assert.equal(await box.getAttribute('aria-disabled'), 'true', `${name}: ${task} is read-only`);
+    }
+    const maths = document.text.filter(t => t.role === 'monospace_technical');
+    assert(maths.length >= 1, `${name}: maths in the technical face`);
+  }
+  // In the narrow column the definitions are below the fold; a reference
+  // scrolls its definition into view and opens nothing.
+  assert(!(await snapshot()).ui_snapshot.nodes.some(n => n.id === FIRST_NOTE), 'the first definition starts out of view');
+  const reference = await link('[1]');
+  assert(await opensNothing(() => page.mouse.click(reference.point.x, reference.point.y)), 'a footnote reference opens nothing');
+  await page.waitForFunction(id => window.__STOBIE_GALLERY_HANDLE.snapshot().ui_snapshot.nodes.some(n => n.id === id), FIRST_NOTE, { timeout: 5_000 });
+  const noted = await record('document-footnote-revealed');
+  assert.equal(noted.ui_snapshot.nodes.find(n => n.id === FIRST_NOTE).role, 'section', 'the definition is a section');
+
   // Narrow, enlarged high contrast: unsafe links stay text, open nothing and
   // say why; long code and identifiers wrap; scrolling reaches the partial tail.
   await story('markdown/long-narrow', configuration({ appearance: 'light', contrast: 'high', font_scale: 1.5, width: 'narrow' }));
@@ -214,7 +258,7 @@ try {
   assert.deepEqual(errors, []);
   const report = { source_revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), dirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim() !== '', wasm_sha256: createHash('sha256').update(await readFile(join(root, 'pkg/stobie_gallery_bg.wasm'))).digest('hex'), url, browser: browser.version(), steps, targets, opened, idle, input_route: 'Physical Playwright mouse and keyboard, and focus through the ARIA layer; hooks only choose stories and appearance and read observations', errors };
   await writeFile(join(evidence, 'browser-workflow.json'), `${JSON.stringify(report, null, 2)}\n`);
-  console.log('Markdown browser workflow passed: item copy across a link, new-tab links by pointer and keyboard, unsafe links, narrow wrapping, partial input, scrolling and idle');
+  console.log('Markdown browser workflow passed: item copy across a link, new-tab links by pointer and keyboard, heading IDs and read-only tasks in the ARIA layer, a footnote reference revealing its definition, unsafe links, narrow wrapping, partial input, scrolling and idle');
 } catch (error) {
   await writeFile(join(evidence, 'browser-failure.json'), JSON.stringify({ error: String(error), state: await snapshot().catch(() => null), steps, targets, opened }, null, 2));
   await page?.screenshot({ path: join(evidence, 'browser-failure.png') }).catch(() => {});

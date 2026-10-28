@@ -166,9 +166,9 @@ pub fn audit_accesskit(
         let expected_description = semantic.disabled_reason.as_ref().map_or_else(
             || semantic.description.clone(),
             |reason| {
-                Some(format!(
-                    "{}; unavailable: {reason}",
-                    semantic.description.as_deref().unwrap_or_default()
+                Some(unavailable_description(
+                    semantic.description.as_deref(),
+                    reason,
                 ))
             },
         );
@@ -304,6 +304,15 @@ pub fn audit_accesskit(
     findings
 }
 
+/// The accessible description of something unavailable for `reason`: its
+/// own description, if it has one, then the reason.
+pub(crate) fn unavailable_description(description: Option<&str>, reason: &str) -> String {
+    match description.filter(|description| !description.is_empty()) {
+        Some(description) => format!("{description}; unavailable: {reason}"),
+        None => format!("Unavailable: {reason}"),
+    }
+}
+
 /// The AccessKit role a semantic role presents as, or `None` for layout
 /// roles that assistive technology does not see as controls.
 pub(crate) fn accesskit_role(role: UiRole) -> Option<egui::accesskit::Role> {
@@ -368,6 +377,22 @@ mod tests {
     use super::*;
     use crate::test_actions::TestAction;
     use stobie_core::{DockNodeId, PaneId};
+
+    /// Every component and the audit describe an unavailable control alike:
+    /// its description, then the reason, or the reason alone.
+    #[test]
+    fn an_unavailable_description_never_opens_with_its_separator() {
+        assert_eq!(
+            unavailable_description(Some("Undo the change"), "Nothing to undo"),
+            "Undo the change; unavailable: Nothing to undo"
+        );
+        for description in [None, Some("")] {
+            assert_eq!(
+                unavailable_description(description, "Nothing to undo"),
+                "Unavailable: Nothing to undo"
+            );
+        }
+    }
 
     /// Version 1 of the inspection protocol publishes these exact shapes.
     #[test]

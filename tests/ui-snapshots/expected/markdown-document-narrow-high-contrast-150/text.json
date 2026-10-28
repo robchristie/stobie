@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1897516023101900
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 651.9749755859375,
+        "max_x": 990,
+        "max_y": 729.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 651.9749755859375,
+        "max_x": 944.90625,
+        "max_y": 729.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 651.9749755859375,
+        "max_x": 990,
+        "max_y": 729.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 3,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Density is d = n / A for n animals in an area A, so pool C holds:",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 221139222978172
+      },
+      "role": "application_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 236,
+        "max_x": 990,
+        "max_y": 270
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 236,
+        "max_x": 893.03125,
+        "max_y": 270
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 236,
+        "max_x": 990,
+        "max_y": 270
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Rock-pool survey",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 327635350035988
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 715.5625,
+        "min_y": 457.32501220703125,
+        "max_x": 990,
+        "max_y": 483.32501220703125
+      },
+      "painted_rect": {
+        "min_x": 715.5625,
+        "min_y": 457.32501220703125,
+        "max_x": 976.5625,
+        "max_y": 483.32501220703125
+      },
+      "clip_rect": {
+        "min_x": 715.5625,
+        "min_y": 457.32501220703125,
+        "max_x": 990,
+        "max_y": 483.32501220703125
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Count the anemones in pool C[2]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3659097216552874
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 391,
+        "max_x": 990,
+        "max_y": 421
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 391,
+        "max_x": 807.875,
+        "max_y": 421
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 391,
+        "max_x": 990,
+        "max_y": 421
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Open tasks",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3967364626016586
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 706,
+        "min_y": 741.9749755859375,
+        "max_x": 990,
+        "max_y": 845.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 706,
+        "min_y": 741.9749755859375,
+        "max_x": 975.75,
+        "max_y": 845.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 706,
+        "min_y": 741.9749755859375,
+        "max_x": 990,
+        "max_y": 781
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 4,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "d_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5353165259261196
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 275,
+        "max_x": 990,
+        "max_y": 379
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 275,
+        "max_x": 967.90625,
+        "max_y": 379
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 275,
+        "max_x": 990,
+        "max_y": 379
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 4,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Notes from three low tides on the northern platform, with the open tasks and the arithmetic behind each count.[1]",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5636275389449328
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 715.5625,
+        "min_y": 426,
+        "max_x": 990,
+        "max_y": 452
+      },
+      "painted_rect": {
+        "min_x": 715.5625,
+        "min_y": 426,
+        "max_x": 967.6875,
+        "max_y": 452
+      },
+      "clip_rect": {
+        "min_x": 715.5625,
+        "min_y": 426,
+        "max_x": 990,
+        "max_y": 452
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Photograph the northern pools",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7395648576333103
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 616.9749755859375,
+        "max_x": 990,
+        "max_y": 646.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 616.9749755859375,
+        "max_x": 771.78125,
+        "max_y": 646.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 616.9749755859375,
+        "max_x": 990,
+        "max_y": 646.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Density",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8333207844079041
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 694,
+        "min_y": 526.9749755859375,
+        "max_x": 990,
+        "max_y": 604.9749755859375
+      },
+      "painted_rect": {
+        "min_x": 694,
+        "min_y": 526.9749755859375,
+        "max_x": 938.90625,
+        "max_y": 604.9749755859375
+      },
+      "clip_rect": {
+        "min_x": 694,
+        "min_y": 526.9749755859375,
+        "max_x": 990,
+        "max_y": 604.9749755859375
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 3,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Compare the counts with last season's survey, which used a coarser grid.",
+        "truncated": false
+      }
+    }
+  ],
+  "audit": [],
+  "coverage": {
+    "measured_components": 9,
+    "attempted_components": 17,
+    "successful_components": 17,
+    "failed_components": 0,
+    "native_text_controls": 17,
+    "observed_native_controls": 0,
+    "excluded_categories": [
+      "ordinary_egui_labels",
+      "native_combo_box_text",
+      "native_button_text",
+      "native_selectable_text"
+    ]
+  }
+}

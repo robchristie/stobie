@@ -131,6 +131,20 @@ catalogue entries raised every earlier fixture's native-control count from
 824, 423) and `status-chip-treatments-light` (at 863, 140) by one colour
 step as the glyph atlas grew; nothing else changed.
 
+Markdown document fixtures show `markdown/document`, a synthetic field-notes
+document parsed with task lists, footnotes and maths and with CRLF line
+endings, in dark comfortable mode and in a narrow light high-contrast column
+at 150%: headings with the story's IDs, read-only task boxes (done, open,
+and one whose marker pulldown-cmark ends at a blank line), raised footnote
+references, inline maths and an indented display formula in the italic
+monospace face, and, after a short rule, the muted definitions with their
+numbers in a gutter, one opening with a list (below the fold in the narrow
+column). `tools/markdown-browser-smoke.sh` finds each heading with its level
+and its `stobie-a11y:` ID, and each task as a disabled checkbox with its
+state, in the ARIA layer at both configurations, and clicks a reference in
+the narrow column to scroll its definition into view. Adding the catalogue
+entry changed no earlier fixture.
+
 Composer fixtures add chat composers in dark comfortable mode: an empty draft
 whose send is hidden, leaving the microphone alone, a one-line draft ready to
 send and a draft grown to three lines. A narrow light high-contrast column at
