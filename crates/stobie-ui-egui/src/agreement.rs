@@ -82,6 +82,7 @@ pub fn expected_aria_role(role: UiRole) -> Option<&'static str> {
         UiRole::Menu => "menu",
         UiRole::Progress => "progressbar",
         UiRole::Image => "img",
+        UiRole::Heading => "heading",
         UiRole::Application
         | UiRole::ApplicationBar
         | UiRole::Toolbar

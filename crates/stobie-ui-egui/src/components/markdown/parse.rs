@@ -44,6 +44,7 @@ pub enum MarkdownBlockKind {
 
 /// A presented Markdown block and where its source is.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
 pub struct MarkdownBlock {
     /// What the block is.
     pub kind: MarkdownBlockKind,
@@ -59,6 +60,7 @@ pub struct MarkdownBlock {
 
 /// A presented heading and where its source is.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
 pub struct MarkdownHeading {
     /// Its level, 1 to 6.
     pub level: u8,
@@ -74,6 +76,7 @@ pub struct MarkdownHeading {
 /// Every block a Markdown presentation shows, in document order (each
 /// container before what it contains), and every heading among them.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[non_exhaustive]
 pub struct MarkdownSourceMap {
     /// Every presented block. Empty paragraphs and headings are not
     /// presented, and containers nested deeper than the model keeps are not

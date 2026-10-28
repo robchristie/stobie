@@ -57,6 +57,18 @@ pub struct MarkdownSpec<'a> {
     /// `[^label]: `, a task-list item after `[ ] ` or `[x] `, and a table's
     /// cells a row to a line between `|` separators.
     pub options: MarkdownOptions,
+    /// The application's ID for each heading, in the order
+    /// [`markdown_source_map`] lists them for the same source and options;
+    /// none by default. A heading with an ID is published as a
+    /// [`UiRole::Heading`] node with that ID, named by its text, so an agent
+    /// (`stobie reveal ID`) or the application ([`crate::Frame::reveal`]) can
+    /// scroll it into view. The ID belongs to the heading, not to its place
+    /// in the layout: it is the same at every width and text size. IDs must
+    /// be unique among the application's nodes, for example by naming the
+    /// document in each. A heading past the end of the list, or given an
+    /// empty ID, publishes no node. Stobie derives no IDs: the application
+    /// chooses them, for example from each heading's text or source range.
+    pub heading_ids: &'a [SemanticUiId],
 }
 
 impl Default for MarkdownSpec<'_> {
@@ -65,6 +77,7 @@ impl Default for MarkdownSpec<'_> {
             interaction: TextInteraction::Selectable,
             link_description: None,
             options: DEFAULT_MARKDOWN_OPTIONS,
+            heading_ids: &[],
         }
     }
 }
@@ -106,6 +119,10 @@ pub struct MarkdownResponse {
     /// document order. [`crate::PresentationContext::markdown`] records them;
     /// low-level callers publish them.
     pub link_nodes: Vec<UiNode>,
+    /// One [`UiRole::Heading`] node for each heading with an ID from
+    /// [`MarkdownSpec::heading_ids`] at least partly visible, in document
+    /// order, published as `link_nodes` are.
+    pub heading_nodes: Vec<UiNode>,
 }
 
 /// The heading role for a heading level.
@@ -127,6 +144,8 @@ struct TextPiece {
     links: Vec<(usize, Range<usize>)>,
     measured: MeasuredText,
     heading: Option<u8>,
+    /// The application's ID for a heading.
+    anchor: Option<SemanticUiId>,
 }
 
 /// A block's styled text before measurement.
@@ -137,6 +156,8 @@ struct Styled {
     /// Each link in the text, by byte range.
     links: Vec<(usize, Range<usize>)>,
     heading: Option<u8>,
+    /// The application's ID for a heading.
+    anchor: Option<SemanticUiId>,
 }
 
 enum Piece {
@@ -177,6 +198,10 @@ struct Layout<'a> {
     interaction: TextInteraction,
     enabled: bool,
     links: &'a [String],
+    /// The application's ID for each heading, in document order.
+    heading_ids: &'a [SemanticUiId],
+    /// How many headings have been laid out.
+    headings: usize,
     identity: PresentationId,
     pieces: Vec<Piece>,
     y: f32,
@@ -291,6 +316,7 @@ impl Layout<'_> {
             section_links,
             links,
             heading,
+            anchor,
         } = styled;
         let measured = measure_component_reading(
             self.painter,
@@ -306,14 +332,21 @@ impl Layout<'_> {
             egui::vec2(width.max(1.0), measured.size().y.max(1.0)),
         );
         self.first_text_top.get_or_insert(rect.top());
+        // A heading the application named keeps an identity of its own name,
+        // whatever its place.
+        let identity = match &anchor {
+            Some(id) => self.identity.child(("heading", id.0.as_str())),
+            None => self.identity.child(("block", path)),
+        };
         self.pieces.push(Piece::Text(TextPiece {
-            identity: self.identity.child(("block", path)),
+            identity,
             rect,
             job,
             section_links,
             links,
             measured,
             heading,
+            anchor,
         }));
         self.y = rect.bottom();
         rect
@@ -330,12 +363,21 @@ impl Layout<'_> {
         heading: Option<u8>,
     ) {
         let role = heading.map_or(TextRole::Body, heading_role);
+        let anchor = heading.and_then(|_| {
+            let index = self.headings;
+            self.headings += 1;
+            self.heading_ids
+                .get(index)
+                .filter(|id| !id.0.is_empty())
+                .cloned()
+        });
         let (job, section_links) = self.inline_job(inline, role, quoted, None);
         let styled = Styled {
             job,
             section_links,
             links: inline.link_bytes(),
             heading,
+            anchor,
         };
         self.text(path, x, width, role, styled);
     }
@@ -409,6 +451,7 @@ impl Layout<'_> {
                     section_links: vec![None],
                     links: Vec::new(),
                     heading: None,
+                    anchor: None,
                 };
                 self.text(
                     path,
@@ -509,10 +552,18 @@ impl Layout<'_> {
                     Some(Block::Paragraph(inline) | Block::Heading { inline, .. }) => {
                         *inline = inline.with_prefix(&prefix);
                     }
-                    _ => blocks.insert(
-                        0,
-                        Block::Paragraph(Inline::default().with_prefix(prefix.trim_end())),
-                    ),
+                    // The marker takes a line of its own, keyed apart from
+                    // the item's blocks so that theirs do not depend on the
+                    // width.
+                    _ => {
+                        path.push(u32::MAX);
+                        let marker = Inline::default().with_prefix(prefix.trim_end());
+                        self.inline(path, x, width, &marker, quoted, None);
+                        path.pop();
+                        if !blocks.is_empty() {
+                            self.y += self.tokens.spacing.block.0;
+                        }
+                    }
                 }
                 self.blocks(&blocks, path, x, width, quoted, true);
             } else {
@@ -607,6 +658,9 @@ fn union(rects: impl IntoIterator<Item = Rect>) -> Rect {
 /// chooses the extensions parsed, strikethrough alone by default; tables,
 /// footnotes, task lists and maths keep their source text or form.
 /// [`markdown_source_map`] reports where each presented block's source is.
+/// A heading the application gives an ID ([`MarkdownSpec::heading_ids`])
+/// is published as a [`UiRole::Heading`] node with that ID, which a reveal
+/// scrolls into view even from wholly out of view.
 ///
 /// Each block is one measured reading surface, wrapped at the available
 /// width and never truncated, observed as [`TextComponentKind::ReadingText`]
@@ -621,7 +675,7 @@ fn union(rects: impl IntoIterator<Item = Rect>) -> Rect {
 /// on blank lines between items, so a list keeps its layout as it grows.
 ///
 /// Put long content in a scroll area; text scrolled fully out of view adds
-/// no observation, as with [`crate::reading_text`].
+/// no observation or node, as with [`crate::reading_text`].
 #[allow(clippy::too_many_arguments)]
 pub fn markdown(
     ui: &mut egui::Ui,
@@ -672,6 +726,8 @@ pub(crate) fn present_markdown(
         interaction: spec.interaction,
         enabled,
         links: &links,
+        heading_ids: spec.heading_ids,
+        headings: 0,
         identity,
         pieces: Vec::new(),
         y: 0.0,
@@ -694,6 +750,7 @@ pub(crate) fn present_markdown(
     }
 
     let mut link_nodes = Vec::new();
+    let mut heading_nodes = Vec::new();
     for piece in pieces {
         match piece {
             Piece::Fill(fill) => {
@@ -751,6 +808,7 @@ pub(crate) fn present_markdown(
                 font_scale,
                 observations,
                 &mut link_nodes,
+                &mut heading_nodes,
             ),
         }
     }
@@ -758,6 +816,7 @@ pub(crate) fn present_markdown(
         MarkdownResponse {
             response,
             link_nodes,
+            heading_nodes,
         },
         code_blocks,
     )
@@ -775,6 +834,7 @@ fn present_text(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
     link_nodes: &mut Vec<UiNode>,
+    heading_nodes: &mut Vec<UiNode>,
 ) {
     let enabled = ui.is_enabled();
     // A failed measurement paints a diagnostic, not the text: no link areas.
@@ -828,16 +888,37 @@ fn present_text(
     } else {
         present_accessible_measured_text(ui, measured, text.rect, component, None)
     };
+    let author = text
+        .anchor
+        .clone()
+        .unwrap_or_else(|| text.identity.semantic_id());
     if response.interact_rect.is_positive() {
         ui.ctx().accesskit_node_builder(response.id, |node| {
-            node.set_author_id(text.identity.semantic_id().0);
+            node.set_author_id(author.0.clone());
             if let Some(level) = text.heading {
                 node.set_role(egui::accesskit::Role::Heading);
                 node.set_level(usize::from(level));
             }
         });
     }
-    if ui.clip_rect().intersect(text.rect).is_positive() || observation.layout_error.is_some() {
+    let visible = ui.clip_rect().intersect(text.rect).is_positive();
+    if let Some(anchor) = &text.anchor {
+        // A heading scrolled wholly out of view publishes no node, but a
+        // reveal of its ID still finds it.
+        crate::observation::reveal_at(ui, anchor, text.rect);
+        if visible && response.interact_rect.is_positive() {
+            let mut node = UiNode::container(
+                anchor.clone(),
+                Some(parent.clone()),
+                UiRole::Heading,
+                response.rect.into(),
+            );
+            node.name = text.job.text.clone();
+            node.enabled = enabled;
+            heading_nodes.push(node);
+        }
+    }
+    if visible || observation.layout_error.is_some() {
         observations.push(observation);
     }
 

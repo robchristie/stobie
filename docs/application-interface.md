@@ -318,7 +318,13 @@ stobie reveal record-desk.notes.1013
 
 A host test reveals a node with `AppHost::reveal` and runs passes until
 `AppHost::reveal_outcome` reports the outcome, then acts on it, for example
-by clicking it; the reveal works in any harness of the test's size. A
+by clicking it; the reveal works in any harness of the test's size. The
+application reveals a node itself with `Frame::reveal(id)`, for example the
+Markdown heading an in-document link leads to: the reveal starts with the
+next pass and queues behind any other, and `AppHost::reveal_outcome` reports
+how it ended. A Markdown heading reaches a reveal by the ID the application
+gave it (`MarkdownSpec::heading_ids`), and is observed in view as a
+`heading` node with that ID. A
 reveal finds a node that a presentation recipe draws, including a control
 wholly clipped away, and an application node registered with
 `observe_node` at the rectangle it gives. It does not find a row that a

@@ -368,13 +368,14 @@ fn request_passes(context: &egui::Context, reasons: &[HostRepaint]) {
     }
 }
 
-/// The UI's sink for one pass: intents, action triggers and repaint requests.
-/// Panes receive it instead of mutable access to the application.
+/// The UI's sink for one pass: intents, action triggers, reveals and repaint
+/// requests. Panes receive it instead of mutable access to the application.
 pub struct Frame<'a, A: ActionSet, I> {
     intents: &'a mut Vec<I>,
     triggers: &'a mut Vec<(ActionTarget<A>, ActionArgument)>,
     availability: &'a dyn Fn(ActionTarget<A>, &ActionArgument) -> Availability,
     repaint: &'a mut Vec<HostRepaint>,
+    reveals: &'a mut Vec<SemanticUiId>,
     tokens: DesignTokens,
     font_scale: f32,
 }
@@ -448,6 +449,17 @@ impl<A: ActionSet, I> Frame<'_, A, I> {
     /// Ask for another pass, for example while an animation runs.
     pub fn request_repaint(&mut self, reason: &'static str) {
         self.repaint.push(HostRepaint::Application(reason));
+    }
+
+    /// Scroll the node `id` names into view over the coming passes, as an
+    /// agent's [`REVEAL_CAPABILITY`](crate::REVEAL_CAPABILITY) does, for
+    /// example the heading an in-application link leads to
+    /// ([`crate::MarkdownSpec::heading_ids`]). Ask once for each request,
+    /// such as on the pass after the link's intent applied: reveals queue
+    /// behind one another and after an agent's. The reveal starts with the
+    /// next pass; [`AppHost::reveal_outcome`] reports how it ended.
+    pub fn reveal(&mut self, id: impl Into<SemanticUiId>) {
+        self.reveals.push(id.into());
     }
 
     /// Ask for a pass after `delay`, for example to end an idle gesture.
@@ -1638,6 +1650,7 @@ impl<A: Application> AppHost<A> {
                 .map(|reveal| (reveal.id.clone(), reveal.waiting.is_none())),
         );
         let mut intents = Vec::new();
+        let mut reveals = Vec::new();
         {
             let app = &self.app;
             let availability = |target: ActionTarget<A::Action>, argument: &ActionArgument| {
@@ -1652,6 +1665,7 @@ impl<A: Application> AppHost<A> {
                 triggers: &mut triggers,
                 availability: &availability,
                 repaint: &mut self.repaint,
+                reveals: &mut reveals,
                 tokens: self.theme.resolve(
                     self.preferences
                         .theme_variant(context.theme() == egui::Theme::Dark),
@@ -1684,6 +1698,11 @@ impl<A: Application> AppHost<A> {
         self.check_text_edit(&context);
         // A reveal completes with the observation this pass publishes.
         self.settle_reveal(&context);
+        // The application's reveals start with the next pass, after the one
+        // settled above.
+        for id in reveals {
+            self.reveal(id);
+        }
         self.publish(&context);
         self.app.completed(
             &CompletedPass {
@@ -2929,6 +2948,8 @@ fn pair_text_fields(
     fields
 }
 
+#[cfg(test)]
+mod anchor_tests;
 #[cfg(test)]
 mod avatar_item_tests;
 #[cfg(test)]

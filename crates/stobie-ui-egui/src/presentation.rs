@@ -1034,7 +1034,11 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
-        for mut node in presented.link_nodes {
+        for mut node in presented
+            .link_nodes
+            .into_iter()
+            .chain(presented.heading_nodes)
+        {
             node.domain_reference = self.domain_reference.clone();
             self.push_node(ui, node);
         }
