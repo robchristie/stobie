@@ -1166,3 +1166,154 @@ fn the_source_map_names_each_presented_text_block() {
             .count()
     );
 }
+
+/// Headings at the top level, in a quote and in a list item, one of them
+/// with multibyte text.
+const OUTLINE: &str = "# Field notes\n\nIntro.\n\n## Méthode et matériel\n\n\
+> ### Quoted heading\n\n- ### Listed heading\n  In an item.\n\n## Results\n\n\
+### Unnamed\n\n## Past the end\n";
+
+/// The application's IDs for `OUTLINE`'s headings: the sixth is left empty
+/// and the seventh has none.
+fn outline_ids() -> Vec<SemanticUiId> {
+    [
+        "notes.field-notes",
+        "notes.methode",
+        "notes.quoted",
+        "notes.listed",
+        "notes.results",
+        "",
+    ]
+    .into_iter()
+    .map(SemanticUiId::new)
+    .collect()
+}
+
+#[test]
+fn headings_carry_the_applications_ids_as_heading_nodes() {
+    let ids = outline_ids();
+    let spec = MarkdownSpec {
+        heading_ids: &ids,
+        ..MarkdownSpec::default()
+    };
+    let map = crate::markdown_source_map(OUTLINE, spec.options, 0);
+    assert_eq!(map.headings.len(), 7);
+    let mut identities = Vec::new();
+    for width in [PHONE, DESKTOP] {
+        for scale in [1.0, 1.5] {
+            let label = format!("{width} at {scale}");
+            let presented = present_spec(&context(), OUTLINE, width, scale, tokens(), None, spec);
+            assert_clean(&presented, &label);
+            let headings: Vec<_> = presented
+                .snapshot
+                .nodes
+                .iter()
+                .filter(|node| node.role == UiRole::Heading)
+                .collect();
+            // Each named heading, in document order, named by its text.
+            assert_eq!(
+                headings
+                    .iter()
+                    .map(|node| (node.id.0.as_str(), node.name.as_str()))
+                    .collect::<Vec<_>>(),
+                ids[..5]
+                    .iter()
+                    .zip(&map.headings)
+                    .map(|(id, heading)| (id.0.as_str(), heading.text.as_str()))
+                    .collect::<Vec<_>>(),
+                "{label}"
+            );
+            for (node, heading) in headings.iter().zip(&map.headings) {
+                assert_eq!(node.parent, Some(SemanticUiId::root()), "{label}");
+                assert!(node.enabled && !node.focused, "{label}");
+                let accessible = presented
+                    .update
+                    .nodes
+                    .iter()
+                    .map(|(_, accessible)| accessible)
+                    .find(|accessible| accessible.author_id() == Some(node.id.0.as_str()))
+                    .unwrap_or_else(|| panic!("{label}: {} in the AccessKit tree", node.id.0));
+                assert_eq!(accessible.role(), egui::accesskit::Role::Heading);
+                assert_eq!(accessible.level(), Some(usize::from(heading.level)));
+            }
+            // Headings without an ID keep the recipe's own identity: still
+            // AccessKit headings, with no node.
+            let unnamed = presented
+                .update
+                .nodes
+                .iter()
+                .filter(|(_, accessible)| {
+                    accessible.role() == egui::accesskit::Role::Heading
+                        && !accessible
+                            .author_id()
+                            .is_some_and(|author| author.starts_with("notes."))
+                })
+                .count();
+            assert_eq!(unnamed, 2, "{label}");
+            identities.push(presented.rects().into_keys().collect::<Vec<_>>());
+        }
+    }
+    // A named heading keeps its identity at every width and text size.
+    assert!(identities.windows(2).all(|pair| pair[0] == pair[1]));
+    // By default no heading publishes a node.
+    let presented = present(OUTLINE, PHONE, 1.0);
+    assert_clean(&presented, "default");
+    assert!(
+        presented
+            .snapshot
+            .nodes
+            .iter()
+            .all(|node| node.role != UiRole::Heading)
+    );
+}
+
+#[test]
+fn identities_do_not_depend_on_an_item_flattening_at_narrow_widths() {
+    // At 200 points the deeper levels are too narrow to indent, so the
+    // deepest item, which opens with code, is led by its marker on a line of
+    // its own.
+    let mut source: String = (0..6)
+        .map(|level| format!("{}- level {level}\n", "  ".repeat(level)))
+        .collect();
+    let indent = "  ".repeat(6);
+    source.push_str(&format!(
+        "{indent}- ```\n{indent}  code\n{indent}  ```\n\n\
+         {indent}  ### Deep heading\n\n{indent}  After.\n"
+    ));
+    let source = source.as_str();
+    let map = crate::markdown_source_map(source, DEFAULT_MARKDOWN_OPTIONS, 0);
+    assert_eq!(map.headings.len(), 1);
+    let ids = [SemanticUiId::new("notes.deep")];
+    for heading_ids in [&[][..], &ids[..]] {
+        let spec = MarkdownSpec {
+            heading_ids,
+            ..MarkdownSpec::default()
+        };
+        let wide = present_spec(&context(), source, DESKTOP, 1.5, tokens(), None, spec);
+        let narrow = present_spec(&context(), source, 200.0, 1.5, tokens(), None, spec);
+        assert_clean(&wide, "wide");
+        assert_clean(&narrow, "narrow");
+        let wide_ids: Vec<_> = wide.rects().into_keys().collect();
+        let narrow_ids: Vec<_> = narrow.rects().into_keys().collect();
+        // The narrow layout adds the marker's line and keeps every block.
+        assert_eq!(narrow_ids.len(), wide_ids.len() + 1);
+        assert!(wide_ids.iter().all(|id| narrow_ids.contains(id)));
+        let marker = narrow
+            .kind(TextComponentKind::ReadingText)
+            .into_iter()
+            .filter_map(|text| text.content_text())
+            .any(|text| text == "•");
+        assert!(marker, "the flattened item's marker is presented");
+        let headings = |presented: &Presented| {
+            presented
+                .snapshot
+                .nodes
+                .iter()
+                .filter(|node| node.role == UiRole::Heading)
+                .map(|node| node.id.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(headings(&wide), heading_ids);
+        assert_eq!(headings(&narrow), heading_ids);
+    }
+}

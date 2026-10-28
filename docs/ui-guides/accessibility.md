@@ -236,10 +236,11 @@ snapshot, is the source.
 | `Table`, `Tree`, `Menu` | `Table`, `Tree`, `Menu`, named by their label | `table`, `tree`, `menu` |
 | `Progress` | `ProgressIndicator` with its value | `progressbar` |
 | `Image` | `Image`, named by its text alternative | `img` |
+| `Heading` | `Heading` with its level, its text as its value and the application's ID as its author ID | `heading` with `aria-level` |
 | `Section` | As the recipe sets it; a message bubble is a `Group` named by its sender, and a segmented choice a `RadioGroup` (single) or `Group` (multiple) named by the choice | `radiogroup` or `group` when named; otherwise flattened |
 | Section heading (no `UiRole`) | `Heading`, level 2 | `heading` with `aria-level` |
 | Content text (no `UiRole`) | `Label` | Text |
-| Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading | Text, or `heading` with `aria-level` |
+| Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading; a heading the application names is a `Heading` node | Text, or `heading` with `aria-level` |
 | Markdown list number (no `UiRole`) | `Label` | Text |
 
 Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,

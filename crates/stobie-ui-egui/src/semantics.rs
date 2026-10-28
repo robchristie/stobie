@@ -132,6 +132,9 @@ pub fn audit_accesskit(
         }
         let accessible_name = match semantic.role {
             UiRole::StatusChip => node.value().unwrap_or_default().to_owned(),
+            // A heading is text: its words are its value, as a label's are,
+            // and assistive technology names it by them.
+            UiRole::Heading => node.value().or(node.label()).unwrap_or_default().to_owned(),
             // A status container's text belongs to the labels inside it.
             UiRole::Status if node.label().is_none() => descendant_text(&by_id, node),
             _ => node.label().unwrap_or_default().to_owned(),
@@ -329,6 +332,7 @@ pub(crate) fn accesskit_role(role: UiRole) -> Option<egui::accesskit::Role> {
         UiRole::Menu => Role::Menu,
         UiRole::Progress => Role::ProgressIndicator,
         UiRole::Image => Role::Image,
+        UiRole::Heading => Role::Heading,
         UiRole::Application
         | UiRole::ApplicationBar
         | UiRole::Toolbar

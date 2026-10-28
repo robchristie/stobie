@@ -656,6 +656,7 @@ fn the_outline_names_generic_roles_and_selectors_accept_them() {
             node("desk.menu", Some("root"), UiRole::Menu, "File"),
             node("desk.upload", Some("root"), UiRole::Progress, "Upload"),
             node("desk.logo", Some("root"), UiRole::Image, "Logo"),
+            node("desk.intro", Some("root"), UiRole::Heading, "Introduction"),
         ],
         &[],
     );
@@ -667,11 +668,14 @@ fn the_outline_names_generic_roles_and_selectors_accept_them() {
         r#"- menu "File" #desk.menu"#,
         r#"- progress "Upload" #desk.upload"#,
         r#"- image "Logo" #desk.logo"#,
+        r#"- heading "Introduction" #desk.intro"#,
     ] {
         assert!(text.lines().any(|shown| shown == line), "{line} in {text}");
     }
     let role = parse("query", &["--role", "checkbox"]).unwrap();
     assert_eq!(role.selector(None).unwrap().role, Some(UiRole::Checkbox));
+    let role = parse("query", &["--role", "heading"]).unwrap();
+    assert_eq!(role.selector(None).unwrap().role, Some(UiRole::Heading));
 }
 
 #[test]

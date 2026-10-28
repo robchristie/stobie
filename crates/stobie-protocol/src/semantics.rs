@@ -167,6 +167,10 @@ pub enum UiRole {
     Progress,
     /// An image, named by its text alternative.
     Image,
+    /// A heading in content, such as a document's section heading, named by
+    /// its text. Its ID is one the application gave it, so an agent or the
+    /// application can reveal it.
+    Heading,
 }
 
 /// The domain identity a semantic node presents, published to agents as

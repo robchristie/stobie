@@ -246,7 +246,23 @@ token minimum-hit widths of text; deeper or narrower items keep their marker
 at the start of their text instead, and the model keeps at most 16 levels.
 Headings are AccessKit headings with their level, each block's label carries
 its complete text and the context's stable author ID, and there is no
-separate semantic node for text, as for `reading_text`.
+separate semantic node for text, as for `reading_text`, except for a heading
+the application names.
+
+`MarkdownSpec::heading_ids` gives the application's ID for each heading, in
+the order `markdown_source_map` lists them for the same source and options;
+by default there are none. A heading with an ID is published as a
+`UiRole::Heading` node with that ID, named by its presented text, and its
+AccessKit heading carries the ID as its author ID. An agent's
+`stobie reveal ID` or the application's `Frame::reveal(id)` scrolls it into
+view, even from wholly out of view, where it publishes no node. The ID
+belongs to the heading rather than its place: its node, text observation and
+AccessKit identity are the same at every width and text size, including
+where a narrow item's marker takes a line of its own. IDs must be unique
+among the application's nodes, for example by naming the document in each;
+a heading past the end of the list, or given an empty ID, publishes no node.
+Stobie derives no IDs: the application chooses them, for example from each
+heading's text or source range in the source map.
 
 A link inside the text is underlined in `link_colour`, with a heavier
 underline and a pointing hand on hover, and a focus ring that clears its
@@ -296,8 +312,8 @@ behave as any copy control does, inside a message bubble too: they confirm
 without moving the bubble or each other.
 
 Low-level callers use `markdown(ui, identity, source, spec, parent, tokens,
-font_scale, observations)` and publish the returned `link_nodes`; it presents
-no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
+font_scale, observations)` and publish the returned `link_nodes` and
+`heading_nodes`; it presents no copy controls. Gallery `markdown/digest` and `markdown/long-narrow` use the
 production recipe and `markdown/code-copy` a reply with a copy control on
 each of its code blocks; the [evidence record](../markdown-evidence.md)
 retains the review.
