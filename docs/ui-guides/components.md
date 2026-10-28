@@ -212,6 +212,28 @@ recognised and keep their source text, as do footnotes, task lists and maths.
 Bare URLs are not linked; `<https://…>` and `<name@example.org>` autolinks
 are.
 
+`MarkdownSpec::options` chooses the pulldown-cmark extensions to parse with
+(`MarkdownOptions`, re-exported from pulldown-cmark); the default,
+`DEFAULT_MARKDOWN_OPTIONS`, is strikethrough alone. An application that
+parses the same source itself, such as a document reader, passes the options
+it parses with so both parses find the same blocks. Raw HTML stays text and
+nesting stays within 16 levels under every option set. Extensions the recipe
+does not present yet keep their source form: inline maths as `$…$`, display
+maths as `$$…$$`, a footnote reference as `[^label]`, a footnote
+definition's text after `[^label]: `, a task-list item after `[ ] ` or
+`[x] `, and a table's cells a row to a line between `|` separators.
+
+`markdown_source_map(source, options, base)` reports, without presenting,
+every block the recipe presents for that source and those options, in
+document order with each container before its contents: its
+`MarkdownBlockKind`, its depth among quotes, lists and items, and its source
+byte range as pulldown-cmark's offset iterator reports its start tag (a tight
+list item's text, which has no tag, spans its first to its last inline
+event). It lists each heading's level, presented text and source range too.
+Ranges count bytes of `source` as stored, CRLF and multibyte characters
+included, plus `base`: pass the offset where `source` starts in its file,
+such as after frontmatter, to receive ranges in the file.
+
 Each block is one measured reading surface, wrapped at its column's width and
 never truncated, observed as `ReadingText` with `TextOverflow::WrapUnbounded`
 and selectable by default, so a drag can select across blocks and copy them.

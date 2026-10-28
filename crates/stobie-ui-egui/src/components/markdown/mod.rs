@@ -11,6 +11,7 @@ use egui::{
 };
 
 use self::parse::{Block, Document, Inline};
+pub use self::parse::{MarkdownBlock, MarkdownBlockKind, MarkdownHeading, MarkdownSourceMap};
 use crate::{
     DesignTokens, HorizontalTextAlignment, INVALID_LINK_URL, MeasuredText, PresentationId,
     SemanticUiId, TextComponentId, TextComponentKind, TextInteraction, TextLayoutObservation,
@@ -27,6 +28,16 @@ const RESERVED_NUMBER: &str = "00.";
 /// The marker column of a bulleted list.
 const RESERVED_BULLET: &str = "0.";
 
+/// pulldown-cmark's parser options, which choose the CommonMark extensions a
+/// Markdown presentation parses. An application that parses the same source
+/// itself passes the options it parses with, so both parses find the same
+/// blocks; see [`markdown_source_map`].
+pub use pulldown_cmark::Options as MarkdownOptions;
+
+/// The parser options a [`MarkdownSpec`] has by default: CommonMark with
+/// strikethrough.
+pub const DEFAULT_MARKDOWN_OPTIONS: MarkdownOptions = MarkdownOptions::ENABLE_STRIKETHROUGH;
+
 /// How a Markdown presentation behaves. Its typography comes from the tokens
 /// (the reading profile for a reading surface) and its colours from the
 /// theme.
@@ -38,6 +49,14 @@ pub struct MarkdownSpec<'a> {
     /// Context for assistive technology on every link, such as "Opens in a
     /// new tab", in the application's language.
     pub link_description: Option<&'a str>,
+    /// The extensions to parse with, [`DEFAULT_MARKDOWN_OPTIONS`] by
+    /// default. Raw HTML stays text and nesting stays bounded whatever they
+    /// are. Extensions the recipe does not present yet keep their source
+    /// form: inline maths as `$…$`, display maths as `$$…$$`, a footnote
+    /// reference as `[^label]`, a footnote definition's text after
+    /// `[^label]: `, a task-list item after `[ ] ` or `[x] `, and a table's
+    /// cells a row to a line between `|` separators.
+    pub options: MarkdownOptions,
 }
 
 impl Default for MarkdownSpec<'_> {
@@ -45,8 +64,38 @@ impl Default for MarkdownSpec<'_> {
         Self {
             interaction: TextInteraction::Selectable,
             link_description: None,
+            options: DEFAULT_MARKDOWN_OPTIONS,
         }
     }
+}
+
+/// Where each block that [`markdown`] presents for `source` comes from,
+/// without presenting it: every presented block's kind, nesting depth and
+/// source byte range, and every heading's level, text and source byte range,
+/// in document order. Pass the [`MarkdownSpec::options`] the presentation
+/// uses. Ranges are the byte offsets pulldown-cmark reports in `source`, plus
+/// `base`: give the offset at which `source` starts in a larger text, such as
+/// a file whose frontmatter precedes the Markdown body, to receive ranges in
+/// that text. Ranges count bytes, so CRLF line endings and multibyte
+/// characters count as they are stored.
+///
+/// ```
+/// use stobie_ui_egui::{MarkdownBlockKind, MarkdownOptions, markdown_source_map};
+///
+/// let file = "---\ntitle: Notes\n---\n# Notes\n\nA paragraph.\n";
+/// let body = file.find("# ").unwrap();
+/// let map = markdown_source_map(&file[body..], MarkdownOptions::ENABLE_TABLES, body);
+/// assert_eq!(map.blocks[0].kind, MarkdownBlockKind::Heading);
+/// assert_eq!(map.headings[0].text, "Notes");
+/// assert_eq!(&file[map.headings[0].source.clone()], "# Notes\n");
+/// assert_eq!(&file[map.blocks[1].source.clone()], "A paragraph.\n");
+/// ```
+pub fn markdown_source_map(
+    source: &str,
+    options: MarkdownOptions,
+    base: usize,
+) -> MarkdownSourceMap {
+    parse::source_map(source, options, base)
 }
 
 /// What [`markdown`] presented.
@@ -554,8 +603,10 @@ fn union(rects: impl IntoIterator<Item = Rect>) -> Rect {
 /// and numbered lists to any depth, block quotes, fenced and indented code
 /// in the monospace face, horizontal rules, emphasis, strong, strikethrough,
 /// inline code and links. Raw HTML is shown as written and never
-/// interpreted; an image shows its alternative text; tables are not
-/// recognised and keep their source text.
+/// interpreted; an image shows its alternative text. [`MarkdownSpec::options`]
+/// chooses the extensions parsed, strikethrough alone by default; tables,
+/// footnotes, task lists and maths keep their source text or form.
+/// [`markdown_source_map`] reports where each presented block's source is.
 ///
 /// Each block is one measured reading surface, wrapped at the available
 /// width and never truncated, observed as [`TextComponentKind::ReadingText`]
@@ -610,7 +661,7 @@ pub(crate) fn present_markdown(
     font_scale: f32,
     observations: &mut Vec<TextLayoutObservation>,
 ) -> (MarkdownResponse, Vec<CodeBlock>) {
-    let Document { blocks, links } = parse::parse(source);
+    let Document { blocks, links, .. } = parse::parse(source, spec.options);
     let width = ui.available_width().max(1.0);
     let enabled = ui.is_enabled();
     let painter = ui.painter().clone();
