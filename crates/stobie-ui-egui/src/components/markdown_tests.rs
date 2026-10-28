@@ -1391,26 +1391,32 @@ fn the_source_map_names_each_presented_text_block() {
                     | MarkdownBlockKind::Heading
                     | MarkdownBlockKind::CodeBlock
                     | MarkdownBlockKind::HtmlBlock
-                    | MarkdownBlockKind::Table
                     | MarkdownBlockKind::MetadataBlock
             )
         })
         .collect();
+    // The one table presents each of its four cells as text of its own.
+    assert_eq!(
+        map.blocks
+            .iter()
+            .filter(|block| block.kind == MarkdownBlockKind::Table)
+            .count(),
+        1
+    );
     for width in [PHONE, DESKTOP] {
         for scale in [1.0, 1.5] {
             let label = format!("{width} at {scale}");
             let presented = present_spec(&context(), EXTENDED, width, scale, tokens(), None, spec);
             assert_clean(&presented, &label);
             let reading = presented.kind(TextComponentKind::ReadingText);
-            assert_eq!(reading.len(), texts.len(), "{label}: {texts:#?}");
+            assert_eq!(reading.len(), texts.len() + 4, "{label}: {texts:#?}");
             let lines: Vec<&str> = reading
                 .iter()
                 .map(|text| text.content_text().unwrap_or_default())
                 .collect();
-            assert!(
-                lines.contains(&"| Name | Wert |\n| α | 1 |"),
-                "{label}: {lines:#?}"
-            );
+            for cell in ["Name", "Wert", "α", "1"] {
+                assert!(lines.contains(&cell), "{label}: {lines:#?}");
+            }
             assert!(lines.contains(&"The note, ünïcode."), "{label}");
         }
     }
@@ -1969,4 +1975,407 @@ fn a_followed_link_reaches_the_root_from_every_nested_context() {
             "{context_kind}"
         );
     }
+}
+
+/// A wide table, its columns aligned start, centre, end and end, with a
+/// link and wrapping notes, and a narrow one.
+const TABLES: &str = "| Pool | Tide | Area (m²) | Depth (m) | Temperature (°C) | Species | Notes |\r\n\
+| :--- | :---: | ---: | ---: | ---: | --- | --- |\r\n\
+| North shelf | Low | 12.5 | 0.4 | 14 | Limpets, chitons | Sheltered by a basalt ledge; see the [survey](#survey) |\r\n\
+| South gully | High | 3 | 1.2 | 15 | Anemones, nudibranchs | Surge at the mouth |\r\n\
+| Outer reef | | 140 | 2.6 | 12 | Kelp | |\r\n\r\n\
+| Name | Count |\r\n| --- | ---: |\r\n| Crab | 4 |\r\n";
+
+fn tables_spec() -> MarkdownSpec<'static> {
+    MarkdownSpec {
+        options: DOCUMENT,
+        ..MarkdownSpec::default()
+    }
+}
+
+/// The AccessKit tree's nodes by ID.
+fn accesskit_nodes(
+    presented: &Presented,
+) -> BTreeMap<egui::accesskit::NodeId, &egui::accesskit::Node> {
+    presented
+        .update
+        .nodes
+        .iter()
+        .map(|(id, node)| (*id, node))
+        .collect()
+}
+
+/// A cell's role, row index and column index.
+type AccessibleCell = (egui::accesskit::Role, Option<usize>, Option<usize>);
+
+/// A presented table as assistive technology sees it: its row and column
+/// counts, and each row's index and cells as (role, row, column).
+#[derive(Debug, PartialEq)]
+struct AccessibleTable {
+    rows: Option<usize>,
+    columns: Option<usize>,
+    cells: Vec<(Option<usize>, Vec<AccessibleCell>)>,
+    top: f64,
+}
+
+fn accessible_tables(presented: &Presented) -> Vec<AccessibleTable> {
+    use egui::accesskit::Role;
+    let nodes = accesskit_nodes(presented);
+    let mut tables: Vec<_> = nodes
+        .values()
+        .filter(|node| node.role() == Role::Table)
+        .map(|table| AccessibleTable {
+            rows: table.row_count(),
+            columns: table.column_count(),
+            cells: table
+                .children()
+                .iter()
+                .map(|id| nodes[id])
+                .filter(|row| row.role() == Role::Row)
+                .map(|row| {
+                    let cells = row
+                        .children()
+                        .iter()
+                        .map(|id| nodes[id])
+                        .map(|cell| (cell.role(), cell.row_index(), cell.column_index()))
+                        .collect();
+                    (row.row_index(), cells)
+                })
+                .collect(),
+            top: table.bounds().map_or(0.0, |bounds| bounds.y0),
+        })
+        .collect();
+    tables.sort_by(|a, b| a.top.total_cmp(&b.top));
+    tables
+}
+
+fn reading_text<'a>(presented: &'a Presented, text: &str) -> &'a TextLayoutObservation {
+    presented
+        .kind(TextComponentKind::ReadingText)
+        .into_iter()
+        .find(|layout| layout.content_text() == Some(text))
+        .unwrap_or_else(|| panic!("{text:?} is presented"))
+}
+
+#[test]
+fn tables_present_as_a_grid_or_stacked_at_every_width_size_and_contrast() {
+    use egui::accesskit::Role::{Cell, ColumnHeader};
+    for theme in [ThemeVariant::Dark, ThemeVariant::LightHighContrast] {
+        let tokens = DesignTokens::resolve(theme, DensityVariant::Comfortable);
+        for scale in [1.0, 1.5] {
+            let mut identities = Vec::new();
+            for width in [DESKTOP, PHONE] {
+                let label = format!("{theme:?} {width} at {scale}");
+                let presented = present_spec(
+                    &context(),
+                    TABLES,
+                    width,
+                    scale,
+                    tokens,
+                    None,
+                    tables_spec(),
+                );
+                assert_clean(&presented, &label);
+                let tables = accessible_tables(&presented);
+                assert_eq!(tables.len(), 2, "{label}: {tables:#?}");
+                let lines: Vec<&str> = presented
+                    .kind(TextComponentKind::ReadingText)
+                    .into_iter()
+                    .filter_map(|text| text.content_text())
+                    .collect();
+                for text in presented.kind(TextComponentKind::ReadingText) {
+                    assert_eq!(text.interaction, TextInteraction::Selectable);
+                    assert!(!text.truncated, "{label}");
+                    assert!(text.allocated_rect.max_x <= width + 0.5, "{label}");
+                }
+                // The narrow table is a grid at every width: a header row of
+                // column headers, then its body row of cells.
+                assert_eq!(
+                    tables[1],
+                    AccessibleTable {
+                        rows: Some(2),
+                        columns: Some(2),
+                        cells: vec![
+                            (
+                                Some(0),
+                                vec![
+                                    (ColumnHeader, Some(0), Some(0)),
+                                    (ColumnHeader, Some(0), Some(1))
+                                ]
+                            ),
+                            (
+                                Some(1),
+                                vec![(Cell, Some(1), Some(0)), (Cell, Some(1), Some(1))]
+                            ),
+                        ],
+                        top: tables[1].top,
+                    },
+                    "{label}"
+                );
+                // The link in a cell is presented once, whatever the layout.
+                let links = presented.links();
+                assert_eq!(links.len(), 1, "{label}");
+                assert_eq!(links[0].name, "survey");
+                let wide = &tables[0];
+                assert_eq!(wide.columns, Some(7), "{label}");
+                if width == DESKTOP {
+                    // A grid: the header row, then three rows; the empty
+                    // cells are cells without text.
+                    assert_eq!(wide.rows, Some(4), "{label}");
+                    assert_eq!(wide.cells.len(), 4, "{label}");
+                    for (index, (row, cells)) in wide.cells.iter().enumerate() {
+                        assert_eq!(*row, Some(index), "{label}");
+                        let role = if index == 0 { ColumnHeader } else { Cell };
+                        let expected: Vec<_> = (0..7)
+                            .map(|column| (role, Some(index), Some(column)))
+                            .collect();
+                        assert_eq!(cells, &expected, "{label}");
+                    }
+                    for cell in ["Pool", "North shelf", "12.5", "Low", "Kelp"] {
+                        assert!(lines.contains(&cell), "{label}: {lines:#?}");
+                    }
+                    // Each column's text is placed as the column is aligned.
+                    let rect = |text: &str| reading_text(&presented, text).allocated_rect;
+                    let (low, high) = (rect("Low"), rect("High"));
+                    let centre = |rect: crate::TextRect| (rect.min_x + rect.max_x) * 0.5;
+                    assert!((centre(low) - centre(high)).abs() < 0.5, "{label}");
+                    assert!(low.min_x > rect("Tide").min_x - 0.5, "{label}");
+                    let (wide_area, narrow_area) = (rect("12.5"), rect("3"));
+                    assert!((wide_area.max_x - narrow_area.max_x).abs() < 0.5, "{label}");
+                    assert!(narrow_area.min_x > wide_area.min_x, "{label}");
+                    assert!((rect("North shelf").min_x - rect("Pool").min_x).abs() < 0.5);
+                    // Rows stack in order, each cell's text below the last.
+                    assert!(rect("North shelf").min_y > rect("Pool").max_y, "{label}");
+                    assert!(rect("South gully").min_y > rect("North shelf").max_y);
+                } else {
+                    // Stacked: each body row a record, its cells led by
+                    // their headers, its empty cells left out.
+                    assert_eq!(wide.rows, Some(3), "{label}");
+                    let records: Vec<_> = wide
+                        .cells
+                        .iter()
+                        .map(|(row, cells)| {
+                            (
+                                *row,
+                                cells
+                                    .iter()
+                                    .map(|(role, _, column)| (*role, *column))
+                                    .collect::<Vec<_>>(),
+                            )
+                        })
+                        .collect();
+                    let all = (0..7)
+                        .map(|column| (Cell, Some(column)))
+                        .collect::<Vec<_>>();
+                    let sparse = [0, 2, 3, 4, 5].map(|column| (Cell, Some(column))).to_vec();
+                    assert_eq!(
+                        records,
+                        [(Some(0), all.clone()), (Some(1), all), (Some(2), sparse)],
+                        "{label}"
+                    );
+                    for line in [
+                        "Pool: North shelf",
+                        "Tide: Low",
+                        "Area (m²): 140",
+                        "Species: Kelp",
+                    ] {
+                        assert!(lines.contains(&line), "{label}: {lines:#?}");
+                    }
+                    assert!(!lines.contains(&"Pool"), "{label}: no header row");
+                    assert!(
+                        lines.contains(&"Notes: Sheltered by a basalt ledge; see the survey"),
+                        "{label}: {lines:#?}"
+                    );
+                    // A record's lines start together, one below another.
+                    let (pool, tide) = (
+                        reading_text(&presented, "Pool: North shelf").allocated_rect,
+                        reading_text(&presented, "Tide: Low").allocated_rect,
+                    );
+                    assert!((pool.min_x - tide.min_x).abs() < 0.5, "{label}");
+                    assert!(tide.min_y >= pool.max_y - 0.5, "{label}");
+                }
+                identities.push(
+                    presented
+                        .rects()
+                        .into_keys()
+                        .collect::<std::collections::BTreeSet<_>>(),
+                );
+            }
+            // A stacked cell keeps the identity it has in the grid.
+            assert!(
+                identities[1].is_subset(&identities[0]),
+                "{theme:?} at {scale}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_table_cell_wraps_within_its_column() {
+    let presented = present_spec(
+        &context(),
+        TABLES,
+        600.0,
+        1.0,
+        tokens(),
+        None,
+        tables_spec(),
+    );
+    assert_clean(&presented, "600");
+    let tables = accessible_tables(&presented);
+    assert_eq!(tables[0].rows, Some(4), "a grid at 600: {tables:#?}");
+    let notes = reading_text(&presented, "Sheltered by a basalt ledge; see the survey");
+    assert!(notes.line_count > 1, "{notes:#?}");
+    assert!(notes.allocated_rect.max_x <= 600.5);
+    // The row grows to its tallest cell: the next row starts below it.
+    let next = reading_text(&presented, "South gully").allocated_rect;
+    assert!(
+        next.min_y > notes.allocated_rect.max_y,
+        "{next:?} {notes:#?}"
+    );
+}
+
+/// Tables in a quote and in a list item, and one with no body rows.
+const NESTED_TABLES: &str = "> | Quoted | Table |\n> | --- | --- |\n> | q1 | q2 |\n\n\
+- An item\n\n  | Listed | Table |\n  | --- | --- |\n  | l1 | l2 |\n\n\
+| Only | Header |\n| --- | --- |\n";
+
+#[test]
+fn a_table_presents_in_a_quote_in_a_list_item_and_with_no_body_rows() {
+    for scale in [1.0, 1.5] {
+        for width in [DESKTOP, PHONE] {
+            let label = format!("{width} at {scale}");
+            let presented = present_spec(
+                &context(),
+                NESTED_TABLES,
+                width,
+                scale,
+                tokens(),
+                None,
+                tables_spec(),
+            );
+            assert_clean(&presented, &label);
+            let tables = accessible_tables(&presented);
+            let counts: Vec<_> = tables.iter().map(|t| (t.rows, t.columns)).collect();
+            assert_eq!(
+                counts,
+                [(Some(2), Some(2)), (Some(2), Some(2)), (Some(1), Some(2))],
+                "{label}"
+            );
+            for text in presented.kind(TextComponentKind::ReadingText) {
+                assert!(text.allocated_rect.max_x <= width + 0.5, "{label}");
+            }
+            // The quoted and listed tables are indented with their blocks.
+            let left = |text: &str| reading_text(&presented, text).allocated_rect.min_x;
+            assert!(left("q1") > left("Only"), "{label}");
+            assert!(left("l1") > left("Only"), "{label}");
+        }
+    }
+}
+
+#[test]
+fn a_table_projects_as_an_aria_table() {
+    let presented = present_spec(
+        &context(),
+        TABLES,
+        DESKTOP,
+        1.0,
+        tokens(),
+        None,
+        tables_spec(),
+    );
+    let tree = crate::aria::project(&presented.update, 1.0);
+    let roles = |role: &str| {
+        tree.elements
+            .values()
+            .filter(|element| element.attributes.get("role").map(String::as_str) == Some(role))
+            .collect::<Vec<_>>()
+    };
+    let tables = roles("table");
+    assert_eq!(tables.len(), 2);
+    assert!(
+        tables
+            .iter()
+            .any(|table| table.attributes["aria-rowcount"] == "4"
+                && table.attributes["aria-colcount"] == "7")
+    );
+    assert_eq!(roles("row").len(), 6);
+    assert_eq!(roles("columnheader").len(), 9);
+    assert_eq!(roles("cell").len(), 23);
+    // Each cell's text is within its cell.
+    let pool = roles("columnheader")
+        .into_iter()
+        .find(|header| header.attributes["aria-colindex"] == "1" && header.children.len() == 1)
+        .expect("a first column header with its text");
+    assert_eq!(pool.attributes["aria-rowindex"], "1");
+}
+
+#[test]
+fn the_default_options_keep_a_table_as_its_source() {
+    let presented = present(TABLES, DESKTOP, 1.0);
+    assert_clean(&presented, "default");
+    assert!(accessible_tables(&presented).is_empty());
+    let lines: Vec<&str> = presented
+        .kind(TextComponentKind::ReadingText)
+        .into_iter()
+        .filter_map(|text| text.content_text())
+        .collect();
+    assert_eq!(lines.len(), 2, "{lines:#?}");
+    assert!(
+        lines[1].starts_with("| Name | Count | | --- | ---: |"),
+        "{lines:#?}"
+    );
+}
+
+#[test]
+fn dragging_across_a_table_selects_and_copies_its_cells() {
+    let rect = Rc::new(Cell::new(Rect::NOTHING));
+    let observed = rect.clone();
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(DESKTOP, 300.0))
+        .build_ui(move |ui| {
+            crate::install_typography_fonts(ui.ctx());
+            let mut p = PresentationContext::new(
+                ui,
+                tokens(),
+                1.0,
+                PresentationScope::new("reply"),
+                SemanticUiId::root(),
+            );
+            let response = p.markdown(
+                ui,
+                "body",
+                "| Name | Count |\n| --- | ---: |\n| Crab | 4 |\n| Whelk | 12 |",
+                tables_spec(),
+            );
+            observed.set(response.rect);
+            let _ = p.finish(ui);
+        });
+    harness.run();
+    let rect = rect.get();
+    let table = harness
+        .get_by_role(egui::accesskit::Role::Table)
+        .accesskit_node()
+        .data()
+        .bounds()
+        .unwrap();
+    // From the first header's text to the last cell's.
+    let start = rect.left_top() + egui::vec2(8.0, 6.0);
+    let end = egui::pos2(table.x1 as f32 - 8.0, table.y1 as f32 - 6.0);
+    harness.hover_at(start);
+    harness.drag_at(start);
+    harness.hover_at(end);
+    harness.drop_at(end);
+    harness.step();
+    harness.event(egui::Event::Copy);
+    harness.step();
+    let commands = &harness.output().platform_output.commands;
+    let copied = commands
+        .iter()
+        .find_map(|command| match command {
+            egui::OutputCommand::CopyText(text) => Some(text.as_str()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{commands:?}"));
+    assert_eq!(copied, "Name Count\nCrab 4\nWhelk 12");
 }

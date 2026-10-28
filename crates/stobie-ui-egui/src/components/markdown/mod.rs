@@ -8,10 +8,10 @@ use std::ops::Range;
 
 use egui::{
     Color32, CursorIcon, FontFamily, FontId, Galley, Painter, Pos2, Rect, Response, Sense, Stroke,
-    TextFormat, text::LayoutJob,
+    TextFormat, UiBuilder, text::LayoutJob,
 };
 
-use self::parse::{Block, Document, Inline, Item, LinkTarget};
+use self::parse::{Alignment, Block, Document, Inline, Item, LinkTarget};
 pub use self::parse::{
     MarkdownBlock, MarkdownBlockKind, MarkdownFootnote, MarkdownHeading, MarkdownLink,
     MarkdownSourceMap,
@@ -23,6 +23,12 @@ use crate::{
     link_colour, link_url_allowed, measure_component_reading, measure_component_text,
     present_accessible_measured_text, present_measured_text,
 };
+
+/// A width wider than any table cell's text, at which it measures unwrapped.
+const UNWRAPPED: f32 = 100_000.0;
+/// The separator between a column's header and a cell's text where a table
+/// stacks.
+const STACKED_SEPARATOR: &str = ": ";
 
 /// A bullet's radius as a share of its text's font size.
 const BULLET_RADIUS: f32 = 0.18;
@@ -380,6 +386,9 @@ fn heading_role(level: u8) -> TextRole {
 struct TextPiece {
     identity: PresentationId,
     rect: Rect,
+    /// The width the text wraps at, which a table cell's narrower or
+    /// aligned `rect` does not change.
+    wrap_width: f32,
     job: LayoutJob,
     /// The document link each section of `job` belongs to.
     section_links: Vec<Option<usize>>,
@@ -432,12 +441,61 @@ enum Piece {
     Fill(Rect),
     /// A block quote's bar, or a horizontal rule.
     Line(Rect),
+    Table(TablePiece),
+}
+
+/// A table as laid out: a grid of rows and columns, or, where its columns
+/// do not fit, stacked with each body row a record of its own.
+struct TablePiece {
+    identity: PresentationId,
+    rect: Rect,
+    /// How many rows and columns assistive technology is told it has.
+    row_count: usize,
+    column_count: usize,
+    rows: Vec<RowPiece>,
+    /// The header row's surface, painted before the text.
+    fills: Vec<Rect>,
+    /// The rules between rows.
+    lines: Vec<Rect>,
+}
+
+struct RowPiece {
+    /// Its place in the source: 0 for the header row, then each body row.
+    source: usize,
+    /// Its index among the rows assistive technology is told of.
+    index: usize,
+    rect: Rect,
+    /// Whether its cells head their columns.
+    header: bool,
+    cells: Vec<CellPiece>,
+}
+
+struct CellPiece {
+    column: usize,
+    rect: Rect,
+    /// Its text, or `None` where the cell is empty.
+    text: Option<TextPiece>,
 }
 
 impl Piece {
     fn translate(&mut self, offset: egui::Vec2) {
         match self {
             Self::Text(text) => text.rect = text.rect.translate(offset),
+            Self::Table(table) => {
+                table.rect = table.rect.translate(offset);
+                for rect in table.fills.iter_mut().chain(&mut table.lines) {
+                    *rect = rect.translate(offset);
+                }
+                for row in &mut table.rows {
+                    row.rect = row.rect.translate(offset);
+                    for cell in &mut row.cells {
+                        cell.rect = cell.rect.translate(offset);
+                        if let Some(text) = &mut cell.text {
+                            text.rect = text.rect.translate(offset);
+                        }
+                    }
+                }
+            }
             Self::Marker { rect, .. }
             | Self::Task { rect, .. }
             | Self::Fill(rect)
@@ -592,6 +650,22 @@ impl Layout<'_> {
     }
 
     fn text(&mut self, path: &[u32], x: f32, width: f32, role: TextRole, styled: Styled) -> Rect {
+        let piece = self.text_piece(path, egui::pos2(x, self.y), width, role, styled);
+        let rect = piece.rect;
+        self.pieces.push(Piece::Text(piece));
+        self.y = rect.bottom();
+        rect
+    }
+
+    /// Measure text `width` wide with its top left at `min`.
+    fn text_piece(
+        &mut self,
+        path: &[u32],
+        min: Pos2,
+        width: f32,
+        role: TextRole,
+        styled: Styled,
+    ) -> TextPiece {
         let Styled {
             job,
             section_links,
@@ -608,10 +682,7 @@ impl Layout<'_> {
             self.scale,
             width.max(1.0),
         );
-        let rect = Rect::from_min_size(
-            egui::pos2(x, self.y),
-            egui::vec2(width.max(1.0), measured.size().y.max(1.0)),
-        );
+        let rect = Rect::from_min_size(min, egui::vec2(width.max(1.0), measured.size().y.max(1.0)));
         self.first_text_top.get_or_insert(rect.top());
         // A heading the application named keeps an identity of its own name,
         // whatever its place.
@@ -620,9 +691,10 @@ impl Layout<'_> {
             None => self.identity.child(("block", path)),
         };
         let lead = std::mem::take(&mut self.lead);
-        self.pieces.push(Piece::Text(TextPiece {
+        TextPiece {
             identity,
             rect,
+            wrap_width: width.max(1.0),
             job,
             section_links,
             links,
@@ -630,9 +702,7 @@ impl Layout<'_> {
             heading,
             anchor,
             lead,
-        }));
-        self.y = rect.bottom();
-        rect
+        }
     }
 
     /// A paragraph, or a heading of `heading`'s level.
@@ -819,6 +889,305 @@ impl Layout<'_> {
                 )));
                 self.y += 1.0;
             }
+            Block::Table {
+                alignments,
+                head,
+                rows,
+            } => self.table(path, x, width, alignments, head, rows, quoted),
+        }
+    }
+
+    /// The space between a grid cell's edges and its text. Rows a spacing
+    /// unit from their rules stay close enough that a selection copied
+    /// across them keeps a row to a line.
+    fn cell_padding(&self) -> egui::Vec2 {
+        egui::vec2(self.tokens.spacing.inline.0, self.tokens.spacing.unit.0)
+    }
+
+    /// A cell's natural width, unwrapped, and its longest word's width.
+    fn cell_widths(&self, inline: &Inline, quoted: bool) -> (f32, f32) {
+        let (job, _) = self.inline_job(inline, TextRole::Body, quoted, None);
+        let measured = measure_component_reading(
+            self.painter,
+            job,
+            TextRole::Body,
+            self.interaction,
+            self.tokens,
+            self.scale,
+            UNWRAPPED,
+        );
+        let mut word = 0.0_f32;
+        for row in &measured.galley.rows {
+            let mut start = None;
+            for glyph in &row.row.glyphs {
+                if glyph.chr.is_whitespace() {
+                    start = None;
+                    continue;
+                }
+                let left = *start.get_or_insert(glyph.pos.x);
+                word = word.max(glyph.max_x() - left);
+            }
+        }
+        (measured.size().x, word)
+    }
+
+    /// A cell's text, `width` wide at `min`, placed as its column is
+    /// aligned. Its rect is the text's own extent, so that its link areas
+    /// and selection follow the text where it is aligned.
+    #[allow(clippy::too_many_arguments)]
+    fn cell(
+        &mut self,
+        path: &[u32],
+        min: Pos2,
+        width: f32,
+        alignment: Alignment,
+        inline: &Inline,
+        quoted: bool,
+    ) -> TextPiece {
+        let (job, section_links) = self.inline_job(inline, TextRole::Body, quoted, None);
+        let styled = Styled {
+            job,
+            section_links,
+            links: inline.link_bytes(),
+            heading: None,
+            anchor: None,
+        };
+        let mut piece = self.text_piece(path, min, width, TextRole::Body, styled);
+        let width = width.max(1.0);
+        let used = piece.measured.size().x.clamp(1.0, width);
+        let offset = match alignment {
+            Alignment::Start => 0.0,
+            Alignment::Centre => (width - used) * 0.5,
+            Alignment::End => width - used,
+        };
+        piece.rect = Rect::from_min_size(
+            egui::pos2(min.x + offset, min.y),
+            egui::vec2(used, piece.rect.height()),
+        );
+        piece
+    }
+
+    /// A table: a grid where each column has room for its longest word (up
+    /// to twice the narrowest content), otherwise stacked.
+    #[allow(clippy::too_many_arguments)]
+    fn table(
+        &mut self,
+        path: &mut Vec<u32>,
+        x: f32,
+        width: f32,
+        alignments: &[Alignment],
+        head: &[Inline],
+        rows: &[Vec<Inline>],
+        quoted: bool,
+    ) {
+        let columns = alignments.len();
+        if columns == 0 {
+            return;
+        }
+        let pad = self.cell_padding();
+        let head: Vec<Inline> = head.iter().map(Inline::strong).collect();
+        let longest = self.minimum_content_width() * 2.0;
+        let mut natural = vec![0.0_f32; columns];
+        let mut least = vec![0.0_f32; columns];
+        for row in std::iter::once(&head).chain(rows) {
+            for (column, cell) in row.iter().enumerate().take(columns) {
+                let (cell_natural, word) = self.cell_widths(cell, quoted);
+                natural[column] = natural[column].max(cell_natural + pad.x * 2.0);
+                least[column] = least[column].max(word.min(longest) + pad.x * 2.0);
+            }
+        }
+        let identity = self.identity.child(("table", path.as_slice()));
+        let top = self.y;
+        let mut table = TablePiece {
+            identity,
+            rect: Rect::NOTHING,
+            row_count: 0,
+            column_count: columns,
+            rows: Vec::new(),
+            fills: Vec::new(),
+            lines: Vec::new(),
+        };
+        if least.iter().sum::<f32>() > width {
+            self.stacked(&mut table, path, x, width, &head, rows, quoted);
+        } else {
+            let widths = shared_widths(&natural, &least, width);
+            self.grid(
+                &mut table, path, x, &widths, alignments, &head, rows, quoted,
+            );
+        }
+        let right = table
+            .lines
+            .iter()
+            .map(|line| line.right())
+            .fold(x + 1.0, f32::max);
+        table.rect =
+            Rect::from_min_max(egui::pos2(x, top), egui::pos2(right, self.y.max(top + 1.0)));
+        self.pieces.push(Piece::Table(table));
+    }
+
+    /// A table as a grid: the header row on a raised surface, a rule below
+    /// each row, and each cell's text wrapping within its column.
+    #[allow(clippy::too_many_arguments)]
+    fn grid(
+        &mut self,
+        table: &mut TablePiece,
+        path: &mut Vec<u32>,
+        x: f32,
+        widths: &[f32],
+        alignments: &[Alignment],
+        head: &[Inline],
+        rows: &[Vec<Inline>],
+        quoted: bool,
+    ) {
+        let pad = self.cell_padding();
+        let line_height = self.style(TextRole::Body).line_height;
+        let total: f32 = widths.iter().sum();
+        table.row_count = rows.len() + 1;
+        for (source, cells) in std::iter::once(head)
+            .chain(rows.iter().map(Vec::as_slice))
+            .enumerate()
+        {
+            let top = self.y;
+            let mut left = x;
+            let mut texts = Vec::with_capacity(widths.len());
+            let mut bottom = top + line_height + pad.y * 2.0;
+            for (column, (&width, &alignment)) in widths.iter().zip(alignments).enumerate() {
+                let text = cells
+                    .get(column)
+                    .filter(|cell| !cell.text.trim().is_empty())
+                    .map(|cell| {
+                        path.extend([cell_index(source), cell_index(column)]);
+                        let piece = self.cell(
+                            path,
+                            egui::pos2(left + pad.x, top + pad.y),
+                            width - pad.x * 2.0,
+                            alignment,
+                            cell,
+                            quoted,
+                        );
+                        path.truncate(path.len() - 2);
+                        piece
+                    });
+                if let Some(text) = &text {
+                    bottom = bottom.max(text.rect.bottom() + pad.y);
+                }
+                texts.push((column, left, width, text));
+                left += width;
+            }
+            let rect = Rect::from_min_max(egui::pos2(x, top), egui::pos2(x + total, bottom));
+            let cells = texts
+                .into_iter()
+                .map(|(column, left, width, text)| CellPiece {
+                    column,
+                    rect: Rect::from_min_max(
+                        egui::pos2(left, top),
+                        egui::pos2(left + width, bottom),
+                    ),
+                    text,
+                })
+                .collect();
+            if source == 0 {
+                table.fills.push(rect);
+            }
+            table.rows.push(RowPiece {
+                source,
+                index: source,
+                rect,
+                header: source == 0,
+                cells,
+            });
+            table.lines.push(Rect::from_min_size(
+                egui::pos2(x, bottom),
+                egui::vec2(total, 1.0),
+            ));
+            self.y = bottom + 1.0;
+        }
+    }
+
+    /// A table too narrow for its columns: each body row a record set apart
+    /// by rules, each of its cells a line led by its column's header. A
+    /// table without body rows lists its headers. An empty cell is left out.
+    #[allow(clippy::too_many_arguments)]
+    fn stacked(
+        &mut self,
+        table: &mut TablePiece,
+        path: &mut Vec<u32>,
+        x: f32,
+        width: f32,
+        head: &[Inline],
+        rows: &[Vec<Inline>],
+        quoted: bool,
+    ) {
+        let pad = self.tokens.spacing.block.0;
+        let records: Vec<(usize, &[Inline])> = if rows.is_empty() {
+            vec![(0, head)]
+        } else {
+            rows.iter()
+                .enumerate()
+                .map(|(index, row)| (index + 1, row.as_slice()))
+                .collect()
+        };
+        table.row_count = records.len();
+        table.lines.push(Rect::from_min_size(
+            egui::pos2(x, self.y),
+            egui::vec2(width, 1.0),
+        ));
+        self.y += 1.0;
+        for (index, (source, cells)) in records.into_iter().enumerate() {
+            let top = self.y;
+            self.y += pad;
+            let mut pieces = Vec::new();
+            for (column, cell) in cells.iter().enumerate() {
+                if cell.text.trim().is_empty() {
+                    continue;
+                }
+                let lead = head.get(column).filter(|lead| !lead.text.trim().is_empty());
+                let inline = match lead {
+                    Some(lead) if source > 0 => cell.led_by(lead, STACKED_SEPARATOR),
+                    _ => cell.clone(),
+                };
+                path.extend([cell_index(source), cell_index(column)]);
+                let text = self.cell(
+                    path,
+                    egui::pos2(x, self.y),
+                    width,
+                    Alignment::Start,
+                    &inline,
+                    quoted,
+                );
+                path.truncate(path.len() - 2);
+                self.y = text.rect.bottom();
+                pieces.push((column, text));
+            }
+            if pieces.is_empty() {
+                self.y = top;
+                continue;
+            }
+            self.y += pad;
+            let rect = Rect::from_min_max(egui::pos2(x, top), egui::pos2(x + width, self.y));
+            let cells = pieces
+                .into_iter()
+                .map(|(column, text)| CellPiece {
+                    column,
+                    rect: Rect::from_min_max(
+                        egui::pos2(x, text.rect.top()),
+                        egui::pos2(x + width, text.rect.bottom()),
+                    ),
+                    text: Some(text),
+                })
+                .collect();
+            table.rows.push(RowPiece {
+                source,
+                index,
+                rect,
+                header: source == 0,
+                cells,
+            });
+            table.lines.push(Rect::from_min_size(
+                egui::pos2(x, self.y),
+                egui::vec2(width, 1.0),
+            ));
+            self.y += 1.0;
         }
     }
 
@@ -1038,6 +1407,38 @@ impl Layout<'_> {
             path.pop();
         }
     }
+}
+
+/// A table cell's place in its block's path.
+fn cell_index(index: usize) -> u32 {
+    u32::try_from(index).unwrap_or(u32::MAX)
+}
+
+/// Column widths for a grid `width` wide: each column's `natural` width
+/// where they all fit, otherwise its `least` width and a share of the rest
+/// in proportion to how much more it would take.
+fn shared_widths(natural: &[f32], least: &[f32], width: f32) -> Vec<f32> {
+    if natural.iter().sum::<f32>() <= width {
+        return natural.to_vec();
+    }
+    let spare = (width - least.iter().sum::<f32>()).max(0.0);
+    let wants: Vec<f32> = natural
+        .iter()
+        .zip(least)
+        .map(|(natural, least)| (natural - least).max(0.0))
+        .collect();
+    let wanted: f32 = wants.iter().sum();
+    least
+        .iter()
+        .zip(&wants)
+        .map(|(least, want)| {
+            if wanted > 0.0 {
+                least + spare * want / wanted
+            } else {
+                *least
+            }
+        })
+        .collect()
 }
 
 /// Each link's fragments in a galley positioned at `origin`: one rectangle
@@ -1284,6 +1685,22 @@ pub(crate) fn present_markdown(
                 &mut nodes,
                 &mut followed,
             ),
+            Piece::Table(table) => present_table(ui, &table, tokens, &mut |ui, text| {
+                present_text(
+                    ui,
+                    identity,
+                    text,
+                    &links,
+                    &footnotes,
+                    spec,
+                    parent.clone(),
+                    tokens,
+                    font_scale,
+                    observations,
+                    &mut nodes,
+                    &mut followed,
+                );
+            }),
         }
     }
     for footnote in &footnotes {
@@ -1326,6 +1743,84 @@ struct Nodes {
     headings: Vec<UiNode>,
     tasks: Vec<UiNode>,
     footnotes: Vec<UiNode>,
+}
+
+/// Paint a table's surfaces and rules, and present its cells' text, each in
+/// a cell nested in a row nested in the table for assistive technology.
+fn present_table(
+    ui: &mut egui::Ui,
+    table: &TablePiece,
+    tokens: &DesignTokens,
+    text: &mut dyn FnMut(&mut egui::Ui, &TextPiece),
+) {
+    use egui::accesskit::Role;
+    for fill in &table.fills {
+        ui.painter()
+            .rect_filled(*fill, 0.0, tokens.colours.surface_raised);
+    }
+    for line in &table.lines {
+        ui.painter()
+            .rect_filled(*line, 0.0, tokens.colours.border_decorative);
+    }
+    let mut table_ui = ui.new_child(
+        UiBuilder::new()
+            .id_salt(table.identity.egui_id())
+            .max_rect(table.rect),
+    );
+    describe(&table_ui, table.rect, |node| {
+        node.set_role(Role::Table);
+        node.set_author_id(table.identity.semantic_id().0);
+        node.set_row_count(table.row_count);
+        node.set_column_count(table.column_count);
+    });
+    for row in &table.rows {
+        let mut row_ui = table_ui.new_child(
+            UiBuilder::new()
+                .id_salt(("row", row.source))
+                .max_rect(row.rect),
+        );
+        describe(&row_ui, row.rect, |node| {
+            node.set_role(Role::Row);
+            node.set_row_index(row.index);
+        });
+        for cell in &row.cells {
+            let mut cell_ui = row_ui.new_child(
+                UiBuilder::new()
+                    .id_salt(("cell", cell.column))
+                    .max_rect(cell.rect),
+            );
+            describe(&cell_ui, cell.rect, |node| {
+                node.set_role(if row.header {
+                    Role::ColumnHeader
+                } else {
+                    Role::Cell
+                });
+                node.set_row_index(row.index);
+                node.set_column_index(cell.column);
+            });
+            if let Some(piece) = &cell.text {
+                text(&mut cell_ui, piece);
+            }
+        }
+    }
+}
+
+/// Describe `ui`'s own node to assistive technology, bounded by the part of
+/// `rect` in view, when any of it is.
+fn describe(ui: &egui::Ui, rect: Rect, build: impl FnOnce(&mut egui::accesskit::Node)) {
+    let visible = ui.clip_rect().intersect(rect);
+    if !visible.is_positive() {
+        return;
+    }
+    ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+        build(node);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: f64::from(visible.min.x),
+            y0: f64::from(visible.min.y),
+            x1: f64::from(visible.max.x),
+            y1: f64::from(visible.max.y),
+        });
+    });
 }
 
 /// Paint a task-list item's read-only box and describe it to assistive
@@ -1460,7 +1955,7 @@ fn present_text(
                 text.measured.spec.interaction,
                 tokens,
                 font_scale,
-                text.rect.width(),
+                text.wrap_width,
             );
             &hovered_measurement
         }

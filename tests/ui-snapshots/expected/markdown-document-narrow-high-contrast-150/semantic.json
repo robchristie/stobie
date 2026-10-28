@@ -19,15 +19,15 @@
       "actions": []
     },
     {
-      "id": "gallery.document.density",
+      "id": "gallery.document.counts",
       "parent": "gallery.story",
       "role": "heading",
-      "name": "Density",
+      "name": "Counts",
       "rect": {
         "min_x": 694,
-        "min_y": 616.9749755859375,
+        "min_y": 642.9749755859375,
         "max_x": 990,
-        "max_y": 646.9749755859375
+        "max_y": 672.9749755859375
       },
       "enabled": true,
       "focused": false,
@@ -41,9 +41,9 @@
       "name": "Open tasks",
       "rect": {
         "min_x": 694,
-        "min_y": 391,
+        "min_y": 417,
         "max_x": 990,
-        "max_y": 421
+        "max_y": 447
       },
       "enabled": true,
       "focused": false,
@@ -57,9 +57,9 @@
       "name": "Rock-pool survey",
       "rect": {
         "min_x": 694,
-        "min_y": 236,
+        "min_y": 262,
         "max_x": 990,
-        "max_y": 270
+        "max_y": 296
       },
       "enabled": true,
       "focused": false,
@@ -90,9 +90,9 @@
       "name": "Task",
       "rect": {
         "min_x": 694,
-        "min_y": 493.3125,
+        "min_y": 519.3125,
         "max_x": 711,
-        "max_y": 510.3125
+        "max_y": 536.3125
       },
       "enabled": false,
       "focused": false,
@@ -107,9 +107,9 @@
       "name": "[1]",
       "rect": {
         "min_x": 789,
-        "min_y": 353,
+        "min_y": 379,
         "max_x": 805.431396484375,
-        "max_y": 379
+        "max_y": 405
       },
       "enabled": true,
       "focused": false,
@@ -124,9 +124,9 @@
       "name": "[2]",
       "rect": {
         "min_x": 960.5625,
-        "min_y": 457.32501220703125,
+        "min_y": 483.32501220703125,
         "max_x": 975.993896484375,
-        "max_y": 483.32501220703125
+        "max_y": 509.32501220703125
       },
       "enabled": true,
       "focused": false,
@@ -141,9 +141,9 @@
       "name": "Count the anemones in pool C[2]",
       "rect": {
         "min_x": 694,
-        "min_y": 461.98748779296875,
+        "min_y": 487.98748779296875,
         "max_x": 711,
-        "max_y": 478.98748779296875
+        "max_y": 504.98748779296875
       },
       "enabled": false,
       "focused": false,
@@ -158,9 +158,9 @@
       "name": "Photograph the northern pools",
       "rect": {
         "min_x": 694,
-        "min_y": 430.6625061035156,
+        "min_y": 456.6625061035156,
         "max_x": 711,
-        "max_y": 447.6625061035156
+        "max_y": 473.6625061035156
       },
       "enabled": false,
       "focused": false,

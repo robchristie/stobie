@@ -46,16 +46,18 @@ shows its description.\n\n\
 The reply is still arriving: [the survey](https://example.org/papers/survey) \
 and **partial text with an open [link](https://exam";
 
-/// The extensions a knowledge document uses, short of tables.
+/// The extensions a knowledge document uses.
 const DOCUMENT_OPTIONS: MarkdownOptions = DEFAULT_MARKDOWN_OPTIONS
+    .union(MarkdownOptions::ENABLE_TABLES)
     .union(MarkdownOptions::ENABLE_TASKLISTS)
     .union(MarkdownOptions::ENABLE_FOOTNOTES)
     .union(MarkdownOptions::ENABLE_MATH);
 
 /// Field notes as a document repository holds them, with CRLF line endings:
 /// tasks (one whose marker stands alone, its text a paragraph after the list,
-/// as pulldown-cmark reads it), footnotes (one opening with a list), and
-/// inline and display maths.
+/// as pulldown-cmark reads it), a wide table of counts (its columns aligned
+/// start, centre and end, one cell empty), footnotes (one opening with a
+/// list), and inline and display maths.
 pub(crate) const DOCUMENT: &str = "# Rock-pool survey\r\n\r\n\
 Notes from three low tides on the northern platform, with the open tasks and \
 the arithmetic behind each count.[^tides]\r\n\r\n\
@@ -64,6 +66,13 @@ the arithmetic behind each count.[^tides]\r\n\r\n\
 - [ ] Count the anemones in pool C[^count]\r\n\
 - [ ]\r\n\r\n  \
 Compare the counts with last season's survey, which used a coarser grid.\r\n\r\n\
+## Counts\r\n\r\n\
+| Pool | Tide | Area (m²) | Anemones | Limpets | Density (m⁻²) | Notes |\r\n\
+| :--- | :---: | ---: | ---: | ---: | ---: | --- |\r\n\
+| A | Second | 6.0 | 31 | 54 | 5.2 | Too deep to grid; two counts only |\r\n\
+| B | First | 4.2 | 18 | 77 | 4.3 | Edges dry; wet area only |\r\n\
+| C | First | 3.5 | 42 | 23 | 12.0 | Sheltered by the ledge |\r\n\
+| D | | 2.8 | 9 | 12 | 3.2 | New this season |\r\n\r\n\
 ## Density\r\n\r\n\
 Density is $d = n / A$ for $n$ animals in an area $A$, so pool C holds:\r\n\r\n\
 $$\r\nd_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}\r\n$$\r\n\r\n\
@@ -258,8 +267,9 @@ mod tests {
 
     /// The document story at phone and desktop widths, at 100% and 150%
     /// text, in dark and light high contrast: its read-only task boxes, its
-    /// headings with the application's IDs, a footnote reference and maths
-    /// in its technical face, with clean text and AccessKit audits.
+    /// headings with the application's IDs, its table as a grid or stacked,
+    /// a footnote reference and maths in its technical face, with clean text
+    /// and AccessKit audits.
     #[test]
     fn document_presents_tasks_headings_footnotes_and_maths_at_each_width_and_contrast() {
         let headings = [
@@ -338,6 +348,44 @@ mod tests {
             let update = output.platform_output.accesskit_update.take().unwrap();
             let findings = audit_accesskit(&snapshot, &update);
             assert!(findings.is_empty(), "{label}: {findings:?}");
+            // The table is a grid with a header row where its columns fit,
+            // and stacked, a record to each body row, where they do not.
+            let tables: Vec<_> = update
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.role() == egui::accesskit::Role::Table)
+                .map(|(_, node)| (node.row_count(), node.column_count()))
+                .collect();
+            let contents: Vec<_> = snapshot
+                .text
+                .iter()
+                .filter_map(|text| match &text.content {
+                    Some(TextContent::Excerpt { text, .. }) => Some(text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            let headers = update
+                .nodes
+                .iter()
+                .filter(|(_, node)| node.role() == egui::accesskit::Role::ColumnHeader)
+                .count();
+            if variant == ThemeVariant::Dark {
+                assert_eq!(tables, [(Some(5), Some(7))], "{label}");
+                assert_eq!(headers, 7, "{label}");
+                assert!(contents.contains(&"Anemones"), "{label}: {contents:#?}");
+            } else {
+                assert_eq!(tables, [(Some(4), Some(7))], "{label}");
+                assert_eq!(headers, 0, "{label}");
+                for line in ["Anemones: 42", "Notes: New this season"] {
+                    assert!(contents.contains(&line), "{label}: {contents:#?}");
+                }
+                assert!(
+                    !contents
+                        .iter()
+                        .any(|text| text.starts_with("Tide:") && text.len() < 6),
+                    "{label}: an empty cell is left out"
+                );
+            }
         }
     }
 

@@ -242,6 +242,7 @@ snapshot, is the source.
 | Content text (no `UiRole`) | `Label` | Text |
 | Markdown block (no `UiRole`) | `Label`, or `Heading` with its level for a heading; a heading the application names is a `Heading` node | Text, or `heading` with `aria-level` |
 | Markdown list number (no `UiRole`) | `Label` | Text |
+| Markdown table (no `UiRole`) | `Table` with its row and column counts, holding a `Row` with its index for each row, holding a `ColumnHeader` or `Cell` with its row and column indices for each cell | `table` with `aria-rowcount` and `aria-colcount`, `row` with `aria-rowindex`, and `columnheader` or `cell` with `aria-rowindex` and `aria-colindex`, counting from 1 |
 
 Other AccessKit roles map to their ARIA equivalents, such as `checkbox`,
 `menuitem` and `dialog`. Unknown roles become generic elements.

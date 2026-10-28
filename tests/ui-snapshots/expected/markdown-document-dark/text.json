@@ -4,28 +4,28 @@
     {
       "component_id": {
         "kind": "list_marker",
-        "instance": 3965472467208189
+        "instance": 1112477060041841
       },
       "role": "body",
       "horizontal_alignment": "end",
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 561.5499877929688,
+        "min_y": 733.5499877929688,
         "max_x": 554.8125,
-        "max_y": 579.5499877929688
+        "max_y": 751.5499877929688
       },
       "painted_rect": {
         "min_x": 540.46875,
-        "min_y": 561.5499877929688,
+        "min_y": 733.5499877929688,
         "max_x": 554.8125,
-        "max_y": 579.5499877929688
+        "max_y": 751.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 561.5499877929688,
+        "min_y": 733.5499877929688,
         "max_x": 554.8125,
-        "max_y": 579.5499877929688
+        "max_y": 751.5499877929688
       },
       "overflow": "expand",
       "interaction": "inert",
@@ -41,28 +41,28 @@
     {
       "component_id": {
         "kind": "list_marker",
-        "instance": 7342423182379358
+        "instance": 2657697608536591
       },
       "role": "body",
       "horizontal_alignment": "end",
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 538.5499877929688,
+        "min_y": 710.5499877929688,
         "max_x": 554.8125,
-        "max_y": 556.5499877929688
+        "max_y": 728.5499877929688
       },
       "painted_rect": {
         "min_x": 540.46875,
-        "min_y": 538.5499877929688,
+        "min_y": 710.5499877929688,
         "max_x": 554.8125,
-        "max_y": 556.5499877929688
+        "max_y": 728.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 538.5499877929688,
+        "min_y": 710.5499877929688,
         "max_x": 554.8125,
-        "max_y": 556.5499877929688
+        "max_y": 728.5499877929688
       },
       "overflow": "expand",
       "interaction": "inert",
@@ -78,28 +78,28 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 1288074417725819
+        "instance": 1094894239605487
       },
       "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 578.5,
-        "min_y": 561.5499877929688,
-        "max_x": 1150,
-        "max_y": 579.5499877929688
+        "min_x": 919.71875,
+        "min_y": 463.54998779296875,
+        "max_x": 1007.15625,
+        "max_y": 481.54998779296875
       },
       "painted_rect": {
-        "min_x": 578.5,
-        "min_y": 561.5499877929688,
-        "max_x": 841.125,
-        "max_y": 579.5499877929688
+        "min_x": 919.71875,
+        "min_y": 463.54998779296875,
+        "max_x": 1007.15625,
+        "max_y": 481.54998779296875
       },
       "clip_rect": {
-        "min_x": 578.5,
-        "min_y": 561.5499877929688,
-        "max_x": 1150,
-        "max_y": 579.5499877929688
+        "min_x": 919.71875,
+        "min_y": 463.54998779296875,
+        "max_x": 1007.15625,
+        "max_y": 481.54998779296875
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -108,35 +108,35 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Anemones closed by the sun were counted once.",
+        "text": "New this season",
         "truncated": false
       }
     },
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 1897516023101900
+        "instance": 1182328175304621
       },
       "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 534,
-        "min_y": 351.54998779296875,
-        "max_x": 1150,
-        "max_y": 369.54998779296875
+        "min_x": 670.25,
+        "min_y": 463.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 481.54998779296875
       },
       "painted_rect": {
-        "min_x": 534,
-        "min_y": 351.54998779296875,
-        "max_x": 890.21875,
-        "max_y": 369.54998779296875
+        "min_x": 670.25,
+        "min_y": 463.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 481.54998779296875
       },
       "clip_rect": {
-        "min_x": 534,
-        "min_y": 351.54998779296875,
-        "max_x": 1150,
-        "max_y": 369.54998779296875
+        "min_x": 670.25,
+        "min_y": 463.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 481.54998779296875
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -145,7 +145,81 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Density is d = n / A for n animals in an area A, so pool C holds:",
+        "text": "2.8",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 1326202062446894
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 889.5625,
+        "min_y": 409.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 889.5625,
+        "min_y": 409.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 889.5625,
+        "min_y": 409.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "4.3",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2019714752384831
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 700.40625,
+        "min_y": 355.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 700.40625,
+        "min_y": 355.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 700.40625,
+        "min_y": 355.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Anemones",
         "truncated": false
       }
     },
@@ -189,28 +263,28 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 2236873482469722
+        "instance": 2310136142311067
       },
       "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 578.5,
-        "min_y": 584.5499877929688,
-        "max_x": 1150,
-        "max_y": 602.5499877929688
+        "min_x": 580.265625,
+        "min_y": 382.54998779296875,
+        "max_x": 620.265625,
+        "max_y": 400.54998779296875
       },
       "painted_rect": {
-        "min_x": 578.5,
-        "min_y": 584.5499877929688,
-        "max_x": 947.40625,
-        "max_y": 602.5499877929688
+        "min_x": 580.265625,
+        "min_y": 382.54998779296875,
+        "max_x": 620.265625,
+        "max_y": 400.54998779296875
       },
       "clip_rect": {
-        "min_x": 578.5,
-        "min_y": 584.5499877929688,
-        "max_x": 1150,
-        "max_y": 602.5499877929688
+        "min_x": 580.265625,
+        "min_y": 382.54998779296875,
+        "max_x": 620.265625,
+        "max_y": 400.54998779296875
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -219,7 +293,118 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Animals on the grid line were counted with the square to their north.",
+        "text": "Second",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 239128311720211
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 889.5625,
+        "min_y": 382.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 400.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 889.5625,
+        "min_y": 382.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 400.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 889.5625,
+        "min_y": 382.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 400.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "5.2",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2689325331330774
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 634.46875,
+        "min_y": 355.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 634.46875,
+        "min_y": 355.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 634.46875,
+        "min_y": 355.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Area (m²)",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 2775731161909946
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 805,
+        "min_y": 436.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 805,
+        "min_y": 436.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 805,
+        "min_y": 436.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "23",
         "truncated": false
       }
     },
@@ -233,21 +418,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 484.54998779296875,
+        "min_y": 583.5499877929688,
         "max_x": 1150,
-        "max_y": 520.5499877929688
+        "max_y": 619.5499877929688
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 484.54998779296875,
-        "max_x": 1095.59375,
-        "max_y": 520.5499877929688
+        "min_y": 583.5499877929688,
+        "max_x": 1141.59375,
+        "max_y": 619.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 484.54998779296875,
+        "min_y": 583.5499877929688,
         "max_x": 1150,
-        "max_y": 520.5499877929688
+        "max_y": 619.5499877929688
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -256,7 +441,44 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Each count follows the grid laid at the first tide, read from the seaward corner. The tally sheets are in the appendix, with the photographs filed by pool and tide.",
+        "text": "Pool A was too deep to grid on the second tide, so its estimate rests on two counts. Pool B dried out at the edges, and the count there includes only the wet area. Pool D is new this season.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 322546731564411
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 919.71875,
+        "min_y": 436.54998779296875,
+        "max_x": 1040.90625,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 919.71875,
+        "min_y": 436.54998779296875,
+        "max_x": 1040.90625,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 919.71875,
+        "min_y": 436.54998779296875,
+        "max_x": 1040.90625,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Sheltered by the ledge",
         "truncated": false
       }
     },
@@ -300,6 +522,43 @@
     {
       "component_id": {
         "kind": "reading_text",
+        "instance": 3583815313042036
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 670.25,
+        "min_y": 409.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 670.25,
+        "min_y": 409.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 670.25,
+        "min_y": 409.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "4.2",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
         "instance": 3659097216552874
       },
       "role": "pane_title",
@@ -337,28 +596,28 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 3967364626016586
+        "instance": 3724348001065305
       },
-      "role": "monospace_technical",
+      "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 546,
-        "min_y": 381.54998779296875,
+        "min_x": 578.5,
+        "min_y": 733.5499877929688,
         "max_x": 1150,
-        "max_y": 399.54998779296875
+        "max_y": 751.5499877929688
       },
       "painted_rect": {
-        "min_x": 546,
-        "min_y": 381.54998779296875,
-        "max_x": 1031.25,
-        "max_y": 399.54998779296875
+        "min_x": 578.5,
+        "min_y": 733.5499877929688,
+        "max_x": 841.125,
+        "max_y": 751.5499877929688
       },
       "clip_rect": {
-        "min_x": 546,
-        "min_y": 381.54998779296875,
+        "min_x": 578.5,
+        "min_y": 733.5499877929688,
         "max_x": 1150,
-        "max_y": 399.54998779296875
+        "max_y": 751.5499877929688
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -367,7 +626,266 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "d_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}",
+        "text": "Anemones closed by the sun were counted once.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3801864944145273
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 588.4375,
+        "min_y": 409.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 588.4375,
+        "min_y": 409.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 588.4375,
+        "min_y": 409.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "First",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 3858042541561105
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 805,
+        "min_y": 409.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 805,
+        "min_y": 409.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 805,
+        "min_y": 409.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "77",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4412928416158644
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 578.5,
+        "min_y": 756.5499877929688,
+        "max_x": 1150,
+        "max_y": 774.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 578.5,
+        "min_y": 756.5499877929688,
+        "max_x": 947.40625,
+        "max_y": 774.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 578.5,
+        "min_y": 756.5499877929688,
+        "max_x": 1150,
+        "max_y": 762
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Animals on the grid line were counted with the square to their north.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4420720620459311
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 773.09375,
+        "min_y": 355.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 773.09375,
+        "min_y": 355.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 773.09375,
+        "min_y": 355.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Limpets",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4666801039940385
+      },
+      "role": "pane_title",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 1150,
+        "max_y": 346.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 582.375,
+        "max_y": 346.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 1150,
+        "max_y": 346.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Counts",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 4724887368206362
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 805,
+        "min_y": 382.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 400.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 805,
+        "min_y": 382.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 400.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 805,
+        "min_y": 382.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 400.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "54",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 5050607083268021
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 746.15625,
+        "min_y": 382.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 400.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 746.15625,
+        "min_y": 382.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 400.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 746.15625,
+        "min_y": 382.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 400.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "31",
         "truncated": false
       }
     },
@@ -448,28 +966,28 @@
     {
       "component_id": {
         "kind": "reading_text",
-        "instance": 5657212443077994
+        "instance": 5869783098020306
       },
       "role": "body",
       "horizontal_alignment": "start",
       "vertical_alignment": "top",
       "allocated_rect": {
-        "min_x": 561.8125,
-        "min_y": 538.5499877929688,
-        "max_x": 1150,
-        "max_y": 556.5499877929688
+        "min_x": 541,
+        "min_y": 382.54998779296875,
+        "max_x": 548.0625,
+        "max_y": 400.54998779296875
       },
       "painted_rect": {
-        "min_x": 561.8125,
-        "min_y": 538.5499877929688,
-        "max_x": 789.6875,
-        "max_y": 556.5499877929688
+        "min_x": 541,
+        "min_y": 382.54998779296875,
+        "max_x": 548.0625,
+        "max_y": 400.54998779296875
       },
       "clip_rect": {
-        "min_x": 561.8125,
-        "min_y": 538.5499877929688,
-        "max_x": 1150,
-        "max_y": 556.5499877929688
+        "min_x": 541,
+        "min_y": 382.54998779296875,
+        "max_x": 548.0625,
+        "max_y": 400.54998779296875
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -478,7 +996,7 @@
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Each visit began an hour before low water.",
+        "text": "A",
         "truncated": false
       }
     },
@@ -492,21 +1010,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 459.54998779296875,
+        "min_y": 631.5499877929688,
         "max_x": 1150,
-        "max_y": 479.54998779296875
+        "max_y": 651.5499877929688
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 459.54998779296875,
+        "min_y": 631.5499877929688,
         "max_x": 586.375,
-        "max_y": 479.54998779296875
+        "max_y": 651.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 459.54998779296875,
+        "min_y": 631.5499877929688,
         "max_x": 1150,
-        "max_y": 479.54998779296875
+        "max_y": 651.5499877929688
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -522,6 +1040,228 @@
     {
       "component_id": {
         "kind": "reading_text",
+        "instance": 6680508777728927
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 541,
+        "min_y": 355.54998779296875,
+        "max_x": 566,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 541,
+        "min_y": 355.54998779296875,
+        "max_x": 566,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 541,
+        "min_y": 355.54998779296875,
+        "max_x": 566,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Pool",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6711267476757813
+      },
+      "role": "monospace_technical",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 546,
+        "min_y": 553.5499877929688,
+        "max_x": 1150,
+        "max_y": 571.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 546,
+        "min_y": 553.5499877929688,
+        "max_x": 1031.25,
+        "max_y": 571.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 546,
+        "min_y": 553.5499877929688,
+        "max_x": 1150,
+        "max_y": 571.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "d_C = \\frac{42}{3.5\\,\\mathrm{m}^2} \\approx 12\\ \\mathrm{m}^{-2}",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6835734166716140
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 889.5625,
+        "min_y": 463.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 481.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 889.5625,
+        "min_y": 463.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 481.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 889.5625,
+        "min_y": 463.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 481.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "3.2",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6862304630616782
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 541,
+        "min_y": 463.54998779296875,
+        "max_x": 549,
+        "max_y": 481.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 541,
+        "min_y": 463.54998779296875,
+        "max_x": 549,
+        "max_y": 481.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 541,
+        "min_y": 463.54998779296875,
+        "max_x": 549,
+        "max_y": 481.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "D",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 6888588824273512
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 805,
+        "min_y": 463.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 481.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 805,
+        "min_y": 463.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 481.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 805,
+        "min_y": 463.54998779296875,
+        "max_x": 817.9375,
+        "max_y": 481.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "12",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7157378432450732
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 831.9375,
+        "min_y": 355.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 831.9375,
+        "min_y": 355.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 831.9375,
+        "min_y": 355.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Density (m⁻²)",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
         "instance": 7239597179299055
       },
       "role": "body",
@@ -529,30 +1269,104 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 411.54998779296875,
+        "min_y": 523.5499877929688,
         "max_x": 1150,
-        "max_y": 447.54998779296875
+        "max_y": 541.5499877929688
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 411.54998779296875,
-        "max_x": 1141.59375,
-        "max_y": 447.54998779296875
+        "min_y": 523.5499877929688,
+        "max_x": 890.21875,
+        "max_y": 541.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 411.54998779296875,
+        "min_y": 523.5499877929688,
         "max_x": 1150,
-        "max_y": 447.54998779296875
+        "max_y": 541.5499877929688
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
       "declared_max_lines": 0,
-      "line_count": 2,
+      "line_count": 1,
       "truncated": false,
       "content": {
         "kind": "excerpt",
-        "text": "Pool A was too deep to grid on the second tide, so its estimate rests on two counts. Pool B dried out at the edges, and the count there includes only the wet area. Pool D is new this season.",
+        "text": "Density is d = n / A for n animals in an area A, so pool C holds:",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7280126012080840
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 670.25,
+        "min_y": 436.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 670.25,
+        "min_y": 436.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 670.25,
+        "min_y": 436.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "3.5",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7361481514594208
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 919.71875,
+        "min_y": 355.54998779296875,
+        "max_x": 951.78125,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 919.71875,
+        "min_y": 355.54998779296875,
+        "max_x": 951.78125,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 919.71875,
+        "min_y": 355.54998779296875,
+        "max_x": 951.78125,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Notes",
         "truncated": false
       }
     },
@@ -566,21 +1380,21 @@
       "vertical_alignment": "top",
       "allocated_rect": {
         "min_x": 534,
-        "min_y": 326.54998779296875,
+        "min_y": 498.54998779296875,
         "max_x": 1150,
-        "max_y": 346.54998779296875
+        "max_y": 518.5499877929688
       },
       "painted_rect": {
         "min_x": 534,
-        "min_y": 326.54998779296875,
+        "min_y": 498.54998779296875,
         "max_x": 585.84375,
-        "max_y": 346.54998779296875
+        "max_y": 518.5499877929688
       },
       "clip_rect": {
         "min_x": 534,
-        "min_y": 326.54998779296875,
+        "min_y": 498.54998779296875,
         "max_x": 1150,
-        "max_y": 346.54998779296875
+        "max_y": 518.5499877929688
       },
       "overflow": "wrap_unbounded",
       "interaction": "selectable",
@@ -590,6 +1404,228 @@
       "content": {
         "kind": "excerpt",
         "text": "Density",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7582079939470445
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 541,
+        "min_y": 436.54998779296875,
+        "max_x": 548.4375,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 541,
+        "min_y": 436.54998779296875,
+        "max_x": 548.4375,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 541,
+        "min_y": 436.54998779296875,
+        "max_x": 548.4375,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "C",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 761048365052064
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 561.8125,
+        "min_y": 710.5499877929688,
+        "max_x": 1150,
+        "max_y": 728.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 561.8125,
+        "min_y": 710.5499877929688,
+        "max_x": 789.6875,
+        "max_y": 728.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 561.8125,
+        "min_y": 710.5499877929688,
+        "max_x": 1150,
+        "max_y": 728.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Each visit began an hour before low water.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 7986651076289638
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 588.046875,
+        "min_y": 355.54998779296875,
+        "max_x": 612.484375,
+        "max_y": 373.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 588.046875,
+        "min_y": 355.54998779296875,
+        "max_x": 612.484375,
+        "max_y": 373.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 588.046875,
+        "min_y": 355.54998779296875,
+        "max_x": 612.484375,
+        "max_y": 373.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Tide",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8011236141590496
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 919.71875,
+        "min_y": 382.54998779296875,
+        "max_x": 1099.6875,
+        "max_y": 400.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 919.71875,
+        "min_y": 382.54998779296875,
+        "max_x": 1099.6875,
+        "max_y": 400.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 919.71875,
+        "min_y": 382.54998779296875,
+        "max_x": 1099.6875,
+        "max_y": 400.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Too deep to grid; two counts only",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8055018889913085
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 588.4375,
+        "min_y": 436.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 588.4375,
+        "min_y": 436.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 588.4375,
+        "min_y": 436.54998779296875,
+        "max_x": 612.09375,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "First",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8115829975193557
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 919.71875,
+        "min_y": 409.54998779296875,
+        "max_x": 1050.96875,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 919.71875,
+        "min_y": 409.54998779296875,
+        "max_x": 1050.96875,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 919.71875,
+        "min_y": 409.54998779296875,
+        "max_x": 1050.96875,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Edges dry; wet area only",
         "truncated": false
       }
     },
@@ -629,13 +1665,272 @@
         "text": "Compare the counts with last season's survey, which used a coarser grid.",
         "truncated": false
       }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8451331830485716
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 746.15625,
+        "min_y": 409.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 746.15625,
+        "min_y": 409.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 746.15625,
+        "min_y": 409.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "18",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 865762818738601
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 883.09375,
+        "min_y": 436.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 883.09375,
+        "min_y": 436.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 883.09375,
+        "min_y": 436.54998779296875,
+        "max_x": 905.71875,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "12.0",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8847244016540988
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 752.625,
+        "min_y": 463.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 481.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 752.625,
+        "min_y": 463.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 481.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 752.625,
+        "min_y": 463.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 481.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "9",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 889427550854706
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 541,
+        "min_y": 409.54998779296875,
+        "max_x": 548.65625,
+        "max_y": 427.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 541,
+        "min_y": 409.54998779296875,
+        "max_x": 548.65625,
+        "max_y": 427.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 541,
+        "min_y": 409.54998779296875,
+        "max_x": 548.65625,
+        "max_y": 427.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "B",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 8917302628608762
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 746.15625,
+        "min_y": 436.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 454.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 746.15625,
+        "min_y": 436.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 454.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 746.15625,
+        "min_y": 436.54998779296875,
+        "max_x": 759.09375,
+        "max_y": 454.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "42",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 902564921497978
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 534,
+        "min_y": 656.5499877929688,
+        "max_x": 1150,
+        "max_y": 692.5499877929688
+      },
+      "painted_rect": {
+        "min_x": 534,
+        "min_y": 656.5499877929688,
+        "max_x": 1095.59375,
+        "max_y": 692.5499877929688
+      },
+      "clip_rect": {
+        "min_x": 534,
+        "min_y": 656.5499877929688,
+        "max_x": 1150,
+        "max_y": 692.5499877929688
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 2,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "Each count follows the grid laid at the first tide, read from the seaward corner. The tally sheets are in the appendix, with the photographs filed by pool and tide.",
+        "truncated": false
+      }
+    },
+    {
+      "component_id": {
+        "kind": "reading_text",
+        "instance": 934452314457095
+      },
+      "role": "body",
+      "horizontal_alignment": "start",
+      "vertical_alignment": "top",
+      "allocated_rect": {
+        "min_x": 670.25,
+        "min_y": 382.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 400.54998779296875
+      },
+      "painted_rect": {
+        "min_x": 670.25,
+        "min_y": 382.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 400.54998779296875
+      },
+      "clip_rect": {
+        "min_x": 670.25,
+        "min_y": 382.54998779296875,
+        "max_x": 686.40625,
+        "max_y": 400.54998779296875
+      },
+      "overflow": "wrap_unbounded",
+      "interaction": "selectable",
+      "declared_max_lines": 0,
+      "line_count": 1,
+      "truncated": false,
+      "content": {
+        "kind": "excerpt",
+        "text": "6.0",
+        "truncated": false
+      }
     }
   ],
   "audit": [],
   "coverage": {
-    "measured_components": 17,
-    "attempted_components": 17,
-    "successful_components": 17,
+    "measured_components": 52,
+    "attempted_components": 52,
+    "successful_components": 52,
     "failed_components": 0,
     "native_text_controls": 24,
     "observed_native_controls": 0,

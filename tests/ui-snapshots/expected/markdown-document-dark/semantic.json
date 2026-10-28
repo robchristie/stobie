@@ -19,15 +19,31 @@
       "actions": []
     },
     {
+      "id": "gallery.document.counts",
+      "parent": "gallery.story",
+      "role": "heading",
+      "name": "Counts",
+      "rect": {
+        "min_x": 534,
+        "min_y": 326.54998779296875,
+        "max_x": 1150,
+        "max_y": 346.54998779296875
+      },
+      "enabled": true,
+      "focused": false,
+      "selected": false,
+      "actions": []
+    },
+    {
       "id": "gallery.document.density",
       "parent": "gallery.story",
       "role": "heading",
       "name": "Density",
       "rect": {
         "min_x": 534,
-        "min_y": 326.54998779296875,
+        "min_y": 498.54998779296875,
         "max_x": 1150,
-        "max_y": 346.54998779296875
+        "max_y": 518.5499877929688
       },
       "enabled": true,
       "focused": false,
@@ -41,9 +57,9 @@
       "name": "[2]",
       "rect": {
         "min_x": 534,
-        "min_y": 561.5499877929688,
+        "min_y": 733.5499877929688,
         "max_x": 1150,
-        "max_y": 602.5499877929688
+        "max_y": 762
       },
       "enabled": true,
       "focused": false,
@@ -57,9 +73,9 @@
       "name": "[1]",
       "rect": {
         "min_x": 534,
-        "min_y": 538.5499877929688,
+        "min_y": 710.5499877929688,
         "max_x": 1150,
-        "max_y": 556.5499877929688
+        "max_y": 728.5499877929688
       },
       "enabled": true,
       "focused": false,
@@ -73,9 +89,9 @@
       "name": "Method",
       "rect": {
         "min_x": 534,
-        "min_y": 459.54998779296875,
+        "min_y": 631.5499877929688,
         "max_x": 1150,
-        "max_y": 479.54998779296875
+        "max_y": 651.5499877929688
       },
       "enabled": true,
       "focused": false,

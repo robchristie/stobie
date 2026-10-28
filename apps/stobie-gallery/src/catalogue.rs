@@ -1002,7 +1002,7 @@ pub static STORIES: [StoryDefinition; 55] = [
     ),
     story(
         StoryId::MarkdownDocument,
-        "A document read with every Markdown extension: heading anchors, read-only task lists, footnotes and maths as source.",
+        "A document read with every Markdown extension: heading anchors, read-only task lists, a table, footnotes and maths as source.",
         StoryGroup::Reading,
         640,
         720,
