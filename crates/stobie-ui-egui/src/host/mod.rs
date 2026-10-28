@@ -1286,6 +1286,12 @@ pub struct AppHost<A: Application> {
     publication_failed: bool,
     /// URLs that open-link invocations asked for, opened in the next pass.
     links_to_open: Vec<String>,
+    /// The in-application Markdown links the latest pass presented, each
+    /// with its focusable widget: an open-link invocation follows them.
+    followable: Vec<(SemanticUiId, egui::Id)>,
+    /// The in-application links open-link invocations asked to follow,
+    /// taken by their next presentation and withdrawn after it.
+    follows: Vec<egui::Id>,
     /// The latest pass's presented copy controls.
     copies: Vec<CopyBinding>,
     /// Intents sent from outside passes, applied at the start of the next.
@@ -1399,6 +1405,8 @@ impl<A: Application> AppHost<A> {
             reveal_outcome: None,
             fields_stale: false,
             links_to_open: Vec::new(),
+            followable: Vec::new(),
+            follows: Vec::new(),
             copies: Vec::new(),
             sent: Default::default(),
             sent_applied: 0,
@@ -1676,6 +1684,11 @@ impl<A: Application> AppHost<A> {
             };
             app.ui(root, &mut self.ui_state, &mut frame);
         }
+        // A link not presented in this pass is not followed later.
+        for widget in self.follows.drain(..) {
+            crate::components::cancel_follow(&context, widget);
+        }
+        self.followable = crate::components::followable_links(&context);
         // Set text is a semantic edit: once the field has taken it, focus
         // returns to where it was, so no caret is left blinking.
         if let Some((widget, previous)) = self.edit_focus.take() {
@@ -1992,8 +2005,18 @@ impl<A: Application> AppHost<A> {
                 self.repaint.push(HostRepaint::Application("set text"));
                 Ok(Execution::Deferred)
             }
-            // The URL opens through egui's platform output in the next pass.
             Invocation::OpenLink { link } => {
+                // An in-application link is followed by its next
+                // presentation, as activating it would, and opens nothing.
+                if let Some((_, widget)) = self.followable.iter().find(|(id, _)| *id == link.id) {
+                    let widget = *widget;
+                    crate::components::request_follow(&self.context, widget);
+                    self.follows.push(widget);
+                    self.repaint.push(HostRepaint::Application("follow link"));
+                    return Ok(Execution::Completed);
+                }
+                // The URL opens through egui's platform output in the next
+                // pass.
                 if !crate::link_url_allowed(&link.url) {
                     return Err(InspectionError::validation(crate::INVALID_LINK_URL));
                 }
@@ -2968,6 +2991,8 @@ mod dialog_navigation_tests;
 mod dialog_tests;
 #[cfg(test)]
 mod focus_return_tests;
+#[cfg(test)]
+mod follow_tests;
 #[cfg(test)]
 mod heading_tests;
 #[cfg(test)]

@@ -47,11 +47,12 @@ pub use conversation_row::{
 };
 pub use icon::{IconId, icon_size, paint_icon};
 pub use list_row::{ListRowSpec, list_row, list_row_height, list_row_semantic_node};
-pub(crate) use markdown::present_markdown;
 pub use markdown::{
-    DEFAULT_MARKDOWN_OPTIONS, MarkdownBlock, MarkdownBlockKind, MarkdownHeading, MarkdownOptions,
-    MarkdownResponse, MarkdownSourceMap, MarkdownSpec, markdown, markdown_source_map,
+    DEFAULT_MARKDOWN_OPTIONS, FollowedMarkdownLink, MarkdownBlock, MarkdownBlockKind,
+    MarkdownHeading, MarkdownLink, MarkdownLinkKind, MarkdownOptions, MarkdownResponse,
+    MarkdownSourceMap, MarkdownSpec, markdown, markdown_source_map,
 };
+pub(crate) use markdown::{cancel_follow, followable_links, present_markdown, request_follow};
 pub use navigation::{
     DestinationSpec, NavigationBadge, NavigationItemSpec, navigation_item,
     navigation_item_minimum_width, navigation_item_semantic_node,

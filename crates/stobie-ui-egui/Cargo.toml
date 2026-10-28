@@ -57,6 +57,12 @@ required-features = ["eframe"]
 # Run the example's undo and redo tests with the crate's tests.
 test = true
 
+[[example]]
+name = "library"
+required-features = ["eframe"]
+# Run the example's in-application link tests with the crate's tests.
+test = true
+
 [dev-dependencies]
 # Examples are applications: they choose eframe's GPU backends, as Record Desk does.
 eframe.workspace = true

@@ -163,6 +163,8 @@ pub struct PresentationContext {
     /// Publish only visible content, from the policy in force at creation.
     visible_only: bool,
     raw_presentations: Vec<RawPresentation>,
+    /// The first in-application Markdown link followed in this context.
+    followed: Option<crate::FollowedMarkdownLink>,
 }
 
 impl Drop for PresentationContext {
@@ -217,6 +219,7 @@ impl PresentationContext {
             node_clips: Vec::new(),
             visible_only: crate::observation::is_visible_only(ui.ctx()),
             raw_presentations: Vec::new(),
+            followed: None,
         }
     }
 
@@ -312,7 +315,20 @@ impl PresentationContext {
         self.semantic_nodes.append(&mut child.semantic_nodes);
         self.node_clips.append(&mut child.node_clips);
         self.raw_presentations.append(&mut child.raw_presentations);
+        if self.followed.is_none() {
+            self.followed = child.followed.take();
+        }
         result
+    }
+
+    /// The first in-application Markdown link
+    /// ([`crate::MarkdownLinkKind::InApplication`]) the reader followed in
+    /// this pass, in any Markdown this context, its scoped children, message
+    /// bubbles and dialogs presented: the application navigates to it. The
+    /// `library` example classifies a document's links from
+    /// [`crate::markdown_source_map`] and follows its relative ones.
+    pub fn followed_link(&self) -> Option<&crate::FollowedMarkdownLink> {
+        self.followed.as_ref()
     }
 
     /// Retain application-owned semantics for a custom row or evidence surface.
@@ -994,7 +1010,9 @@ impl PresentationContext {
 
     /// Markdown, such as a reply from a model: CommonMark blocks and inline
     /// styles on the reading-text path, each block measured, wrapped and
-    /// selectable, with links inside the text that open in a new browser tab.
+    /// selectable, with links inside the text that open in a new browser tab,
+    /// or that the application follows itself
+    /// ([`crate::MarkdownSpec::link_kinds`], [`Self::followed_link`]).
     /// Every link's semantic `Link` node is recorded, so hosts offer it to
     /// agents as the `stobie.open-link` capability.
     ///
@@ -1034,6 +1052,9 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        if self.followed.is_none() {
+            self.followed = presented.followed;
+        }
         for mut node in presented
             .link_nodes
             .into_iter()

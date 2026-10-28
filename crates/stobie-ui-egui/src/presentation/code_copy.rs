@@ -110,6 +110,9 @@ impl PresentationContext {
             self.font_scale,
             &mut self.text_layouts,
         );
+        if self.followed.is_none() {
+            self.followed = presented.followed;
+        }
         for mut node in presented
             .link_nodes
             .into_iter()

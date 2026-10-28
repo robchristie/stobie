@@ -146,6 +146,10 @@ details.
 - **[`notes`](crates/stobie-ui-egui/examples/notes.rs)**: the complete hosted
   application in one file, with undo and redo:
   `cargo run -p stobie-ui-egui --example notes`.
+- **[`library`](crates/stobie-ui-egui/examples/library.rs)**: Markdown
+  documents whose relative links the application follows itself, revealing
+  the heading a fragment names:
+  `cargo run -p stobie-ui-egui --example library`.
 - **[Record Desk](consumers/record-desk/README.md)**: a two-pane record
   workflow in its own Cargo workspace. It finds, edits and reviews synthetic
   records, applies one validated transaction, undoes and redoes, and saves

@@ -56,6 +56,7 @@ VARIATION_GUIDE = "docs/image-application-composition.md"
 CONSUMERS = (
     ("analytical-workspace-lab", "minimal-workspace"),
     ("stobie-ui-egui", "notes"),
+    ("stobie-ui-egui", "library"),
 )
 VARIATION = ('presentation.badge(ui, "state", "Document annotation", '
              'stobie_ui_egui::StatusTone::Success);')

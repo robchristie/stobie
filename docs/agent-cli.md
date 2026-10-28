@@ -212,7 +212,10 @@ is its text and a combo box's is its selected option's label. Capabilities witho
   [reaching controls out of view](application-interface.md#reach-controls-out-of-view).
 - `invoke stobie.open-link --id ID` opens a link, a `link` node whose value
   is its URL, in a new browser tab (natively, the default browser), so the
-  application stays open. The outline tags links `[open-link]`.
+  application stays open. A Markdown link the application handles itself
+  (`MarkdownLinkKind::InApplication`) opens nothing: the application follows
+  it, as a click would, on the pass that runs the invocation, and the receipt
+  does not wait for its navigation. The outline tags links `[open-link]`.
 - `invoke stobie.copy-text --id ID` copies a copy control's text to the
   clipboard, as pressing it does; the control's polite `status` node then
   carries its confirmation or failure. Neither the outline nor discovery

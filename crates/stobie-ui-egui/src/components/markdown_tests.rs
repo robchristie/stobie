@@ -530,9 +530,31 @@ fn link_harness(
     enabled: bool,
     spec: MarkdownSpec<'static>,
 ) -> (Harness<'static>, Vec<Rect>, Opened) {
+    let (harness, rects, opened, _) = following_harness(source, width, enabled, spec);
+    (harness, rects, opened)
+}
+
+/// In-application links followed, recorded inside each pass.
+type Followed = Rc<RefCell<Vec<crate::FollowedMarkdownLink>>>;
+
+fn taken(followed: &Followed) -> Vec<(usize, String)> {
+    std::mem::take(&mut *followed.borrow_mut())
+        .into_iter()
+        .map(|link| (link.index, link.destination))
+        .collect()
+}
+
+/// [`link_harness`], also returning the in-application links followed.
+fn following_harness(
+    source: &'static str,
+    width: f32,
+    enabled: bool,
+    spec: MarkdownSpec<'static>,
+) -> (Harness<'static>, Vec<Rect>, Opened, Followed) {
     let rects = Rc::new(RefCell::new(Vec::new()));
     let opened = Opened::default();
-    let (observed, recorded) = (rects.clone(), opened.clone());
+    let followed = Followed::default();
+    let (observed, recorded, follows) = (rects.clone(), opened.clone(), followed.clone());
     let mut harness = Harness::builder()
         .with_size(egui::vec2(width, 600.0))
         .build_ui(move |ui| {
@@ -546,6 +568,7 @@ fn link_harness(
                     SemanticUiId::root(),
                 );
                 p.markdown(ui, "body", source, spec);
+                follows.borrow_mut().extend(p.followed_link().cloned());
                 *observed.borrow_mut() = p
                     .finish(ui)
                     .semantic_nodes
@@ -570,7 +593,7 @@ fn link_harness(
         });
     harness.run();
     let rects = rects.borrow().clone();
-    (harness, rects, opened)
+    (harness, rects, opened, followed)
 }
 
 const URL: &str = "https://example.org/papers/retrieval-heads";
@@ -634,6 +657,248 @@ fn links_in_text_open_a_new_tab_from_pointer_keyboard_and_accesskit() {
     node.click_accesskit();
     harness.run();
     assert_eq!(take(&opened), [egui::OpenUrl::new_tab(URL)]);
+}
+
+/// Links the application classifies: in-application, external,
+/// unavailable with its reason, an unsafe URL it calls external, an unsafe
+/// URL it calls in-application, and one past the end of its list.
+const CLASSIFIED: &str = "Read [Setting up](guide.md#setting-up), [the site](https://example.org/site), \
+    [the lost page](lost.md), [a script](javascript:alert(1)), [another script](javascript:alert(2)) \
+    and [later](https://example.org/later).";
+
+const LOST: &str = "No document is named lost.md";
+
+const KINDS: [crate::MarkdownLinkKind<'static>; 5] = [
+    crate::MarkdownLinkKind::InApplication,
+    crate::MarkdownLinkKind::External,
+    crate::MarkdownLinkKind::Unavailable(LOST),
+    crate::MarkdownLinkKind::External,
+    crate::MarkdownLinkKind::InApplication,
+];
+
+const CLASSIFIED_SPEC: MarkdownSpec<'static> = MarkdownSpec {
+    interaction: TextInteraction::Selectable,
+    link_description: Some("Opens in a new tab"),
+    options: DEFAULT_MARKDOWN_OPTIONS,
+    heading_ids: &[],
+    link_kinds: &KINDS,
+};
+
+#[test]
+fn the_application_classifies_each_link_and_cannot_loosen_the_url_rules() {
+    assert_eq!(MarkdownSpec::default().link_kinds, &[]);
+    assert_eq!(
+        crate::MarkdownLinkKind::default(),
+        crate::MarkdownLinkKind::External
+    );
+    let map = crate::markdown_source_map(CLASSIFIED, DEFAULT_MARKDOWN_OPTIONS, 0);
+    assert_eq!(map.links.len(), 6);
+    assert_eq!(map.links[0].destination, "guide.md#setting-up");
+    for width in [PHONE, DESKTOP] {
+        let presented = present_spec(
+            &context(),
+            CLASSIFIED,
+            width,
+            1.0,
+            tokens(),
+            None,
+            CLASSIFIED_SPEC,
+        );
+        assert_clean(&presented, &format!("{width}"));
+        let links = presented.links();
+        assert_eq!(
+            links
+                .iter()
+                .map(|link| (
+                    link.name.as_str(),
+                    link.value.as_deref(),
+                    link.enabled,
+                    link.description.as_deref(),
+                    link.disabled_reason.as_deref()
+                ))
+                .collect::<Vec<_>>(),
+            [
+                ("Setting up", Some("guide.md#setting-up"), true, None, None),
+                (
+                    "the site",
+                    Some("https://example.org/site"),
+                    true,
+                    Some("Opens in a new tab"),
+                    None
+                ),
+                ("the lost page", Some("lost.md"), false, None, Some(LOST)),
+                (
+                    "a script",
+                    Some("javascript:alert(1)"),
+                    false,
+                    Some("Opens in a new tab"),
+                    Some(crate::INVALID_LINK_URL)
+                ),
+                (
+                    "another script",
+                    Some("javascript:alert(2)"),
+                    true,
+                    None,
+                    None
+                ),
+                (
+                    "later",
+                    Some("https://example.org/later"),
+                    true,
+                    Some("Opens in a new tab"),
+                    None
+                ),
+            ],
+            "{width}"
+        );
+        // Agents see the same availability, with the application's reason.
+        let lost = crate::LinkBinding::from_node(links[2]).unwrap();
+        assert_eq!(lost.availability.disabled_reason(), Some(LOST));
+        // AccessKit agrees: the in-application link is an activatable link
+        // to its destination; the unavailable one says why.
+        let accessible = |label: &str| {
+            presented
+                .update
+                .nodes
+                .iter()
+                .map(|(_, node)| node)
+                .find(|node| {
+                    node.role() == egui::accesskit::Role::Link && node.label() == Some(label)
+                })
+                .unwrap()
+                .clone()
+        };
+        let setting_up = accessible("Setting up");
+        assert_eq!(setting_up.url(), Some("guide.md#setting-up"));
+        assert!(setting_up.supports_action(egui::accesskit::Action::Click));
+        assert!(!setting_up.is_disabled());
+        assert_eq!(setting_up.description(), None);
+        let lost = accessible("the lost page");
+        assert!(lost.is_disabled());
+        assert!(!lost.supports_action(egui::accesskit::Action::Click));
+        assert_eq!(
+            lost.description(),
+            Some(format!("; unavailable: {LOST}").as_str())
+        );
+    }
+
+    let (mut harness, rects, opened, followed) =
+        following_harness(CLASSIFIED, DESKTOP, true, CLASSIFIED_SPEC);
+    assert_eq!(rects.len(), 6);
+    assert!(take(&opened).is_empty() && taken(&followed).is_empty());
+    // Pointer: the in-application link is followed, by a primary or a middle
+    // click, and opens nothing.
+    for button in [egui::PointerButton::Primary, egui::PointerButton::Middle] {
+        click(&mut harness, rects[0].center(), button);
+        assert_eq!(
+            taken(&followed),
+            [(0, "guide.md#setting-up".to_owned())],
+            "{button:?}"
+        );
+        assert!(take(&opened).is_empty(), "{button:?}");
+    }
+    // Nothing is reported again without another activation.
+    harness.run();
+    assert!(taken(&followed).is_empty());
+    // The external links open a new tab, as before, and are not reported.
+    click(
+        &mut harness,
+        rects[1].center(),
+        egui::PointerButton::Primary,
+    );
+    click(
+        &mut harness,
+        rects[5].center(),
+        egui::PointerButton::Primary,
+    );
+    assert_eq!(
+        take(&opened),
+        [
+            egui::OpenUrl::new_tab("https://example.org/site"),
+            egui::OpenUrl::new_tab("https://example.org/later")
+        ]
+    );
+    assert!(taken(&followed).is_empty());
+    // The unavailable links do nothing, whatever the application said.
+    for rect in &rects[2..4] {
+        click(&mut harness, rect.center(), egui::PointerButton::Primary);
+        click(&mut harness, rect.center(), egui::PointerButton::Middle);
+    }
+    assert!(take(&opened).is_empty() && taken(&followed).is_empty());
+    // An unsafe URL the application follows itself is reported, never opened.
+    click(
+        &mut harness,
+        rects[4].center(),
+        egui::PointerButton::Primary,
+    );
+    assert_eq!(taken(&followed), [(4, "javascript:alert(2)".to_owned())]);
+    assert!(take(&opened).is_empty());
+
+    // Keyboard: Tab reaches the available links in order; Enter and Space
+    // follow or open each.
+    let focus = |harness: &Harness<'_>| {
+        harness
+            .ctx
+            .memory(|memory| memory.focused())
+            .and_then(|focused| {
+                (0..6_usize).find(|index| {
+                    focused
+                        == PresentationScope::new("reply")
+                            .instance("body")
+                            .child(("link", *index))
+                            .egui_id()
+                })
+            })
+    };
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+    assert_eq!(focus(&harness), Some(0));
+    for key in [egui::Key::Enter, egui::Key::Space] {
+        harness.key_press(key);
+        harness.run();
+        assert_eq!(
+            taken(&followed),
+            [(0, "guide.md#setting-up".to_owned())],
+            "{key:?}"
+        );
+        assert!(take(&opened).is_empty(), "{key:?}");
+    }
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+    assert_eq!(focus(&harness), Some(1));
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(
+        take(&opened),
+        [egui::OpenUrl::new_tab("https://example.org/site")]
+    );
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+    assert_eq!(
+        focus(&harness),
+        Some(4),
+        "unavailable links are no Tab stop"
+    );
+
+    // AccessKit: activating the in-application link follows it.
+    harness
+        .get_all_by_role(egui::accesskit::Role::Link)
+        .find(|node| node.accesskit_node().label().as_deref() == Some("Setting up"))
+        .unwrap()
+        .click_accesskit();
+    harness.run();
+    assert_eq!(taken(&followed), [(0, "guide.md#setting-up".to_owned())]);
+    assert!(take(&opened).is_empty());
+
+    // In a disabled region nothing is followed.
+    let (mut harness, rects, opened, followed) =
+        following_harness(CLASSIFIED, DESKTOP, false, CLASSIFIED_SPEC);
+    click(
+        &mut harness,
+        rects[0].center(),
+        egui::PointerButton::Primary,
+    );
+    assert!(take(&opened).is_empty() && taken(&followed).is_empty());
 }
 
 #[test]

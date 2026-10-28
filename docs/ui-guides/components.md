@@ -229,7 +229,10 @@ document order with each container before its contents: its
 `MarkdownBlockKind`, its depth among quotes, lists and items, and its source
 byte range as pulldown-cmark's offset iterator reports its start tag (a tight
 list item's text, which has no tag, spans its first to its last inline
-event). It lists each heading's level, presented text and source range too.
+event). It lists each heading's level, presented text and source range too,
+and each link (`MarkdownLink`) in document order with its destination as
+pulldown-cmark reports it (an email autolink gains `mailto:`) and the source
+range of its start tag.
 Ranges count bytes of `source` as stored, CRLF and multibyte characters
 included, plus `base`: pass the offset where `source` starts in its file,
 such as after frontmatter, to receive ranges in the file.
@@ -266,10 +269,10 @@ heading's text or source range in the source map.
 
 A link inside the text is underlined in `link_colour`, with a heavier
 underline and a pointing hand on hover, and a focus ring that clears its
-glyphs. It opens in a new browser tab (natively, the default browser) from a
-click anywhere on any line it wraps across, a middle or modifier click, Tab
-then Enter or Space (one Tab stop per link), or assistive-technology
-activation. A drag that starts on a link selects text instead. Each link is a
+glyphs. By default it opens in a new browser tab (natively, the default
+browser) from a click anywhere on any line it wraps across, a middle or
+modifier click, Tab then Enter or Space (one Tab stop per link), or
+assistive-technology activation. A drag that starts on a link selects text instead. Each link is a
 `UiRole::Link` node named by its text with its URL as its value, so hosts
 offer it as `stobie.open-link`; `MarkdownSpec::link_description` gives every
 link the application's description, such as "Opens in a new tab". Links
@@ -279,6 +282,35 @@ text as ordinary text, opens nothing by any route and is published as an
 unavailable link whose reason is `INVALID_LINK_URL`; unlike the standalone
 link, it records no failing text observation, because the URL is content,
 not an application mistake. A disabled `Ui` mutes links and opens nothing.
+
+`MarkdownSpec::link_kinds` lets the application decide what each link does,
+one `MarkdownLinkKind` per link in the order `markdown_source_map` lists them
+for the same source and options; a link past the end of the list is
+`External`, the default.
+
+- `External` is the behaviour above: the URL opens if, and only if, the link
+  recipe's rules allow it. Calling a link external never loosens those rules;
+  a `javascript:` or relative URL stays an unavailable link.
+- `InApplication` is reported to the application and opens nothing, whatever
+  its URL: every activation above (click, middle click, Enter, Space,
+  assistive technology) and an agent's `stobie.open-link` invocation follow
+  it. Read the link with `PresentationContext::followed_link()` after
+  presenting, or `MarkdownResponse::followed` from the low-level `markdown`
+  function, as a `FollowedMarkdownLink` carrying its index and destination,
+  then emit an intent to navigate, for example to another document or to a
+  heading by its ID with `Frame::reveal`. It is presented, focused and
+  published exactly as an external link is, without
+  `link_description`.
+- `Unavailable(reason)` keeps its text as ordinary text, opens and reports
+  nothing, takes no Tab stop, and is published as an unavailable link whose
+  reason is the application's; a blank reason reads "The link is
+  unavailable". It carries no `link_description` either.
+
+Stobie never decides what a destination means: the application classifies
+each one from the source map, for example by whether it names one of its own
+documents. The [`library` example](../../crates/stobie-ui-egui/examples/library.rs)
+follows relative links between documents and reveals the heading a fragment
+names.
 
 Any source parses and presents without panicking, including one still
 arriving: an unfinished `**`, link or fence stays text or code until it
