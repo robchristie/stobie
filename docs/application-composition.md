@@ -131,7 +131,8 @@ availability for each row; see
 `PresentationContext::native` and observed as a text input can be set through
 the framework's `stobie.set-text` capability without application code, and
 every link presented through `PresentationContext::link` can be opened through
-`stobie.open-link`, always in a new browser tab. Without the
+`stobie.open-link`, always in a new browser tab; a Markdown link the
+application handles itself is followed within the application instead. Without the
 environment variable, no automation starts. Use a short, fresh directory for
 the socket: Unix socket paths are limited to about 100 bytes, and a socket left
 by a killed process blocks the next start until it is removed. Startup failures

@@ -361,6 +361,9 @@ impl PresentationContext {
         self.semantic_nodes.append(&mut child.semantic_nodes);
         self.node_clips.append(&mut child.node_clips);
         self.raw_presentations.append(&mut child.raw_presentations);
+        if self.followed.is_none() {
+            self.followed = child.followed.take();
+        }
         result
     }
 

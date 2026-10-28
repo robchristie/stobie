@@ -73,8 +73,23 @@ pub struct MarkdownHeading {
     pub block: usize,
 }
 
+/// A link in Markdown source and where it is.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub struct MarkdownLink {
+    /// Where the link leads, as the recipe uses it: pulldown-cmark's
+    /// destination after Markdown unescaping, with `mailto:` before an email
+    /// autolink's address.
+    pub destination: String,
+    /// Its source, in bytes, as pulldown-cmark's offset iterator reports the
+    /// link's start tag (the whole link, text and destination), plus the
+    /// caller's base.
+    pub source: Range<usize>,
+}
+
 /// Every block a Markdown presentation shows, in document order (each
-/// container before what it contains), and every heading among them.
+/// container before what it contains), every heading among them and every
+/// link.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub struct MarkdownSourceMap {
@@ -84,6 +99,10 @@ pub struct MarkdownSourceMap {
     pub blocks: Vec<MarkdownBlock>,
     /// Every presented heading, in document order.
     pub headings: Vec<MarkdownHeading>,
+    /// Every link, in document order: the order
+    /// [`super::MarkdownSpec::link_kinds`] follows. A link whose text is
+    /// empty is listed although it presents nothing.
+    pub links: Vec<MarkdownLink>,
 }
 
 impl MarkdownSourceMap {
@@ -96,6 +115,9 @@ impl MarkdownSourceMap {
         }
         for heading in &mut self.headings {
             shift(&mut heading.source);
+        }
+        for link in &mut self.links {
+            shift(&mut link.source);
         }
         self
     }
@@ -507,6 +529,10 @@ impl Builder {
                 } else {
                     dest_url.into_string()
                 };
+                self.map.links.push(MarkdownLink {
+                    destination: url.clone(),
+                    source: self.current.clone(),
+                });
                 self.links.push(url);
                 self.link = Some(self.links.len() - 1);
             }
@@ -1017,6 +1043,96 @@ mod tests {
             source_map(body, DOCUMENT, usize::MAX).blocks[0].source,
             usize::MAX..usize::MAX
         );
+    }
+
+    /// Links of every kind, in every place a document puts them, with CRLF
+    /// line endings and multibyte text.
+    const LINKED: &str = "# See [the guide](guide.md#set-up) ✓\r\n\r\n\
+        Read [café notes](../notes/café.md \"Notes\"), [a reference][ref], \
+        <https://example.org/a> and <someone@example.org>.\r\n\
+        Then [empty]() and [](https://example.org/blank) and \
+        ![a chart of [the data](data.md)](chart.png).\r\n\r\n\
+        | Page | Link |\r\n| --- | --- |\r\n| α | [table](#table) |\r\n\r\n\
+        - [x] [task](tasks.md)\r\n\r\n\
+        > [quoted \\[escaped\\]](quoted%20page.md)\r\n\r\n\
+        Note[^n].\r\n\r\n\
+        [^n]: In a [footnote](#notes).\r\n\r\n\
+        [ref]: https://example.org/ref\r\n";
+
+    #[test]
+    fn link_offsets_and_destinations_equal_pulldown_cmarks() {
+        let mut expected = Vec::new();
+        for (event, range) in Parser::new_ext(LINKED, DOCUMENT).into_offset_iter() {
+            if let Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                ..
+            }) = event
+            {
+                let destination = if link_type == LinkType::Email {
+                    format!("mailto:{dest_url}")
+                } else {
+                    dest_url.into_string()
+                };
+                expected.push(MarkdownLink {
+                    destination,
+                    source: range,
+                });
+            }
+        }
+        let document = parse(LINKED, DOCUMENT);
+        assert_eq!(document.map.links, expected);
+        // The map lists the links the recipe presents, in the same order.
+        assert_eq!(
+            document
+                .map
+                .links
+                .iter()
+                .map(|link| link.destination.as_str())
+                .collect::<Vec<_>>(),
+            document.links
+        );
+        assert_eq!(
+            expected
+                .iter()
+                .map(|link| (link.destination.as_str(), &LINKED[link.source.clone()]))
+                .collect::<Vec<_>>(),
+            [
+                ("guide.md#set-up", "[the guide](guide.md#set-up)"),
+                (
+                    "../notes/café.md",
+                    "[café notes](../notes/café.md \"Notes\")"
+                ),
+                ("https://example.org/ref", "[a reference][ref]"),
+                ("https://example.org/a", "<https://example.org/a>"),
+                ("mailto:someone@example.org", "<someone@example.org>"),
+                ("", "[empty]()"),
+                ("https://example.org/blank", "[](https://example.org/blank)"),
+                ("data.md", "[the data](data.md)"),
+                ("#table", "[table](#table)"),
+                ("tasks.md", "[task](tasks.md)"),
+                (
+                    "quoted%20page.md",
+                    "[quoted \\[escaped\\]](quoted%20page.md)"
+                ),
+                ("#notes", "[footnote](#notes)"),
+            ]
+        );
+        // The caller's base shifts every link's range.
+        let base = 21;
+        let file = format!("{}{LINKED}", "x".repeat(base));
+        let mapped = source_map(&file[base..], DOCUMENT, base);
+        assert_eq!(mapped.links.len(), expected.len());
+        for (mapped, relative) in mapped.links.iter().zip(&expected) {
+            assert_eq!(mapped.destination, relative.destination);
+            assert_eq!(
+                &file[mapped.source.clone()],
+                &LINKED[relative.source.clone()]
+            );
+        }
+        // The default options find the same links outside the extensions.
+        let default = parse(LINKED, Options::ENABLE_STRIKETHROUGH).map.links;
+        assert!(default.len() >= 10, "{default:#?}");
     }
 
     #[test]

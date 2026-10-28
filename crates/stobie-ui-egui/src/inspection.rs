@@ -211,7 +211,7 @@ impl LinkBinding {
             pane: self.pane,
             domain: self.domain.clone(),
             label: "Open link".into(),
-            description: "Open the link's URL in a new browser tab, or the platform's default browser natively".into(),
+            description: "Open the link's URL in a new browser tab, or the platform's default browser natively; a link the application handles itself is followed within the application instead".into(),
             scope: if self.pane.is_some() {
                 ActionScope::Pane
             } else {
@@ -345,7 +345,11 @@ pub enum Invocation<A: ActionKey> {
         text: String,
     },
     /// Open a presented link's URL. A semantic open always asks for a new
-    /// browser tab, so the application under inspection stays open.
+    /// browser tab, so the application under inspection stays open. A
+    /// Markdown link the application handles itself
+    /// ([`crate::MarkdownLinkKind::InApplication`]) opens nothing: the host
+    /// has its next presentation follow it, as activating it would, which the
+    /// receipt does not wait for.
     OpenLink { link: LinkBinding },
     /// Copy a copy control's text, as pressing it would. The control copies
     /// on its next pass and shows its confirmation or failure, which the

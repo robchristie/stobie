@@ -1002,16 +1002,20 @@ impl PresentationContext {
                     child.node_clips.insert(0, content.clip_rect());
                     // A hosted dialog registers inside its region; otherwise
                     // this context publishes what it presented.
+                    let followed = child.followed.take();
                     let unhosted = if hosted {
                         drop(child);
                         None
                     } else {
                         Some(child)
                     };
-                    (inner, after, surface, unhosted)
+                    (inner, after, surface, unhosted, followed)
                 })
             });
-        let (inner, after, rect, unhosted) = modal.inner;
+        let (inner, after, rect, unhosted, followed) = modal.inner;
+        if self.followed.is_none() {
+            self.followed = followed;
+        }
         if let Some(mut child) = unhosted {
             self.text_layouts.append(&mut child.text_layouts);
             self.semantic_nodes.append(&mut child.semantic_nodes);

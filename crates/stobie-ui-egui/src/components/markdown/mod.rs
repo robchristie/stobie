@@ -11,7 +11,9 @@ use egui::{
 };
 
 use self::parse::{Block, Document, Inline};
-pub use self::parse::{MarkdownBlock, MarkdownBlockKind, MarkdownHeading, MarkdownSourceMap};
+pub use self::parse::{
+    MarkdownBlock, MarkdownBlockKind, MarkdownHeading, MarkdownLink, MarkdownSourceMap,
+};
 use crate::{
     DesignTokens, HorizontalTextAlignment, INVALID_LINK_URL, MeasuredText, PresentationId,
     SemanticUiId, TextComponentId, TextComponentKind, TextInteraction, TextLayoutObservation,
@@ -46,8 +48,10 @@ pub struct MarkdownSpec<'a> {
     /// Selectable by default, as reading text is. Choose Inert only where a
     /// parent owns the pointer; links stay activatable either way.
     pub interaction: TextInteraction,
-    /// Context for assistive technology on every link, such as "Opens in a
-    /// new tab", in the application's language.
+    /// Context for assistive technology on every external link, such as
+    /// "Opens in a new tab", in the application's language. In-application
+    /// links and links the application makes unavailable
+    /// ([`MarkdownSpec::link_kinds`]) do not carry it.
     pub link_description: Option<&'a str>,
     /// The extensions to parse with, [`DEFAULT_MARKDOWN_OPTIONS`] by
     /// default. Raw HTML stays text and nesting stays bounded whatever they
@@ -69,6 +73,13 @@ pub struct MarkdownSpec<'a> {
     /// empty ID, publishes no node. Stobie derives no IDs: the application
     /// chooses them, for example from each heading's text or source range.
     pub heading_ids: &'a [SemanticUiId],
+    /// How each link behaves, as the application classifies its destination,
+    /// in the order [`markdown_source_map`] lists links for the same source
+    /// and options; every link is [`MarkdownLinkKind::External`] by default
+    /// and past the end of the list. Stobie resolves nothing itself: the
+    /// application decides, for example, that a relative path names one of
+    /// its own documents.
+    pub link_kinds: &'a [MarkdownLinkKind<'a>],
 }
 
 impl Default for MarkdownSpec<'_> {
@@ -78,8 +89,159 @@ impl Default for MarkdownSpec<'_> {
             link_description: None,
             options: DEFAULT_MARKDOWN_OPTIONS,
             heading_ids: &[],
+            link_kinds: &[],
         }
     }
+}
+
+/// How a Markdown link behaves, as the application classifies its
+/// destination ([`MarkdownSpec::link_kinds`]). Every kind keeps the link's
+/// text, colour, underline and place in the text; an available link keeps
+/// the link recipe's pointer, keyboard and assistive-technology behaviour
+/// and its [`UiRole::Link`] node, which agents operate through
+/// `stobie.open-link`.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MarkdownLinkKind<'a> {
+    /// Opens in a new browser tab, or the platform's default browser
+    /// natively, under the link recipe's rules: a destination
+    /// [`link_url_allowed`] rejects stays an unavailable link whatever the
+    /// application says.
+    #[default]
+    External,
+    /// Navigates within the application. Following it opens nothing: the
+    /// recipe reports it ([`MarkdownResponse::followed`],
+    /// [`crate::PresentationContext::followed_link`]) and the application
+    /// navigates, for example by showing another document or revealing a
+    /// heading ([`crate::Frame::reveal`]).
+    InApplication,
+    /// Keeps its text, opens nothing and is published as an unavailable link
+    /// with this reason, in the application's language, such as "No document
+    /// has this name".
+    Unavailable(&'a str),
+}
+
+/// An in-application link ([`MarkdownLinkKind::InApplication`]) the reader
+/// followed, by pointer, keyboard, assistive technology or an agent.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub struct FollowedMarkdownLink {
+    /// Its index in [`MarkdownSourceMap::links`] and
+    /// [`MarkdownSpec::link_kinds`].
+    pub index: usize,
+    /// Where it leads, as [`MarkdownLink::destination`] gives it.
+    pub destination: String,
+}
+
+/// How a presented link behaves, resolved from the application's
+/// classification and the link recipe's rules.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LinkRoute<'a> {
+    /// Opens its URL in a new tab.
+    Open,
+    /// Reported to the application as followed.
+    Follow,
+    /// Opens nothing, for this reason.
+    Unavailable(&'a str),
+}
+
+/// A document link with its resolved behaviour.
+struct ResolvedLink<'a> {
+    destination: &'a str,
+    route: LinkRoute<'a>,
+    /// Whether the application made it unavailable, rather than the link
+    /// recipe's rules.
+    withheld: bool,
+}
+
+impl<'a> ResolvedLink<'a> {
+    fn new(destination: &'a str, kind: MarkdownLinkKind<'a>) -> Self {
+        let (route, withheld) = match kind {
+            // The application cannot loosen the link recipe's rules.
+            MarkdownLinkKind::External if link_url_allowed(destination) => (LinkRoute::Open, false),
+            MarkdownLinkKind::External => (LinkRoute::Unavailable(INVALID_LINK_URL), false),
+            MarkdownLinkKind::InApplication => (LinkRoute::Follow, false),
+            MarkdownLinkKind::Unavailable(reason) if reason.trim().is_empty() => {
+                (LinkRoute::Unavailable(UNAVAILABLE_LINK), true)
+            }
+            MarkdownLinkKind::Unavailable(reason) => (LinkRoute::Unavailable(reason), true),
+        };
+        Self {
+            destination,
+            route,
+            withheld,
+        }
+    }
+
+    fn available(&self) -> bool {
+        !matches!(self.route, LinkRoute::Unavailable(_))
+    }
+}
+
+/// The reason an unavailable link gives when the application gave none.
+const UNAVAILABLE_LINK: &str = "The link is unavailable";
+
+/// The in-application links one pass presented, which an agent may follow.
+#[derive(Clone, Default)]
+struct Followable {
+    pass: u64,
+    links: Vec<(SemanticUiId, egui::Id)>,
+}
+
+fn followable_id(context: &egui::Context) -> egui::Id {
+    egui::Id::new(("stobie.markdown.followable", context.viewport_id()))
+}
+
+/// Record that this pass presented the in-application link `id`, whose
+/// focusable widget is `widget`.
+fn register_followable(context: &egui::Context, id: SemanticUiId, widget: egui::Id) {
+    let pass = context.cumulative_pass_nr();
+    let key = followable_id(context);
+    context.data_mut(|data| {
+        let followable = data.get_temp_mut_or_default::<Followable>(key);
+        if followable.pass != pass {
+            *followable = Followable {
+                pass,
+                links: Vec::new(),
+            };
+        }
+        followable.links.push((id, widget));
+    });
+}
+
+/// The in-application links the current pass presented, each with its
+/// focusable widget, for a host to follow when an agent opens one.
+pub(crate) fn followable_links(context: &egui::Context) -> Vec<(SemanticUiId, egui::Id)> {
+    let pass = context.cumulative_pass_nr();
+    let key = followable_id(context);
+    context.data(|data| {
+        data.get_temp::<Followable>(key)
+            .filter(|followable| followable.pass == pass)
+            .map(|followable| followable.links)
+            .unwrap_or_default()
+    })
+}
+
+fn follow_request_id(widget: egui::Id) -> egui::Id {
+    widget.with("stobie.markdown.follow")
+}
+
+/// Ask the in-application link whose widget is `widget` to be followed on
+/// its next presentation, as activating it would.
+pub(crate) fn request_follow(context: &egui::Context, widget: egui::Id) {
+    context.data_mut(|data| data.insert_temp(follow_request_id(widget), true));
+}
+
+/// Withdraw a request to follow that no presentation took.
+pub(crate) fn cancel_follow(context: &egui::Context, widget: egui::Id) {
+    context.data_mut(|data| data.remove::<bool>(follow_request_id(widget)));
+}
+
+/// Take a request to follow the link whose widget is `widget`.
+fn take_follow(context: &egui::Context, widget: egui::Id) -> bool {
+    context.data_mut(|data| {
+        data.remove_temp::<bool>(follow_request_id(widget))
+            .unwrap_or(false)
+    })
 }
 
 /// Where each block that [`markdown`] presents for `source` comes from,
@@ -123,6 +285,10 @@ pub struct MarkdownResponse {
     /// [`MarkdownSpec::heading_ids`] at least partly visible, in document
     /// order, published as `link_nodes` are.
     pub heading_nodes: Vec<UiNode>,
+    /// The first in-application link ([`MarkdownLinkKind::InApplication`])
+    /// followed in this pass: the application navigates to it. External
+    /// links open in a new tab and are not reported.
+    pub followed: Option<FollowedMarkdownLink>,
 }
 
 /// The heading role for a heading level.
@@ -197,7 +363,7 @@ struct Layout<'a> {
     scale: f32,
     interaction: TextInteraction,
     enabled: bool,
-    links: &'a [String],
+    links: &'a [ResolvedLink<'a>],
     /// The application's ID for each heading, in document order.
     heading_ids: &'a [SemanticUiId],
     /// How many headings have been laid out.
@@ -276,9 +442,7 @@ impl Layout<'_> {
             } else {
                 style.font_id.family.clone()
             };
-            let valid = run
-                .link
-                .is_some_and(|link| link_url_allowed(&self.links[link]));
+            let valid = run.link.is_some_and(|link| self.links[link].available());
             let colour = match run.link {
                 Some(_) if valid && self.enabled => link_colour(self.tokens),
                 Some(_) if valid => self.tokens.colours.text_muted.into(),
@@ -670,7 +834,10 @@ fn union(rects: impl IntoIterator<Item = Rect>) -> Rect {
 /// recipe's rules ([`link_url_allowed`]): pointer, Tab then Enter or Space,
 /// and assistive-technology activation share one route. A link whose URL is
 /// not allowed keeps its text, opens nothing and is published as an
-/// unavailable link with the reason. Any source, including an incomplete one
+/// unavailable link with the reason. The application may instead classify a
+/// link as in-application, which reports it as followed rather than opening
+/// it, or as unavailable with its own reason ([`MarkdownSpec::link_kinds`]).
+/// Any source, including an incomplete one
 /// still arriving, presents without panicking; list spacing does not depend
 /// on blank lines between items, so a list keeps its layout as it grows.
 ///
@@ -716,6 +883,16 @@ pub(crate) fn present_markdown(
     observations: &mut Vec<TextLayoutObservation>,
 ) -> (MarkdownResponse, Vec<CodeBlock>) {
     let Document { blocks, links, .. } = parse::parse(source, spec.options);
+    let links: Vec<_> = links
+        .iter()
+        .enumerate()
+        .map(|(index, destination)| {
+            ResolvedLink::new(
+                destination,
+                spec.link_kinds.get(index).copied().unwrap_or_default(),
+            )
+        })
+        .collect();
     let width = ui.available_width().max(1.0);
     let enabled = ui.is_enabled();
     let painter = ui.painter().clone();
@@ -751,6 +928,7 @@ pub(crate) fn present_markdown(
 
     let mut link_nodes = Vec::new();
     let mut heading_nodes = Vec::new();
+    let mut followed = None;
     for piece in pieces {
         match piece {
             Piece::Fill(fill) => {
@@ -809,6 +987,7 @@ pub(crate) fn present_markdown(
                 observations,
                 &mut link_nodes,
                 &mut heading_nodes,
+                &mut followed,
             ),
         }
     }
@@ -817,6 +996,7 @@ pub(crate) fn present_markdown(
             response,
             link_nodes,
             heading_nodes,
+            followed,
         },
         code_blocks,
     )
@@ -827,7 +1007,7 @@ fn present_text(
     ui: &mut egui::Ui,
     document: PresentationId,
     text: &TextPiece,
-    links: &[String],
+    links: &[ResolvedLink<'_>],
     spec: MarkdownSpec<'_>,
     parent: SemanticUiId,
     tokens: &DesignTokens,
@@ -835,6 +1015,7 @@ fn present_text(
     observations: &mut Vec<TextLayoutObservation>,
     link_nodes: &mut Vec<UiNode>,
     heading_nodes: &mut Vec<UiNode>,
+    followed: &mut Option<FollowedMarkdownLink>,
 ) {
     let enabled = ui.is_enabled();
     // A failed measurement paints a diagnostic, not the text: no link areas.
@@ -848,7 +1029,7 @@ fn present_text(
         .iter()
         .find(|(link, rects)| {
             enabled
-                && link_url_allowed(&links[*link])
+                && links[*link].available()
                 && rects.iter().any(|rect| ui.rect_contains_pointer(*rect))
         })
         .map(|(link, _)| *link);
@@ -926,9 +1107,17 @@ fn present_text(
         if rects.is_empty() {
             continue;
         }
-        let url = links[*link].as_str();
-        let valid = link_url_allowed(url);
+        let resolved = &links[*link];
+        let url = resolved.destination;
+        let valid = resolved.available();
         let active = enabled && valid;
+        // The application's own unavailable links do not carry the
+        // description it gives external links, nor do in-application links.
+        let description = match resolved.route {
+            LinkRoute::Follow => None,
+            LinkRoute::Unavailable(_) if resolved.withheld => None,
+            _ => spec.link_description,
+        };
         let label = text.job.text[bytes.clone()].trim().to_owned();
         let identity = document.child(("link", *link));
         let clip = ui.clip_rect();
@@ -942,7 +1131,11 @@ fn present_text(
             .iter()
             .position(|rect| rect.intersect(clip).is_positive())
             .unwrap_or(0);
-        let mut clicked = false;
+        // An agent's request to follow is a press, taken whatever the
+        // pointer does.
+        let mut clicked = resolved.route == LinkRoute::Follow
+            && take_follow(ui.ctx(), identity.egui_id())
+            && active;
         let mut hovering = false;
         let mut focused = false;
         let mut primary_response = None;
@@ -973,15 +1166,23 @@ fn present_text(
                 focused = response.has_focus();
                 primary_response = Some(response.clone());
             }
-            let tip = if valid {
-                url.to_owned()
-            } else {
-                format!("Unavailable: {INVALID_LINK_URL}")
+            let tip = match resolved.route {
+                LinkRoute::Unavailable(reason) => format!("Unavailable: {reason}"),
+                _ => url.to_owned(),
             };
             response.on_hover_text(tip);
         }
         if clicked {
-            crate::open_new_tab(ui.ctx(), url);
+            match resolved.route {
+                LinkRoute::Open => crate::open_new_tab(ui.ctx(), url),
+                LinkRoute::Follow => {
+                    followed.get_or_insert_with(|| FollowedMarkdownLink {
+                        index: *link,
+                        destination: url.to_owned(),
+                    });
+                }
+                LinkRoute::Unavailable(_) => {}
+            }
         }
         if hovering && active {
             ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
@@ -1012,13 +1213,13 @@ fn present_text(
             node.set_label(label.as_str());
             node.set_url(url);
             node.set_author_id(identity.semantic_id().0);
-            match (spec.link_description, valid) {
-                (description, false) => node.set_description(format!(
-                    "{}; unavailable: {INVALID_LINK_URL}",
+            match (description, resolved.route) {
+                (description, LinkRoute::Unavailable(reason)) => node.set_description(format!(
+                    "{}; unavailable: {reason}",
                     description.unwrap_or_default()
                 )),
-                (Some(description), true) => node.set_description(description),
-                (None, true) => node.clear_description(),
+                (Some(description), _) => node.set_description(description),
+                (None, _) => node.clear_description(),
             }
             node.set_bounds(egui::accesskit::Rect {
                 x0: f64::from(visible.min.x),
@@ -1040,12 +1241,15 @@ fn present_text(
             visible.into(),
         );
         node.name = label;
-        node.description = spec.link_description.map(str::to_owned);
+        node.description = description.map(str::to_owned);
         node.enabled = active;
         node.focused = focused;
         node.value = Some(url.to_owned());
-        if !valid {
-            node.disabled_reason = Some(INVALID_LINK_URL.to_owned());
+        if let LinkRoute::Unavailable(reason) = resolved.route {
+            node.disabled_reason = Some(reason.to_owned());
+        }
+        if active && resolved.route == LinkRoute::Follow {
+            register_followable(ui.ctx(), node.id.clone(), identity.egui_id());
         }
         link_nodes.push(node);
     }
