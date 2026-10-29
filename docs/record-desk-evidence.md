@@ -78,8 +78,9 @@ backend/browser configuration, input route and step observations. Standalone
 smokes write `.tools/runtime/record-desk-evidence/record-desk`; canonical verification
 writes `.tools/runtime/verification-evidence/record-desk`, including metadata,
 workflow JSON, runtime logs and PNGs. Exact committed-candidate journeys and CI
-are attributable through the owning PR and its landing record. Full CI retains
-the `record-desk-evidence` artefact for 14 days on success and failure.
+are attributable through the owning PR and its landing record. At the time,
+full CI retained the evidence for 14 days on success and failure; current
+retention is described in [CI cache](ci-cache.md).
 
 Final CI qualification exposed a legacy Lab idle-check timing failure: one
 additional frame after a fixed 250 ms delay was labelled continuous repaint.

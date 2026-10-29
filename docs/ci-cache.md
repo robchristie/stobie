@@ -33,7 +33,11 @@ reports, their clean source revision and their exact stage selections. Interface
 stages retain separate summaries under
 `.tools/runtime/verification-evidence/interface-<stage>/application-interface/`.
 The standalone interface smoke still selects all four journeys by default.
-Each stage uploads its qualification evidence separately for 14 days.
+A stage that fails or is cancelled uploads its complete qualification evidence
+for 14 days. A successful stage uploads only its interface `summary.json` files, also for
+14 days, which the final job downloads for this check, including on a later
+re-run of only the failed jobs; run
+`cargo xtask verify` locally for the complete evidence of a passing revision.
 
 Browser Tab traversal waits for the application's `tab_input_epoch` receipt
 before sending another key. The diagnostic counts keydowns once per egui input
@@ -106,7 +110,7 @@ The checks stage clears these owned XML files before setup/compilation; the
 Record Desk stage clears only its own report before setup/compilation.
 Each focused invocation clears its own report before version preflight. Reports
 from completed runs survive later verification failures and Rust-cache cleanup,
-and the existing always-run stage upload retains them for 14 days. Nextest compilation
+and a failed stage's evidence upload retains them for 14 days. Nextest compilation
 or initial setup failure leaves the affected report absent rather than reusing stale
 results. Direct focused commands are `python3 tools/test-rust.py workspace`,
 `python3 tools/test-rust.py ui-no-default`, and

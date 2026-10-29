@@ -71,8 +71,9 @@ binds all four journeys to clean source checkpoint
 instances, observation identities, input receipts and capture timing/hashes.
 Full reports remain in ignored `.tools/runtime/interface-final-source/application-interface/`.
 Canonical verification writes the same reports beneath
-`.tools/runtime/verification-evidence/application-interface`; CI retains them
-on success and failure for 14 days. [PR #48](https://github.com/robchristie/stobie/pull/48)
+`.tools/runtime/verification-evidence/application-interface`; CI then retained
+them on success and failure for 14 days (current retention is described in
+[CI cache](ci-cache.md)). [PR #48](https://github.com/robchristie/stobie/pull/48)
 owns exact-head review, required checks, squash identity and post-merge CI.
 
 | Surface | Result |

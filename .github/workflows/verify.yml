@@ -84,14 +84,26 @@ jobs:
         with:
           path: ~/.cargo/bin/wasm-bindgen
           key: wasm-bindgen-cli-0.2.127-${{ runner.os }}-${{ runner.arch }}
+      # Full evidence is tens of megabytes per stage, so only an unsuccessful
+      # stage keeps it. A successful stage passes on just the interface
+      # summaries that the final gate reads. They keep the same retention so
+      # that a later "Re-run failed jobs" attempt can still read them.
       - name: Retain qualification evidence
-        if: always()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: verification-${{ matrix.name }}
           path: .tools/runtime/verification-evidence
           retention-days: 14
           if-no-files-found: warn
+      - name: Pass interface summaries to the final gate
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ matrix.name }}
+          path: .tools/runtime/verification-evidence/interface-*/application-interface/summary.json
+          retention-days: 14
+          if-no-files-found: ignore
 
   verify:
     needs: [scope, qualification, documentation]
