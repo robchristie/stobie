@@ -34,8 +34,9 @@ stages retain separate summaries under
 `.tools/runtime/verification-evidence/interface-<stage>/application-interface/`.
 The standalone interface smoke still selects all four journeys by default.
 A stage that fails or is cancelled uploads its complete qualification evidence
-for 14 days. A successful stage uploads only its interface `summary.json` files,
-kept for one day, which the final job downloads for this check; run
+for 14 days. A successful stage uploads only its interface `summary.json` files, also for
+14 days, which the final job downloads for this check, including on a later
+re-run of only the failed jobs; run
 `cargo xtask verify` locally for the complete evidence of a passing revision.
 
 Browser Tab traversal waits for the application's `tab_input_epoch` receipt
