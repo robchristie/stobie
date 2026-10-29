@@ -28,8 +28,10 @@ verification stage. It rejects:
 ## Where new evidence goes
 
 Smoke tests and `cargo xtask verify` write to ignored `.tools/runtime/`
-directories. CI uploads each stage's `.tools/runtime/verification-evidence/`
-for 14 days.
+directories. CI uploads a stage's `.tools/runtime/verification-evidence/` for
+14 days only when the stage fails or is cancelled; a successful stage uploads
+just the interface summaries its final gate reads, for one day. CI uploads are
+never durable evidence.
 
 When a report needs durable raw evidence:
 
